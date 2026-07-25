@@ -11,9 +11,9 @@ let
   # Verification-only: existing commits were signed by this public key before
   # the SOPS migration. Keeping it does not invoke or depend on 1Password.
   historicalSigningPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHj9lWCKgMOZg6K1QzZvNH0QYY4m0lA0l6A+E4wVdVMT historical-signing-key";
-  apiTokensFile = ../../secrets/api-tokens.yaml;
-  githubSshKeyFile = ../../secrets/github-ssh-key.sops;
-  passwordHashesFile = ../../secrets/password-hashes.yaml;
+  apiTokensFile = ../../../secrets/api-tokens.yaml;
+  githubSshKeyFile = ../../../secrets/github-ssh-key.sops;
+  passwordHashesFile = ../../../secrets/password-hashes.yaml;
   passwordHashSecretName = "${user.username}-password-hash";
   apiTokenKeys = {
     anwa-github-mcp-token = "codex/anwa_github_mcp_token";

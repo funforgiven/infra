@@ -46,7 +46,7 @@ The effective `~/.config/niri/config.kdl` was a DMS wrapper around `hm.kdl` and
 the `alttab`, `binds`, `colors`, `layout`, `windowrules`, and `wpblur`
 fragments. The exact pre-cutover wrapper, its complete Home Manager KDL, and
 every non-empty included DMS fragment are preserved under
-`modules/funforgiven/window-manager/tests/phase0-niri/`. The empty
+`components/nix/funforgiven/window-manager/tests/phase0-niri/`. The empty
 `windowrules.kdl` had SHA-256
 `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
 The snapshot includes the wrapper's explicit border-fix stanza, so the table

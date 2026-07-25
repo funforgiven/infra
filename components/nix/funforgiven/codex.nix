@@ -57,10 +57,6 @@
             model_reasoning_effort = "ultra";
             model_verbosity = "medium";
 
-            projects."${config.home.homeDirectory}/dev/nixos-config" = {
-              trust_level = "trusted";
-            };
-
             projects."${config.home.homeDirectory}/dev/anwa" = {
               trust_level = "trusted";
             };

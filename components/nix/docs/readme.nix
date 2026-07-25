@@ -24,19 +24,22 @@ in
 
       parts = {
         intro = ''
-          # nixos-config
+          # infra
 
-          Personal NixOS configuration for `${hostName}`, built on NixOS unstable
-          with Home Manager and the dendritic module pattern.
+          Infrastructure configuration, currently for the NixOS host `${hostName}`.
 
-          This is a machine-specific configuration rather than a reusable distribution.
-          It can still be useful as a reference for a dendritic flake, a Niri desktop,
-          or a declarative PipeWire setup.
+          `${hostName}` is built on NixOS unstable with Home Manager and the dendritic
+          module pattern. The repository can grow to cover homelab, cloud, cluster, and
+          network deployments as those configurations gain real content.
+
+          This repository describes concrete infrastructure rather than a reusable
+          distribution. Its Nix component can still be useful as a reference for a
+          dendritic flake, a Niri desktop, or a declarative PipeWire setup.
 
         '';
 
         overview = ''
-          ## What It Configures
+          ## What It Configures Today
 
           - AMD Ryzen desktop with an NVIDIA GPU
           - Niri with a repository-owned Quickshell bar, dock, launcher, and mixer
@@ -54,16 +57,22 @@ in
         layout = ''
           ## Repository Layout
 
-          - `flake.nix` is generated; `outputs.nix` loads the module tree.
-          - `modules/computers/` contains host facts and disk layout.
-          - `modules/${host.user}/` contains personal applications and desktop settings.
-          - `modules/hardware/` contains reusable hardware features.
-          - `modules/packages/` contains local packages and overlays.
-          - `modules/repository/` contains checks, formatting, and generated-file support.
-          - `modules/docs/` contains the sources for generated documentation.
+          - `flake.nix` is generated; `outputs.nix` loads the Nix component tree.
+          - `components/nix/computers/` contains host facts and disk layout.
+          - `components/nix/${host.user}/` contains personal applications and desktop settings.
+          - `components/nix/hardware/` contains reusable hardware features.
+          - `components/nix/packages/` contains local packages and overlays.
+          - `components/nix/repository/` contains checks, formatting, and generated-file support.
+          - `components/nix/docs/` contains the sources for generated documentation.
+          - `secrets/` contains encrypted machine credentials and their documentation.
 
-          `${hostName}` is assembled in `modules/computers/${hostName}.nix` by
+          `${hostName}` is assembled in `components/nix/computers/${hostName}.nix` by
           selecting focused features and the user's Home Manager profiles.
+
+          Future deployment convention: when a deployment needs its own identity or
+          entry point, it belongs under `deployments/`. Implementations and reusable
+          features remain under `components/`. Directories are added only with their
+          first real configuration.
 
         '';
 
@@ -143,7 +152,8 @@ in
           ## Fresh Installation
 
           The disko command below destroys the configured target disk. Read
-          `modules/computers/${hostName}-disko.nix` and verify the device path first.
+          `components/nix/computers/${hostName}-disko.nix` and verify the device path
+          first.
 
           1. Provide the local wallpaper file described above.
 
@@ -191,7 +201,7 @@ in
         credits = ''
           ## Credits
 
-          The repository architecture follows
+          The Nix component architecture follows
           [mightyiam's dendritic pattern](https://github.com/mightyiam/dendritic),
           with [mightyiam/infra](https://github.com/mightyiam/infra) as its primary
           reference configuration.
