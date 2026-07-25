@@ -1,13 +1,16 @@
-# nixos-config
+# infra
 
-Personal NixOS configuration for `parmigiano`, built on NixOS unstable
-with Home Manager and the dendritic module pattern.
+Infrastructure configuration, currently for the NixOS host `parmigiano`.
 
-This is a machine-specific configuration rather than a reusable distribution.
-It can still be useful as a reference for a dendritic flake, a Niri desktop,
-or a declarative PipeWire setup.
+`parmigiano` is built on NixOS unstable with Home Manager and the dendritic
+module pattern. The repository can grow to cover homelab, cloud, cluster, and
+network deployments as those configurations gain real content.
 
-## What It Configures
+This repository describes concrete infrastructure rather than a reusable
+distribution. Its Nix component can still be useful as a reference for a
+dendritic flake, a Niri desktop, or a declarative PipeWire setup.
+
+## What It Configures Today
 
 - AMD Ryzen desktop with an NVIDIA GPU
 - Niri with a repository-owned Quickshell bar, dock, launcher, and mixer
@@ -22,23 +25,29 @@ or a declarative PipeWire setup.
 
 ## Repository Layout
 
-- `flake.nix` is generated; `outputs.nix` loads the module tree.
-- `modules/computers/` contains host facts and disk layout.
-- `modules/funforgiven/` contains personal applications and desktop settings.
-- `modules/hardware/` contains reusable hardware features.
-- `modules/packages/` contains local packages and overlays.
-- `modules/repository/` contains checks, formatting, and generated-file support.
-- `modules/docs/` contains the sources for generated documentation.
+- `flake.nix` is generated; `outputs.nix` loads the Nix component tree.
+- `components/nix/computers/` contains host facts and disk layout.
+- `components/nix/funforgiven/` contains personal applications and desktop settings.
+- `components/nix/hardware/` contains reusable hardware features.
+- `components/nix/packages/` contains local packages and overlays.
+- `components/nix/repository/` contains checks, formatting, and generated-file support.
+- `components/nix/docs/` contains the sources for generated documentation.
+- `secrets/` contains encrypted machine credentials and their documentation.
 
-`parmigiano` is assembled in `modules/computers/parmigiano.nix` by
+`parmigiano` is assembled in `components/nix/computers/parmigiano.nix` by
 selecting focused features and the user's Home Manager profiles.
+
+Future deployment convention: when a deployment needs its own identity or
+entry point, it belongs under `deployments/`. Implementations and reusable
+features remain under `components/`. Directories are added only with their
+first real configuration.
 
 ## Dendritic Pattern
 
-This repository follows the dendritic pattern from `mightyiam/dendritic`: every
-Nix file under `modules/` is a top-level flake-parts module, and feature
-modules register named NixOS and Home Manager modules instead of importing
-distant paths directly.
+The Nix implementation follows the dendritic pattern from
+`mightyiam/dendritic`: every Nix file under `components/nix/` is a top-level
+flake-parts module, and feature modules register named NixOS and Home Manager
+modules instead of importing distant paths directly.
 
 ## Local Files
 
@@ -106,7 +115,8 @@ funforgiven-runtime-check
 ## Fresh Installation
 
 The disko command below destroys the configured target disk. Read
-`modules/computers/parmigiano-disko.nix` and verify the device path first.
+`components/nix/computers/parmigiano-disko.nix` and verify the device path
+first.
 
 1. Provide the local wallpaper file described above.
 
@@ -148,7 +158,7 @@ nix eval .#homeConfigurations."funforgiven@parmigiano".activationPackage.drvPath
 
 ## Credits
 
-The repository architecture follows
+The Nix component architecture follows
 [mightyiam's dendritic pattern](https://github.com/mightyiam/dendritic),
 with [mightyiam/infra](https://github.com/mightyiam/infra) as its primary
 reference configuration.

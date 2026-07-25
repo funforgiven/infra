@@ -1,5 +1,5 @@
 {
-  description = "Dendritic NixOS configuration for parmigiano";
+  description = "Infrastructure configuration; currently NixOS for parmigiano";
 
   outputs = inputs: import ./outputs.nix inputs;
 

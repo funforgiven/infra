@@ -11,7 +11,7 @@ in
   imports = [ inputs.flake-file.flakeModules.default ];
 
   flake-file = {
-    description = "Dendritic NixOS configuration for ${hostName}";
+    description = "Infrastructure configuration; currently NixOS for ${hostName}";
     outputs = "inputs: import ./outputs.nix inputs";
     do-not-edit = "";
 
