@@ -19,6 +19,7 @@ _: {
             config.treefmt.build.wrapper
             pkgs.gitMinimal
             pkgs.nixd
+            (pkgs.python3.withPackages (pythonPackages: [ pythonPackages.paramiko ]))
           ];
 
           shellHook = config.repository.devShell.shellHook;
