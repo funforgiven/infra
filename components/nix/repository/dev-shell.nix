@@ -20,6 +20,8 @@ _: {
             pkgs.gitMinimal
             pkgs.nixd
             (pkgs.python3.withPackages (pythonPackages: [ pythonPackages.paramiko ]))
+            pkgs.ripgrep
+            pkgs.shellcheck
           ];
 
           shellHook = config.repository.devShell.shellHook;
