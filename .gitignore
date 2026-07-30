@@ -1,3 +1,7 @@
+*.backup
+*.py[cod]
+.env
+.env.*
 /.codex-doc-cache/
 /.direnv/
 /.envrc
@@ -8,3 +12,5 @@
 /secrets/*.hash
 /secrets/*.key
 /secrets/*.pem
+__pycache__/
+before-infra-*.rsc
