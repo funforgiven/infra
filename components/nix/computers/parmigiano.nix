@@ -14,6 +14,7 @@ let
     "funforgiven-locale"
     "funforgiven-time"
     "networking"
+    "routeros-management"
     "nix"
     "funforgiven-account"
     "funforgiven-secrets"
