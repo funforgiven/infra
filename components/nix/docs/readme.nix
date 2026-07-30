@@ -14,6 +14,7 @@ in
         "overview"
         "layout"
         "dendritic"
+        "routeros"
         "local-files"
         "generated-files"
         "daily-use"
@@ -26,15 +27,17 @@ in
         intro = ''
           # infra
 
-          Infrastructure configuration, currently for the NixOS host `${hostName}`.
+          Infrastructure configuration for the NixOS host `${hostName}` and the
+          surrounding homelab network.
 
           `${hostName}` is built on NixOS unstable with Home Manager and the dendritic
-          module pattern. The repository can grow to cover homelab, cloud, cluster, and
-          network deployments as those configurations gain real content.
+          module pattern. RouterOS deployment records cover the current router and
+          switching fabric. Cloud, cluster, and other platforms can be added when they
+          gain real configuration.
 
-          This repository describes concrete infrastructure rather than a reusable
-          distribution. Its Nix component can still be useful as a reference for a
-          dendritic flake, a Niri desktop, or a declarative PipeWire setup.
+          This is a concrete environment, not a reusable distribution. It can still
+          serve as a reference for a dendritic flake, a Niri desktop, declarative
+          PipeWire routing, SOPS secret delivery, or a device-oriented RouterOS layout.
 
         '';
 
@@ -49,8 +52,11 @@ in
           - Turkish and Japanese input through Fcitx5 and Mozc
           - Btrfs on NVMe through disko, with systemd-boot
           - Wallpaper-derived colors shared through Matugen and Stylix
-          - SOPS/age for the account password hash and machine credentials, with
-            1Password retained for desktop and browser password management
+          - SOPS/age for the account password hash, machine credentials, and
+            homelab API/network credentials, with 1Password retained for desktop
+            and browser password management
+          - RouterOS deployment records and tooling for a CCR2004 router and
+            CRS510 switch
 
         '';
 
@@ -64,15 +70,63 @@ in
           - `components/nix/packages/` contains local packages and overlays.
           - `components/nix/repository/` contains checks, formatting, and generated-file support.
           - `components/nix/docs/` contains the sources for generated documentation.
-          - `secrets/` contains encrypted machine credentials and their documentation.
+          - `components/routeros/` contains shared RouterOS validation, credential
+            installation, and tests.
+          - `deployments/homelab/routeros/` contains device-specific router and
+            switch identities, physical assignments, and secret-free `.rsc` records
+            under each device's `applied/` directory.
+          - `secrets/` contains SOPS-encrypted machine and homelab credentials and
+            their documentation.
 
           `${hostName}` is assembled in `components/nix/computers/${hostName}.nix` by
           selecting focused features and the user's Home Manager profiles.
 
-          Future deployment convention: when a deployment needs its own identity or
-          entry point, it belongs under `deployments/`. Implementations and reusable
-          features remain under `components/`. Directories are added only with their
-          first real configuration.
+          Deployment identities and entry points belong under `deployments/`.
+          Implementations and reusable features remain under `components/`.
+          Directories are added only with their first real configuration.
+
+        '';
+
+        routeros = ''
+          ## Homelab Network
+
+          RouterOS deployments are grouped by device identity:
+
+          ```text
+          deployments/homelab/routeros/
+          ├── core-router/
+          │   ├── applied/
+          │   └── install-pppoe.sh
+          └── core-switch/
+              └── applied/
+          ```
+
+          Each `applied/` directory contains selected, secret-free `.rsc` records
+          of one-shot changes that contributed to the current device state. They
+          are an audit trail, not a complete migration history, desired-state, or
+          convergence scripts. Every record aborts at its first executable line to
+          prevent accidental replay on a configured device.
+
+          Shared validation and credential tooling lives in `components/routeros/`.
+          Validate the records, shell entry point, and credential helper with:
+
+          ```sh
+          components/routeros/validate.sh
+          ```
+
+          Within Git, PPPoE and Omada values exist only as SOPS ciphertext in
+          `secrets/routeros.yaml` and `secrets/omada.yaml`. sops-nix materializes
+          the two PPPoE values for the current installer as user-owned `0400`
+          runtime files. The NixOS host is not an Omada recipient, so those
+          unused values remain recovery-key-only ciphertext. Device login
+          credentials, RouterOS exports, and binary backups are not committed.
+
+          The network plan, physical map, firewall policy, current transition
+          state, recovery paths, and remaining work are documented in the
+          [RouterOS deployment runbook](deployments/homelab/routeros/README.md).
+          This public repository treats internal addressing, device identities,
+          and port assignments as non-secret operational documentation; all
+          authentication material remains encrypted or outside Git.
 
         '';
 
