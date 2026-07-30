@@ -13,6 +13,7 @@ let
   historicalSigningPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHj9lWCKgMOZg6K1QzZvNH0QYY4m0lA0l6A+E4wVdVMT historical-signing-key";
   apiTokensFile = ../../../secrets/api-tokens.yaml;
   githubSshKeyFile = ../../../secrets/github-ssh-key.sops;
+  routerosSecretsFile = ../../../secrets/routeros.yaml;
   passwordHashesFile = ../../../secrets/password-hashes.yaml;
   passwordHashSecretName = "${user.username}-password-hash";
   apiTokenKeys = {
@@ -21,6 +22,11 @@ let
     github-mcp-token = "codex/github_mcp_token";
   };
   consumerSecretNames = builtins.attrNames apiTokenKeys ++ [ "github-ssh-key" ];
+  routerosSecretKeys = {
+    homelab-routeros-pppoe-password = "routeros/pppoe_password";
+    homelab-routeros-pppoe-username = "routeros/pppoe_username";
+  };
+  routerosSecretNames = builtins.attrNames routerosSecretKeys;
 
   mkConsumerSopsSecrets =
     permissions:
@@ -31,6 +37,17 @@ let
         format = "binary";
       };
     };
+
+  mkRouterosSopsSecrets =
+    permissions:
+    lib.mapAttrs (
+      _: key:
+      permissions
+      // {
+        inherit key;
+        sopsFile = routerosSecretsFile;
+      }
+    ) routerosSecretKeys;
 
   mkSecretMcpLauncher =
     {
@@ -236,20 +253,38 @@ in
               && githubSshConfig.mode == "0600";
             message = "The OpenSSH client config must be rendered as a private user-owned file.";
           }
+          {
+            assertion = lib.all (
+              name:
+              let
+                secret = config.sops.secrets.${name};
+              in
+              secret.owner == secretPermissions.owner
+              && secret.group == secretPermissions.group
+              && secret.mode == secretPermissions.mode
+              && secret.path == "/run/secrets/${name}"
+              && secret.sopsFile == routerosSecretsFile
+              && secret.key == routerosSecretKeys.${name}
+            ) routerosSecretNames;
+            message = "RouterOS secrets must be private user-owned runtime files.";
+          }
         ];
 
         sops = {
           defaultSopsFile = apiTokensFile;
           defaultSopsFormat = "yaml";
           age.sshKeyPaths = [ hostIdentityPath ];
-          secrets = mkConsumerSopsSecrets secretPermissions // {
-            "${passwordHashSecretName}" = {
-              sopsFile = passwordHashesFile;
-              key = "users/${user.username}/password_hash";
-              neededForUsers = true;
-              mode = "0400";
+          secrets =
+            mkConsumerSopsSecrets secretPermissions
+            // mkRouterosSopsSecrets secretPermissions
+            // {
+              "${passwordHashSecretName}" = {
+                sopsFile = passwordHashesFile;
+                key = "users/${user.username}/password_hash";
+                neededForUsers = true;
+                mode = "0400";
+              };
             };
-          };
           templates."github-ssh-config" = secretPermissions // {
             content = config.home-manager.users.${user.username}.home.file.".ssh/config".text;
             mode = "0600";
