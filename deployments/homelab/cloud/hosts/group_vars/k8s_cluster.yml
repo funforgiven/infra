@@ -61,7 +61,7 @@ cilium_native_routing_cidr: 10.233.64.0/18
 cilium_dns_proxy_enable_transparent_mode: false
 cilium_enable_hubble: false
 cilium_gateway_api_enabled: false
-cilium_l2announcements: false
+cilium_l2announcements: true
 
 cilium_agent_image_digest: sha256:2eb67991eaa9368ba199c2fac2c573cb0ffdeb79184533344f42fc9a7ff6af3c
 cilium_operator_download_digest: sha256:7edc61725901e32a13e180c5290d43df5292f5f49c6d654c94a0be2faf52e71e
@@ -80,6 +80,11 @@ cilium_extra_values:
   routingMode: native
   devices:
     - bond0.20
+  # Two five-second service leases require less than one QPS per agent. Keep
+  # the explicit budget comfortably above that while bounding API pressure.
+  k8sClientRateLimit:
+    qps: 10
+    burst: 20
   image:
     override: "quay.io/cilium/cilium:v{{ cilium_version }}@{{ cilium_agent_image_digest }}"
   operator:
