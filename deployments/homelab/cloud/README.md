@@ -11,10 +11,13 @@ complete. Ubuntu is installed and Git-managed on all three servers. Every host
 passes the hardware, RAID/EFI, KVM/IOMMU, LACP/FEC, routed-MTU, all-direction
 jumbo-path, and individual-LACP-member failure gates. Kubernetes 1.35.4 has a
 healthy three-member etcd quorum, a qualified kube-vip API endpoint, and a
-healthy Cilium native-routing dataplane. Independent-OS-disk boot testing is
-deliberately deferred as a resilience exercise. The switch map is `taleggio`
-on ports 3/4, `asiago` on 5/6, and `pecorino` on 7/8. GitOps wave 20 is next;
-production eligibility remains false.
+healthy Cilium native-routing dataplane. Flux 2.9.3 now reconciles the signed
+public Git source through four digest-pinned controllers; source verification,
+revision convergence, and the SOPS key boundary passed their semantic gates.
+Independent-OS-disk boot testing is deliberately deferred as a resilience
+exercise. The switch map is `taleggio` on ports 3/4, `asiago` on 5/6, and
+`pecorino` on 7/8. Wave 20 remains open for the B2 Object Lock backup
+foundation; production eligibility remains false.
 
 The small set of current documents is intentional:
 
@@ -320,8 +323,8 @@ root-owned kubeconfig, inject `/run/secrets/undercloud-flux-age-identity` as
 `flux-system/sops-age` without writing a kubeconfig or plaintext key to disk,
 then apply the committed Git source and root Kustomization. Completion requires
 all four controller Deployments to be Available, the GitRepository's
-`SourceVerifiedCondition=True` and `sourceVerificationMode=HEAD`, and the
-GitRepository and Kustomization to be Ready at the expected signed commit
+`SourceVerified=True` condition and `sourceVerificationMode=HEAD` status, and
+the GitRepository and Kustomization to be Ready at the expected signed commit
 revision. The SOPS identity is stable recovery state and is not regenerated
 during a host or cluster rebuild.
 
