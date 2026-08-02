@@ -21,6 +21,9 @@ spec:
       path: /metrics
       interval: 10s
       honorLabels: true
+      relabelings:
+        - targetLabel: cluster
+          replacement: rook-ceph
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
@@ -39,6 +42,9 @@ spec:
     - port: ceph-exporter-http-metrics
       path: /metrics
       interval: 10s
+      relabelings:
+        - targetLabel: cluster
+          replacement: rook-ceph
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
