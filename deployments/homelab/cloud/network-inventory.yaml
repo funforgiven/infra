@@ -94,6 +94,12 @@ all:
             gateway: 10.21.90.1
             dns_server: 10.21.90.1
             lease_time: 1d
+          routeros_private_dns_forward:
+            name: cloud.fahrican.com
+            type: FWD
+            forward_to: 10.21.20.129
+            match_subdomain: true
+            comment: "infra: private cloud split DNS"
           routeros_static_leases:
             - comment: "infra: primary admin workstation"
               mac_address: 60:CF:84:ED:E9:1E

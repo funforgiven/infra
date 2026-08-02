@@ -1,0 +1,27 @@
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: internal-dns
+spec:
+  blocks:
+    - cidr: 10.21.20.129/32
+  serviceSelector:
+    matchLabels:
+      infra.fahrican.com/vip-purpose: internal-dns
+---
+apiVersion: cilium.io/v2alpha1
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: vlan20-private-services
+spec:
+  serviceSelector:
+    matchLabels:
+      infra.fahrican.com/l2-announcement: vlan20
+  nodeSelector:
+    matchExpressions:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+  interfaces:
+    - '^bond0\.20$'
+  externalIPs: false
+  loadBalancerIPs: true

@@ -402,7 +402,7 @@
         - never
         - apply
 
-- name: Reconcile current CCR2004 static DHCP leases
+- name: Reconcile current CCR2004 management DHCP and private DNS
   hosts: core_router
   gather_facts: false
   pre_tasks:
@@ -419,6 +419,11 @@
           - routeros_management_dhcp.gateway | length > 0
           - routeros_management_dhcp.dns_server | length > 0
           - routeros_management_dhcp.lease_time | length > 0
+          - routeros_private_dns_forward.name | length > 0
+          - routeros_private_dns_forward.type == 'FWD'
+          - routeros_private_dns_forward.forward_to | length > 0
+          - routeros_private_dns_forward.match_subdomain is boolean
+          - routeros_private_dns_forward.comment | length > 0
           - >-
             routeros_static_leases | map(attribute='comment') | list |
             unique | length == routeros_static_leases | length
@@ -429,7 +434,8 @@
             routeros_static_leases | map(attribute='address') | list |
             unique | length == routeros_static_leases | length
         fail_msg: >-
-          Refusing CCR2004 access: static leases must be complete and unique.
+          Refusing CCR2004 access: management DHCP, private DNS, and static
+          leases must be complete and unique.
       tags:
         - always
         - inventory-contract
@@ -445,10 +451,22 @@
       changed_when: false
       tags: [always]
 
+    - name: Require RouterOS DNS recursion for private forwarding
+      community.routeros.command:
+        commands:
+          - >-
+            :if ([/ip dns get allow-remote-requests] != true) do={
+            :error "private DNS prerequisite: allow-remote-requests must be
+            enabled" }
+      changed_when: false
+      tags: [always]
+
     - name: Read current CCR2004 static leases
       community.routeros.command:
         commands:
           - /system identity print
+          - /ip dns print
+          - /ip dns static print detail without-paging where type=FWD
           - >-
             /ip dhcp-server print detail without-paging where
             name="{{ routeros_management_dhcp.name }}"
@@ -457,6 +475,26 @@
             comment="infra: management static leases"
           - /ip dhcp-server lease print detail without-paging where comment~"infra:"
       register: ccr_preflight
+      changed_when: false
+      tags: [always]
+
+    - name: Refuse duplicate or conflicting private DNS forwarders
+      community.routeros.command:
+        commands:
+          - >-
+            :local owned [/ip dns static find where
+            comment="{{ routeros_private_dns_forward.comment }}"];
+            :local named [/ip dns static find where
+            name="{{ routeros_private_dns_forward.name }}"];
+            :if ([:len $owned] > 1) do={
+            :error "duplicate Git-owned private DNS forwarder" };
+            :if ([:len $named] > 1) do={
+            :error "duplicate private DNS name" };
+            :if ([:len $named] = 1) do={
+            :if ([:len [/ip dns static find where
+            name="{{ routeros_private_dns_forward.name }}" and
+            comment="{{ routeros_private_dns_forward.comment }}"]] != 1) do={
+            :error "private DNS name is owned by another row" } }
       changed_when: false
       tags: [always]
 
@@ -565,6 +603,56 @@
       loop_control:
         label: "{{ static_lease.comment }}"
         loop_var: static_lease
+      changed_when: false
+      tags:
+        - never
+        - apply
+
+    - name: Reconcile Git-owned private DNS forwarders
+      community.routeros.command:
+        commands:
+          - >-
+            :local row [/ip dns static find where
+            comment="{{ routeros_private_dns_forward.comment }}"];
+            :if ([:len $row] = 0) do={
+            /ip dns static add comment="{{ routeros_private_dns_forward.comment }}"
+            disabled=no forward-to={{ routeros_private_dns_forward.forward_to }}
+            match-subdomain={{
+            routeros_private_dns_forward.match_subdomain | ternary('yes', 'no') }}
+            name="{{ routeros_private_dns_forward.name }}"
+            type={{ routeros_private_dns_forward.type }} } else={
+            :if ([:len $row] != 1) do={
+            :error "duplicate Git-owned private DNS forwarder" };
+            /ip dns static set $row disabled=no
+            forward-to={{ routeros_private_dns_forward.forward_to }}
+            match-subdomain={{
+            routeros_private_dns_forward.match_subdomain | ternary('yes', 'no') }}
+            name="{{ routeros_private_dns_forward.name }}"
+            type={{ routeros_private_dns_forward.type }} }
+      tags:
+        - never
+        - apply
+
+    - name: Prove every Git-owned private DNS forwarder
+      community.routeros.command:
+        commands:
+          - >-
+            :if ([/ip dns get allow-remote-requests] != true) do={
+            :error "private DNS postflight: allow-remote-requests is disabled" };
+            :if ([:len [/ip dns static find where
+            comment="{{ routeros_private_dns_forward.comment }}"]] != 1) do={
+            :error "private DNS postflight: invalid comment identity" };
+            :if ([:len [/ip dns static find where
+            name="{{ routeros_private_dns_forward.name }}"]] != 1) do={
+            :error "private DNS postflight: invalid name identity" };
+            :if ([:len [/ip dns static find where
+            comment="{{ routeros_private_dns_forward.comment }}" and disabled=no and
+            forward-to={{ routeros_private_dns_forward.forward_to }} and
+            match-subdomain={{
+            routeros_private_dns_forward.match_subdomain | ternary('yes', 'no') }} and
+            name="{{ routeros_private_dns_forward.name }}" and
+            type={{ routeros_private_dns_forward.type }}]] != 1) do={
+            :error "private DNS postflight: row does not match Git" }
       changed_when: false
       tags:
         - never
