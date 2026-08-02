@@ -2,5 +2,4 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - 20-gitops/flux-system
-  - 20-backup
-  - 30-rook-ceph
+  - 20-gitops/waves.yaml

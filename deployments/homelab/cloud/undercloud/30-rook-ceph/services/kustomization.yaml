@@ -3,9 +3,6 @@ kind: Kustomization
 commonAnnotations:
   kustomize.toolkit.fluxcd.io/prune: disabled
 resources:
-  - nodes.yaml
-  - operator.yaml
-  - cluster.yaml
   - pools.yaml
   - filesystem.yaml
   - undercloud-storage.yaml
