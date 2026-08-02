@@ -171,6 +171,8 @@ spec:
 
     grafana:
       replicas: 1
+      deploymentStrategy:
+        type: Recreate
       defaultDashboardsEditable: false
       grafana.ini:
         analytics:
