@@ -1,0 +1,116 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: loki-chart
+  namespace: observability
+spec:
+  interval: 24h
+  url: oci://ghcr.io/grafana-community/helm-charts/loki
+  ref:
+    digest: sha256:7b785f8096f1eb03499d958280d65c634d6ecb5d9942a14d5302d7517d4c9fc4
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: loki
+  namespace: observability
+spec:
+  interval: 30m
+  timeout: 15m
+  releaseName: loki
+  chartRef:
+    kind: OCIRepository
+    name: loki-chart
+  driftDetection:
+    mode: enabled
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    deploymentMode: Monolithic
+
+    loki:
+      auth_enabled: false
+      image:
+        digest: sha256:87f0a067673756a3cede1bcbf0c74875f7df9b09fddb53e399d0c576f756cfcc
+      commonConfig:
+        path_prefix: /var/loki
+        replication_factor: 1
+      schemaConfig:
+        configs:
+          - from: "2024-04-01"
+            store: tsdb
+            object_store: filesystem
+            schema: v13
+            index:
+              prefix: loki_index_
+              period: 24h
+      storage:
+        type: filesystem
+      limits_config:
+        reject_old_samples: true
+        reject_old_samples_max_age: 168h
+        retention_period: 336h
+      compactor:
+        working_directory: /var/loki/compactor
+        retention_enabled: true
+        delete_request_store: filesystem
+
+    singleBinary:
+      replicas: 1
+      sidecar: false
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          memory: 4Gi
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: single-binary
+                  app.kubernetes.io/instance: loki
+                  app.kubernetes.io/name: loki
+              topologyKey: kubernetes.io/hostname
+      persistence:
+        enabled: true
+        enableStatefulSetAutoDeletePVC: true
+        accessModes:
+          - ReadWriteOnce
+        size: 50Gi
+        storageClass: general
+        whenDeleted: Retain
+        whenScaled: Retain
+
+    read:
+      replicas: 0
+    write:
+      replicas: 0
+    backend:
+      replicas: 0
+
+    gateway:
+      enabled: false
+    chunksCache:
+      enabled: false
+    resultsCache:
+      enabled: false
+    lokiCanary:
+      enabled: false
+    test:
+      enabled: false
+
+    monitoring:
+      serviceMonitor:
+        enabled: true
+      dashboards:
+        enabled: true
+      rules:
+        enabled: true
+      alerts:
+        enabled: true

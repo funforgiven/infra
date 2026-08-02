@@ -1,0 +1,236 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: kube-prometheus-stack-chart
+  namespace: observability
+spec:
+  interval: 24h
+  url: oci://ghcr.io/prometheus-community/charts/kube-prometheus-stack
+  ref:
+    digest: sha256:db4805aa51d6566e6b628d71a6445be8a81ecd49701b99928c1a4cffc4132c1a
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kube-prometheus-stack
+  namespace: observability
+spec:
+  interval: 30m
+  timeout: 15m
+  releaseName: kube-prometheus-stack
+  chartRef:
+    kind: OCIRepository
+    name: kube-prometheus-stack-chart
+  driftDetection:
+    mode: enabled
+    ignore:
+      - paths:
+          - /webhooks/0/clientConfig/caBundle
+        target:
+          group: admissionregistration.k8s.io
+          version: v1
+          kind: MutatingWebhookConfiguration
+          name: kube-prometheus-stack-admission
+      - paths:
+          - /webhooks/0/clientConfig/caBundle
+          - /webhooks/1/clientConfig/caBundle
+        target:
+          group: admissionregistration.k8s.io
+          version: v1
+          kind: ValidatingWebhookConfiguration
+          name: kube-prometheus-stack-admission
+  install:
+    crds: Create
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  values:
+    prometheus-node-exporter:
+      image:
+        digest: sha256:8c9bac11973b94b59be88d6e11fee4429aa743c8846cdc75d65b18db33f6a106
+
+    kube-state-metrics:
+      image:
+        sha: sha256:85108987d044b18a098126732f98602df408888c0f7d456241f5abefb9744bc1
+
+    crds:
+      enabled: true
+      upgradeJob:
+        enabled: false
+
+    kubeProxy:
+      enabled: false
+
+    prometheusOperator:
+      image:
+        sha: a001ed10a3823bbf2410ea347796d0e35ff8decd24fb98acbe7ab9e98d431c39
+      prometheusConfigReloader:
+        image:
+          sha: 0ccb22ca9f3f6fd9f76ce95585d18bd2e363d421c534dde710be4bd13caa551d
+      admissionWebhooks:
+        enabled: true
+        failurePolicy: IgnoreOnInstallOnly
+        certManager:
+          enabled: false
+        patch:
+          enabled: true
+          image:
+            sha: d0e80b2f62fe43bb5e1b96adc692132fb4522e802f4cf673c09b1f94722b8cb6
+
+    prometheus:
+      podDisruptionBudget:
+        enabled: true
+        minAvailable: 1
+      prometheusSpec:
+        replicas: 2
+        retention: 15d
+        retentionSize: 40GiB
+        image:
+          sha: 64f71bb84e03c855948418b0fc5dea53e9543d8e3fc9931598f583805507f05e
+        persistentVolumeClaimRetentionPolicy:
+          whenDeleted: Retain
+          whenScaled: Retain
+        externalLabels:
+          cluster: undercloud
+        podAntiAffinity: hard
+        podAntiAffinityTopologyKey: kubernetes.io/hostname
+        ruleSelectorNilUsesHelmValues: false
+        ruleSelector: {}
+        ruleNamespaceSelector:
+          matchExpressions:
+            - key: kubernetes.io/metadata.name
+              operator: In
+              values:
+                - observability
+                - rook-ceph
+        serviceMonitorSelectorNilUsesHelmValues: false
+        serviceMonitorSelector: {}
+        serviceMonitorNamespaceSelector:
+          matchExpressions:
+            - key: kubernetes.io/metadata.name
+              operator: In
+              values:
+                - observability
+                - rook-ceph
+        podMonitorSelectorNilUsesHelmValues: false
+        podMonitorSelector: {}
+        podMonitorNamespaceSelector:
+          matchExpressions:
+            - key: kubernetes.io/metadata.name
+              operator: In
+              values:
+                - observability
+                - rook-ceph
+        resources:
+          requests:
+            cpu: 500m
+            memory: 2Gi
+          limits:
+            memory: 6Gi
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: general
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 50Gi
+
+    alertmanager:
+      podDisruptionBudget:
+        enabled: true
+        minAvailable: 2
+      alertmanagerSpec:
+        replicas: 3
+        image:
+          sha: 9e082985f56f4c8c9f724e18f2288c6708f472e56a5286b8863d080434ea065d
+        persistentVolumeClaimRetentionPolicy:
+          whenDeleted: Retain
+          whenScaled: Retain
+        podAntiAffinity: hard
+        podAntiAffinityTopologyKey: kubernetes.io/hostname
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            memory: 512Mi
+        storage:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: general
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 2Gi
+
+    grafana:
+      replicas: 1
+      defaultDashboardsEditable: false
+      image:
+        sha: 7cb8c64c4d57a57e734073f3cc94620adb24a0acb929bd80ba9f14017e3a975b
+      initChownData:
+        image:
+          sha: dc2d74b28e4cf8984fa52af1f39bc7c3d9c73760b41a74d629f5d11b1ab28616
+      admin:
+        existingSecret: grafana-admin-credentials
+        userKey: admin-user
+        passwordKey: admin-password
+      rbac:
+        namespaced: true
+      persistence:
+        enabled: true
+        type: pvc
+        storageClassName: general
+        accessModes:
+          - ReadWriteOnce
+        size: 10Gi
+        annotations:
+          helm.sh/resource-policy: keep
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          memory: 1Gi
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: kube-prometheus-stack
+                  app.kubernetes.io/name: grafana
+              topologyKey: kubernetes.io/hostname
+      sidecar:
+        image:
+          sha: 21b9fe7bb29d65caf2445ccbf96ff6eda5e589a92bd8f5188f957fe75b551d72
+        dashboards:
+          enabled: true
+          label: grafana_dashboard
+          labelValue: "1"
+          searchNamespace: observability
+          resource: configmap
+          watchMethod: WATCH
+          provider:
+            allowUiUpdates: false
+            disableDelete: false
+        datasources:
+          enabled: true
+          label: grafana_datasource
+          labelValue: "1"
+          searchNamespace: observability
+          resource: configmap
+      additionalDataSources:
+        - name: Loki
+          uid: loki
+          type: loki
+          access: proxy
+          url: http://loki.observability.svc.cluster.local:3100
+          editable: false
+          jsonData:
+            maxLines: 1000
