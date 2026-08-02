@@ -1,0 +1,307 @@
+#cloud-config
+# https://canonical-subiquity.readthedocs-hosted.com/en/latest/reference/autoinstall-reference.html
+autoinstall:
+  version: 1
+
+  # The source ISO is checksum-pinned; do not replace its installer at runtime.
+  refresh-installer:
+    update: false
+
+  locale: en_US.UTF-8
+  keyboard:
+    layout: tr
+    variant: ""
+
+  identity:
+    hostname: {{ inventory_hostname | to_json }}
+    realname: Cloud Administrator
+    username: {{ cloud_host_automation_user | to_json }}
+    password: {{ autoinstall_password_hash | to_json }}
+
+  ssh:
+    install-server: true
+    allow-pw: false
+    authorized-keys:
+      - {{ autoinstall_ssh_public_key | to_json }}
+
+  # This guard must pass before Curtin can wipe either OS disk. It permits
+  # replacement disks by class and capacity rather than serial or connector.
+  early-commands:
+    - [udevadm, settle, --timeout=30]
+    - |
+      python3 - <<'PY'
+      import json
+      import pathlib
+      import subprocess
+      import sys
+
+      qualified_driver = {{ cloud_nic_driver | to_json }}
+      expected_os_disks = {{ cloud_storage_devices.os | length }}
+      expected_ceph_disks = {{ cloud_storage_devices.ceph | length }}
+
+      def fail(message):
+          print(f"CLOUD HOST PREFLIGHT FAILED: {message}", file=sys.stderr)
+          raise SystemExit(1)
+
+      if not pathlib.Path("/sys/firmware/efi").is_dir():
+          fail("the installer was not booted in UEFI mode")
+
+      try:
+          roots = json.loads(subprocess.check_output(
+              [
+                  "lsblk", "--bytes", "--json", "--paths", "--output",
+                  "NAME,TYPE,SIZE,TRAN,ROTA,MODEL,SERIAL,MOUNTPOINTS",
+              ],
+              text=True,
+          ))["blockdevices"]
+      except Exception as error:
+          fail(f"cannot inventory block devices: {error}")
+
+      def is_installer(node):
+          mountpoints = node.get("mountpoints") or []
+          if isinstance(mountpoints, str):
+              mountpoints = [mountpoints]
+          return (
+              any(path in {"/cdrom", "/isodevice"} for path in mountpoints)
+              or any(is_installer(child) for child in node.get("children", []))
+          )
+
+      disks = [
+          disk for disk in roots
+          if disk.get("type") == "disk" and not is_installer(disk)
+      ]
+      sata = [
+          disk for disk in disks
+          if disk.get("tran") == "sata"
+          and str(disk.get("rota")).lower() in {"0", "false"}
+          and 250_000_000_000 <= int(disk.get("size", 0)) <= 270_000_000_000
+      ]
+      nvme = [
+          disk for disk in disks
+          if disk.get("tran") == "nvme"
+          and str(disk.get("rota")).lower() in {"0", "false"}
+          and 1_900_000_000_000 <= int(disk.get("size", 0)) <= 2_100_000_000_000
+      ]
+      if (
+          len(disks) != expected_os_disks + expected_ceph_disks
+          or len(sata) != expected_os_disks
+          or len(nvme) != expected_ceph_disks
+      ):
+          observed = [
+              {
+                  key: disk.get(key)
+                  for key in ("name", "size", "tran", "rota", "model", "serial")
+              }
+              for disk in disks
+          ]
+          fail(
+              f"expected exactly {expected_os_disks} 250-270GB SATA SSDs "
+              f"and {expected_ceph_disks} 1.9-2.1TB "
+              f"NVMe SSDs; observed {json.dumps(observed, sort_keys=True)}"
+          )
+
+      qualified_ports = set()
+      for interface in pathlib.Path("/sys/class/net").iterdir():
+          try:
+              driver = (interface / "device/driver").resolve(strict=True).name
+              if driver == qualified_driver:
+                  qualified_ports.add(interface.name)
+          except FileNotFoundError:
+              pass
+      if len(qualified_ports) != 2:
+          fail(
+              f"expected exactly two {qualified_driver} ports; "
+              f"observed {sorted(qualified_ports)}"
+          )
+
+      print(
+          f"CLOUD HOST PREFLIGHT PASSED: {qualified_driver} ports "
+          f"{sorted(qualified_ports)}",
+          flush=True,
+      )
+      PY
+
+  network:
+    version: 2
+    renderer: networkd
+    ethernets:
+      cloud-ports:
+        match:
+          driver: {{ cloud_nic_driver | to_json }}
+        dhcp4: false
+        dhcp6: false
+        mtu: {{ cloud_bond_mtu }}
+    bonds:
+      {{ cloud_bond_name }}:
+        interfaces:
+          - cloud-ports
+        dhcp4: false
+        dhcp6: false
+        mtu: {{ cloud_bond_mtu }}
+        parameters:
+          mode: {{ cloud_bond_mode }}
+          lacp-rate: {{ cloud_bond_lacp_rate }}
+          transmit-hash-policy: {{ cloud_bond_transmit_hash_policy }}
+    vlans:
+      {{ cloud_bond_name }}.20:
+        id: 20
+        link: {{ cloud_bond_name }}
+        dhcp4: false
+        mtu: {{ cloud_vlan_mtu[20] }}
+        addresses:
+          - {{ cloud_vlan_addresses[20] }}/{{ cloud_host_prefix_length }}
+        routes:
+          - to: default
+            via: {{ cloud_default_gateway }}
+        nameservers:
+          addresses: {{ cloud_dns_servers | to_json }}
+          search: []
+
+  # The two smallest SSDs are selected only after the guard proves that the
+  # disk population is exactly two small SATA SSDs plus two large NVMe SSDs.
+  # There is deliberately no storage action for either Ceph NVMe device.
+  storage:
+    swap:
+      size: 0
+    config:
+      - id: disk-os-a
+        type: disk
+        ptable: gpt
+        wipe: superblock-recursive
+        preserve: false
+        grub_device: false
+        match:
+          ssd: true
+          size: smallest
+      - id: disk-os-b
+        type: disk
+        ptable: gpt
+        wipe: superblock-recursive
+        preserve: false
+        grub_device: false
+        match:
+          ssd: true
+          size: smallest
+      - id: partition-esp-a
+        type: partition
+        device: disk-os-a
+        number: 1
+        offset: 1048576
+        size: 1127219200
+        flag: boot
+        wipe: superblock
+        preserve: false
+        grub_device: true
+      - id: format-esp-a
+        type: format
+        volume: partition-esp-a
+        fstype: fat32
+        preserve: false
+      - id: partition-boot-a
+        type: partition
+        device: disk-os-a
+        number: 2
+        offset: 1128267776
+        size: 2147483648
+        wipe: superblock
+        preserve: false
+        grub_device: false
+      - id: partition-root-a
+        type: partition
+        device: disk-os-a
+        number: 3
+        offset: 3275751424
+        size: 190000922624
+        wipe: superblock
+        preserve: false
+        grub_device: false
+      - id: partition-esp-b
+        type: partition
+        device: disk-os-b
+        number: 1
+        offset: 1048576
+        size: 1127219200
+        flag: boot
+        wipe: superblock
+        preserve: false
+        grub_device: true
+      - id: format-esp-b
+        type: format
+        volume: partition-esp-b
+        fstype: fat32
+        preserve: false
+      - id: partition-boot-b
+        type: partition
+        device: disk-os-b
+        number: 2
+        offset: 1128267776
+        size: 2147483648
+        wipe: superblock
+        preserve: false
+        grub_device: false
+      - id: partition-root-b
+        type: partition
+        device: disk-os-b
+        number: 3
+        offset: 3275751424
+        size: 190000922624
+        wipe: superblock
+        preserve: false
+        grub_device: false
+      - id: raid-boot
+        type: raid
+        name: md/md-boot
+        raidlevel: raid1
+        devices:
+          - partition-boot-a
+          - partition-boot-b
+        spare_devices: []
+        wipe: superblock
+        preserve: false
+      - id: format-boot
+        type: format
+        volume: raid-boot
+        fstype: ext4
+        preserve: false
+      - id: raid-root
+        type: raid
+        name: md/md-root
+        raidlevel: raid1
+        devices:
+          - partition-root-a
+          - partition-root-b
+        spare_devices: []
+        wipe: superblock
+        preserve: false
+      - id: vg-system
+        type: lvm_volgroup
+        name: vg-system
+        devices:
+          - raid-root
+        preserve: false
+      - id: lv-root
+        type: lvm_partition
+        name: root
+        volgroup: vg-system
+        size: 189863559168B
+        wipe: superblock
+        preserve: false
+      - id: format-root
+        type: format
+        volume: lv-root
+        fstype: ext4
+        preserve: false
+      - id: mount-root
+        type: mount
+        device: format-root
+        path: /
+      - id: mount-boot
+        type: mount
+        device: format-boot
+        path: /boot
+      - id: mount-esp
+        type: mount
+        device: format-esp-a
+        path: /boot/efi
+
+  shutdown: poweroff

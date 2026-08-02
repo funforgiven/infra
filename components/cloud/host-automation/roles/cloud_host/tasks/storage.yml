@@ -1,0 +1,97 @@
+---
+- name: Read the primary EFI mount source
+  ansible.builtin.command:
+    argv:
+      - findmnt
+      - --noheadings
+      - --output
+      - SOURCE
+      - --mountpoint
+      - /boot/efi
+  register: cloud_primary_efi_source
+  changed_when: false
+  check_mode: false
+
+- name: Resolve the primary EFI partition
+  ansible.builtin.command:
+    argv:
+      - readlink
+      - --canonicalize
+      - "{{ cloud_primary_efi_source.stdout }}"
+  register: cloud_primary_efi_partition
+  changed_when: false
+  check_mode: false
+
+- name: Resolve both inventoried EFI partitions
+  ansible.builtin.command:
+    argv:
+      - readlink
+      - --canonicalize
+      - "{{ item }}-part1"
+  loop: "{{ cloud_storage_devices.os }}"
+  register: cloud_efi_partitions
+  changed_when: false
+  check_mode: false
+
+- name: Select the EFI partition on the other OS disk
+  ansible.builtin.set_fact:
+    cloud_secondary_efi_devices: >-
+      {{
+        cloud_efi_partitions.results
+        | rejectattr('stdout', 'equalto', cloud_primary_efi_partition.stdout)
+        | map(attribute='item')
+        | map('regex_replace', '$', '-part1')
+        | list
+      }}
+
+- name: Require the inventoried secondary EFI partition
+  ansible.builtin.assert:
+    that:
+      - cloud_secondary_efi_devices | length == 1
+    fail_msg: >-
+      The two inventoried OS disks must each have the existing ESP created by
+      the Ubuntu installer. This role never creates or formats a partition.
+
+- name: Mount the secondary EFI partition
+  ansible.posix.mount:
+    path: "{{ cloud_secondary_efi_mountpoint }}"
+    src: "{{ cloud_secondary_efi_devices | first }}"
+    fstype: vfat
+    opts: defaults,nofail,x-systemd.device-timeout=10s
+    dump: "0"
+    passno: "1"
+    state: mounted
+
+- name: Install the secondary EFI synchronization helper
+  ansible.builtin.template:
+    src: cloud-sync-secondary-efi.sh.j2
+    dest: /usr/local/sbin/cloud-sync-secondary-efi
+    owner: root
+    group: root
+    mode: "0755"
+  register: cloud_efi_helper
+
+- name: Install the secondary EFI synchronization service
+  ansible.builtin.template:
+    src: cloud-sync-secondary-efi.service.j2
+    dest: /etc/systemd/system/cloud-sync-secondary-efi.service
+    owner: root
+    group: root
+    mode: "0644"
+  register: cloud_efi_service
+
+- name: Synchronize EFI after package transactions
+  ansible.builtin.template:
+    src: cloud-sync-secondary-efi-apt-hook.j2
+    dest: /etc/apt/apt.conf.d/99-cloud-sync-secondary-efi
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Enable secondary EFI synchronization at boot
+  ansible.builtin.systemd_service:
+    name: cloud-sync-secondary-efi.service
+    daemon_reload: true
+    enabled: true
+    state: >-
+      {{ 'restarted' if cloud_efi_helper.changed or cloud_efi_service.changed else 'started' }}

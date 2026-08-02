@@ -1,0 +1,6 @@
+---
+requires_ansible: ">=2.21.0,<2.22.0"
+plugin_routing:
+  cliconf:
+    routeros:
+      redirect: community.routeros.routeros

@@ -1,0 +1,69 @@
+---
+- name: Render guarded autoinstall data from cloud host inventory
+  hosts: cloud_hosts
+  connection: local
+  gather_facts: false
+
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+    ansible_become_password: ""
+
+  tasks:
+    - name: Validate the inventory contract used by destructive installation
+      ansible.builtin.assert:
+        that:
+          - autoinstall_output_directory is defined
+          - autoinstall_output_directory | length > 0
+          - ansible_host == cloud_vlan_addresses[20]
+          - cloud_storage_devices.os | length == 2
+          - cloud_storage_devices.ceph | length == 2
+          - cloud_storage_devices.os | intersect(cloud_storage_devices.ceph) | length == 0
+          - cloud_console_password_salt is regex('^[./0-9A-Za-z]{8,16}$')
+          - cloud_nic_driver | length > 0
+        quiet: true
+
+    - name: Create the private render directory
+      ansible.builtin.file:
+        path: "{{ autoinstall_output_directory }}"
+        state: directory
+        mode: "0700"
+
+    - name: Load the installation credentials
+      ansible.builtin.set_fact:
+        autoinstall_console_password: >-
+          {{
+            lookup(
+              'ansible.builtin.file',
+              autoinstall_password_file
+              | default(cloud_console_password_file, true)
+            )
+          }}
+        autoinstall_ssh_public_key: >-
+          {{
+            lookup(
+              'ansible.builtin.file',
+              playbook_dir + '/../../../../secrets/github-ssh-key.pub'
+            )
+            | trim
+          }}
+      no_log: true
+
+    - name: Derive the reproducible console password hash
+      ansible.builtin.set_fact:
+        autoinstall_password_hash: >-
+          {{
+            autoinstall_console_password
+            | ansible.builtin.password_hash(
+                'sha512',
+                cloud_console_password_salt
+              )
+          }}
+      no_log: true
+
+    - name: Render host-specific autoinstall data outside Git
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../autoinstall/user-data.yaml.j2"
+        dest: >-
+          {{ autoinstall_output_directory }}/{{ inventory_hostname }}-user-data.yaml
+        mode: "0600"
+      no_log: true

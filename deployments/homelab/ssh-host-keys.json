@@ -1,0 +1,42 @@
+{
+  "asiago": {
+    "hostNames": [
+      "10.21.20.12",
+      "asiago"
+    ],
+    "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWis+1Mr8gpI5tTaaprEBhSBim3Q/owQ0HNGfR40wEd"
+  },
+  "ccr2004": {
+    "hostNames": [
+      "10.21.10.1"
+    ],
+    "publicKey": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDut0ogWrg/w+EN6gN/PuSgTq+WHa8IlxzL0GnliUa6PHo4MG5cY/GTvFXTsJK0ipEk4tKmNeHQWBkBWMAjzafmVuhZVYnmmDCVw8UNQK2k0pR4cmwjhf+WX1zMfS10YJVBoOIwzZZH6+VmNqWschc1JS9xzoIHWlRqt3dNUR/oh4tNvjCPVrstmfgMVYfvliRFlouNah14VPZHoPJUnrcFVSJBTHxXeAlkmiAabt9wgJC5NukOmlNEtd8JqVrFGpHGZ6VDY5CSjlFb9cDGXZfdppSW/CcLm57i1TQ8lSljW7KP/qqN7qavzgQQbk3msWQgViYCQkwTmAUd9FrE82pp"
+  },
+  "crs510": {
+    "hostNames": [
+      "10.21.90.2"
+    ],
+    "publicKey": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC9p5NSzw5ZDgnT22vaFWA3wnmGVRbQtpJqDy4unKdt7CQsXJ0eldwsrp8eZ+fHTeHjxagp4m0WdsC7ZwXQtXYX/VX6qrrxp4TkLNBho87fNm9+M2P/KmrJ7DGzcsd/NnA8AhMEpaYRUPpBOXaWI+gXUMjOPTmdrKwxxkIeJ4Iy6D75Vl/To/MdFnpBAsJS6C7jbBd5uA1KK4SbMegHbZ6CQth/qs1nLxMftELOy4QYDmxzccUPRouvMslO+GrPPBDOACyuvPzOwHFw74hriudMNDDPmYAjcMZnJhch3/p7i03pHNXSZtJROoPshXsYq4uoGMdxTjmE+WXfFX5aAx3z"
+  },
+  "pecorino": {
+    "hostNames": [
+      "10.21.20.10",
+      "pecorino"
+    ],
+    "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIDNNutRxJwmjfOB/Z4uonvsN/ffBsyLiE2q3FN1d3Wm"
+  },
+  "ricotta": {
+    "hostNames": [
+      "10.21.90.3",
+      "ricotta"
+    ],
+    "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ5ei8E9FnIEpu5nqbG50MgACU4NG+vTvbIqsBsj81ao"
+  },
+  "taleggio": {
+    "hostNames": [
+      "10.21.20.11",
+      "taleggio"
+    ],
+    "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA6TBFREK/67K3C/2fMOX2uN1RKh1dOZjBf/nKojqZId"
+  }
+}

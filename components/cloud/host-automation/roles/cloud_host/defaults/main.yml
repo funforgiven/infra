@@ -1,0 +1,44 @@
+---
+cloud_supported_distribution: Ubuntu
+cloud_supported_release: noble
+cloud_minimum_memory_mb: 60000
+cloud_minimum_logical_cpus: 20
+cloud_required_cpu_flags:
+  - aes
+  - cx16
+  - lahf_lm
+  - pni
+  - popcnt
+  - sse4_1
+  - sse4_2
+  - ssse3
+cloud_ssh_hardening_drop_in: /etc/ssh/sshd_config.d/00-cloud-host-automation.conf
+cloud_console_password_file: ""
+cloud_console_password_salt: ""
+
+cloud_netplan_directory: /etc/netplan
+cloud_netplan_active_path: "{{ cloud_netplan_directory }}/99-openstack-host.yaml"
+cloud_cloud_init_network_config_path: /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+cloud_bond_members: []
+cloud_vlan_addresses: {}
+
+cloud_storage_devices:
+  os: []
+  ceph: []
+cloud_os_disk_minimum_bytes: 200000000000
+cloud_ceph_disk_minimum_bytes: 1800000000000
+cloud_secondary_efi_mountpoint: /boot/efi-secondary
+cloud_iommu_kernel_parameters: []
+cloud_cpu_virtualization_module: ""
+
+cloud_packages:
+  - chrony
+  - ethtool
+  - iproute2
+  - mdadm
+  - python3-apt
+  - rsync
+
+cloud_kernel_modules:
+  - 8021q
+  - bonding

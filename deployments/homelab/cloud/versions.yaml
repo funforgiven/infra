@@ -1,0 +1,61 @@
+schemaVersion: 1
+document: homelab-cloud-version-selection
+lastReviewed: "2026-08-02"
+
+host:
+  ubuntu:
+    version: 24.04.4
+    iso: ubuntu-24.04.4-live-server-amd64.iso
+    sha256: e907d92eeec9df64163a7e454cbc8d7755e8ddc7ed42f99dbc80c40f1a138433
+    subiquity:
+      version: 24.04.4
+      refresh: false
+  ansibleCore: 2.21.0
+
+kubernetes:
+  version: 1.35.4
+  kubespray:
+    version: 2.31.0
+    commit: 1c9add48975060f45396b34d8e022c30d7f80dab
+    runner:
+      image: quay.io/kubespray/kubespray
+      digest: sha256:6ecdd749a3661c44656ea66d9cff22bbd0b58e3d6122b59ec52ddaaa677f919d
+  kubeVip:
+    version: 1.0.3
+    image: ghcr.io/kube-vip/kube-vip
+    digest: sha256:4e2791cc0238ae01b3986d827f4d568a25d846c94bab51238fe6241281a27113
+  flux:
+    version: 2.8.8
+    linuxAmd64Sha256: 3791d8fbb73b967ada021186f7b46686a2b180ce206d3c279c3f2ad183877a7f
+  cilium:
+    version: 1.19.4
+    agentDigest: sha256:2eb67991eaa9368ba199c2fac2c573cb0ffdeb79184533344f42fc9a7ff6af3c
+    operatorDownloadDigest: sha256:7edc61725901e32a13e180c5290d43df5292f5f49c6d654c94a0be2faf52e71e
+    operatorRuntimeDigest: sha256:1aa2b62735e7d8ab49ee840ae59c346932024c88901579121395c1271b435f71
+    envoy:
+      tag: v1.36.6-1778235340-b87d1e32f522b33bd51701c6476d199326f01496
+      digest: sha256:71d4fa0ec45e8d546dbd5604e169dc77fe92be63b799313bff031d00d89762e3
+  metalLbFallback: 0.16.1
+  certManager: 1.21.1
+  externalDns: 1.21.1
+  coreDns:
+    version: 1.12.4
+    image: registry.k8s.io/coredns/coredns:v1.12.4@sha256:986f04c2e15e147d00bdd51e8c51bcef3644b13ff806be7d2ff1b261d6dfbae1
+  envoyGateway:
+    version: 1.8.3
+    chartDigest: sha256:74551245ad0b0608f207e52c9ec3ce96ddd14e7655d12d5005c1c1d03b9d422a
+
+storage:
+  rook: 1.20.3
+  ceph:
+    release: tentacle
+    version: 20.2.2
+    image: quay.io/ceph/ceph@sha256:6b4b5ae33acd3d736eb26d2a19238bce71a22f9cfb99cca887ba6312d0957644
+    forbiddenVersions: [20.2.0]
+
+openstack:
+  release: "2026.1"
+  openstackHelm:
+    chartVersion: 2026.1.0
+    repository: https://opendev.org/openstack/openstack-helm.git
+    commit: ce8c7069bcba495e3df4cc6075dc6870472f6c14

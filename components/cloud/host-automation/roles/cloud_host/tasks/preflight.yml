@@ -1,0 +1,192 @@
+---
+- name: Require the supported host hardware and operating system
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution == cloud_supported_distribution
+      - ansible_facts.distribution_release == cloud_supported_release
+      - ansible_facts.architecture == "x86_64"
+      - ansible_facts.memtotal_mb | int >= cloud_minimum_memory_mb
+      - ansible_facts.processor_nproc | int >= cloud_minimum_logical_cpus
+    fail_msg: >-
+      {{ inventory_hostname }} does not meet the Ubuntu, CPU-feature, capacity,
+      or memory contract. Review the hardware and firmware before
+      continuing.
+
+- name: Read CPU flags from the kernel
+  ansible.builtin.slurp:
+    src: /proc/cpuinfo
+  register: cloud_cpuinfo
+
+- name: Require the common migratable CPU feature floor
+  ansible.builtin.assert:
+    that:
+      - >-
+        cloud_required_cpu_flags |
+        difference(
+          ((cloud_cpuinfo.content | b64decode |
+          regex_findall('(?m)^flags\\s*:\\s*(.+)$') | first) | split)
+        ) | length == 0
+    fail_msg: >-
+      {{ inventory_hostname }} does not provide the required x86-64-v2/AES
+      feature floor.
+
+- name: Read time synchronization state
+  ansible.builtin.command:
+    argv: [timedatectl, show, --property=NTPSynchronized, --value]
+  register: cloud_time_synchronized
+  changed_when: false
+
+- name: Require synchronized time
+  ansible.builtin.assert:
+    that:
+      - cloud_time_synchronized.stdout | lower == "yes"
+
+- name: Require complete and disjoint storage inventory
+  ansible.builtin.assert:
+    that:
+      - cloud_storage_devices.os | length == 2
+      - cloud_storage_devices.ceph | length == 2
+      - cloud_storage_devices.os | unique | length == 2
+      - cloud_storage_devices.ceph | unique | length == 2
+      - cloud_storage_devices.os | intersect(cloud_storage_devices.ceph) | length == 0
+
+- name: Require exactly two qualified network interfaces
+  ansible.builtin.assert:
+    that:
+      - cloud_bond_members | length == 2
+    fail_msg: >-
+      Expected exactly two interfaces using {{ cloud_nic_driver }}; observed
+      {{ cloud_bond_members }}.
+
+- name: Inspect operating-system disks
+  ansible.builtin.command:
+    argv:
+      - lsblk
+      - --bytes
+      - --nodeps
+      - --noheadings
+      - --output
+      - TYPE,TRAN,ROTA,SIZE
+      - "{{ item }}"
+  loop: "{{ cloud_storage_devices.os }}"
+  register: cloud_os_disk_facts
+  changed_when: false
+  check_mode: false
+
+- name: Require two non-rotating SATA operating-system disks
+  ansible.builtin.assert:
+    that:
+      - item.stdout.split() | length == 4
+      - item.stdout.split()[0] == "disk"
+      - item.stdout.split()[1] == "sata"
+      - item.stdout.split()[2] == "0"
+      - item.stdout.split()[3] | int >= cloud_os_disk_minimum_bytes
+    fail_msg: "{{ item.item }} is not a qualifying SATA OS disk."
+  loop: "{{ cloud_os_disk_facts.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Inspect Ceph disks
+  ansible.builtin.command:
+    argv:
+      - lsblk
+      - --bytes
+      - --nodeps
+      - --noheadings
+      - --output
+      - TYPE,TRAN,ROTA,SIZE
+      - "{{ item }}"
+  loop: "{{ cloud_storage_devices.ceph }}"
+  register: cloud_ceph_disk_facts
+  changed_when: false
+  check_mode: false
+
+- name: Require two non-rotating NVMe Ceph disks
+  ansible.builtin.assert:
+    that:
+      - item.stdout.split() | length == 4
+      - item.stdout.split()[0] == "disk"
+      - item.stdout.split()[1] == "nvme"
+      - item.stdout.split()[2] == "0"
+      - item.stdout.split()[3] | int >= cloud_ceph_disk_minimum_bytes
+    fail_msg: "{{ item.item }} is not a qualifying NVMe Ceph disk."
+  loop: "{{ cloud_ceph_disk_facts.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Read Linux software RAID state
+  ansible.builtin.slurp:
+    src: /proc/mdstat
+  register: cloud_mdstat
+
+- name: Require healthy RAID1 arrays for root and boot
+  ansible.builtin.assert:
+    that:
+      - >-
+        (cloud_mdstat.content | b64decode
+        | regex_findall('(?m)^md\\S+\\s*:.*\\braid1\\b')) | length == 2
+      - >-
+        (cloud_mdstat.content | b64decode
+        | regex_findall('\\[2/2\\]\\s+\\[UU\\]')) | length == 2
+    fail_msg: "Both OS RAID1 arrays must be healthy [2/2] [UU]."
+
+- name: Read EFI mount sources
+  ansible.builtin.command:
+    argv:
+      - findmnt
+      - --noheadings
+      - --output
+      - SOURCE
+      - --mountpoint
+      - "{{ item }}"
+  loop:
+    - /boot/efi
+    - "{{ cloud_secondary_efi_mountpoint }}"
+  register: cloud_efi_mounts
+  changed_when: false
+  check_mode: false
+
+- name: Check the secondary fallback bootloader
+  ansible.builtin.stat:
+    path: "{{ cloud_secondary_efi_mountpoint }}/EFI/BOOT/BOOTX64.EFI"
+  register: cloud_secondary_bootloader
+
+- name: Require two distinct, synchronized EFI system partitions
+  ansible.builtin.assert:
+    that:
+      - cloud_efi_mounts.results[0].stdout | length > 0
+      - cloud_efi_mounts.results[1].stdout | length > 0
+      - cloud_efi_mounts.results[0].stdout != cloud_efi_mounts.results[1].stdout
+      - cloud_secondary_bootloader.stat.isreg | default(false)
+
+- name: Compare primary and secondary Ubuntu EFI files
+  ansible.builtin.command:
+    argv:
+      - diff
+      - --recursive
+      - --brief
+      - /boot/efi/EFI/ubuntu
+      - "{{ cloud_secondary_efi_mountpoint }}/EFI/ubuntu"
+  changed_when: false
+  check_mode: false
+
+- name: Find active IOMMU groups
+  ansible.builtin.find:
+    paths: /sys/kernel/iommu_groups
+    file_type: directory
+    recurse: false
+  register: cloud_iommu_groups
+
+- name: Check KVM availability
+  ansible.builtin.stat:
+    path: /dev/kvm
+  register: cloud_kvm
+
+- name: Require active IOMMU and KVM
+  ansible.builtin.assert:
+    that:
+      - cloud_iommu_groups.matched | int > 0
+      - cloud_kvm.stat.ischr | default(false)
+    fail_msg: >-
+      Enable VT-d or AMD-Vi and hardware virtualization, converge the host,
+      reboot, then repeat preflight.

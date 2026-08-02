@@ -7,7 +7,7 @@ Commit secret values only as SOPS ciphertext. Recipients are declared in
 
 | SOPS file and key | Purpose |
 | --- | --- |
-| `github-ssh-key.sops` | GitHub SSH authentication and signing |
+| `github-ssh-key.sops` | GitHub SSH/signing and physical-host automation |
 | `api-tokens.yaml` → `codex/anwa_github_mcp_token` | Anwa workspace GitHub MCP server |
 | `api-tokens.yaml` → `codex/github_mcp_token` | GitHub MCP server |
 | `api-tokens.yaml` → `codex/context7_api_key` | Context7 MCP server |
@@ -15,8 +15,16 @@ Commit secret values only as SOPS ciphertext. Recipients are declared in
 | `omada.yaml` → `omada/id` | Omada controller identifier |
 | `omada.yaml` → `omada/client_id` | Omada API client identifier |
 | `omada.yaml` → `omada/client_secret` | Omada API client secret |
+| `omada.yaml` → `wireless/psks/personal` | `Rooftrollen` WPA2-PSK |
+| `omada.yaml` → `wireless/psks/iot` | `Rooftrollen_IoT` WPA2-PSK |
 | `routeros.yaml` → `routeros/pppoe_username` | TurkNet PPPoE username |
 | `routeros.yaml` → `routeros/pppoe_password` | TurkNet PPPoE password |
+| `routeros.yaml` → `routeros/ccr2004_login_password` | CCR2004 `admin` login password |
+| `routeros.yaml` → `routeros/crs510_login_password` | CRS510 `admin` login password |
+| `cloud-hosts.yaml` → `cloud_hosts/taleggio/ubuntu_console_password` | Taleggio local-console and sudo recovery password |
+| `cloud-hosts.yaml` → `cloud_hosts/asiago/ubuntu_console_password` | Asiago local-console and sudo recovery password |
+| `cloud-hosts.yaml` → `cloud_hosts/pecorino/ubuntu_console_password` | Pecorino local-console and sudo recovery password |
+| `kubernetes.yaml` → `undercloud/kube_encrypt_token` | Stable Kubernetes API secret-at-rest encryption key |
 | `password-hashes.yaml` → `users/funforgiven/password_hash` | NixOS account password hash |
 
 ## Recovery
@@ -28,8 +36,10 @@ NixOS also derives a recipient from `/etc/ssh/ssh_host_ed25519_key` for
 secrets consumed during unattended activation. Backing up that host key is
 optional; it preserves the host identity and avoids updating those recipient
 sets. `omada.yaml` deliberately excludes the host because it has no deployed
-consumer. When replacing the host key, derive the new recipient, add it to
-`../.sops.yaml`, and update every host-consumed SOPS file before
+unattended runtime-file consumer. The manual Omada reconciler receives a
+personal-recipient decryption stream on standard input and does not require a
+host recipient. When replacing the host key, derive the new recipient, add it
+to `../.sops.yaml`, and update every host-consumed SOPS file before
 `nixos-install`.
 
 ## Editing
@@ -38,6 +48,8 @@ Edit the structured files with the repository-pinned CLI:
 
 ```sh
 nix run .#sops --accept-flake-config -- secrets/api-tokens.yaml
+nix run .#sops --accept-flake-config -- secrets/cloud-hosts.yaml
+nix run .#sops --accept-flake-config -- secrets/kubernetes.yaml
 nix run .#sops --accept-flake-config -- secrets/omada.yaml
 nix run .#sops --accept-flake-config -- secrets/password-hashes.yaml
 nix run .#sops --accept-flake-config -- secrets/routeros.yaml
@@ -58,6 +70,14 @@ nix run .#sops --accept-flake-config -- encrypt \
 Generate a replacement password hash with `mkpasswd -m yescrypt`, then update
 `users/funforgiven/password_hash` in `password-hashes.yaml`.
 
+Cloud-host console secrets are different: store a unique high-entropy
+plaintext value per host inside `cloud-hosts.yaml`; never commit a precomputed
+host hash. sops-nix materializes only the selected value on the controller,
+while the Ubuntu host receives only a salted one-way hash during supervised
+enrollment. OpenSSH password authentication stays disabled; the runtime value
+is used solely for password-required sudo over an SSH-key-authenticated
+connection and for PiKVM console recovery.
+
 After changing a secret, activate the NixOS configuration and restart its
 consumer:
 
@@ -65,26 +85,39 @@ consumer:
 sudo nixos-rebuild switch --flake .#parmigiano --accept-flake-config
 ```
 
-## Network Runtime Files
+## Controller Runtime Files
 
-sops-nix decrypts `routeros.yaml` during system activation and materializes
-its values as separate files owned by `funforgiven` with mode `0400`:
+sops-nix decrypts selected keys from `routeros.yaml` and `cloud-hosts.yaml`
+during system activation and materializes them as separate files owned by
+`funforgiven` with mode `0400`:
 
 | Runtime path | Consumer |
 | --- | --- |
-| `/run/secrets/homelab-routeros-pppoe-username` | RouterOS PPPoE installer |
-| `/run/secrets/homelab-routeros-pppoe-password` | RouterOS PPPoE installer |
+| `/run/secrets/homelab-routeros-ccr2004-login-password` | CCR2004 Ansible network automation |
+| `/run/secrets/homelab-routeros-crs510-login-password` | CRS510 Ansible network automation |
+| `/run/secrets/cloud-host-taleggio-ubuntu-console-password` | Taleggio Ansible sudo and PiKVM console recovery |
+| `/run/secrets/cloud-host-asiago-ubuntu-console-password` | Asiago Ansible sudo and PiKVM console recovery |
+| `/run/secrets/cloud-host-pecorino-ubuntu-console-password` | Pecorino Ansible sudo and PiKVM console recovery |
+| `/run/secrets/undercloud-kube-encrypt-token` | Kubespray secret-at-rest encryption configuration |
 
-The RouterOS launcher reads the two PPPoE files directly and prompts
-interactively for the separate RouterOS administrator password. The
-repository does not yet have an Omada API consumer, so `omada.yaml` is
-encrypted only to the personal recovery recipient. Its values are not
-decryptable by the host, materialized as runtime files, exported into an
-environment, or used to reconcile controller state. Add a narrowly scoped
-host recipient and runtime declarations only when that consumer exists.
+The two login passwords are independent URL-safe encodings of 32 random bytes:
+exactly 43 characters from `A-Z`, `a-z`, `0-9`, `_`, and `-`. Ansible checks
+the shape without printing a value. Rotate one device at a time through its
+direct console or WinBox, then update the matching SOPS value before the next
+automation run.
 
-The root `.env` migration is complete. Do not recreate it: the ignore rule is
-retained only as defense in depth. Use the SOPS editor above rather than
+The PPPoE values remain encrypted in `routeros.yaml` as the recovery source for
+future Terraform/REST adoption. They have no runtime files while there is no
+declarative consumer. The Omada reconciler documented under
+`components/cloud/network-automation/` accepts the complete decrypted JSON
+document only through standard input for manual runs. `omada.yaml` remains
+encrypted only to the personal recovery recipient: its values are not
+decryptable by the host, materialized as runtime files, or exported into an
+environment. Add a narrowly scoped host recipient and runtime declarations
+only when an unattended consumer exists.
+
+A root `.env` is forbidden; its ignore rule is defense in depth, not a secret
+storage mechanism. Use the SOPS editor above rather than
 redirecting decrypted output into a repository or temporary file. Never
 decrypt a secret into a committed path, pass a secret value in a command
 argument, or print it in validation output.
@@ -102,6 +135,8 @@ After changing `../.sops.yaml`, update every encrypted file:
 
 ```sh
 nix run .#sops --accept-flake-config -- updatekeys secrets/api-tokens.yaml
+nix run .#sops --accept-flake-config -- updatekeys secrets/cloud-hosts.yaml
+nix run .#sops --accept-flake-config -- updatekeys secrets/kubernetes.yaml
 nix run .#sops --accept-flake-config -- updatekeys secrets/github-ssh-key.sops
 nix run .#sops --accept-flake-config -- updatekeys secrets/omada.yaml
 nix run .#sops --accept-flake-config -- updatekeys secrets/password-hashes.yaml

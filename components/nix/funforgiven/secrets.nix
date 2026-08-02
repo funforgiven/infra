@@ -14,6 +14,8 @@ let
   apiTokensFile = ../../../secrets/api-tokens.yaml;
   githubSshKeyFile = ../../../secrets/github-ssh-key.sops;
   routerosSecretsFile = ../../../secrets/routeros.yaml;
+  cloudHostSecretsFile = ../../../secrets/cloud-hosts.yaml;
+  kubernetesSecretsFile = ../../../secrets/kubernetes.yaml;
   passwordHashesFile = ../../../secrets/password-hashes.yaml;
   passwordHashSecretName = "${user.username}-password-hash";
   apiTokenKeys = {
@@ -22,11 +24,33 @@ let
     github-mcp-token = "codex/github_mcp_token";
   };
   consumerSecretNames = builtins.attrNames apiTokenKeys ++ [ "github-ssh-key" ];
-  routerosSecretKeys = {
-    homelab-routeros-pppoe-password = "routeros/pppoe_password";
-    homelab-routeros-pppoe-username = "routeros/pppoe_username";
+  runtimeSecretSpecs = {
+    homelab-routeros-ccr2004-login-password = {
+      key = "routeros/ccr2004_login_password";
+      sopsFile = routerosSecretsFile;
+    };
+    homelab-routeros-crs510-login-password = {
+      key = "routeros/crs510_login_password";
+      sopsFile = routerosSecretsFile;
+    };
+    cloud-host-taleggio-ubuntu-console-password = {
+      key = "cloud_hosts/taleggio/ubuntu_console_password";
+      sopsFile = cloudHostSecretsFile;
+    };
+    cloud-host-asiago-ubuntu-console-password = {
+      key = "cloud_hosts/asiago/ubuntu_console_password";
+      sopsFile = cloudHostSecretsFile;
+    };
+    cloud-host-pecorino-ubuntu-console-password = {
+      key = "cloud_hosts/pecorino/ubuntu_console_password";
+      sopsFile = cloudHostSecretsFile;
+    };
+    undercloud-kube-encrypt-token = {
+      key = "undercloud/kube_encrypt_token";
+      sopsFile = kubernetesSecretsFile;
+    };
   };
-  routerosSecretNames = builtins.attrNames routerosSecretKeys;
+  runtimeSecretNames = builtins.attrNames runtimeSecretSpecs;
 
   mkConsumerSopsSecrets =
     permissions:
@@ -38,16 +62,8 @@ let
       };
     };
 
-  mkRouterosSopsSecrets =
-    permissions:
-    lib.mapAttrs (
-      _: key:
-      permissions
-      // {
-        inherit key;
-        sopsFile = routerosSecretsFile;
-      }
-    ) routerosSecretKeys;
+  mkRuntimeSopsSecrets =
+    permissions: lib.mapAttrs (_: specification: permissions // specification) runtimeSecretSpecs;
 
   mkSecretMcpLauncher =
     {
@@ -93,6 +109,21 @@ let
     let
       allowedSignersFile = "${config.home.homeDirectory}/.ssh/allowed_signers";
       githubPublicKey = user.accounts.github.sshPublicKey;
+      cloudHostSshSettings =
+        lib.mapAttrs
+          (_: hostName: {
+            HostName = hostName;
+            User = "ubuntu";
+            IdentityAgent = "none";
+            IdentitiesOnly = true;
+            IdentityFile = secretPaths.github-ssh-key;
+            StrictHostKeyChecking = "yes";
+          })
+          {
+            asiago = "10.21.20.12";
+            pecorino = "10.21.20.10";
+            taleggio = "10.21.20.11";
+          };
       context7McpLauncher = mkSecretMcpLauncher {
         name = "context7-mcp";
         package = pkgs.context7-mcp;
@@ -197,7 +228,8 @@ let
                 IdentityFile = secretPaths.github-ssh-key;
               };
               "*".IdentityAgent = "none";
-            };
+            }
+            // cloudHostSshSettings;
           };
         };
       };
@@ -258,15 +290,16 @@ in
               name:
               let
                 secret = config.sops.secrets.${name};
+                specification = runtimeSecretSpecs.${name};
               in
               secret.owner == secretPermissions.owner
               && secret.group == secretPermissions.group
               && secret.mode == secretPermissions.mode
               && secret.path == "/run/secrets/${name}"
-              && secret.sopsFile == routerosSecretsFile
-              && secret.key == routerosSecretKeys.${name}
-            ) routerosSecretNames;
-            message = "RouterOS secrets must be private user-owned runtime files.";
+              && secret.sopsFile == specification.sopsFile
+              && secret.key == specification.key
+            ) runtimeSecretNames;
+            message = "Runtime infrastructure secrets must be private user-owned files with their declared SOPS source and key.";
           }
         ];
 
@@ -276,7 +309,7 @@ in
           age.sshKeyPaths = [ hostIdentityPath ];
           secrets =
             mkConsumerSopsSecrets secretPermissions
-            // mkRouterosSopsSecrets secretPermissions
+            // mkRuntimeSopsSecrets secretPermissions
             // {
               "${passwordHashSecretName}" = {
                 sopsFile = passwordHashesFile;

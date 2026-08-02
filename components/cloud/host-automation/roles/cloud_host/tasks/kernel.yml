@@ -1,0 +1,32 @@
+---
+- name: Require architecture-specific virtualization configuration
+  ansible.builtin.assert:
+    that:
+      - cloud_iommu_kernel_parameters | length > 0
+      - "'iommu=pt' in cloud_iommu_kernel_parameters"
+      - cloud_cpu_virtualization_module in ["kvm_intel", "kvm_amd"]
+    fail_msg: >-
+      Set this host's IOMMU parameters and KVM module in host_vars.
+
+- name: Persist required kernel modules
+  ansible.builtin.template:
+    src: cloud-modules.conf.j2
+    dest: /etc/modules-load.d/90-openstack-cloud.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Load required kernel modules
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ (cloud_kernel_modules + [cloud_cpu_virtualization_module]) | unique }}"
+
+- name: Persist IOMMU boot parameters
+  ansible.builtin.template:
+    src: cloud-iommu.cfg.j2
+    dest: /etc/default/grub.d/90-openstack-iommu.cfg
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Rebuild grub configuration

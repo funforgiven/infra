@@ -1,0 +1,4 @@
+# Managed by Ansible. Do not edit on the host.
+{% for module in (cloud_kernel_modules + [cloud_cpu_virtualization_module]) | unique | sort %}
+{{ module }}
+{% endfor %}

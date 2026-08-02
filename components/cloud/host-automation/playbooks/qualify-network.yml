@@ -1,0 +1,117 @@
+---
+- name: Qualify the cloud-host network without changing it
+  hosts: cloud_hosts
+  become: true
+  gather_facts: true
+  any_errors_fatal: true
+
+  tasks:
+    - name: Read the active bond state
+      ansible.builtin.slurp:
+        src: "/proc/net/bonding/{{ cloud_bond_name }}"
+      register: cloud_bond_state
+
+    - name: Read member link state
+      ansible.builtin.command:
+        argv: [ethtool, "{{ item }}"]
+      loop: "{{ cloud_bond_members }}"
+      register: cloud_member_links
+      changed_when: false
+
+    - name: Read member FEC state
+      ansible.builtin.command:
+        argv: [ethtool, --show-fec, "{{ item }}"]
+      loop: "{{ cloud_bond_members }}"
+      register: cloud_member_fec
+      changed_when: false
+
+    - name: Require both members at 25 GbE with RS-FEC
+      ansible.builtin.assert:
+        that:
+          - 'item.0.stdout is search("(?m)^\\s*Speed: 25000Mb/s$")'
+          - 'item.0.stdout is search("(?m)^\\s*Duplex: Full$")'
+          - 'item.0.stdout is search("(?m)^\\s*Link detected: yes$")'
+          - 'item.1.stdout is search("(?m)^\\s*Active FEC encoding: RS$")'
+        fail_msg: "{{ item.0.item }} is not healthy at 25 GbE with RS-FEC."
+      loop: "{{ cloud_member_links.results | zip(cloud_member_fec.results) | list }}"
+      loop_control:
+        label: "{{ item.0.item }}"
+
+    - name: Require the expected active LACP bond
+      ansible.builtin.assert:
+        that:
+          - cloud_bond_members | length == 2
+          - 'cloud_bond_text is search("(?m)^Bonding Mode: IEEE 802[.]3ad")'
+          - 'cloud_bond_text is search("(?m)^Transmit Hash Policy: layer3[+]4")'
+          - 'cloud_bond_text is search("(?m)^LACP rate: fast$")'
+          - >-
+            (cloud_bond_text | regex_findall("(?m)^Slave Interface: (\\S+)$") | sort)
+            == (cloud_bond_members | sort)
+          - '(cloud_bond_text | regex_findall("(?m)^MII Status: up$")) | length == 3'
+          - '(cloud_bond_text | regex_findall("(?m)^Speed: 25000 Mbps$")) | length == 2'
+        fail_msg: "{{ cloud_bond_name }} is not the expected healthy two-port LACP bond."
+      vars:
+        cloud_bond_text: "{{ cloud_bond_state.content | b64decode }}"
+
+    - name: Read the default IPv4 route
+      ansible.builtin.command:
+        argv: [ip, -json, -4, route, show, default]
+      register: cloud_default_routes
+      changed_when: false
+
+    - name: Require the only default route on VLAN 20
+      ansible.builtin.assert:
+        that:
+          - cloud_default_routes.stdout | from_json | length == 1
+          - (cloud_default_routes.stdout | from_json | first).dev == cloud_bond_name ~ '.20'
+          - (cloud_default_routes.stdout | from_json | first).gateway == cloud_default_gateway
+
+    - name: Verify the routed 1500-byte path
+      ansible.builtin.command:
+        argv: [ping, -4, -c, "3", -W, "2", -M, do, -s, "1472", "{{ cloud_default_gateway }}"]
+      changed_when: false
+
+    - name: Verify management paths between installed hosts
+      ansible.builtin.command:
+        argv:
+          - ping
+          - -4
+          - -c
+          - "3"
+          - -W
+          - "2"
+          - -M
+          - do
+          - -s
+          - "1472"
+          - -I
+          - "{{ cloud_bond_name }}.20"
+          - "{{ hostvars[item].cloud_vlan_addresses[20] }}"
+      loop: "{{ groups.cloud_hosts | difference([inventory_hostname]) }}"
+      changed_when: false
+
+    - name: Verify jumbo paths between installed hosts
+      ansible.builtin.command:
+        argv:
+          - ping
+          - -4
+          - -c
+          - "3"
+          - -W
+          - "2"
+          - -M
+          - do
+          - -s
+          - "8972"
+          - -I
+          - "{{ cloud_bond_name }}.{{ item.0 }}"
+          - "{{ hostvars[item.1].cloud_vlan_addresses[item.0] }}"
+      loop: >-
+        {{
+          cloud_jumbo_vlans
+          | product(groups.cloud_hosts | difference([inventory_hostname]))
+          | list
+        }}
+      loop_control:
+        label: "VLAN {{ item.0 }} to {{ item.1 }}"
+      changed_when: false

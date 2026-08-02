@@ -1,0 +1,571 @@
+---
+- name: Preflight the CRS510 cloud VLAN state
+  hosts: core_switch
+  gather_facts: false
+  pre_tasks:
+    - name: Load the CRS510 controller credential
+      ansible.builtin.import_tasks: tasks/load-routeros-login-password.yaml
+      tags: [always]
+  tasks:
+    - name: Validate the structured CRS510 fabric inventory
+      ansible.builtin.assert:
+        that:
+          - crs_cloud_fabric.schema_version == 1
+          - crs_cloud_fabric.bridge | length > 0
+          - crs_cloud_fabric.server_bonds | length == 3
+          - >-
+            crs_cloud_fabric.bridge_vlans |
+            map(attribute='id') | list | unique | length ==
+            crs_cloud_fabric.bridge_vlans | length
+          - >-
+            crs_cloud_fabric.server_bonds |
+            map(attribute='name') | list | unique | length ==
+            crs_cloud_fabric.server_bonds | length
+          - >-
+            crs_cloud_fabric.server_bonds |
+            map(attribute='members') | flatten |
+            map(attribute='switch_port') | list | unique | length ==
+            crs_cloud_fabric.server_bonds |
+            map(attribute='members') | flatten | length
+          - crs_cloud_fabric.bond_policy.mode == '802.3ad'
+          - crs_cloud_fabric.bond_policy.lacp_mode == 'active'
+          - crs_cloud_fabric.bond_policy.lacp_rate == '1sec'
+          - crs_cloud_fabric.bond_policy.minimum_links == 1
+          - crs_cloud_fabric.bond_policy.mtu == 9000
+          - crs_cloud_fabric.bond_policy.l2_mtu == 9216
+          - >-
+            crs_cloud_fabric.bond_policy.l2_mtu >
+            crs_cloud_fabric.bond_policy.mtu
+          - >-
+            crs_cloud_fabric.bond_policy.transmit_hash_policy ==
+            'layer-3-and-4'
+        fail_msg: >-
+          Refusing to inspect or change the CRS510: its structured fabric
+          inventory is incomplete or violates the qualified common policy.
+      tags:
+        - always
+        - inventory-contract
+
+    - name: Validate each inventory-defined server bond
+      ansible.builtin.assert:
+        that:
+          - cloud_bond.name | length > 0
+          - cloud_bond.host | length > 0
+          - cloud_bond.members | length == 2
+        fail_msg: >-
+          Refusing the CRS510 inventory entry for {{ cloud_bond.name }}: every
+          bond needs a host and two members.
+      loop: "{{ crs_cloud_fabric.server_bonds }}"
+      loop_control:
+        label: "{{ cloud_bond.name }}"
+        loop_var: cloud_bond
+      tags:
+        - always
+        - inventory-contract
+
+    - name: Validate each inventory-defined bridge VLAN
+      ansible.builtin.assert:
+        that:
+          - cloud_vlan.id | int > 0
+          - >-
+            cloud_vlan.scope != 'switch-local' or
+            cloud_vlan.additional_tagged_interfaces | length == 0
+        fail_msg: >-
+          Switch-local VLAN {{ cloud_vlan.id }} cannot declare an uplink.
+      loop: "{{ crs_cloud_fabric.bridge_vlans }}"
+      loop_control:
+        label: "VLAN {{ cloud_vlan.id }} {{ cloud_vlan.scope }}"
+        loop_var: cloud_vlan
+      tags:
+        - always
+        - inventory-contract
+
+    - name: Require the active VLAN-aware bridge
+      community.routeros.command:
+        commands:
+          - >-
+            :if ([:len [/interface bridge find where
+            name="{{ crs_cloud_fabric.bridge }}" and
+            vlan-filtering=yes and disabled=no]] != 1) do={
+            :error "cloud prerequisite: one active VLAN-aware bridge named
+            {{ crs_cloud_fabric.bridge }} must be created by the CRS base
+            bootstrap" }
+      changed_when: false
+      tags: [always]
+
+    - name: Read switch identity
+      community.routeros.command:
+        commands:
+          - /system identity print
+      register: crs_identity_preflight
+      changed_when: false
+      tags: [always]
+
+    - name: Read current bridge state
+      community.routeros.command:
+        commands:
+          - >-
+            /interface bridge print detail without-paging where
+            name="{{ crs_cloud_fabric.bridge }}"
+      register: crs_bridge_preflight
+      changed_when: false
+      tags: [always]
+
+    - name: Read current bond state
+      community.routeros.command:
+        commands:
+          - /interface bonding print detail without-paging where name~"bond-server"
+      register: crs_bond_preflight
+      changed_when: false
+      tags: [always]
+
+    - name: Read current bridge VLAN state
+      community.routeros.command:
+        commands:
+          - /interface bridge vlan print detail without-paging
+      register: crs_vlan_preflight
+      changed_when: false
+      tags: [always]
+
+    - name: Show the CRS510 preflight without credentials
+      ansible.builtin.debug:
+        msg: >-
+          {{ crs_identity_preflight.stdout_lines
+          + crs_bridge_preflight.stdout_lines
+          + crs_bond_preflight.stdout_lines
+          + crs_vlan_preflight.stdout_lines }}
+      tags: [always]
+
+    - name: Refuse duplicate current bonds or bridge ports
+      community.routeros.command:
+        commands:
+          - >-
+            :if ([:len [/interface bonding find where
+            name="{{ cloud_bond.name }}"]] > 1) do={
+            :error "duplicate bond {{ cloud_bond.name }}" };
+            :if ([:len [/interface bridge port find where
+            bridge="{{ crs_cloud_fabric.bridge }}" and
+            interface="{{ cloud_bond.name }}"]] > 1) do={
+            :error "duplicate bridge port {{ cloud_bond.name }}" }
+      loop: "{{ crs_cloud_fabric.server_bonds }}"
+      loop_control:
+        label: "{{ cloud_bond.name }}"
+        loop_var: cloud_bond
+      changed_when: false
+      tags: [always]
+
+    - name: Refuse duplicate current bridge VLAN rows
+      community.routeros.command:
+        commands:
+          - >-
+            :if ([:len [/interface bridge vlan find where
+            bridge="{{ crs_cloud_fabric.bridge }}" and
+            vlan-ids={{ cloud_vlan.id }}]] > 1) do={
+            :error "duplicate bridge VLAN {{ cloud_vlan.id }}" }
+      loop: "{{ crs_cloud_fabric.bridge_vlans }}"
+      loop_control:
+        label: "VLAN {{ cloud_vlan.id }}"
+        loop_var: cloud_vlan
+      changed_when: false
+      tags: [always]
+
+    - name: Reconcile the server-member L2 frame ceiling
+      community.routeros.command:
+        commands:
+          - >-
+            /interface ethernet set [find where
+            default-name="{{ cloud_member.1.switch_port }}"]
+            l2mtu={{ crs_cloud_fabric.bond_policy.l2_mtu }}
+      loop: "{{ crs_cloud_fabric.server_bonds | subelements('members') }}"
+      loop_control:
+        label: >-
+          {{ cloud_member.0.name }}/{{ cloud_member.1.switch_port }}
+        loop_var: cloud_member
+      tags:
+        - never
+        - apply
+
+    - name: Create or reconcile the inventory-defined physical server bonds
+      community.routeros.command:
+        commands:
+          - >-
+            :if ([:len [/interface bonding find where
+            name="{{ cloud_bond.name }}"]] = 0) do={
+            /interface bonding add comment="infra: {{ cloud_bond.host }} cloud trunk"
+            disabled=no
+            lacp-mode={{ crs_cloud_fabric.bond_policy.lacp_mode }}
+            lacp-rate={{ crs_cloud_fabric.bond_policy.lacp_rate }}
+            min-links={{ crs_cloud_fabric.bond_policy.minimum_links }}
+            mode={{ crs_cloud_fabric.bond_policy.mode }}
+            mtu={{ crs_cloud_fabric.bond_policy.mtu }}
+            name="{{ cloud_bond.name }}"
+            slaves="{{ cloud_bond.members |
+            map(attribute='switch_port') | join(',') }}"
+            transmit-hash-policy={{
+            crs_cloud_fabric.bond_policy.transmit_hash_policy }} } else={
+            /interface bonding set [find where name="{{ cloud_bond.name }}"]
+            comment="infra: {{ cloud_bond.host }} cloud trunk" disabled=no
+            lacp-mode={{ crs_cloud_fabric.bond_policy.lacp_mode }}
+            lacp-rate={{ crs_cloud_fabric.bond_policy.lacp_rate }}
+            min-links={{ crs_cloud_fabric.bond_policy.minimum_links }}
+            mode={{ crs_cloud_fabric.bond_policy.mode }}
+            mtu={{ crs_cloud_fabric.bond_policy.mtu }}
+            slaves="{{ cloud_bond.members |
+            map(attribute='switch_port') | join(',') }}"
+            transmit-hash-policy={{
+            crs_cloud_fabric.bond_policy.transmit_hash_policy }} }
+      loop: "{{ crs_cloud_fabric.server_bonds }}"
+      loop_control:
+        label: "{{ cloud_bond.name }}"
+        loop_var: cloud_bond
+      tags:
+        - never
+        - apply
+
+    - name: Reconcile only explicitly qualified server-member PHY policies
+      community.routeros.command:
+        commands:
+          - >-
+            /interface ethernet set [find where
+            default-name="{{ cloud_member.1.switch_port }}"] disabled=no
+            auto-negotiation={{
+            cloud_member.1.phy_policy.auto_negotiation |
+            ternary('yes', 'no') }}
+            speed={{ cloud_member.1.phy_policy.speed }}
+            fec-mode={{ cloud_member.1.phy_policy.fec_mode }}
+      loop: "{{ crs_cloud_fabric.server_bonds | subelements('members') }}"
+      loop_control:
+        label: >-
+          {{ cloud_member.0.name }}/{{ cloud_member.1.switch_port }}
+        loop_var: cloud_member
+      when: cloud_member.1.phy_policy is defined
+      tags:
+        - never
+        - apply
+
+    - name: Create or reconcile the server bond bridge ports
+      community.routeros.command:
+        commands:
+          - >-
+            :if ([:len [/interface bridge port find where
+            bridge="{{ crs_cloud_fabric.bridge }}" and
+            interface="{{ cloud_bond.name }}"]] = 0) do={
+            /interface bridge port add
+            bridge="{{ crs_cloud_fabric.bridge }}"
+            comment="infra: cloud trunk {{ cloud_bond.name }}"
+            edge=auto frame-types=admit-only-vlan-tagged
+            ingress-filtering=yes interface="{{ cloud_bond.name }}" pvid=1
+            } else={ /interface bridge port set [find where
+            bridge="{{ crs_cloud_fabric.bridge }}" and
+            interface="{{ cloud_bond.name }}"]
+            comment="infra: cloud trunk {{ cloud_bond.name }}" disabled=no
+            edge=auto frame-types=admit-only-vlan-tagged
+            ingress-filtering=yes pvid=1 }
+      loop: "{{ crs_cloud_fabric.server_bonds }}"
+      loop_control:
+        label: "{{ cloud_bond.name }}"
+        loop_var: cloud_bond
+      tags:
+        - never
+        - apply
+
+    - name: Create or reconcile the inventory-defined cloud bridge VLANs
+      community.routeros.command:
+        commands:
+          - >-
+            :if ([:len [/interface bridge vlan find where
+            bridge="{{ crs_cloud_fabric.bridge }}" and
+            vlan-ids={{ cloud_vlan.id }}]] = 0) do={
+            /interface bridge vlan add
+            bridge="{{ crs_cloud_fabric.bridge }}"
+            comment="{{ cloud_vlan.comment }}"
+            tagged="{{ (cloud_vlan.additional_tagged_interfaces +
+            (crs_cloud_fabric.server_bonds | map(attribute='name') | list)) |
+            join(',') }}" untagged="" vlan-ids={{ cloud_vlan.id }} } else={
+            /interface bridge vlan set [find where
+            bridge="{{ crs_cloud_fabric.bridge }}" and
+            vlan-ids={{ cloud_vlan.id }}]
+            comment="{{ cloud_vlan.comment }}"
+            tagged="{{ (cloud_vlan.additional_tagged_interfaces +
+            (crs_cloud_fabric.server_bonds | map(attribute='name') | list)) |
+            join(',') }}" untagged="" }
+      loop: "{{ crs_cloud_fabric.bridge_vlans }}"
+      loop_control:
+        label: "VLAN {{ cloud_vlan.id }} {{ cloud_vlan.scope }}"
+        loop_var: cloud_vlan
+      tags:
+        - never
+        - apply
+
+    - name: Assert every reconciled bond and tagged bridge-port configuration
+      community.routeros.command:
+        commands:
+          - >-
+            :if ([:len [/interface bonding find where
+            name="{{ cloud_bond.name }}" and disabled=no and
+            mode={{ crs_cloud_fabric.bond_policy.mode }} and
+            lacp-mode={{ crs_cloud_fabric.bond_policy.lacp_mode }} and
+            lacp-rate={{ crs_cloud_fabric.bond_policy.lacp_rate }} and
+            min-links={{ crs_cloud_fabric.bond_policy.minimum_links }} and
+            mtu={{ crs_cloud_fabric.bond_policy.mtu }} and
+            transmit-hash-policy={{
+            crs_cloud_fabric.bond_policy.transmit_hash_policy }}]] != 1)
+            do={ :error "cloud postflight: invalid bond
+            {{ cloud_bond.name }}" };
+            :if ([:tostr [/interface bonding get [find where
+            name="{{ cloud_bond.name }}"] slaves]] !=
+            "{{ cloud_bond.members | map(attribute='switch_port') |
+            join(';') }}") do={ :error "cloud postflight: invalid members on
+            {{ cloud_bond.name }}" };
+            :if ([:len [/interface bridge port find where
+            bridge="{{ crs_cloud_fabric.bridge }}" and
+            interface="{{ cloud_bond.name }}" and disabled=no and
+            edge=auto and
+            frame-types=admit-only-vlan-tagged and ingress-filtering=yes]]
+            != 1) do={ :error "cloud postflight: invalid bridge port
+            {{ cloud_bond.name }}" }
+      loop: "{{ crs_cloud_fabric.server_bonds }}"
+      loop_control:
+        label: "{{ cloud_bond.name }}"
+        loop_var: cloud_bond
+      changed_when: false
+      tags:
+        - never
+        - apply
+
+    - name: Assert every server-member L2 frame ceiling
+      community.routeros.command:
+        commands:
+          - >-
+            :if ([:len [/interface ethernet find where
+            default-name="{{ cloud_member.1.switch_port }}" and
+            l2mtu={{ crs_cloud_fabric.bond_policy.l2_mtu }}]] != 1) do={
+            :error "cloud postflight: invalid L2 MTU on
+            {{ cloud_member.1.switch_port }}" }
+      loop: "{{ crs_cloud_fabric.server_bonds | subelements('members') }}"
+      loop_control:
+        label: >-
+          {{ cloud_member.0.name }}/{{ cloud_member.1.switch_port }}
+        loop_var: cloud_member
+      changed_when: false
+      tags:
+        - never
+        - apply
+
+    - name: Assert every explicitly qualified member PHY configuration
+      community.routeros.command:
+        commands:
+          - >-
+            :if ([:len [/interface ethernet find where
+            default-name="{{ cloud_member.1.switch_port }}" and disabled=no
+            and auto-negotiation={{
+            cloud_member.1.phy_policy.auto_negotiation |
+            ternary('yes', 'no') }} and
+            speed={{ cloud_member.1.phy_policy.speed }} and
+            fec-mode={{ cloud_member.1.phy_policy.fec_mode }}]] != 1) do={
+            :error "cloud postflight: invalid PHY configuration on
+            {{ cloud_member.1.switch_port }}" }
+      loop: "{{ crs_cloud_fabric.server_bonds | subelements('members') }}"
+      loop_control:
+        label: >-
+          {{ cloud_member.0.name }}/{{ cloud_member.1.switch_port }}
+        loop_var: cloud_member
+      when: cloud_member.1.phy_policy is defined
+      changed_when: false
+      tags:
+        - never
+        - apply
+
+    - name: Assert every inventory-defined bridge VLAN configuration
+      community.routeros.command:
+        commands:
+          - >-
+            :local row [/interface bridge vlan find where
+            bridge="{{ crs_cloud_fabric.bridge }}" and
+            vlan-ids={{ cloud_vlan.id }}];
+            :if ([:len $row] != 1) do={ :error "cloud postflight: missing VLAN
+            {{ cloud_vlan.id }}" };
+            :if ([:tostr [/interface bridge vlan get $row tagged]] !=
+            "{{ (cloud_vlan.additional_tagged_interfaces +
+            (crs_cloud_fabric.server_bonds | map(attribute='name') | list)) |
+            join(';') }}") do={ :error "cloud postflight: invalid tagged
+            interfaces on VLAN {{ cloud_vlan.id }}" };
+            :if ([:tostr [/interface bridge vlan get $row untagged]] != "")
+            do={ :error "cloud postflight: unexpected untagged interface on
+            VLAN {{ cloud_vlan.id }}" }
+      loop: "{{ crs_cloud_fabric.bridge_vlans }}"
+      loop_control:
+        label: "VLAN {{ cloud_vlan.id }} {{ cloud_vlan.scope }}"
+        loop_var: cloud_vlan
+      changed_when: false
+      tags:
+        - never
+        - apply
+
+- name: Reconcile current CCR2004 static DHCP leases
+  hosts: core_router
+  gather_facts: false
+  pre_tasks:
+    - name: Load the CCR2004 controller credential
+      ansible.builtin.import_tasks: tasks/load-routeros-login-password.yaml
+      tags: [always]
+  tasks:
+    - name: Validate the current CCR2004 inventory
+      ansible.builtin.assert:
+        that:
+          - routeros_management_dhcp.name | length > 0
+          - routeros_management_dhcp.interface | length > 0
+          - routeros_management_dhcp.network | length > 0
+          - routeros_management_dhcp.gateway | length > 0
+          - routeros_management_dhcp.dns_server | length > 0
+          - routeros_management_dhcp.lease_time | length > 0
+          - >-
+            routeros_static_leases | map(attribute='comment') | list |
+            unique | length == routeros_static_leases | length
+          - >-
+            routeros_static_leases | map(attribute='mac_address') | list |
+            unique | length == routeros_static_leases | length
+          - >-
+            routeros_static_leases | map(attribute='address') | list |
+            unique | length == routeros_static_leases | length
+        fail_msg: >-
+          Refusing CCR2004 access: static leases must be complete and unique.
+      tags:
+        - always
+        - inventory-contract
+
+    - name: Require the management VLAN interface
+      community.routeros.command:
+        commands:
+          - >-
+            :if ([:len [/interface vlan find where
+            name="{{ routeros_management_dhcp.interface }}" and
+            disabled=no]] != 1) do={
+            :error "missing management VLAN interface" }
+      changed_when: false
+      tags: [always]
+
+    - name: Read current CCR2004 static leases
+      community.routeros.command:
+        commands:
+          - /system identity print
+          - >-
+            /ip dhcp-server print detail without-paging where
+            name="{{ routeros_management_dhcp.name }}"
+          - >-
+            /ip dhcp-server network print detail without-paging where
+            comment="infra: management static leases"
+          - /ip dhcp-server lease print detail without-paging where comment~"infra:"
+      register: ccr_preflight
+      changed_when: false
+      tags: [always]
+
+    - name: Show the CCR2004 preflight without credentials
+      ansible.builtin.debug:
+        var: ccr_preflight.stdout_lines
+      tags: [always]
+
+    - name: Reconcile the static-only management DHCP network
+      community.routeros.command:
+        commands:
+          - >-
+            :local network [/ip dhcp-server network find where
+            address={{ routeros_management_dhcp.network }}];
+            :if ([:len $network] = 0) do={
+            /ip dhcp-server network add
+            address={{ routeros_management_dhcp.network }}
+            comment="infra: management static leases"
+            dns-server={{ routeros_management_dhcp.dns_server }}
+            gateway={{ routeros_management_dhcp.gateway }} } else={
+            :if ([:len $network] != 1) do={
+            :error "duplicate management DHCP network" };
+            /ip dhcp-server network set $network
+            comment="infra: management static leases"
+            dns-server={{ routeros_management_dhcp.dns_server }}
+            gateway={{ routeros_management_dhcp.gateway }} }
+      tags:
+        - never
+        - apply
+
+    - name: Reconcile the static-only management DHCP server
+      community.routeros.command:
+        commands:
+          - >-
+            :local server [/ip dhcp-server find where
+            name="{{ routeros_management_dhcp.name }}"];
+            :if ([:len $server] = 0) do={
+            /ip dhcp-server add address-pool=static-only
+            comment="infra: management static leases" disabled=no
+            interface={{ routeros_management_dhcp.interface }}
+            lease-time={{ routeros_management_dhcp.lease_time }}
+            name="{{ routeros_management_dhcp.name }}" } else={
+            :if ([:len $server] != 1) do={
+            :error "duplicate management DHCP server" };
+            /ip dhcp-server set $server address-pool=static-only
+            comment="infra: management static leases" disabled=no
+            interface={{ routeros_management_dhcp.interface }}
+            lease-time={{ routeros_management_dhcp.lease_time }} }
+      tags:
+        - never
+        - apply
+
+    - name: Require every declared DHCP server after reconciliation
+      community.routeros.command:
+        commands:
+          - >-
+            :if ([:len [/ip dhcp-server find where
+            name="{{ static_lease.server }}" and disabled=no]] != 1) do={
+            :error "missing DHCP server {{ static_lease.server }}" }
+      loop: "{{ routeros_static_leases }}"
+      loop_control:
+        label: "{{ static_lease.server }}"
+        loop_var: static_lease
+      changed_when: false
+      tags:
+        - never
+        - apply
+
+    - name: Reconcile Git-owned static DHCP leases
+      community.routeros.command:
+        commands:
+          - >-
+            :local lease [/ip dhcp-server lease find where
+            comment="{{ static_lease.comment }}"];
+            :if ([:len $lease] = 0) do={
+            /ip dhcp-server lease add
+            address={{ static_lease.address }}
+            comment="{{ static_lease.comment }}" disabled=no
+            mac-address={{ static_lease.mac_address }}
+            server={{ static_lease.server }} } else={
+            :if ([:len $lease] != 1) do={
+            :error "duplicate Git-owned static lease" };
+            /ip dhcp-server lease set $lease
+            address={{ static_lease.address }} disabled=no
+            mac-address={{ static_lease.mac_address }}
+            server={{ static_lease.server }} }
+      loop: "{{ routeros_static_leases }}"
+      loop_control:
+        label: "{{ static_lease.comment }}"
+        loop_var: static_lease
+      tags:
+        - never
+        - apply
+
+    - name: Prove every Git-owned static DHCP lease
+      community.routeros.command:
+        commands:
+          - >-
+            :if ([:len [/ip dhcp-server lease find where
+            comment="{{ static_lease.comment }}" and
+            address={{ static_lease.address }} and disabled=no and
+            mac-address={{ static_lease.mac_address }} and
+            server={{ static_lease.server }}]] != 1) do={
+            :error "invalid Git-owned static lease" }
+      loop: "{{ routeros_static_leases }}"
+      loop_control:
+        label: "{{ static_lease.comment }}"
+        loop_var: static_lease
+      changed_when: false
+      tags:
+        - never
+        - apply

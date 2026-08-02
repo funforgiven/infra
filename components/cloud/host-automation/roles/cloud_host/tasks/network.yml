@@ -1,0 +1,58 @@
+---
+- name: Disable cloud-init network rendering
+  ansible.builtin.copy:
+    dest: "{{ cloud_cloud_init_network_config_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      network: {config: disabled}
+
+- name: Install the canonical cloud host Netplan
+  ansible.builtin.template:
+    src: netplan.yaml.j2
+    dest: "{{ cloud_netplan_active_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Apply Netplan
+
+- name: Find Netplan files outside the Git-owned configuration
+  ansible.builtin.find:
+    paths: "{{ cloud_netplan_directory }}"
+    patterns:
+      - "*.yaml"
+      - "*.yml"
+    file_type: file
+    recurse: false
+  register: cloud_netplan_files
+
+- name: Remove competing Netplan files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ cloud_netplan_files.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+  when: item.path != cloud_netplan_active_path
+  notify: Apply Netplan
+
+- name: Read the final Netplan file set
+  ansible.builtin.find:
+    paths: "{{ cloud_netplan_directory }}"
+    patterns:
+      - "*.yaml"
+      - "*.yml"
+    file_type: file
+    recurse: false
+  register: cloud_final_netplan_files
+
+- name: Require one Git-owned Netplan source
+  ansible.builtin.assert:
+    that:
+      - >-
+        (cloud_final_netplan_files.files | map(attribute='path') | list)
+        == [cloud_netplan_active_path]
+    fail_msg: >-
+      Refusing to apply merged network state: {{ cloud_netplan_active_path }}
+      must be the only Netplan YAML file.

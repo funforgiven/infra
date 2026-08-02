@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+primary=/boot/efi
+secondary={{ cloud_secondary_efi_mountpoint | quote }}
+
+primary_source=$(readlink -f "$(findmnt --noheadings --output SOURCE --mountpoint "$primary")")
+secondary_source=$(readlink -f "$(findmnt --noheadings --output SOURCE --mountpoint "$secondary")")
+if [[ -z $primary_source || -z $secondary_source || $primary_source == "$secondary_source" ]]; then
+  echo "EFI mounts are absent or refer to the same partition" >&2
+  exit 1
+fi
+
+rsync --archive --delete "$primary/EFI/" "$secondary/EFI/"
+install -d "$secondary/EFI/BOOT"
+if [[ -f $primary/EFI/ubuntu/shimx64.efi ]]; then
+  cp "$primary/EFI/ubuntu/shimx64.efi" "$secondary/EFI/BOOT/BOOTX64.EFI"
+elif [[ -f $primary/EFI/ubuntu/grubx64.efi ]]; then
+  cp "$primary/EFI/ubuntu/grubx64.efi" "$secondary/EFI/BOOT/BOOTX64.EFI"
+else
+  echo "No Ubuntu EFI loader found" >&2
+  exit 1
+fi
+sync --file-system "$secondary"

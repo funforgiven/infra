@@ -1,0 +1,45 @@
+---
+ansible_user: ubuntu
+ansible_python_interpreter: /usr/bin/python3
+ansible_ssh_private_key_file: /run/secrets/github-ssh-key
+ansible_ssh_common_args: >-
+  -o BatchMode=yes
+  -o IdentitiesOnly=yes
+  -o IdentityAgent=none
+  -o StrictHostKeyChecking=yes
+  -o GlobalKnownHostsFile=/etc/ssh/ssh_known_hosts
+  -o UserKnownHostsFile=/dev/null
+
+cloud_host_automation_user: ubuntu
+cloud_nic_driver: ice
+cloud_bond_members: >-
+  {{
+    ansible_facts.interfaces
+    | default([])
+    | map('extract', ansible_facts)
+    | selectattr('module', 'defined')
+    | selectattr('module', 'equalto', cloud_nic_driver)
+    | map(attribute='device')
+    | sort
+    | list
+  }}
+cloud_bond_name: bond0
+cloud_bond_mode: 802.3ad
+cloud_bond_mtu: 9000
+cloud_bond_lacp_rate: fast
+cloud_bond_min_links: 1
+cloud_bond_transmit_hash_policy: layer3+4
+cloud_bond_mii_monitor_ms: 100
+cloud_host_prefix_length: 24
+cloud_default_gateway: 10.21.20.1
+cloud_dns_servers:
+  - 10.21.20.1
+cloud_vlan_mtu:
+  20: 1500
+  30: 9000
+  31: 9000
+  32: 9000
+cloud_jumbo_vlans:
+  - 30
+  - 31
+  - 32

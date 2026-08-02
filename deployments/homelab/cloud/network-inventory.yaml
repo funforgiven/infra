@@ -1,0 +1,113 @@
+---
+all:
+  vars:
+    ansible_connection: ansible.netcommon.network_cli
+    ansible_network_os: fahrican.routeros.routeros
+    ansible_user: admin
+  children:
+    core_switch:
+      hosts:
+        crs510:
+          ansible_host: 10.21.90.2
+          routeros_login_password_file: >-
+            /run/secrets/homelab-routeros-crs510-login-password
+          crs_cloud_fabric:
+            schema_version: 1
+            bridge: bridge
+            bond_policy:
+              mode: 802.3ad
+              lacp_mode: active
+              lacp_rate: 1sec
+              minimum_links: 1
+              mtu: 9000
+              l2_mtu: 9216
+              transmit_hash_policy: layer-3-and-4
+            server_bonds:
+              - name: bond-server1
+                host: taleggio
+                members:
+                  - switch_port: sfp28-3
+                    phy_policy:
+                      auto_negotiation: false
+                      speed: 25G-baseCR
+                      fec_mode: fec91
+                  - switch_port: sfp28-4
+                    phy_policy:
+                      auto_negotiation: false
+                      speed: 25G-baseCR
+                      fec_mode: fec91
+              - name: bond-server2
+                host: asiago
+                members:
+                  - switch_port: sfp28-5
+                    phy_policy:
+                      auto_negotiation: false
+                      speed: 25G-baseCR
+                      fec_mode: fec91
+                  - switch_port: sfp28-6
+                    phy_policy:
+                      auto_negotiation: false
+                      speed: 25G-baseCR
+                      fec_mode: fec91
+              - name: bond-server3
+                host: pecorino
+                members:
+                  - switch_port: sfp28-7
+                    phy_policy:
+                      auto_negotiation: false
+                      speed: 25G-baseCR
+                      fec_mode: fec91
+                  - switch_port: sfp28-8
+                    phy_policy:
+                      auto_negotiation: false
+                      speed: 25G-baseCR
+                      fec_mode: fec91
+            bridge_vlans:
+              - id: 20
+                comment: "infra: SERVERS"
+                additional_tagged_interfaces:
+                  - sfp28-1
+                  - sfp28-2
+                scope: routed
+              - id: 30
+                comment: "infra: CEPH; switch-local only"
+                additional_tagged_interfaces: []
+                scope: switch-local
+              - id: 31
+                comment: "infra: NOVA-MIGRATION; switch-local only"
+                additional_tagged_interfaces: []
+                scope: switch-local
+              - id: 32
+                comment: "infra: OVN-GENEVE; switch-local only"
+                additional_tagged_interfaces: []
+                scope: switch-local
+    core_router:
+      hosts:
+        ccr2004:
+          ansible_host: 10.21.10.1
+          routeros_login_password_file: >-
+            /run/secrets/homelab-routeros-ccr2004-login-password
+          routeros_management_dhcp:
+            name: dhcp-management
+            interface: vlan90-mgmt
+            network: 10.21.90.0/24
+            gateway: 10.21.90.1
+            dns_server: 10.21.90.1
+            lease_time: 1d
+          routeros_static_leases:
+            - comment: "infra: primary admin workstation"
+              mac_address: 60:CF:84:ED:E9:1E
+              address: 10.21.10.20
+              server: dhcp-trusted
+            - comment: "infra: Hue Bridge"
+              mac_address: EC:B5:FA:8E:DB:63
+              address: 10.21.50.121
+              server: dhcp-iot
+            - comment: "infra: PiKVM ricotta"
+              mac_address: 2C:CF:67:9D:A2:F7
+              address: 10.21.90.3
+              server: dhcp-management
+            - comment: "infra: Omada switch"
+              mac_address: 98:25:4A:CB:BF:BE
+              address: 10.21.90.5
+              server: dhcp-management
