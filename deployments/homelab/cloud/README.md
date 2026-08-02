@@ -24,10 +24,15 @@ RAM-backed isolated restore passed. Wave 30 is complete: Rook/Ceph reports
 ready, and the storage classes passed their semantic gates. Wave 35
 observability and Wave 36 Ceph monitoring integrations are complete. All four
 Ceph scrape targets are up, every selected alert rule evaluates cleanly, and
-the monitoring admission webhooks fail closed. A disposable RBD qualification
-image sustained about 89.7k 4 KiB random-write IOPS, 109.9k random-read IOPS,
-and 84.3k IOPS at a 70:30 read/write mix before being removed. Production
-eligibility remains false.
+the monitoring admission webhooks fail closed. Wave 37's primary service-VIP
+path is qualified: three host-spread internal DNS replicas serve
+`10.21.20.129`, Cilium has one L2 lease holder, a controlled ownership handoff
+completed with 297 consecutive UDP-and-TCP probes and no failure, and the
+CCR2004 forwards `cloud.fahrican.com` over both transports. The mutually
+exclusive MetalLB rollback remains the final Wave 37 hold point. A disposable
+RBD qualification image sustained about 89.7k 4 KiB random-write IOPS, 109.9k
+random-read IOPS, and 84.3k IOPS at a 70:30 read/write mix before being
+removed. Production eligibility remains false.
 
 The small set of current documents is intentional:
 
@@ -349,8 +354,9 @@ host. VLAN 40 is deliberately deferred to the Neutron external-network wave and
 does not block Kubernetes bootstrap; its later acceptance must prove that VLANs
 30–33 do not leak northbound.
 
-Before service waves open, qualify the internal DNS, certificate, Gateway API,
-service-VIP ownership, failover, and MetalLB rollback contracts. Decide whether
+Internal DNS and the primary Cilium service-VIP ownership and failover contract
+are qualified. Before service waves open, qualify certificate issuance,
+Gateway API, Envoy Gateway, and the MetalLB rollback contract. Decide whether
 any public endpoint exists; the default remains none. The bucket intentionally
 has no Object Lock and therefore makes no immutability claim. Manila needs its
 approved project IDs and negative access test. OpenStack gates need immutable
