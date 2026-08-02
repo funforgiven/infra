@@ -1,0 +1,35 @@
+---
+- name: Require the supported host and complete inventory
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution == cloud_supported_distribution
+      - ansible_facts.distribution_release == cloud_supported_release
+      - ansible_facts.architecture == "x86_64"
+      - cloud_bond_members | length == 2
+      - cloud_storage_devices.os | length == 2
+      - cloud_storage_devices.ceph | length == 2
+
+- name: Install host prerequisites
+  ansible.builtin.apt:
+    name: "{{ cloud_packages }}"
+    update_cache: true
+    cache_valid_time: 3600
+    state: present
+
+- name: Keep time synchronized
+  ansible.builtin.service:
+    name: chrony
+    enabled: true
+    state: started
+
+- name: Harden the automation account and SSH
+  ansible.builtin.import_tasks: account-security.yml
+
+- name: Configure kernel prerequisites
+  ansible.builtin.import_tasks: kernel.yml
+
+- name: Maintain redundant EFI boot files
+  ansible.builtin.import_tasks: storage.yml
+
+- name: Configure the host network
+  ansible.builtin.import_tasks: network.yml

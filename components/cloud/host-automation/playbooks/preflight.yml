@@ -1,0 +1,12 @@
+---
+- name: Validate installed physical cloud hosts
+  hosts: cloud_hosts
+  become: true
+  gather_facts: true
+  any_errors_fatal: true
+
+  tasks:
+    - name: Run strict cloud host preflight
+      ansible.builtin.include_role:
+        name: cloud_host
+        tasks_from: preflight

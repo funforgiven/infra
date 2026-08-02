@@ -1,0 +1,25 @@
+---
+cloud_storage_devices:
+  os:
+    - /dev/disk/by-path/pci-0000:00:17.0-ata-5.0
+    - /dev/disk/by-path/pci-0000:00:17.0-ata-6.0
+  ceph:
+    - /dev/disk/by-path/pci-0000:02:00.0-nvme-1
+    - /dev/disk/by-path/pci-0000:03:00.0-nvme-1
+
+cloud_vlan_addresses:
+  20: 10.21.20.11
+  30: 10.21.30.11
+  31: 10.21.31.11
+  32: 10.21.32.11
+
+cloud_iommu_kernel_parameters:
+  - intel_iommu=on
+  - iommu=pt
+cloud_cpu_virtualization_module: kvm_intel
+
+# sops-nix owns this controller-side runtime file. No plaintext is in Git.
+cloud_console_password_file: /run/secrets/cloud-host-taleggio-ubuntu-console-password
+cloud_console_password_salt: taleggio.ubuntu
+ansible_become_password: >-
+  {{ lookup('ansible.builtin.file', cloud_console_password_file) }}

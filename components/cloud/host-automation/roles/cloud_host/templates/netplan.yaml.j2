@@ -1,0 +1,49 @@
+# Managed by Ansible.
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    cloud-ports:
+      match:
+        driver: {{ cloud_nic_driver | to_json }}
+      dhcp4: false
+      dhcp6: false
+      accept-ra: false
+      optional: true
+      mtu: {{ cloud_bond_mtu }}
+  bonds:
+    {{ cloud_bond_name }}:
+      interfaces:
+        - cloud-ports
+      dhcp4: false
+      dhcp6: false
+      accept-ra: false
+      mtu: {{ cloud_bond_mtu }}
+      parameters:
+        mode: {{ cloud_bond_mode }}
+        lacp-rate: {{ cloud_bond_lacp_rate }}
+        min-links: {{ cloud_bond_min_links }}
+        mii-monitor-interval: {{ cloud_bond_mii_monitor_ms }}
+        transmit-hash-policy: {{ cloud_bond_transmit_hash_policy }}
+  vlans:
+{% for vlan_id, mtu in cloud_vlan_mtu | dictsort %}
+    {{ cloud_bond_name }}.{{ vlan_id }}:
+      id: {{ vlan_id }}
+      link: {{ cloud_bond_name }}
+      mtu: {{ mtu }}
+      dhcp4: false
+      dhcp6: false
+      accept-ra: false
+      link-local: []
+{% if vlan_id in cloud_vlan_addresses %}
+      addresses:
+        - {{ cloud_vlan_addresses[vlan_id] }}/{{ cloud_host_prefix_length }}
+{% endif %}
+{% if vlan_id == 20 %}
+      routes:
+        - to: default
+          via: {{ cloud_default_gateway }}
+      nameservers:
+        addresses: {{ cloud_dns_servers | to_json }}
+{% endif %}
+{% endfor %}

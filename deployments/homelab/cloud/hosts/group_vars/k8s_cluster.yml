@@ -1,0 +1,92 @@
+---
+ip: "{{ ansible_host }}"
+access_ip: "{{ ansible_host }}"
+etcd_member_name: "{{ inventory_hostname }}"
+
+kube_version: "1.35.4"
+container_manager: containerd
+kube_network_plugin: cilium
+# Cilium's unprivileged init containers require the host CNI directory to be
+# root-owned; this is the compatibility setting documented by Kubespray.
+kube_owner: root
+
+kube_service_addresses: 10.233.0.0/18
+kube_pods_subnet: 10.233.64.0/18
+kube_network_node_prefix: 24
+
+kube_api_anonymous_auth: true
+kube_encrypt_secret_data: true
+kube_encrypt_token: >-
+  {{ lookup('ansible.builtin.file', '/run/secrets/undercloud-kube-encrypt-token') }}
+kubernetes_audit: true
+unsafe_show_logs: false
+
+# Keep generated Kubespray material ephemeral and outside the Git worktree.
+kubeconfig_localhost: false
+kubectl_localhost: false
+credentials_dir: /run/kubespray
+artifacts_dir: /run/kubespray
+
+# kube-vip owns only the highly available Kubernetes API endpoint. It never
+# competes with Cilium or the MetalLB fallback for Service addresses.
+kube_vip_version: "1.0.3"
+kube_vip_enabled: true
+kube_vip_arp_enabled: true
+kube_vip_bgp_enabled: false
+kube_vip_controlplane_enabled: true
+kube_vip_services_enabled: false
+kube_vip_enableServicesElection: false
+kube_vip_lb_enable: false
+kube_vip_address: 10.21.20.128
+kube_vip_interface: bond0.20
+kube_vip_cidr: 32
+kube_vip_image_repo: ghcr.io/kube-vip/kube-vip
+kube_vip_image_digest: sha256:4e2791cc0238ae01b3986d827f4d568a25d846c94bab51238fe6241281a27113
+kube_vip_image_tag: "v{{ kube_vip_version }}@{{ kube_vip_image_digest }}"
+kube_vip_digest_checksum: >-
+  {{ kube_vip_image_digest | regex_replace('^sha256:', '') }}
+kube_proxy_strict_arp: true
+loadbalancer_apiserver:
+  address: "{{ kube_vip_address }}"
+  port: 6443
+
+# Kubespray validates vxlan as tunnelProtocol. routingMode is authoritative and
+# disables encapsulation; the protocol value remains inert in native mode.
+cilium_version: "1.19.4"
+cilium_mtu: "1500"
+cilium_kube_proxy_replacement: true
+cilium_tunnel_mode: vxlan
+cilium_auto_direct_node_routes: true
+cilium_native_routing_cidr: 10.233.64.0/18
+cilium_dns_proxy_enable_transparent_mode: false
+cilium_enable_hubble: false
+cilium_gateway_api_enabled: false
+cilium_l2announcements: false
+
+cilium_agent_image_digest: sha256:2eb67991eaa9368ba199c2fac2c573cb0ffdeb79184533344f42fc9a7ff6af3c
+cilium_operator_download_digest: sha256:7edc61725901e32a13e180c5290d43df5292f5f49c6d654c94a0be2faf52e71e
+cilium_operator_generic_digest: sha256:1aa2b62735e7d8ab49ee840ae59c346932024c88901579121395c1271b435f71
+cilium_envoy_image_digest: sha256:71d4fa0ec45e8d546dbd5604e169dc77fe92be63b799313bff031d00d89762e3
+cilium_hubble_envoy_image_repo: quay.io/cilium/cilium-envoy
+cilium_hubble_envoy_image_tag: v1.36.6-1778235340-b87d1e32f522b33bd51701c6476d199326f01496
+cilium_digest_checksum: >-
+  {{ cilium_agent_image_digest | regex_replace('^sha256:', '') }}
+cilium_operator_digest_checksum: >-
+  {{ cilium_operator_download_digest | regex_replace('^sha256:', '') }}
+cilium_hubble_envoy_digest_checksum: >-
+  {{ cilium_envoy_image_digest | regex_replace('^sha256:', '') }}
+
+cilium_extra_values:
+  routingMode: native
+  devices:
+    - bond0.20
+  image:
+    override: "quay.io/cilium/cilium:v{{ cilium_version }}@{{ cilium_agent_image_digest }}"
+  operator:
+    image:
+      override: >-
+        quay.io/cilium/operator-generic:v{{ cilium_version }}@{{ cilium_operator_generic_digest }}
+  envoy:
+    image:
+      override: >-
+        {{ cilium_hubble_envoy_image_repo }}:{{ cilium_hubble_envoy_image_tag }}@{{ cilium_envoy_image_digest }}

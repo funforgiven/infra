@@ -1,0 +1,62 @@
+version: 1
+
+site: Hark
+
+switch:
+  name: 98-25-4A-CB-BF-BE
+  mac: 98-25-4A-CB-BF-BE
+  model: SG3210XHP-M2 v3.0
+  profileTemplate: All
+
+  # The controller UI owns this because the public OpenAPI does not expose it.
+  management:
+    vlan: 90
+    addressMode: dhcp
+    dhcpReservation: 10.21.90.5/24
+    fallbackAddress: 192.168.90.5/24
+    previousInterface: disabled
+
+  profiles:
+    infra-trusted-access:
+      nativeVlan: 10
+      taggedVlans: []
+    infra-iot-access:
+      nativeVlan: 50
+      taggedVlans: []
+    infra-management-access:
+      nativeVlan: 90
+      taggedVlans: []
+    infra-ap-trunk:
+      nativeVlan: 90
+      taggedVlans: [10, 50]
+
+  ports:
+    2: infra-trusted-access
+    3: infra-management-access
+    6: infra-ap-trunk
+    8: infra-iot-access
+
+accessPoint:
+  name: 9C-A2-F4-C2-ED-74
+  mac: 9C-A2-F4-C2-ED-74
+  model: EAP670(EU) v1.0
+  address: 10.21.90.4/24
+  gateway: 10.21.90.1
+  dns: 10.21.90.1
+  managementVlan: 90
+  switchPort: 6
+  managementVlanMode: default
+
+wireless:
+  group: Default
+  policy: standard
+
+  ssids:
+    - name: Rooftrollen
+      band: dual
+      vlan: 10
+      pskSecretRef: wireless.psks.personal
+    - name: Rooftrollen_IoT
+      band: 2.4GHz
+      vlan: 50
+      pskSecretRef: wireless.psks.iot

@@ -1,5 +1,5 @@
 {
-  description = "Infrastructure configuration; currently NixOS for parmigiano";
+  description = "Homelab NixOS, network, and private-cloud infrastructure";
 
   outputs = inputs: import ./outputs.nix inputs;
 

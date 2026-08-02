@@ -1,0 +1,33 @@
+---
+- name: Require key-only automation through the Ubuntu account
+  ansible.builtin.assert:
+    that:
+      - ansible_user == cloud_host_automation_user
+      - cloud_host_automation_user == "ubuntu"
+      - cloud_console_password_file | length > 0
+      - cloud_console_password_salt is match('^[A-Za-z0-9./]{8,16}$')
+    fail_msg: >-
+      Physical cloud hosts use ubuntu for SSH-key automation and console
+      recovery. The console password is never an SSH credential.
+
+- name: Set the SOPS-backed local console password
+  ansible.builtin.user:
+    name: "{{ cloud_host_automation_user }}"
+    password: >-
+      {{ lookup('ansible.builtin.file', cloud_console_password_file)
+         | ansible.builtin.password_hash('sha512', cloud_console_password_salt) }}
+    update_password: always
+  no_log: true
+
+- name: Keep password and root SSH authentication disabled
+  ansible.builtin.copy:
+    dest: "{{ cloud_ssh_hardening_drop_in }}"
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by Ansible. The local-console password is not an SSH credential.
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      PermitRootLogin no
+  notify: Reload OpenSSH

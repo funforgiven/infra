@@ -1,0 +1,2 @@
+# Managed by Ansible. Reboot after this file changes.
+GRUB_CMDLINE_LINUX_DEFAULT="${GRUB_CMDLINE_LINUX_DEFAULT} {{ cloud_iommu_kernel_parameters | join(' ') }}"

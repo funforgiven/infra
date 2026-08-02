@@ -19,9 +19,16 @@ _: {
             config.treefmt.build.wrapper
             pkgs.gitMinimal
             pkgs.nixd
-            (pkgs.python3.withPackages (pythonPackages: [ pythonPackages.paramiko ]))
+            (pkgs.python3.withPackages (pythonPackages: [
+              pythonPackages.ansible
+              pythonPackages.ansible-core
+              pythonPackages.pyyaml
+              pythonPackages.requests
+            ]))
             pkgs.ripgrep
             pkgs.shellcheck
+            pkgs.xorriso
+            pkgs.yamllint
           ];
 
           shellHook = config.repository.devShell.shellHook;

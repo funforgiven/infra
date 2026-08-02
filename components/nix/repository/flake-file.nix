@@ -4,14 +4,13 @@
   ...
 }:
 let
-  hostName = "parmigiano";
   wallpaperPath = config.dendritic.wallpaper.path;
 in
 {
   imports = [ inputs.flake-file.flakeModules.default ];
 
   flake-file = {
-    description = "Infrastructure configuration; currently NixOS for ${hostName}";
+    description = "Homelab NixOS, network, and private-cloud infrastructure";
     outputs = "inputs: import ./outputs.nix inputs";
     do-not-edit = "";
 

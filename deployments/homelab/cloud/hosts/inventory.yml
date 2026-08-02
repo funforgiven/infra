@@ -1,0 +1,30 @@
+---
+all:
+  hosts:
+    pecorino:
+      ansible_host: 10.21.20.10
+    taleggio:
+      ansible_host: 10.21.20.11
+    asiago:
+      ansible_host: 10.21.20.12
+  children:
+    # Installed machines managed by the physical-host role.
+    cloud_hosts:
+      hosts:
+        asiago: {}
+        pecorino: {}
+        taleggio: {}
+    # The same three hyperconverged machines have every Kubernetes role.
+    kube_control_plane:
+      children:
+        cloud_hosts: {}
+    etcd:
+      children:
+        kube_control_plane: {}
+    kube_node:
+      children:
+        cloud_hosts: {}
+    k8s_cluster:
+      children:
+        kube_control_plane: {}
+        kube_node: {}

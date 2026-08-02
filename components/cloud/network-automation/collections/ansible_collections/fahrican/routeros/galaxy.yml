@@ -1,0 +1,16 @@
+---
+namespace: fahrican
+name: routeros
+version: 0.1.0
+readme: README.md
+authors:
+  - fahrican infrastructure maintainers
+description: Repository-owned RouterOS transport compatibility for the homelab.
+license:
+  - GPL-3.0-or-later
+tags:
+  - networking
+  - routeros
+dependencies:
+  ansible.netcommon: "8.5.2"
+  community.routeros: "3.20.0"

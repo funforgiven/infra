@@ -1,0 +1,13 @@
+[Unit]
+Description=Synchronize the secondary EFI system partition
+After=local-fs.target
+RequiresMountsFor=/boot/efi {{ cloud_secondary_efi_mountpoint }}
+ConditionPathIsDirectory=/sys/firmware/efi
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/cloud-sync-secondary-efi
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

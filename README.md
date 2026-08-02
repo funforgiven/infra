@@ -1,12 +1,14 @@
 # infra
 
-Infrastructure configuration for the NixOS host `parmigiano` and the
-surrounding homelab network.
+Infrastructure configuration for the NixOS host `parmigiano`, the
+surrounding homelab network, and a three-node OpenStack private cloud.
 
 `parmigiano` is built on NixOS unstable with Home Manager and the dendritic
-module pattern. RouterOS deployment records cover the current router and
-switching fabric. Cloud, cluster, and other platforms can be added when they
-gain real configuration.
+module pattern. Git-controlled automation covers the current RouterOS
+fabric. All three private-cloud hosts now pass the automated physical
+baseline and supervised failure of each LACP member. Independent
+OS-disk boot acceptance is a deferred resilience exercise. The pinned
+Kubernetes bootstrap wave is active; OpenStack is not installed yet.
 
 This is a concrete environment, not a reusable distribution. It can still
 serve as a reference for a dendritic flake, a Niri desktop, declarative
@@ -25,8 +27,10 @@ PipeWire routing, SOPS secret delivery, or a device-oriented RouterOS layout.
 - SOPS/age for the account password hash, machine credentials, and
   homelab API/network credentials, with 1Password retained for desktop
   and browser password management
-- RouterOS deployment records and tooling for a CCR2004 router and
+- RouterOS desired state and reconciliation for a CCR2004 router and
   CRS510 switch
+- A three-node OpenStack cloud foundation with declarative physical
+  networking and Ubuntu host automation
 
 ## Repository Layout
 
@@ -37,11 +41,12 @@ PipeWire routing, SOPS secret delivery, or a device-oriented RouterOS layout.
 - `components/nix/packages/` contains local packages and overlays.
 - `components/nix/repository/` contains checks, formatting, and generated-file support.
 - `components/nix/docs/` contains the sources for generated documentation.
-- `components/routeros/` contains shared RouterOS validation, credential
-  installation, and tests.
-- `deployments/homelab/routeros/` contains device-specific router and
-  switch identities, physical assignments, and secret-free `.rsc` records
-  under each device's `applied/` directory.
+- `components/cloud/` contains the current Ubuntu host and physical-network
+  automation.
+- `deployments/homelab/routeros/` contains the RouterOS runbook;
+  `deployments/homelab/ssh-host-keys.json` pins managed-device identities.
+- `deployments/homelab/cloud/` contains the cloud architecture, exact
+  version selections, host inventory, and network desired state.
 - `secrets/` contains SOPS-encrypted machine and homelab credentials and
   their documentation.
 
@@ -61,43 +66,73 @@ modules instead of importing distant paths directly.
 
 ## Homelab Network
 
-RouterOS deployments are grouped by device identity:
+RouterOS desired state lives in the cloud network inventory and is
+reconciled by one Ansible playbook:
 
 ```text
-deployments/homelab/routeros/
-├── core-router/
-│   ├── applied/
-│   └── install-pppoe.sh
-└── core-switch/
-    └── applied/
+deployments/homelab/cloud/network-inventory.yaml
+components/cloud/network-automation/reconcile-routeros.yaml
 ```
 
-Each `applied/` directory contains selected, secret-free `.rsc` records
-of one-shot changes that contributed to the current device state. They
-are an audit trail, not a complete migration history, desired-state, or
-convergence scripts. Every record aborts at its first executable line to
-prevent accidental replay on a configured device.
-
-Shared validation and credential tooling lives in `components/routeros/`.
-Validate the records, shell entry point, and credential helper with:
+Its default run is read-only. Validate the current inventories, tests, and
+Ansible syntax without contacting a device with:
 
 ```sh
-components/routeros/validate.sh
+nix build .#checks.x86_64-linux.cloud-configuration \
+  --no-link --accept-flake-config
 ```
 
-Within Git, PPPoE and Omada values exist only as SOPS ciphertext in
-`secrets/routeros.yaml` and `secrets/omada.yaml`. sops-nix materializes
-the two PPPoE values for the current installer as user-owned `0400`
-runtime files. The NixOS host is not an Omada recipient, so those
-unused values remain recovery-key-only ciphertext. Device login
-credentials, RouterOS exports, and binary backups are not committed.
+RouterOS login passwords are SOPS ciphertext and sops-nix materializes
+only the two values consumed by Ansible as user-owned `0400` files. PPPoE
+values remain encrypted for future Terraform/REST adoption and have no
+runtime file or bespoke installer. Omada secrets are streamed to its manual
+reconciler only through standard input. Plaintext credentials, exports,
+historical command snapshots, plan files, and binary backups are not
+committed.
 
-The network plan, physical map, firewall policy, current transition
-state, recovery paths, and remaining work are documented in the
-[RouterOS deployment runbook](deployments/homelab/routeros/README.md).
+The network plan, physical map, firewall policy, reconciled endpoint
+state, recovery paths, and remaining qualifications are documented in
+the [RouterOS deployment runbook](deployments/homelab/routeros/README.md).
 This public repository treats internal addressing, device identities,
 and port assignments as non-secret operational documentation; all
 authentication material remains encrypted or outside Git.
+
+## OpenStack Private Cloud
+
+The target is a three-node hyperconverged cloud based on Ubuntu Noble,
+Kubespray, Cilium, Flux, Rook-Ceph, and upstream OpenStack-Helm. All three
+hosts are installed, managed, and pass automated host and network
+qualification, including failure of each LACP member. The pinned
+Kubernetes bootstrap wave is active; Ceph, OpenStack, and Magnum follow
+only after their installation waves begin.
+
+The current repository records:
+
+- a 2×25Gbps LACP trunk per node and isolated Ceph, migration, Geneve,
+  and Manila service VLANs on the CRS510;
+- Ansible for unavoidable Ubuntu host state and RouterOS reconciliation;
+- a narrow Omada compatibility adapter for the controller API currently in use;
+- exact selected component versions and immutable Ceph image identity;
+- one OpenStack-Helm owner each for MariaDB Galera and RabbitMQ;
+- Cilium L2 service announcements with a mutually exclusive MetalLB
+  rollback profile;
+- internal split-horizon CoreDNS and explicitly opt-in public Cloudflare
+  records;
+- six NVMe Rook-Ceph OSDs and dedicated OpenStack/CephFS pools;
+- installation and major-upgrade ordering with semantic readiness gates;
+- a separately recoverable HA CAPI management cluster for Magnum;
+- backup requirements and destructive-operation boundaries.
+
+Start with the
+[cloud deployment runbook](deployments/homelab/cloud/README.md). Architecture
+records and version selections are desired state, not installation evidence.
+
+Validate the executable host/network automation and current inventories with:
+
+```sh
+nix build .#checks.x86_64-linux.cloud-configuration \
+  --no-link --accept-flake-config
+```
 
 ## Local Files
 

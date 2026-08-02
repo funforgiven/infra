@@ -1,0 +1,27 @@
+---
+- name: Rebuild grub configuration
+  ansible.builtin.command:
+    cmd: update-grub
+  changed_when: true
+  listen: Rebuild grub configuration
+
+- name: Validate OpenSSH configuration
+  ansible.builtin.command: /usr/sbin/sshd -t
+  changed_when: false
+  listen: Reload OpenSSH
+
+- name: Reload OpenSSH
+  ansible.builtin.service:
+    name: ssh
+    state: reloaded
+  listen: Reload OpenSSH
+
+- name: Validate Netplan
+  ansible.builtin.command: netplan generate
+  changed_when: false
+  listen: Apply Netplan
+
+- name: Apply Netplan
+  ansible.builtin.command: netplan apply
+  changed_when: true
+  listen: Apply Netplan

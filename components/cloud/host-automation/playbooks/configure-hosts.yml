@@ -1,0 +1,10 @@
+---
+- name: Converge installed physical cloud hosts
+  hosts: cloud_hosts
+  become: true
+  gather_facts: true
+  serial: 1
+  any_errors_fatal: true
+
+  roles:
+    - cloud_host
