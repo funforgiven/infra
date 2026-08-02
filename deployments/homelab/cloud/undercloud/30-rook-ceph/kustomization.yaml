@@ -6,3 +6,4 @@ resources:
   - cluster.yaml
   - pools.yaml
   - filesystem.yaml
+  - undercloud-storage.yaml
