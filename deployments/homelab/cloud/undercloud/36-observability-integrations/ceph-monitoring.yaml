@@ -1,0 +1,212 @@
+# Service monitors and alert expressions are selected from Rook 1.20.3 at
+# commit 3b678364c85fcc6380419a467629244c194c5e5c. The complete upstream rules
+# file has SHA-256 0637e1f3249158baf0e841c9f5432252ee03e52cde3dfc88caddd1ee9354ae5b.
+# The CephCluster keeps monitoring.enabled=false so these Git-owned monitors
+# have exactly one owner.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rook-ceph-mgr
+  namespace: rook-ceph
+spec:
+  namespaceSelector:
+    matchNames:
+      - rook-ceph
+  selector:
+    matchLabels:
+      app: rook-ceph-mgr
+      rook_cluster: rook-ceph
+  endpoints:
+    - port: http-metrics
+      path: /metrics
+      interval: 10s
+      honorLabels: true
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rook-ceph-exporter
+  namespace: rook-ceph
+spec:
+  namespaceSelector:
+    matchNames:
+      - rook-ceph
+  selector:
+    matchLabels:
+      app: rook-ceph-exporter
+      rook_cluster: rook-ceph
+  endpoints:
+    - port: ceph-exporter-http-metrics
+      path: /metrics
+      interval: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ceph-alerts
+  namespace: rook-ceph
+spec:
+  groups:
+    - name: ceph-health
+      rules:
+        - alert: CephHealthError
+          expr: ceph_health_status == 2
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Ceph is in the ERROR state
+            description: Check `ceph health detail` for cluster {{ $labels.cluster }}.
+        - alert: CephHealthWarning
+          expr: ceph_health_status == 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: Ceph is in the WARNING state
+            description: Check `ceph health detail` for cluster {{ $labels.cluster }}.
+        - alert: CephMonDownQuorumAtRisk
+          expr: |
+            (
+              (ceph_health_detail{name="MON_DOWN"} == 1) * on() group_right(cluster) (
+                count(ceph_mon_quorum_status == 1) by(cluster)
+                == bool (floor(count(ceph_mon_metadata) by(cluster) / 2) + 1)
+              )
+            ) == 1
+          for: 30s
+          labels:
+            severity: critical
+          annotations:
+            summary: Ceph monitor quorum is at risk
+            description: A further monitor loss can make cluster {{ $labels.cluster }} unavailable.
+        - alert: CephOSDDown
+          expr: ceph_health_detail{name="OSD_DOWN"} == 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: A Ceph OSD is down
+            description: Inspect OSD state and the affected host in cluster {{ $labels.cluster }}.
+        - alert: CephOSDNearFull
+          expr: ceph_health_detail{name="OSD_NEARFULL"} == 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: A Ceph OSD is near full
+            description: Restore capacity headroom in cluster {{ $labels.cluster }}.
+        - alert: CephOSDFull
+          expr: ceph_health_detail{name="OSD_FULL"} > 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: A Ceph OSD is full and writes may be blocked
+            description: Restore capacity immediately in cluster {{ $labels.cluster }}.
+        - alert: CephDaemonCrash
+          expr: ceph_health_detail{name="RECENT_CRASH"} == 1
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: A Ceph daemon has crashed
+            description: Acknowledge the crash only after diagnosing it in cluster {{ $labels.cluster }}.
+        - alert: CephSlowOps
+          expr: ceph_healthcheck_slow_ops > 0
+          for: 30s
+          labels:
+            severity: warning
+          annotations:
+            summary: Ceph operations are slow
+            description: Cluster {{ $labels.cluster }} has {{ $value }} requests exceeding the complaint time.
+    - name: ceph-data
+      rules:
+        - alert: CephPGsInactive
+          expr: >-
+            ceph_pool_metadata * on(cluster,pool_id,instance) group_left()
+            (ceph_pg_total - ceph_pg_active) > 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Ceph placement groups are inactive
+            description: Pool {{ $labels.name }} cannot serve all I/O in cluster {{ $labels.cluster }}.
+        - alert: CephPGsUnclean
+          expr: >-
+            ceph_pool_metadata * on(cluster,pool_id,instance) group_left()
+            (ceph_pg_total - ceph_pg_clean) > 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: Ceph placement groups remain unclean
+            description: Pool {{ $labels.name }} has not recovered in cluster {{ $labels.cluster }}.
+        - alert: CephPGsDamaged
+          expr: ceph_health_detail{name=~"PG_DAMAGED|OSD_SCRUB_ERRORS"} == 1
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Ceph placement groups are damaged
+            description: Manual consistency repair may be required in cluster {{ $labels.cluster }}.
+        - alert: CephPGUnavailableBlockingIO
+          expr: >-
+            ((ceph_health_detail{name="PG_AVAILABILITY"} == 1) -
+            scalar(ceph_health_detail{name="OSD_DOWN"})) == 1
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: A Ceph placement group is blocking I/O
+            description: Data availability is reduced in cluster {{ $labels.cluster }}.
+        - alert: CephFilesystemDamaged
+          expr: ceph_health_detail{name="MDS_DAMAGE"} > 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: CephFS metadata is damaged
+            description: CephFS data may be inaccessible in cluster {{ $labels.cluster }}.
+        - alert: CephFilesystemOffline
+          expr: ceph_health_detail{name="MDS_ALL_DOWN"} > 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: CephFS is offline
+            description: All metadata-server ranks are unavailable in cluster {{ $labels.cluster }}.
+        - alert: CephFilesystemReadOnly
+          expr: ceph_health_detail{name="MDS_HEALTH_READ_ONLY"} > 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: CephFS is read-only
+            description: A metadata-pool write error made CephFS read-only in cluster {{ $labels.cluster }}.
+    - name: ceph-host
+      rules:
+        - alert: CephNodeNetworkBondDegraded
+          expr: node_bonding_slaves - node_bonding_active != 0
+          labels:
+            severity: warning
+          annotations:
+            summary: A cloud-node network bond is degraded
+            description: Bond {{ $labels.master }} on {{ $labels.instance }} has an inactive member.
+    - name: ceph-scrape
+      rules:
+        - alert: PrometheusCephMgrJobMissing
+          expr: absent(up{job="rook-ceph-mgr"})
+          for: 30s
+          labels:
+            severity: critical
+          annotations:
+            summary: The Ceph manager scrape job is missing
+            description: Prometheus cannot evaluate Ceph health without manager metrics.
+        - alert: PrometheusCephExporterJobMissing
+          expr: sum(absent(up{job="rook-ceph-exporter"}))
+          for: 30s
+          labels:
+            severity: critical
+          annotations:
+            summary: The Ceph exporter scrape job is missing
+            description: Prometheus cannot evaluate per-daemon Ceph metrics.
