@@ -72,7 +72,7 @@ spec:
           sha: 0ccb22ca9f3f6fd9f76ce95585d18bd2e363d421c534dde710be4bd13caa551d
       admissionWebhooks:
         enabled: true
-        failurePolicy: IgnoreOnInstallOnly
+        failurePolicy: Fail
         certManager:
           enabled: false
         patch:
