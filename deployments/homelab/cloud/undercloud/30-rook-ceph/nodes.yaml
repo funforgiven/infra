@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Node
+metadata:
+  name: pecorino
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+    kustomize.toolkit.fluxcd.io/ssa: Merge
+    network.rook.io/mon-ip: 10.21.30.10
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: taleggio
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+    kustomize.toolkit.fluxcd.io/ssa: Merge
+    network.rook.io/mon-ip: 10.21.30.11
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: asiago
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+    kustomize.toolkit.fluxcd.io/ssa: Merge
+    network.rook.io/mon-ip: 10.21.30.12
