@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - 20-gitops/flux-system
   - 20-backup
+  - 30-rook-ceph
