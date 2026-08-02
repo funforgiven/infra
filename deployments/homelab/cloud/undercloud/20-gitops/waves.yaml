@@ -169,3 +169,40 @@ spec:
       kind: HelmRelease
       name: fluent-bit-collector
       namespace: observability
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave36-observability-integrations
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  path: ./deployments/homelab/cloud/undercloud/36-observability-integrations
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: wave35-observability
+  healthChecks:
+    - apiVersion: monitoring.coreos.com/v1
+      kind: ServiceMonitor
+      name: rook-ceph-mgr
+      namespace: rook-ceph
+    - apiVersion: monitoring.coreos.com/v1
+      kind: ServiceMonitor
+      name: rook-ceph-exporter
+      namespace: rook-ceph
+    - apiVersion: monitoring.coreos.com/v1
+      kind: PrometheusRule
+      name: ceph-alerts
+      namespace: rook-ceph
+  healthCheckExprs:
+    - apiVersion: monitoring.coreos.com/v1
+      kind: ServiceMonitor
+      current: "true"
+    - apiVersion: monitoring.coreos.com/v1
+      kind: PrometheusRule
+      current: "true"
