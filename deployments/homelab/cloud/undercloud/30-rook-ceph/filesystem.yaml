@@ -1,0 +1,49 @@
+apiVersion: ceph.rook.io/v1
+kind: CephFilesystem
+metadata:
+  name: manila-cephfs
+  namespace: rook-ceph
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  preserveFilesystemOnDelete: true
+  metadataPool:
+    failureDomain: host
+    replicated:
+      size: 3
+      requireSafeReplicaSize: true
+    parameters:
+      min_size: "2"
+      pg_autoscale_mode: "on"
+  dataPools:
+    - name: data
+      failureDomain: host
+      replicated:
+        size: 3
+        requireSafeReplicaSize: true
+      parameters:
+        min_size: "2"
+        pg_autoscale_mode: "on"
+  metadataServer:
+    activeCount: 1
+    activeStandby: true
+    resources:
+      requests:
+        cpu: 200m
+        memory: 4Gi
+      limits:
+        memory: 6Gi
+    placement:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                    - rook-ceph-mds
+                - key: rook_file_system
+                  operator: In
+                  values:
+                    - manila-cephfs
+            topologyKey: kubernetes.io/hostname

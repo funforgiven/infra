@@ -4,3 +4,5 @@ resources:
   - nodes.yaml
   - operator.yaml
   - cluster.yaml
+  - pools.yaml
+  - filesystem.yaml
