@@ -25,6 +25,7 @@ Commit secret values only as SOPS ciphertext. Recipients are declared in
 | `cloud-hosts.yaml` → `cloud_hosts/asiago/ubuntu_console_password` | Asiago local-console and sudo recovery password |
 | `cloud-hosts.yaml` → `cloud_hosts/pecorino/ubuntu_console_password` | Pecorino local-console and sudo recovery password |
 | `kubernetes.yaml` → `undercloud/kube_encrypt_token` | Stable Kubernetes API secret-at-rest encryption key |
+| `kubernetes.yaml` → `undercloud/flux_age_identity` | Stable Flux SOPS age identity for undercloud reconciliation |
 | `password-hashes.yaml` → `users/funforgiven/password_hash` | NixOS account password hash |
 
 ## Recovery
@@ -41,6 +42,11 @@ personal-recipient decryption stream on standard input and does not require a
 host recipient. When replacing the host key, derive the new recipient, add it
 to `../.sops.yaml`, and update every host-consumed SOPS file before
 `nixos-install`.
+
+The undercloud Flux age identity is also a stable recovery asset. sops-nix
+materializes it only on the controller, and bootstrap injects it as
+`flux-system/sops-age`. Do not regenerate it during a workstation, host, or
+cluster rebuild; rotate it only as an explicit recipient migration.
 
 ## Editing
 
@@ -87,9 +93,9 @@ sudo nixos-rebuild switch --flake .#parmigiano --accept-flake-config
 
 ## Controller Runtime Files
 
-sops-nix decrypts selected keys from `routeros.yaml` and `cloud-hosts.yaml`
-during system activation and materializes them as separate files owned by
-`funforgiven` with mode `0400`:
+sops-nix decrypts selected keys from `routeros.yaml`, `cloud-hosts.yaml`, and
+`kubernetes.yaml` during system activation and materializes them as separate
+files owned by `funforgiven` with mode `0400`:
 
 | Runtime path | Consumer |
 | --- | --- |
@@ -99,6 +105,7 @@ during system activation and materializes them as separate files owned by
 | `/run/secrets/cloud-host-asiago-ubuntu-console-password` | Asiago Ansible sudo and PiKVM console recovery |
 | `/run/secrets/cloud-host-pecorino-ubuntu-console-password` | Pecorino Ansible sudo and PiKVM console recovery |
 | `/run/secrets/undercloud-kube-encrypt-token` | Kubespray secret-at-rest encryption configuration |
+| `/run/secrets/undercloud-flux-age-identity` | Flux `flux-system/sops-age` bootstrap and recovery |
 
 The two login passwords are independent URL-safe encodings of 32 random bytes:
 exactly 43 characters from `A-Z`, `a-z`, `0-9`, `_`, and `-`. Ansible checks

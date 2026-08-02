@@ -49,6 +49,10 @@ let
       key = "undercloud/kube_encrypt_token";
       sopsFile = kubernetesSecretsFile;
     };
+    undercloud-flux-age-identity = {
+      key = "undercloud/flux_age_identity";
+      sopsFile = kubernetesSecretsFile;
+    };
   };
   runtimeSecretNames = builtins.attrNames runtimeSecretSpecs;
 

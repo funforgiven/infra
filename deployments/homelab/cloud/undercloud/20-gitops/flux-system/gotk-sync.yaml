@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: flux-system-signing-key
+  namespace: flux-system
+type: Opaque
+stringData:
+  trusted-signing-key.sshpub: |
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL1nHHxNA1YUl+89HhieA+YOyOLYJaSRBmutEOVxVQeB github-funforgiven-2026-07-18
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: flux-system
+  namespace: flux-system
+spec:
+  interval: 1m
+  url: https://github.com/funforgiven/infra.git
+  ref:
+    branch: main
+  verify:
+    mode: HEAD
+    secretRef:
+      name: flux-system-signing-key
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: flux-system
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 5m
+  path: ./deployments/homelab/cloud/undercloud
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age

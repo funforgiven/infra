@@ -16,6 +16,7 @@
           {
             nativeBuildInputs = [
               python
+              pkgs.kustomize
               pkgs.ripgrep
               pkgs.shellcheck
               pkgs.yamllint
@@ -110,6 +111,7 @@
             )
 
             yamllint -d relaxed components/cloud deployments/homelab/cloud
+            kustomize build deployments/homelab/cloud/undercloud >/dev/null
             shellcheck components/cloud/host-automation/build-autoinstall-iso.sh
 
             touch "$out"
