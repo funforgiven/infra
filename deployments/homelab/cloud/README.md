@@ -16,10 +16,11 @@ public Git source through four digest-pinned controllers; source verification,
 revision convergence, and the SOPS key boundary passed their semantic gates.
 Independent-OS-disk boot testing is deliberately deferred as a resilience
 exercise. The switch map is `taleggio` on ports 3/4, `asiago` on 5/6, and
-`pecorino` on 7/8. The private B2 destination and its upload-only writer are
-created. The Wave 20 etcd uploader is present in desired state but remains
-suspended until the B2 lifecycle, cluster-external restore reader, first
-upload, and isolated restore proof pass; production eligibility remains false.
+`pecorino` on 7/8. Wave 20 is complete: the private B2 destination has bounded
+hidden-version retention, the six-hour client-encrypted etcd uploader is
+enabled, the restore reader remains outside Kubernetes, and a real upload plus
+RAM-backed isolated restore passed. Wave 30 Rook/Ceph is next; production
+eligibility remains false.
 
 The small set of current documents is intentional:
 
