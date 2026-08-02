@@ -172,6 +172,14 @@ spec:
     grafana:
       replicas: 1
       defaultDashboardsEditable: false
+      grafana.ini:
+        analytics:
+          reporting_enabled: false
+          check_for_updates: false
+          check_for_plugin_updates: false
+        plugins:
+          preinstall_disabled: true
+          preinstall_auto_update: false
       image:
         sha: 7cb8c64c4d57a57e734073f3cc94620adb24a0acb929bd80ba9f14017e3a975b
       initChownData:
@@ -221,6 +229,8 @@ spec:
             disableDelete: false
         datasources:
           enabled: true
+          env:
+            HEALTH_PORT: "8081"
           label: grafana_datasource
           labelValue: "1"
           searchNamespace: observability
