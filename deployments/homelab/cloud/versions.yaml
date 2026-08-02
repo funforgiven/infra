@@ -72,7 +72,24 @@ kubernetes:
     chartDigest: sha256:74551245ad0b0608f207e52c9ec3ce96ddd14e7655d12d5005c1c1d03b9d422a
 
 storage:
-  rook: 1.20.3
+  rook:
+    version: 1.20.3
+    commit: 3b678364c85fcc6380419a467629244c194c5e5c
+    image: docker.io/rook/ceph@sha256:da3c5046074ddc01bd2d162f7da3c3098e2f117fa5093df827e55f7e35899add
+    operatorChart:
+      repository: oci://registry-1.docker.io/rook/rook-ceph
+      digest: sha256:df8ebccb66165ff92aedf035cac9cd07eda9a44b92cb8f7f7570a7d7b5f19d84
+    csi:
+      version: 1.0.4
+      commit: 29a66b683aa8873001c729b7b120e18604cdb445
+      operatorImage: quay.io/cephcsi/ceph-csi-operator@sha256:c62933fd4083635f969f8a61932af45dba9902d48867e2b5d98a69d8e4344eb6
+      pluginImage: quay.io/cephcsi/cephcsi@sha256:886e6d2416d62dd7c8fbe659b6306b6c9451d6918e35ad5d1ac774520e11ef87
+      registrarImage: registry.k8s.io/sig-storage/csi-node-driver-registrar@sha256:f9de845b170155199f2a2a3f9531cf13d78e31235e9db6b6582a8b0db0a50dad
+      provisionerImage: registry.k8s.io/sig-storage/csi-provisioner@sha256:6be9f63ca4caa6c46aae55aa372500949d8a21473d72f819da1f746076b32d4e
+      snapshotterImage: registry.k8s.io/sig-storage/csi-snapshotter@sha256:da081c27e8a6d91f36042c1942362d0515ced8d06e18c11b8f893e58c4d6d797
+      attacherImage: registry.k8s.io/sig-storage/csi-attacher@sha256:b9dc9a714a484ccdeeb6f86d88d4db9b7a5ecfc5a55da6db3a60bb3fa33c278a
+      resizerImage: registry.k8s.io/sig-storage/csi-resizer@sha256:589e525cddef6d768e68da1f0bc9ffd0a24bf3add3dd010648eb7189976fde79
+      addonsImage: quay.io/csiaddons/k8s-sidecar@sha256:69092d026323307933fba2bed9c57d864f2a92cfd385d644b478442ded0d2886
   ceph:
     release: tentacle
     version: 20.2.2

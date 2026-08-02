@@ -31,7 +31,7 @@ metadata:
 spec:
   interval: 10m
   retryInterval: 1m
-  timeout: 5m
+  timeout: 15m
   path: ./deployments/homelab/cloud/undercloud
   prune: true
   wait: true

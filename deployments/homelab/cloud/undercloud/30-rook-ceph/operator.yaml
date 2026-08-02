@@ -1,0 +1,150 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rook-ceph
+  labels:
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: privileged
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: rook-ceph-chart
+  namespace: rook-ceph
+spec:
+  interval: 24h
+  url: oci://registry-1.docker.io/rook/rook-ceph
+  ref:
+    digest: sha256:df8ebccb66165ff92aedf035cac9cd07eda9a44b92cb8f7f7570a7d7b5f19d84
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: ceph-csi-operator
+  namespace: rook-ceph
+spec:
+  interval: 24h
+  url: https://github.com/ceph/ceph-csi-operator.git
+  ref:
+    commit: 29a66b683aa8873001c729b7b120e18604cdb445
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: rook-ceph
+  namespace: rook-ceph
+spec:
+  interval: 30m
+  timeout: 10m
+  releaseName: rook-ceph
+  chartRef:
+    kind: OCIRepository
+    name: rook-ceph-chart
+  install:
+    crds: Create
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  values:
+    image:
+      repository: docker.io/rook/ceph
+      tag: v1.20.3@sha256:da3c5046074ddc01bd2d162f7da3c3098e2f117fa5093df827e55f7e35899add
+      pullPolicy: IfNotPresent
+    crds:
+      enabled: true
+    currentNamespaceOnly: true
+    allowLoopDevices: false
+    enableDiscoveryDaemon: false
+    revisionHistoryLimit: 3
+    monitoring:
+      enabled: false
+    rbacAggregate:
+      enableOBCs: false
+    csi:
+      installCsiOperator: true
+      cephcsi:
+        repository: quay.io/cephcsi/cephcsi
+        tag: v3.17.0@sha256:886e6d2416d62dd7c8fbe659b6306b6c9451d6918e35ad5d1ac774520e11ef87
+      registrar:
+        repository: registry.k8s.io/sig-storage/csi-node-driver-registrar
+        tag: v2.17.0@sha256:f9de845b170155199f2a2a3f9531cf13d78e31235e9db6b6582a8b0db0a50dad
+      provisioner:
+        repository: registry.k8s.io/sig-storage/csi-provisioner
+        tag: v6.2.0@sha256:6be9f63ca4caa6c46aae55aa372500949d8a21473d72f819da1f746076b32d4e
+      snapshotter:
+        repository: registry.k8s.io/sig-storage/csi-snapshotter
+        tag: v8.5.0@sha256:da081c27e8a6d91f36042c1942362d0515ced8d06e18c11b8f893e58c4d6d797
+      attacher:
+        repository: registry.k8s.io/sig-storage/csi-attacher
+        tag: v4.12.0@sha256:b9dc9a714a484ccdeeb6f86d88d4db9b7a5ecfc5a55da6db3a60bb3fa33c278a
+      resizer:
+        repository: registry.k8s.io/sig-storage/csi-resizer
+        tag: v2.1.0@sha256:589e525cddef6d768e68da1f0bc9ffd0a24bf3add3dd010648eb7189976fde79
+      csiAddons:
+        repository: quay.io/csiaddons/k8s-sidecar
+        tag: v0.14.0@sha256:69092d026323307933fba2bed9c57d864f2a92cfd385d644b478442ded0d2886
+    ceph-csi-operator:
+      controllerManager:
+        manager:
+          image:
+            repository: quay.io/cephcsi/ceph-csi-operator
+            tag: v1.0.4@sha256:c62933fd4083635f969f8a61932af45dba9902d48867e2b5d98a69d8e4344eb6
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ceph-csi-drivers
+  namespace: rook-ceph
+spec:
+  interval: 30m
+  timeout: 10m
+  releaseName: ceph-csi-drivers
+  dependsOn:
+    - name: rook-ceph
+  chart:
+    spec:
+      chart: ./deploy/charts/ceph-csi-drivers
+      interval: 24h
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: ceph-csi-operator
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    operatorConfig:
+      namespace: rook-ceph
+      driverSpecDefaults:
+        imageSet:
+          name: rook-csi-operator-image-set-configmap
+        nodePlugin:
+          priorityClassName: system-node-critical
+        controllerPlugin:
+          priorityClassName: system-cluster-critical
+    drivers:
+      rbd:
+        enabled: true
+        name: rook-ceph.rbd.csi.ceph.com
+        snapshotPolicy: none
+        controllerPlugin:
+          replicas: 2
+      cephfs:
+        enabled: true
+        name: rook-ceph.cephfs.csi.ceph.com
+        snapshotPolicy: none
+        controllerPlugin:
+          replicas: 2
+      nfs:
+        enabled: false
+        name: rook-ceph.nfs.csi.ceph.com
+      nvmeof:
+        enabled: false
+        name: rook-ceph.nvmeof.csi.ceph.com
