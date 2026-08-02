@@ -108,6 +108,31 @@ class NetworkInventoryTests(unittest.TestCase):
             self.assertEqual(len(values), len(set(values)))
         self.assertIn('loop: "{{ routeros_static_leases }}"', self.playbook)
 
+    def test_private_split_dns_is_one_exact_data_driven_forwarder(self) -> None:
+        self.assertEqual(
+            {
+                "name": "cloud.fahrican.com",
+                "type": "FWD",
+                "forward_to": "10.21.20.129",
+                "match_subdomain": True,
+                "comment": "infra: private cloud split DNS",
+            },
+            self.router["routeros_private_dns_forward"],
+        )
+        self.assertIn("/ip dns get allow-remote-requests", self.playbook)
+        self.assertNotIn("/ip dns set allow-remote-requests", self.playbook)
+        self.assertIn("Reconcile Git-owned private DNS forwarders", self.playbook)
+        self.assertIn("Prove every Git-owned private DNS forwarder", self.playbook)
+        for field in (
+            "comment",
+            "disabled",
+            "forward-to",
+            "match-subdomain",
+            "name",
+            "type",
+        ):
+            self.assertIn(field, self.playbook)
+
     def test_only_current_physical_wave_vlans_are_reconciled(self) -> None:
         self.assertEqual([20, 30, 31, 32], list(self.host_defaults["cloud_vlan_mtu"]))
         self.assertNotIn("cloud_provider_vlans", self.host_defaults)
@@ -151,6 +176,20 @@ class NetworkInventoryTests(unittest.TestCase):
             self.assertIn(mutation, section)
             self.assertLess(section.index(credential), section.index(preflight))
             self.assertLess(section.index(preflight), section.index(mutation))
+
+        router_section = sections[1]
+        dns_mutation = "Reconcile Git-owned private DNS forwarders"
+        dns_postflight = "Prove every Git-owned private DNS forwarder"
+        self.assertIn(dns_mutation, router_section)
+        self.assertIn(dns_postflight, router_section)
+        self.assertLess(
+            router_section.index("Read current CCR2004 static leases"),
+            router_section.index(dns_mutation),
+        )
+        self.assertLess(
+            router_section.index(dns_mutation),
+            router_section.index(dns_postflight),
+        )
 
     def test_ansible_assertions_are_string_expressions(self) -> None:
         def visit(value, source: Path) -> None:

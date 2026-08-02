@@ -206,3 +206,54 @@ spec:
     - apiVersion: monitoring.coreos.com/v1
       kind: PrometheusRule
       current: "true"
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave37-service-network
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  path: ./deployments/homelab/cloud/undercloud/37-service-network
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: wave36-observability-integrations
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: internal-coredns
+      namespace: network-services
+    - apiVersion: v1
+      kind: Service
+      name: internal-coredns
+      namespace: network-services
+    - apiVersion: monitoring.coreos.com/v1
+      kind: ServiceMonitor
+      name: internal-coredns
+      namespace: observability
+    - apiVersion: monitoring.coreos.com/v1
+      kind: PrometheusRule
+      name: internal-coredns
+      namespace: observability
+  healthCheckExprs:
+    - apiVersion: v1
+      kind: Service
+      failed: >-
+        has(status.loadBalancer.ingress) &&
+        size(status.loadBalancer.ingress) > 0 &&
+        status.loadBalancer.ingress[0].ip != '10.21.20.129'
+      current: >-
+        has(status.loadBalancer.ingress) &&
+        size(status.loadBalancer.ingress) == 1 &&
+        status.loadBalancer.ingress[0].ip == '10.21.20.129'
+    - apiVersion: monitoring.coreos.com/v1
+      kind: ServiceMonitor
+      current: "true"
+    - apiVersion: monitoring.coreos.com/v1
+      kind: PrometheusRule
+      current: "true"

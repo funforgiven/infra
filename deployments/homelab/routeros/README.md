@@ -7,8 +7,8 @@ CCR/CRS uplinks.
 There are two current-state inputs:
 
 - `../cloud/network-inventory.yaml` is the RouterOS inventory: device
-  identity, current cloud bonds/VLANs, link policy, and declared static DHCP
-  leases.
+  identity, current cloud bonds/VLANs, link policy, declared static DHCP
+  leases, and the private cloud DNS forward.
 - `components/cloud/network-automation/reconcile-routeros.yaml` is the
   current convergence owner until the RouterOS Terraform import described
   below is complete.
@@ -44,6 +44,14 @@ VLANs 30–32 on the CRS server bonds. VLAN 40 is architectural desired state,
 but is deferred until its Omada port 1/9 transit and CCR policy can be applied
 and qualified in the same wave. The CCR's 1 Gb/s core uplink must never become
 an east-west path.
+
+The CCR desired state contains exactly one split-DNS row: a `FWD` entry for
+`cloud.fahrican.com` and all subdomains to the internal CoreDNS service at
+`10.21.20.129`. The read-only preflight requires
+`allow-remote-requests=yes`; the playbook deliberately does not own that
+router-wide setting. Mutation uses the same explicit `apply` tag as the other
+CCR resources and proves the row's unique comment, name, type, target,
+subdomain match, and enabled state afterward.
 
 ## Current reconciliation
 

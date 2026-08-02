@@ -1,0 +1,46 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: internal-coredns
+  namespace: observability
+spec:
+  jobLabel: app.kubernetes.io/name
+  namespaceSelector:
+    matchNames:
+      - network-services
+  selector:
+    matchLabels:
+      monitoring.fahrican.com/target: internal-coredns
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 15s
+      relabelings:
+        - targetLabel: cluster
+          replacement: undercloud
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: internal-coredns
+  namespace: observability
+spec:
+  groups:
+    - name: internal-dns
+      rules:
+        - alert: InternalCoreDNSJobMissing
+          expr: absent(up{job="internal-coredns"})
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: The private authoritative DNS scrape job is missing
+            description: Prometheus cannot observe the cloud.fahrican.com authoritative service.
+        - alert: InternalCoreDNSReplicaDown
+          expr: count(up{job="internal-coredns"} == 1) < 3
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: A private authoritative DNS replica is unavailable
+            description: CoreDNS target {{ $labels.instance }} is down.

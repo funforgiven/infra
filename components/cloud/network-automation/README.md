@@ -18,16 +18,20 @@ resets, adoption, or undeclared controller objects.
 - their bridge ports and VLANs 20 and 30–32;
 - the observed E810/DAC 25 GbE/RS-FEC policy on all server-member ports;
 - the static-only VLAN-90 management DHCP server and network; and
-- the inventory-declared CCR2004 static leases.
+- the inventory-declared CCR2004 static leases; and
+- the single private-zone DNS forward from `cloud.fahrican.com` to the
+  internal CoreDNS VIP `10.21.20.129`.
 
 The CRS bootstrap must already provide one enabled VLAN-filtering bridge named
 `bridge`. Manila VLAN 33 and external VLAN 40, including the latter's Omada
-port 1/9 transit, CCR gateway/firewall, and private DNS forward, belong to later
-service waves. They are intentionally absent from current reconciliation so a
-partial path cannot be created.
+port 1/9 transit and CCR gateway/firewall, belong to later service waves. They
+are intentionally absent from current reconciliation so a partial path cannot
+be created.
 The CCR bootstrap must already provide the enabled `vlan90-mgmt` interface and
 its `10.21.90.1/24` address. The future RouterOS Terraform import takes ownership
 of both bootstrap substrates.
+RouterOS must already have `allow-remote-requests=yes`; this reconciler asserts
+that prerequisite but does not take ownership of the router-wide DNS setting.
 Current reconciliation creates or updates its declared objects; omission alone
 never deletes a live object. Terraform replaces this boundary after import.
 
@@ -57,10 +61,10 @@ ansible-playbook reconcile-routeros.yaml --limit core_router --tags apply
 ```
 
 Credential loading and semantic preflight tasks are tagged `always`. Apply
-paths assert the link, VLAN, and lease objects for which the playbook defines
-postconditions. Carrier, LACP member failure, MTU, and end-to-end traffic are
-separate supervised qualifications; all three current hosts and all six LACP
-members have passed them.
+paths assert the link, VLAN, lease, and private DNS objects for which the
+playbook defines exact postconditions. Carrier, LACP member failure, MTU, and
+end-to-end traffic are separate supervised qualifications; all three current
+hosts and all six LACP members have passed them.
 
 Each device login password is read from its user-owned `0400` sops-nix file
 immediately before the first connection. Inventory contains only the runtime
