@@ -173,6 +173,7 @@ spec:
       replicas: 1
       deploymentStrategy:
         type: Recreate
+        rollingUpdate: null
       defaultDashboardsEditable: false
       grafana.ini:
         analytics:
