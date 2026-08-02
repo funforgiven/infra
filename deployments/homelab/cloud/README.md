@@ -22,8 +22,12 @@ enabled, the restore reader remains outside Kubernetes, and a real upload plus
 RAM-backed isolated restore passed. Wave 30 is complete: Rook/Ceph reports
 `HEALTH_OK`, all six OSDs are up and in, the selected RBD pools and CephFS are
 ready, and the storage classes passed their semantic gates. Wave 35
-observability is the next reconciliation boundary; production eligibility
-remains false.
+observability and Wave 36 Ceph monitoring integrations are complete. All four
+Ceph scrape targets are up, every selected alert rule evaluates cleanly, and
+the monitoring admission webhooks fail closed. A disposable RBD qualification
+image sustained about 89.7k 4 KiB random-write IOPS, 109.9k random-read IOPS,
+and 84.3k IOPS at a 70:30 read/write mix before being removed. Production
+eligibility remains false.
 
 The small set of current documents is intentional:
 
@@ -269,7 +273,8 @@ Installation is deliberately sequential:
 
 ```text
 00 physical → 10 Kubernetes → 20 GitOps + off-cluster backup foundation
-→ 30 Rook/Ceph + backup → 35 observability
+→ 30 Rook/Ceph + backup → 35 observability → 36 Ceph monitoring
+→ service/API network foundation
 → 40 MariaDB/RabbitMQ + backup → 50 OpenStack core + backup
 → 60 OpenStack services + backup → 70 Magnum/CAPI + backup
 → 80 restore/recovery acceptance → 90 production acceptance
@@ -314,6 +319,12 @@ removes their historical data until Ceph recovers. OpenSearch remains deferred
 until measured retention/search demand and one-host-loss memory headroom
 justify it.
 
+Wave 36 keeps Rook's dynamic ServiceMonitor ownership disabled and instead
+Git-owns one manager monitor, one exporter monitor, and a compact selection of
+the exact Rook 1.20.3 alert expressions. The scrape boundary adds the stable
+`cluster=rook-ceph` label required by those expressions. This avoids installing
+a second Ceph chart merely to obtain monitoring resources.
+
 ### Semantic hold points
 
 The minimum evidence at each boundary is behavioral:
@@ -338,13 +349,12 @@ host. VLAN 40 is deliberately deferred to the Neutron external-network wave and
 does not block Kubernetes bootstrap; its later acceptance must prove that VLANs
 30–33 do not leak northbound.
 
-Before service waves open, qualify immutable chart/controller artifacts, select
-the B2 lifecycle and cost policy, implement the uploader, establish restore
-authorization outside the workload cluster, and decide whether any public
-endpoint exists (the default remains none). The bucket intentionally has no
-Object Lock and therefore makes no immutability claim. Manila needs its approved
-project IDs and negative access test. OpenStack gates need immutable disposable
-test-object inputs.
+Before service waves open, qualify the internal DNS, certificate, Gateway API,
+service-VIP ownership, failover, and MetalLB rollback contracts. Decide whether
+any public endpoint exists; the default remains none. The bucket intentionally
+has no Object Lock and therefore makes no immutability claim. Manila needs its
+approved project IDs and negative access test. OpenStack gates need immutable
+disposable test-object inputs.
 
 Magnum remains blocked on reproducible driver/provider images, exact Heat
 inputs, a pinned Manila-over-NFS CSI derivative, and its workload qualification
@@ -382,10 +392,10 @@ The independent recovery destination is a private, SSE-B2-encrypted B2 bucket.
 Object Lock is disabled by design, so this destination does not claim immutable
 or ransomware-resistant retention. Its current writer is restricted to the
 `undercloud/` prefix and `writeFiles`; it cannot read, list, delete, change
-retention, or administer the bucket. A separate restore key is created only
-when restore tooling exists, kept outside the workload cluster, and activated
-for supervised recovery. Automated uploads remain closed until lifecycle and
-cost limits are explicitly selected.
+retention, or administer the bucket. The separate restore reader and age
+identity are SOPS-encrypted admin-only material outside Kubernetes. Automated
+six-hour uploads and bounded hidden-version retention are enabled; recovery
+still requires supervised access to that separate reader.
 
 The target backup policy covers undercloud and Magnum etcd, MariaDB, RabbitMQ
 definitions, a writer-quiesced matched OVN NB/SB pair, and selected tenant data.
