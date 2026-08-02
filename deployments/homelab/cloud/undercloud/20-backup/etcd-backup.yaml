@@ -70,7 +70,7 @@ spec:
                     --output-type binary \
                     --output /encrypted/snapshot.db.sops.json \
                     /snapshot/snapshot.db
-                  chmod 0640 /encrypted/snapshot.db.sops.json
+                  chmod 0444 /encrypted/snapshot.db.sops.json
               env:
                 - name: HOST_IP
                   valueFrom:
@@ -95,7 +95,7 @@ spec:
                   drop:
                     - ALL
                 readOnlyRootFilesystem: true
-                runAsGroup: 65532
+                runAsGroup: 0
                 runAsNonRoot: false
                 runAsUser: 0
               volumeMounts:

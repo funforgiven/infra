@@ -18,6 +18,8 @@ Commit secret values only as SOPS ciphertext. Recipients are declared in
 | `omada.yaml` → `wireless/psks/personal` | `Rooftrollen` WPA2-PSK |
 | `omada.yaml` → `wireless/psks/iot` | `Rooftrollen_IoT` WPA2-PSK |
 | `backblaze.yaml` → `undercloud/etcd_recovery/age_identity` | Cluster-external etcd backup decryption identity |
+| `backblaze.yaml` → `undercloud/etcd_restore_reader/application_key_id` | Read-only B2 recovery key identifier |
+| `backblaze.yaml` → `undercloud/etcd_restore_reader/application_key` | Read-only B2 recovery key secret |
 | `../deployments/homelab/cloud/undercloud/20-backup/writer.sops.yaml` | Flux-managed, upload-only B2 credential |
 | `routeros.yaml` → `routeros/pppoe_username` | TurkNet PPPoE username |
 | `routeros.yaml` → `routeros/pppoe_password` | TurkNet PPPoE password |
@@ -127,12 +129,11 @@ environment. Add a narrowly scoped host recipient and runtime declarations
 only when an unattended consumer exists.
 
 `backblaze.yaml` is likewise an admin-only recovery source. It contains the
-offline age identity; the separately created key that can only list and read
-etcd backup versions is added there after live B2 qualification. Neither is
-materialized by sops-nix or injected into the cluster. The upload-only
-credential has exactly one ciphertext source in the Flux-managed
-`20-backup/writer.sops.yaml`; it cannot read, list, delete, or administer the
-bucket. The regenerated B2 master key is never committed.
+offline age identity and the separate application key that can only list and
+read etcd backup versions. Neither is materialized by sops-nix or injected into
+the cluster. The upload-only credential has exactly one ciphertext source in
+the Flux-managed `20-backup/writer.sops.yaml`; it cannot read, list, delete, or
+administer the bucket. The regenerated B2 master key is never committed.
 
 A root `.env` is forbidden; its ignore rule is defense in depth, not a secret
 storage mechanism. Use the SOPS editor above rather than
