@@ -1,0 +1,79 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: fluent-bit-collector-chart
+  namespace: observability
+spec:
+  interval: 24h
+  url: oci://ghcr.io/fluent/helm-charts/fluent-bit-collector
+  ref:
+    digest: sha256:123bfa44d8402367138b3ba39d16e74c5fead51a68daad8082388618115aba92
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: fluent-bit-collector
+  namespace: observability
+spec:
+  interval: 30m
+  timeout: 10m
+  releaseName: fluent-bit-collector
+  dependsOn:
+    - name: kube-prometheus-stack
+    - name: loki
+  chartRef:
+    kind: OCIRepository
+    name: fluent-bit-collector-chart
+  driftDetection:
+    mode: enabled
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    image:
+      digest: sha256:ccda4cbd0f87be1e04cc1d5425bc84a6669051d4ac93a6b7a053c3ba9832aa14
+    updateStrategy:
+      type: RollingUpdate
+    minReadySeconds: 10
+    terminationGracePeriodSeconds: 30
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+
+    service:
+      enabled: true
+    serviceMonitor:
+      enabled: true
+      endpointConfig:
+        interval: 30s
+    dashboards:
+      enabled: true
+
+    storage:
+      enabled: true
+      hostPath: /var/lib/fluent-bit
+
+    config:
+      pipeline:
+        outputs:
+          - name: loki
+            alias: loki
+            match: "*"
+            host: loki.observability.svc.cluster.local
+            port: 3100
+            labels: >-
+              cluster=undercloud,namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name'],node=$kubernetes['host']
+            line_format: json
+            auto_kubernetes_labels: "off"
+            storage.total_limit_size: 5G
+            retry_limit: no_limits

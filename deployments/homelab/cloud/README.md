@@ -19,8 +19,11 @@ exercise. The switch map is `taleggio` on ports 3/4, `asiago` on 5/6, and
 `pecorino` on 7/8. Wave 20 is complete: the private B2 destination has bounded
 hidden-version retention, the six-hour client-encrypted etcd uploader is
 enabled, the restore reader remains outside Kubernetes, and a real upload plus
-RAM-backed isolated restore passed. Wave 30 Rook/Ceph is next; production
-eligibility remains false.
+RAM-backed isolated restore passed. Wave 30 is complete: Rook/Ceph reports
+`HEALTH_OK`, all six OSDs are up and in, the selected RBD pools and CephFS are
+ready, and the storage classes passed their semantic gates. Wave 35
+observability is the next reconciliation boundary; production eligibility
+remains false.
 
 The small set of current documents is intentional:
 
@@ -295,12 +298,21 @@ wave 20 also requires an explicit lifecycle and cost policy plus separately
 controlled restore authorization. Wave 80 is the isolated restore and recovery
 acceptance gate, not the first time backups exist.
 
-Wave 35 installs `kube-prometheus-stack` (Prometheus Operator, Alertmanager,
-Grafana) with node, Kubernetes, Ceph, and OpenStack exporters. Alloy or Fluent
-Bit sends initial logs to Loki. OpenSearch is deferred until measured
-retention/search demand and one-host-loss memory headroom justify it; Loki and
-OpenSearch do not become duplicate permanent log stores without distinct,
-documented roles.
+Wave 35 selects the digest-pinned `kube-prometheus-stack` 88.0.1 chart,
+Grafana-community Loki 18.7.0 (Loki 3.7.4), and Fluent
+`fluent-bit-collector` 1.0.9 (Fluent Bit 5.0.9). Prometheus has two
+host-separated 50 GiB RBD-backed replicas with 15-day retention; Alertmanager
+has three host-separated replicas; Grafana has one 10 GiB RBD-backed replica.
+Loki uses its supported monolithic filesystem mode: one 50 GiB RBD-backed pod
+with 14-day retention. Ceph preserves its PVC across a host loss, but log
+ingestion and queries have a pod-reschedule RTO; Fluent Bit therefore keeps a
+bounded filesystem buffer on every node. Three monolithic replicas are not
+claimed because the selected Loki chart requires an object-storage backend for
+that topology, and this wave deliberately adds neither RGW nor MinIO. Metrics
+and logs share the Ceph failure domain they observe, so a whole-Ceph outage also
+removes their historical data until Ceph recovers. OpenSearch remains deferred
+until measured retention/search demand and one-host-loss memory headroom
+justify it.
 
 ### Semantic hold points
 

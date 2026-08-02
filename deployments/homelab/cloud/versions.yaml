@@ -96,6 +96,36 @@ storage:
     image: quay.io/ceph/ceph@sha256:6b4b5ae33acd3d736eb26d2a19238bce71a22f9cfb99cca887ba6312d0957644
     forbiddenVersions: [20.2.0]
 
+observability:
+  kubePrometheusStack:
+    chartVersion: 88.0.1
+    prometheusOperatorVersion: 0.93.0
+    repository: oci://ghcr.io/prometheus-community/charts/kube-prometheus-stack
+    digest: sha256:db4805aa51d6566e6b628d71a6445be8a81ecd49701b99928c1a4cffc4132c1a
+    images:
+      nodeExporter: quay.io/prometheus/node-exporter:v1.12.1-distroless@sha256:8c9bac11973b94b59be88d6e11fee4429aa743c8846cdc75d65b18db33f6a106
+      busybox: docker.io/library/busybox:1.38.0@sha256:dc2d74b28e4cf8984fa52af1f39bc7c3d9c73760b41a74d629f5d11b1ab28616
+      grafanaSidecar: quay.io/kiwigrid/k8s-sidecar:2.10.0@sha256:21b9fe7bb29d65caf2445ccbf96ff6eda5e589a92bd8f5188f957fe75b551d72
+      grafana: docker.io/grafana/grafana:13.1.1@sha256:7cb8c64c4d57a57e734073f3cc94620adb24a0acb929bd80ba9f14017e3a975b
+      kubeStateMetrics: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.19.1@sha256:85108987d044b18a098126732f98602df408888c0f7d456241f5abefb9744bc1
+      operator: quay.io/prometheus-operator/prometheus-operator:v0.93.0@sha256:a001ed10a3823bbf2410ea347796d0e35ff8decd24fb98acbe7ab9e98d431c39
+      webhookCertgen: ghcr.io/jkroepke/kube-webhook-certgen:1.8.5@sha256:d0e80b2f62fe43bb5e1b96adc692132fb4522e802f4cf673c09b1f94722b8cb6
+      alertmanager: quay.io/prometheus/alertmanager:v0.33.1@sha256:9e082985f56f4c8c9f724e18f2288c6708f472e56a5286b8863d080434ea065d
+      prometheus: quay.io/prometheus/prometheus:v3.13.2-distroless@sha256:64f71bb84e03c855948418b0fc5dea53e9543d8e3fc9931598f583805507f05e
+      configReloader: quay.io/prometheus-operator/prometheus-config-reloader:v0.93.0@sha256:0ccb22ca9f3f6fd9f76ce95585d18bd2e363d421c534dde710be4bd13caa551d
+  loki:
+    version: 3.7.4
+    chartVersion: 18.7.0
+    repository: oci://ghcr.io/grafana-community/helm-charts/loki
+    digest: sha256:7b785f8096f1eb03499d958280d65c634d6ecb5d9942a14d5302d7517d4c9fc4
+    image: docker.io/grafana/loki:3.7.4@sha256:87f0a067673756a3cede1bcbf0c74875f7df9b09fddb53e399d0c576f756cfcc
+  fluentBit:
+    version: 5.0.9
+    chartVersion: 1.0.9
+    repository: oci://ghcr.io/fluent/helm-charts/fluent-bit-collector
+    digest: sha256:123bfa44d8402367138b3ba39d16e74c5fead51a68daad8082388618115aba92
+    image: ghcr.io/fluent/fluent-bit:5.0.9@sha256:ccda4cbd0f87be1e04cc1d5425bc84a6669051d4ac93a6b7a053c3ba9832aa14
+
 openstack:
   release: "2026.1"
   openstackHelm:
