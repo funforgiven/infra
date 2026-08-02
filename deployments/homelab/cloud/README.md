@@ -16,14 +16,17 @@ public Git source through four digest-pinned controllers; source verification,
 revision convergence, and the SOPS key boundary passed their semantic gates.
 Independent-OS-disk boot testing is deliberately deferred as a resilience
 exercise. The switch map is `taleggio` on ports 3/4, `asiago` on 5/6, and
-`pecorino` on 7/8. Wave 20 remains open for the B2 Object Lock backup
-foundation; production eligibility remains false.
+`pecorino` on 7/8. The private B2 destination and its upload-only writer are
+created. Wave 20 remains open for the backup uploader, explicit lifecycle and
+cost policy, restore authorization, and isolated restore proof; production
+eligibility remains false.
 
 The small set of current documents is intentional:
 
 | File | Purpose |
 | --- | --- |
 | [`versions.yaml`](versions.yaml) | Exact selected versions, commits, images, and digests; selections are not installation claims |
+| [`backup-destination.yaml`](backup-destination.yaml) | Public B2 bucket and least-privilege writer contract; contains no credential value or application-key ID |
 | [`network-inventory.yaml`](network-inventory.yaml) | Live Ansible inventory consumed by RouterOS automation; includes qualified physical link facts |
 | [`omada-network.yaml`](omada-network.yaml) | Omada desired state and qualification boundary |
 | [`hosts/`](hosts/) | Ubuntu inventory and replacement-tolerant physical slot contracts |
@@ -259,10 +262,12 @@ precedes new service pods; contracting migrations wait until the rollback
 window closes. The dependency graphs and semantic hold points above are the
 architecture authority; executable gates are added only with their wave.
 
-The B2 Object Lock destination and recovery credentials are a wave-20
-prerequisite. Each stateful component deploys its backup with the component;
-wave 80 is the isolated restore and recovery acceptance gate, not the first
-time backups exist.
+The private B2 destination and its upload-only credential are created without
+Object Lock. That credential is not a recovery credential: it cannot read or
+list objects. Each stateful component deploys its backup with the component;
+wave 20 also requires an explicit lifecycle and cost policy plus separately
+controlled restore authorization. Wave 80 is the isolated restore and recovery
+acceptance gate, not the first time backups exist.
 
 Wave 35 installs `kube-prometheus-stack` (Prometheus Operator, Alertmanager,
 Grafana) with node, Kubernetes, Ceph, and OpenStack exporters. Alloy or Fluent
@@ -285,7 +290,7 @@ The minimum evidence at each boundary is behavioral:
 | OpenStack | Keystone token plus disposable Glance, Cinder, Nova, Neutron, Heat, Octavia, Manila, and Masakari operations appropriate to the wave |
 | Nova CPU | Five workload types live-migrate through all six directed host pairs |
 | Magnum | Management outage closes writes, existing clusters continue, and create/scale/upgrade/replace/delete plus CSI tests pass |
-| Backup | Checksum and Object Lock are valid and an isolated restore succeeds inside policy |
+| Backup | Checksums, bucket/prefix scope, encryption, lifecycle policy, and restore authorization are valid; an isolated restore succeeds inside policy |
 
 ### Remaining gates
 
@@ -295,11 +300,13 @@ host. VLAN 40 is deliberately deferred to the Neutron external-network wave and
 does not block Kubernetes bootstrap; its later acceptance must prove that VLANs
 30–33 do not leak northbound.
 
-Before GitOps or service waves open, choose separate age recipients, commit only
-SOPS ciphertext, qualify immutable chart/controller artifacts, create the B2
-Object Lock destination, and decide whether any public endpoint exists (the
-default remains none). Manila needs its approved project IDs and negative access
-test. OpenStack gates need immutable disposable test-object inputs.
+Before service waves open, qualify immutable chart/controller artifacts, select
+the B2 lifecycle and cost policy, implement the uploader, establish restore
+authorization outside the workload cluster, and decide whether any public
+endpoint exists (the default remains none). The bucket intentionally has no
+Object Lock and therefore makes no immutability claim. Manila needs its approved
+project IDs and negative access test. OpenStack gates need immutable disposable
+test-object inputs.
 
 Magnum remains blocked on reproducible driver/provider images, exact Heat
 inputs, a pinned Manila-over-NFS CSI derivative, and its workload qualification
@@ -322,11 +329,10 @@ controllers and public signing-key Secret through a control-plane host's
 root-owned kubeconfig, inject `/run/secrets/undercloud-flux-age-identity` as
 `flux-system/sops-age` without writing a kubeconfig or plaintext key to disk,
 then apply the committed Git source and root Kustomization. Completion requires
-all four controller Deployments to be Available, the GitRepository's
-`SourceVerified=True` condition and `sourceVerificationMode=HEAD` status, and
-the GitRepository and Kustomization to be Ready at the expected signed commit
-revision. The SOPS identity is stable recovery state and is not regenerated
-during a host or cluster rebuild.
+all four controller Deployments to be Available, the GitRepository to be Ready
+with `sourceVerificationMode=HEAD`, and the GitRepository and Kustomization to
+converge at the expected signed commit revision. The SOPS identity is stable
+recovery state and is not regenerated during a host or cluster rebuild.
 
 Repository convention stays shallow: reusable implementation belongs in
 `components/cloud/<component>/`; concrete resources belong in
@@ -334,15 +340,23 @@ Repository convention stays shallow: reusable implementation belongs in
 one Flux root when it is bootstrapped, including the separate Magnum management
 cluster. A directory appears only with its first real resource.
 
-The independent recovery destination is a private B2 bucket with compliance
-Object Lock. The target policy covers undercloud and Magnum etcd, MariaDB,
-RabbitMQ definitions, a writer-quiesced matched OVN NB/SB pair, and selected
-tenant data. RabbitMQ message bodies are not a backup payload. Restore evidence,
-not object existence alone, is the readiness condition.
+The independent recovery destination is a private, SSE-B2-encrypted B2 bucket.
+Object Lock is disabled by design, so this destination does not claim immutable
+or ransomware-resistant retention. Its current writer is restricted to the
+`undercloud/` prefix and `writeFiles`; it cannot read, list, delete, change
+retention, or administer the bucket. A separate restore key is created only
+when restore tooling exists, kept outside the workload cluster, and activated
+for supervised recovery. Automated uploads remain closed until lifecycle and
+cost limits are explicitly selected.
+
+The target backup policy covers undercloud and Magnum etcd, MariaDB, RabbitMQ
+definitions, a writer-quiesced matched OVN NB/SB pair, and selected tenant data.
+RabbitMQ message bodies are not a backup payload. Restore evidence, not object
+existence alone, is the readiness condition.
 
 A full rebuild starts from Git, PiKVM, pinned installation artifacts, the host
-inventory, offline age identities, B2 recovery credentials, and retained slot
-evidence. Preserved Ceph devices may be adopted only after they resolve to the
+inventory, offline age identities, supervised B2 restore authorization, and
+retained slot evidence. Preserved Ceph devices may be adopted only after they resolve to the
 declared physical slots and match the reviewed recovery observation. No
 destructive rebuild step may infer its target from a device name or serial.
 

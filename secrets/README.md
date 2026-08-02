@@ -17,6 +17,8 @@ Commit secret values only as SOPS ciphertext. Recipients are declared in
 | `omada.yaml` → `omada/client_secret` | Omada API client secret |
 | `omada.yaml` → `wireless/psks/personal` | `Rooftrollen` WPA2-PSK |
 | `omada.yaml` → `wireless/psks/iot` | `Rooftrollen_IoT` WPA2-PSK |
+| `backblaze.yaml` → `undercloud/backup_writer/application_key_id` | Bucket- and prefix-scoped B2 writer key identifier |
+| `backblaze.yaml` → `undercloud/backup_writer/application_key` | Bucket- and prefix-scoped B2 writer secret |
 | `routeros.yaml` → `routeros/pppoe_username` | TurkNet PPPoE username |
 | `routeros.yaml` → `routeros/pppoe_password` | TurkNet PPPoE password |
 | `routeros.yaml` → `routeros/ccr2004_login_password` | CCR2004 `admin` login password |
@@ -54,6 +56,7 @@ Edit the structured files with the repository-pinned CLI:
 
 ```sh
 nix run .#sops --accept-flake-config -- secrets/api-tokens.yaml
+nix run .#sops --accept-flake-config -- secrets/backblaze.yaml
 nix run .#sops --accept-flake-config -- secrets/cloud-hosts.yaml
 nix run .#sops --accept-flake-config -- secrets/kubernetes.yaml
 nix run .#sops --accept-flake-config -- secrets/omada.yaml
@@ -123,6 +126,14 @@ decryptable by the host, materialized as runtime files, or exported into an
 environment. Add a narrowly scoped host recipient and runtime declarations
 only when an unattended consumer exists.
 
+`backblaze.yaml` is likewise an admin-only recovery source. It contains the
+application key pair for the private bucket and `undercloud/` prefix declared
+in `../deployments/homelab/cloud/backup-destination.yaml`; that key can upload
+objects but cannot read, list, delete, or administer the bucket. No NixOS file
+or Kubernetes Secret is materialized until a real backup uploader exists. At
+that point, move and re-encrypt the credential into the uploader's
+Flux-managed SOPS Secret instead of maintaining two ciphertext sources.
+
 A root `.env` is forbidden; its ignore rule is defense in depth, not a secret
 storage mechanism. Use the SOPS editor above rather than
 redirecting decrypted output into a repository or temporary file. Never
@@ -142,6 +153,7 @@ After changing `../.sops.yaml`, update every encrypted file:
 
 ```sh
 nix run .#sops --accept-flake-config -- updatekeys secrets/api-tokens.yaml
+nix run .#sops --accept-flake-config -- updatekeys secrets/backblaze.yaml
 nix run .#sops --accept-flake-config -- updatekeys secrets/cloud-hosts.yaml
 nix run .#sops --accept-flake-config -- updatekeys secrets/kubernetes.yaml
 nix run .#sops --accept-flake-config -- updatekeys secrets/github-ssh-key.sops
