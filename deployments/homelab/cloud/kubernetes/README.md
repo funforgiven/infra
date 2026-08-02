@@ -5,10 +5,11 @@ kube-vip, and Cilium installation. Flux becomes the continuous Kubernetes
 owner in the next wave.
 
 The inventory keeps every node address on VLAN 20. kube-vip owns only
-`10.21.20.128:6443`; Cilium Service L2 announcements and the mutually exclusive
-MetalLB fallback remain disabled until their later qualification wave. Cilium
-uses native routing through `bond0.20`, pod MTU 1500, and kube-proxy
-replacement. It must not select VLANs 30-32.
+`10.21.20.128:6443`. Cilium owns active Service L2 announcements; MetalLB is an
+inactive, mutually exclusive rollback implementation. Cilium uses native
+routing through `bond0.20`, pod MTU 1500, and kube-proxy replacement. It must
+not select VLANs 30-32. ConfigMap changes roll the agent DaemonSet with at most
+one unavailable agent, preserving networking on the other two nodes.
 
 ## Runner
 
