@@ -6,6 +6,9 @@
 /.direnv/
 /.envrc
 /.pre-commit-config.yaml
+/deployments/homelab/cloud/**/*.agekey
+/deployments/homelab/cloud/**/admin.conf
+/deployments/homelab/cloud/**/kubeconfig
 /hardware-configuration.nix
 /result
 /result-*

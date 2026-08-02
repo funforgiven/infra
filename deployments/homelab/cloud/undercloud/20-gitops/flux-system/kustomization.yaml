@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - gotk-components.yaml
+  - gotk-sync.yaml
+images:
+  - name: ghcr.io/fluxcd/source-controller
+    digest: sha256:c6c82b3182f48b833252c71aefa0741957ca18296612bc6d2b9b5fb276f926e4
+  - name: ghcr.io/fluxcd/kustomize-controller
+    digest: sha256:3e57aecb74419be93d09ba062cfc882bea405193c474009e0da1826de71a4ebd
+  - name: ghcr.io/fluxcd/helm-controller
+    digest: sha256:22c0a585d0d9b1f792b9d5638144b7810e273d28e310da37740f01226bd044a2
+  - name: ghcr.io/fluxcd/notification-controller
+    digest: sha256:cb17eefffbc442412ba6f63336defd04c0fc387d5082d951998d1ff163a9180d

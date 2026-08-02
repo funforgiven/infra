@@ -25,6 +25,7 @@ The small set of current documents is intentional:
 | [`omada-network.yaml`](omada-network.yaml) | Omada desired state and qualification boundary |
 | [`hosts/`](hosts/) | Ubuntu inventory and replacement-tolerant physical slot contracts |
 | [`kubernetes/`](kubernetes/) | Pinned Kubespray bootstrap and semantic acceptance contract |
+| [`undercloud/`](undercloud/) | Flux root for the real undercloud cluster |
 
 Future platform resources are added only when their installation wave is
 reached. A proposed service is recorded here as desired architecture, not as a
@@ -309,7 +310,20 @@ long-term log backend decision.
 Pinned Kubespray now creates Kubernetes, kube-vip, and Cilium. After their
 semantic gate passes, the pinned Flux controllers are installed, the
 cluster-specific age key is injected out of band, and Flux begins reconciling
-the Git source. No Flux bootstrap has happened yet.
+the Git source. Flux reads the public repository over HTTPS without a Git
+credential and verifies the checked-out `HEAD` against the committed SSH
+signing public key.
+
+Bootstrap and recovery use the same small sequence: apply the committed Flux
+controllers and public signing-key Secret through a control-plane host's
+root-owned kubeconfig, inject `/run/secrets/undercloud-flux-age-identity` as
+`flux-system/sops-age` without writing a kubeconfig or plaintext key to disk,
+then apply the committed Git source and root Kustomization. Completion requires
+all four controller Deployments to be Available, the GitRepository's
+`SourceVerifiedCondition=True` and `sourceVerificationMode=HEAD`, and the
+GitRepository and Kustomization to be Ready at the expected signed commit
+revision. The SOPS identity is stable recovery state and is not regenerated
+during a host or cluster rebuild.
 
 Repository convention stays shallow: reusable implementation belongs in
 `components/cloud/<component>/`; concrete resources belong in

@@ -17,7 +17,10 @@ _: {
           packages = [
             config.files.writer.drv
             config.treefmt.build.wrapper
+            pkgs.age
             pkgs.gitMinimal
+            pkgs.kubectl
+            pkgs.kustomize
             pkgs.nixd
             (pkgs.python3.withPackages (pythonPackages: [
               pythonPackages.ansible
