@@ -17,8 +17,8 @@ Commit secret values only as SOPS ciphertext. Recipients are declared in
 | `omada.yaml` → `omada/client_secret` | Omada API client secret |
 | `omada.yaml` → `wireless/psks/personal` | `Rooftrollen` WPA2-PSK |
 | `omada.yaml` → `wireless/psks/iot` | `Rooftrollen_IoT` WPA2-PSK |
-| `backblaze.yaml` → `undercloud/backup_writer/application_key_id` | Bucket- and prefix-scoped B2 writer key identifier |
-| `backblaze.yaml` → `undercloud/backup_writer/application_key` | Bucket- and prefix-scoped B2 writer secret |
+| `backblaze.yaml` → `undercloud/etcd_recovery/age_identity` | Cluster-external etcd backup decryption identity |
+| `../deployments/homelab/cloud/undercloud/20-backup/writer.sops.yaml` | Flux-managed, upload-only B2 credential |
 | `routeros.yaml` → `routeros/pppoe_username` | TurkNet PPPoE username |
 | `routeros.yaml` → `routeros/pppoe_password` | TurkNet PPPoE password |
 | `routeros.yaml` → `routeros/ccr2004_login_password` | CCR2004 `admin` login password |
@@ -127,12 +127,12 @@ environment. Add a narrowly scoped host recipient and runtime declarations
 only when an unattended consumer exists.
 
 `backblaze.yaml` is likewise an admin-only recovery source. It contains the
-application key pair for the private bucket and `undercloud/` prefix declared
-in `../deployments/homelab/cloud/backup-destination.yaml`; that key can upload
-objects but cannot read, list, delete, or administer the bucket. No NixOS file
-or Kubernetes Secret is materialized until a real backup uploader exists. At
-that point, move and re-encrypt the credential into the uploader's
-Flux-managed SOPS Secret instead of maintaining two ciphertext sources.
+offline age identity; the separately created key that can only list and read
+etcd backup versions is added there after live B2 qualification. Neither is
+materialized by sops-nix or injected into the cluster. The upload-only
+credential has exactly one ciphertext source in the Flux-managed
+`20-backup/writer.sops.yaml`; it cannot read, list, delete, or administer the
+bucket. The regenerated B2 master key is never committed.
 
 A root `.env` is forbidden; its ignore rule is defense in depth, not a secret
 storage mechanism. Use the SOPS editor above rather than
