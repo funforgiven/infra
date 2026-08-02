@@ -17,9 +17,9 @@ revision convergence, and the SOPS key boundary passed their semantic gates.
 Independent-OS-disk boot testing is deliberately deferred as a resilience
 exercise. The switch map is `taleggio` on ports 3/4, `asiago` on 5/6, and
 `pecorino` on 7/8. The private B2 destination and its upload-only writer are
-created. Wave 20 remains open for the backup uploader, explicit lifecycle and
-cost policy, restore authorization, and isolated restore proof; production
-eligibility remains false.
+created. The Wave 20 etcd uploader is present in desired state but remains
+suspended until the B2 lifecycle, cluster-external restore reader, first
+upload, and isolated restore proof pass; production eligibility remains false.
 
 The small set of current documents is intentional:
 
@@ -176,6 +176,31 @@ forbidden.
 Cinder Backup's Ceph pool is a fast local recovery copy, not an independent
 disaster backup. Selected Glance, Cinder, and CephFS recovery points must be
 exported off the Ceph failure domain.
+
+### Undercloud etcd recovery
+
+Every six hours, one control-plane node takes and validates an etcd snapshot,
+encrypts it client-side with SOPS and a dedicated age recipient, then replaces
+`undercloud/etcd/snapshot.db.sops.json` in the private B2 bucket. Replacing one
+stable key keeps the newest recovery point current while B2 retains hidden
+older versions for 30 days. The rule never expires the latest version merely
+because the cluster stops uploading.
+
+The cluster contains only the upload-only B2 key and the public age recipient.
+The separate B2 reader and age identity remain admin-only SOPS recovery
+material and are never injected into Kubernetes. A restore operator lists
+object versions, downloads a selected version plus its metadata, verifies the
+ciphertext SHA-256 metadata, decrypts it in temporary storage, and runs
+`etcdutl snapshot status` before use. Qualification restores into a temporary
+data directory and starts an isolated loopback-only etcd; it never replaces a
+live member. Plaintext snapshots, temporary credentials, and restored data are
+removed after the gate.
+
+A disaster restore stops all old etcd members first, restores one selected
+snapshot with the Kubespray-pinned etcd 3.6.10 tooling and the intended member
+topology, then re-adds or rebuilds the other members. Flux reconciliation opens
+only after quorum, Kubernetes API encryption, the API VIP, Cilium, and the
+signed Git revision have all been re-qualified.
 
 Tenant Kubernetes clusters consume Cinder CSI for block storage and Manila CSI
 over NFS for shared storage. Supported templates do not expose cephx keys,

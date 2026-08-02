@@ -44,6 +44,15 @@ kubernetes:
         version: 1.9.2
         image: ghcr.io/fluxcd/notification-controller
         digest: sha256:cb17eefffbc442412ba6f63336defd04c0fc387d5082d951998d1ff163a9180d
+  backup:
+    sops:
+      version: 3.13.1
+      image: ghcr.io/getsops/sops
+      digest: sha256:72c9964902e93643d7f52e86a854ce3c088e0c8aa0c37ad7b2b74f8d8d591429
+    awsCli:
+      version: 2.36.14
+      image: public.ecr.aws/aws-cli/aws-cli
+      digest: sha256:aaa7c2e17bace2c0cad977a85b64022248018148f7a936b44315afe2c61dfa91
   cilium:
     version: 1.19.4
     agentDigest: sha256:2eb67991eaa9368ba199c2fac2c573cb0ffdeb79184533344f42fc9a7ff6af3c

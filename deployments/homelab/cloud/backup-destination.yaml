@@ -10,10 +10,31 @@ bucket:
   access: private
   defaultEncryption: SSE-B2
   objectLock: false
-  lifecycleRules: []
+  lifecycleRules:
+    - fileNamePrefix: undercloud/etcd/
+      daysFromUploadingToHiding: null
+      daysFromHidingToDeleting: 30
 
 writer:
   keyName: infra-undercloud-backup-writer
   namePrefix: undercloud/
   capabilities:
     - writeFiles
+
+etcd:
+  schedule: "17 */6 * * *"
+  timeZone: Etc/UTC
+  objectKey: undercloud/etcd/snapshot.db.sops.json
+  clientSideEncryption:
+    implementation: sops-age
+    recipient: age1z0l8kk9mnr8arupzn7j0tu4kznqnup96jymeey5xkzggzne4df0qjcym75
+  retention:
+    latest: retained until replaced
+    replacedVersionsDays: 30
+
+restoreReader:
+  keyName: infra-undercloud-restore-reader
+  namePrefix: undercloud/etcd/
+  capabilities:
+    - listFiles
+    - readFiles
