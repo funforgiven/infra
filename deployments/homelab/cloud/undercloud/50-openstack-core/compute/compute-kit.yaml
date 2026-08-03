@@ -1,0 +1,273 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: openvswitch
+  namespace: openstack
+spec:
+  releaseName: openvswitch
+  chart:
+    spec:
+      chart: ./openvswitch
+      valuesFiles:
+        - openvswitch/values.yaml
+        - values_overrides/openvswitch/ubuntu_noble.yaml
+        - values_overrides/openvswitch/ovn.yaml
+  values:
+    manifests:
+      job_image_repo_sync: false
+    pod:
+      resources:
+        enabled: true
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: libvirt
+  namespace: openstack
+spec:
+  releaseName: libvirt
+  chart:
+    spec:
+      chart: ./libvirt
+      valuesFiles:
+        - libvirt/values.yaml
+        - values_overrides/libvirt/2026.1-ubuntu_noble.yaml
+        - values_overrides/libvirt/ovn.yaml
+  values:
+    conf:
+      dynamic_options:
+        libvirt:
+          listen_interface: bond0.31
+    manifests:
+      job_image_repo_sync: false
+    pod:
+      resources:
+        enabled: true
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ovn
+  namespace: openstack
+spec:
+  releaseName: ovn
+  chart:
+    spec:
+      chart: ./ovn
+      valuesFiles:
+        - ovn/values.yaml
+        - values_overrides/ovn/ubuntu_noble.yaml
+  values:
+    network:
+      interface:
+        tunnel: bond0.32
+    manifests:
+      job_image_repo_sync: false
+    pod:
+      affinity:
+        anti:
+          type:
+            default: requiredDuringSchedulingIgnoredDuringExecution
+      replicas:
+        ovn_ovsdb_nb: 3
+        ovn_ovsdb_sb: 3
+        ovn_northd: 3
+      resources:
+        enabled: true
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: nova
+  namespace: openstack
+spec:
+  releaseName: nova
+  chart:
+    spec:
+      chart: ./nova
+      valuesFiles:
+        - nova/values.yaml
+        - values_overrides/nova/2026.1-ubuntu_noble.yaml
+        - values_overrides/nova/ovn.yaml
+        - values_overrides/nova/mariadb-tls.yaml
+        - values_overrides/nova/messaging-tls.yaml
+  test:
+    enable: true
+  valuesFrom:
+    - kind: Secret
+      name: compute-values
+      valuesKey: nova.yaml
+  values:
+    rbd_pool:
+      app_name: rbd
+    conf:
+      libvirt:
+        live_migration_interface: bond0.31
+      hypervisor:
+        host_interface: bond0.20
+      nova:
+        DEFAULT:
+          reserved_host_memory_mb: 32768
+        libvirt:
+          cpu_mode: custom
+          cpu_models: x86-64-v2-AES
+          images_type: rbd
+          images_rbd_pool: vms
+    console:
+      novnc:
+        compute:
+          vncserver_proxyclient_interface: bond0.20
+        vncproxy:
+          vncserver_proxyclient_interface: bond0.20
+    endpoints:
+      compute:
+        host_fqdn_override:
+          public:
+            host: compute.cloud.fahrican.com
+      compute_novnc_proxy:
+        host_fqdn_override:
+          public:
+            host: console.cloud.fahrican.com
+      oslo_db:
+        host_fqdn_override:
+          default:
+            tls:
+              issuerRef:
+                name: openstack-ca
+                kind: Issuer
+              usages:
+                - client auth
+    manifests:
+      deployment_serialproxy: false
+      deployment_spiceproxy: false
+      job_image_repo_sync: false
+      service_serialproxy: false
+      service_spiceproxy: false
+      statefulset_conductor: true
+      statefulset_scheduler: true
+    pod:
+      affinity:
+        anti:
+          type:
+            default: requiredDuringSchedulingIgnoredDuringExecution
+      replicas:
+        api_metadata: 3
+        osapi: 3
+        conductor: 3
+        scheduler: 3
+        novncproxy: 3
+      lifecycle:
+        disruption_budget:
+          metadata:
+            min_available: 2
+          osapi:
+            min_available: 2
+      resources:
+        enabled: true
+    extraObjects:
+      - apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        metadata:
+          name: nova
+          namespace: openstack
+        spec:
+          parentRefs:
+            - name: private
+              namespace: network-services
+          hostnames:
+            - compute.cloud.fahrican.com
+          rules:
+            - backendRefs:
+                - name: nova-api
+                  port: 8774
+      - apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        metadata:
+          name: nova-console
+          namespace: openstack
+        spec:
+          parentRefs:
+            - name: private
+              namespace: network-services
+          hostnames:
+            - console.cloud.fahrican.com
+          rules:
+            - backendRefs:
+                - name: nova-novncproxy
+                  port: 6080
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: neutron
+  namespace: openstack
+spec:
+  releaseName: neutron
+  chart:
+    spec:
+      chart: ./neutron
+      valuesFiles:
+        - neutron/values.yaml
+        - values_overrides/neutron/2026.1-ubuntu_noble.yaml
+        - values_overrides/neutron/ovn.yaml
+        - values_overrides/neutron/mariadb-tls.yaml
+        - values_overrides/neutron/messaging-tls.yaml
+  test:
+    enable: true
+  valuesFrom:
+    - kind: Secret
+      name: compute-values
+      valuesKey: neutron.yaml
+  values:
+    network:
+      interface:
+        tunnel: bond0.32
+    conf:
+      neutron:
+        DEFAULT:
+          global_physnet_mtu: 9000
+    endpoints:
+      network:
+        host_fqdn_override:
+          public:
+            host: network.cloud.fahrican.com
+      oslo_db:
+        host_fqdn_override:
+          default:
+            tls:
+              issuerRef:
+                name: openstack-ca
+                kind: Issuer
+              usages:
+                - client auth
+    manifests:
+      job_image_repo_sync: false
+    pod:
+      affinity:
+        anti:
+          type:
+            default: requiredDuringSchedulingIgnoredDuringExecution
+      replicas:
+        server: 3
+      lifecycle:
+        disruption_budget:
+          server:
+            min_available: 2
+      resources:
+        enabled: true
+    extraObjects:
+      - apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        metadata:
+          name: neutron
+          namespace: openstack
+        spec:
+          parentRefs:
+            - name: private
+              namespace: network-services
+          hostnames:
+            - network.cloud.fahrican.com
+          rules:
+            - backendRefs:
+                - name: neutron-server
+                  port: 9696
