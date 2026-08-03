@@ -16,6 +16,11 @@ spec:
     manifests:
       job_image_repo_sync: false
     pod:
+      security_context:
+        ovs:
+          container:
+            server:
+              runAsUser: 0
       resources:
         enabled: true
 ---
