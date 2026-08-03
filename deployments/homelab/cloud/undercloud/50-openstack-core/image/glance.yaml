@@ -40,6 +40,10 @@ spec:
       valuesKey: values.yaml
   values:
     storage: rbd
+    conf:
+      software:
+        rbd:
+          rbd_store_pool_app_name: rbd
     endpoints:
       image:
         host_fqdn_override:
