@@ -69,6 +69,10 @@ spec:
       kind: CephCluster
       name: rook-ceph
       namespace: rook-ceph
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: rook-ceph-tools
+      namespace: rook-ceph
   healthCheckExprs:
     - apiVersion: ceph.rook.io/v1
       kind: CephCluster
