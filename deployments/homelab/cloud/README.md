@@ -29,7 +29,15 @@ path is qualified: three host-spread internal DNS replicas serve
 `10.21.20.129`, Cilium has one L2 lease holder, a controlled ownership handoff
 completed with 297 consecutive UDP-and-TCP probes and no failure, and the
 CCR2004 forwards `cloud.fahrican.com` over both transports. The mutually
-exclusive MetalLB rollback remains the final Wave 37 hold point. A disposable
+exclusive MetalLB rollback remains available. Wave 38's private Gateway API,
+certificate, and fallback-controller foundation is complete. Wave 40 is also
+complete: the upstream OpenStack-Helm charts own three-member MariaDB Galera
+and RabbitMQ clusters with strict TLS, host spread, one-node disruption
+budgets, and six healthy Prometheus targets. Galera passed all-member health,
+TLS, replication, and rolling-restart checks; RabbitMQ passed an AMQPS
+publish/consume check; and the daily MariaDB backup passed its built-in clean
+restore and grant verification. Wave 50—Keystone, Glance, Nova, Neutron, and
+Cinder—is next. A disposable
 RBD qualification image sustained about 89.7k 4 KiB random-write IOPS, 109.9k
 random-read IOPS, and 84.3k IOPS at a 70:30 read/write mix before being
 removed. Production eligibility remains false.
@@ -236,6 +244,13 @@ host-spread replicas. Percona XtraDB Cluster Operator and RabbitMQ Cluster
 Operator are forbidden. OpenStack service charts own database/user/vhost
 provisioning and schema jobs; cert-manager owns certificates; backup jobs use
 supported export interfaces without owning database or broker topology.
+
+The MariaDB chart writes a restore-verified logical backup to its dedicated
+20 GiB PVC every day and retains three days locally. Off-cluster database
+export is still required before production eligibility. RabbitMQ queues are
+non-authoritative transport state and are not backed up: service charts recreate
+users and virtual hosts from Git, while durable service state remains in
+MariaDB. Do not add a second database or broker operator to solve recovery.
 
 Nova starts with the common custom CPU model `x86-64-v2-AES`; host passthrough is
 forbidden. `x86-64-v3` remains a disabled candidate until idle, CPU-loaded, AES,

@@ -35,8 +35,10 @@ in
           module pattern. Git-controlled automation covers the current RouterOS
           fabric. All three private-cloud hosts now pass the automated physical
           baseline and supervised failure of each LACP member. Independent
-          OS-disk boot acceptance is a deferred resilience exercise. The pinned
-          Kubernetes bootstrap wave is active; OpenStack is not installed yet.
+          OS-disk boot acceptance is a deferred resilience exercise. Kubernetes,
+          Flux, Ceph, observability, private service ingress, MariaDB Galera, and
+          RabbitMQ are installed and qualified. The core OpenStack API services
+          are the next deployment wave.
 
           This is a concrete environment, not a reusable distribution. It can still
           serve as a reference for a dendritic flake, a Niri desktop, declarative
@@ -135,9 +137,11 @@ in
           The target is a three-node hyperconverged cloud based on Ubuntu Noble,
           Kubespray, Cilium, Flux, Rook-Ceph, and upstream OpenStack-Helm. All three
           hosts are installed, managed, and pass automated host and network
-          qualification, including failure of each LACP member. The pinned
-          Kubernetes bootstrap wave is active; Ceph, OpenStack, and Magnum follow
-          only after their installation waves begin.
+          qualification, including failure of each LACP member. Kubernetes, Flux,
+          Rook-Ceph, observability, service ingress, and the OpenStack-Helm
+          MariaDB and RabbitMQ infrastructure charts are running. Keystone,
+          Glance, Nova, Neutron, and Cinder are the next installation wave;
+          Magnum remains deferred.
 
           The current repository records:
 
