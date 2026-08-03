@@ -65,6 +65,8 @@ spec:
         - ovn/values.yaml
         - values_overrides/ovn/ubuntu_noble.yaml
   values:
+    conf:
+      ovs_user_name: root
     network:
       interface:
         tunnel: bond0.32
