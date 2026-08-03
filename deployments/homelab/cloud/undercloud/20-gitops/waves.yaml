@@ -355,20 +355,10 @@ spec:
     - name: wave38-cert-manager-qualification
   healthChecks:
     - apiVersion: gateway.networking.k8s.io/v1
-      kind: GatewayClass
-      name: private-envoy
-    - apiVersion: gateway.networking.k8s.io/v1
       kind: Gateway
       name: private
       namespace: network-services
   healthCheckExprs:
-    - apiVersion: gateway.networking.k8s.io/v1
-      kind: GatewayClass
-      current: >-
-        has(status.conditions) &&
-        status.conditions.exists(condition,
-          condition.type == 'Accepted' && condition.status == 'True' &&
-          condition.observedGeneration == metadata.generation)
     - apiVersion: gateway.networking.k8s.io/v1
       kind: Gateway
       current: >-
