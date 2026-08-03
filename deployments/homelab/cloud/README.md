@@ -45,6 +45,7 @@ The small set of current documents is intentional:
 | [`hosts/`](hosts/) | Ubuntu inventory and replacement-tolerant physical slot contracts |
 | [`kubernetes/`](kubernetes/) | Pinned Kubespray bootstrap and semantic acceptance contract |
 | [`undercloud/`](undercloud/) | Flux root for the real undercloud cluster |
+| [`undercloud/38-service-api-foundation/`](undercloud/38-service-api-foundation/) | Private Gateway, certificate, and mutually exclusive L2 fallback operation |
 
 Future platform resources are added only when their installation wave is
 reached. A proposed service is recorded here as desired architecture, not as a

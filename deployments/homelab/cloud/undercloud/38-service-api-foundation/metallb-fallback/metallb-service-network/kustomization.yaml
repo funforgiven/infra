@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../../37-service-network
+  - internal-coredns.yaml
+patches:
+  - target:
+      group: cilium.io
+      version: v2
+      kind: CiliumLoadBalancerIPPool
+      name: internal-dns
+    patch: |-
+      - op: add
+        path: /spec/disabled
+        value: true
+  - target:
+      version: v1
+      kind: Service
+      name: internal-coredns
+      namespace: network-services
+    patch: |-
+      $patch: delete
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: internal-coredns
+        namespace: network-services

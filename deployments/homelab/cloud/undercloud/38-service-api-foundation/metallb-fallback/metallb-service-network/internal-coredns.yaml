@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: internal-coredns-metallb
+  namespace: network-services
+  labels:
+    app.kubernetes.io/name: internal-coredns
+    infra.fahrican.com/lb-implementation: metallb-fallback
+    infra.fahrican.com/vip-purpose: internal-dns
+  annotations:
+    metallb.io/address-pool: internal-dns
+    metallb.io/loadBalancerIPs: 10.21.20.129
+spec:
+  type: LoadBalancer
+  loadBalancerClass: metallb.io/metallb
+  externalTrafficPolicy: Cluster
+  selector:
+    app.kubernetes.io/name: internal-coredns
+  ports:
+    - name: dns
+      port: 53
+      targetPort: dns
+      protocol: UDP
+    - name: dns-tcp
+      port: 53
+      targetPort: dns-tcp
+      protocol: TCP

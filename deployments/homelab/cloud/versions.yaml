@@ -1,6 +1,6 @@
 schemaVersion: 1
 document: homelab-cloud-version-selection
-lastReviewed: "2026-08-02"
+lastReviewed: "2026-08-03"
 
 host:
   ubuntu:
@@ -61,15 +61,39 @@ kubernetes:
     envoy:
       tag: v1.36.6-1778235340-b87d1e32f522b33bd51701c6476d199326f01496
       digest: sha256:71d4fa0ec45e8d546dbd5604e169dc77fe92be63b799313bff031d00d89762e3
-  metalLbFallback: 0.16.1
-  certManager: 1.21.1
+  metalLbFallback:
+    version: 0.16.1
+    commit: 791dfcc63ced7a6b3e869131eae75e645150fff0
+    images:
+      controller: quay.io/metallb/controller:v0.16.1@sha256:f51ab515de9ccd20dc3dccb093e48df8adddac019326c456f449e55ba91b6420
+      speaker: quay.io/metallb/speaker:v0.16.1@sha256:16561e96531e1852d5c229ad7fae6e994dcfa983ff7f4de6b6208b34a4e2ddbc
+  certManager:
+    version: 1.21.1
+    commit: 24e33194fb39488eff2bbf10c6dc640f407cad44
+    chart:
+      repository: oci://quay.io/jetstack/charts/cert-manager
+      digest: sha256:15c0b46d9006ce8eb9ff14d1bf54d1bbfcc587bb9e24cd9fe186fb8fec56af1f
+    images:
+      controller: quay.io/jetstack/cert-manager-controller:v1.21.1@sha256:416a2d76870d996460e62bd7f521bf14fa017be9e3e904aab92163a331fcb61a
+      webhook: quay.io/jetstack/cert-manager-webhook:v1.21.1@sha256:d8b3961b51c8c7320633f8208dc46bf88aa13804d0f7cbe48a096b2c523cee42
+      cainjector: quay.io/jetstack/cert-manager-cainjector:v1.21.1@sha256:ccf6b919ec0500745a47a910118f834f9636d0aac1ff221245cd2557ed8c7c98
+      acmesolver: quay.io/jetstack/cert-manager-acmesolver:v1.21.1@sha256:dbc7cc1354f603918e7c5af7f55a0a620537394452c93a565bde75c6f48e8837
+      startupapicheck: quay.io/jetstack/cert-manager-startupapicheck:v1.21.1@sha256:d8ab6416e6e7303a86fa0a8daa82c94a8001f21c9d78eb2e7db20534e5d07ae8
   externalDns: 1.21.1
   coreDns:
     version: 1.12.4
     image: registry.k8s.io/coredns/coredns:v1.12.4@sha256:986f04c2e15e147d00bdd51e8c51bcef3644b13ff806be7d2ff1b261d6dfbae1
   envoyGateway:
     version: 1.8.3
-    chartDigest: sha256:74551245ad0b0608f207e52c9ec3ce96ddd14e7655d12d5005c1c1d03b9d422a
+    commit: 94850d4323922cba7c67b5b5ad23de9c715f8048
+    gatewayApiVersion: 1.5.1
+    chart:
+      repository: oci://docker.io/envoyproxy/gateway-helm
+      digest: sha256:cfb34ff4266c87a394cd6be5c13607a2dd47083aef771368302eaeaa99c4a0a9
+    images:
+      controller: docker.io/envoyproxy/gateway:v1.8.3@sha256:e7a8c70537628bf996e5dec5c4c835704b4b9f4f715a74cf361bea30608c49ac
+      dataPlane: docker.io/envoyproxy/envoy:distroless-v1.38.3@sha256:574348fada8eb1130b448132287d76626dfb07525b16668075382f8e154a45a8
+      rateLimit: docker.io/envoyproxy/ratelimit:1e50889b@sha256:5bb3741fd6709bab1d498eae1a5807faa2113b712dfb236fb76c04a00871ffc9
 
 storage:
   rook:
