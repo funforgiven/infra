@@ -413,6 +413,10 @@ spec:
   healthChecks:
     - apiVersion: helm.toolkit.fluxcd.io/v2
       kind: HelmRelease
+      name: memcached
+      namespace: openstack
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
       name: mariadb
       namespace: openstack
     - apiVersion: helm.toolkit.fluxcd.io/v2

@@ -1,0 +1,48 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: memcached
+  namespace: openstack
+spec:
+  interval: 30m
+  timeout: 10m
+  releaseName: memcached
+  chart:
+    spec:
+      chart: ./memcached
+      interval: 24h
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: openstack-helm
+      valuesFiles:
+        - memcached/values.yaml
+  driftDetection:
+    mode: enabled
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    conf:
+      memcached:
+        memory: 256
+    images:
+      tags:
+        dep_check: quay.io/airshipit/kubernetes-entrypoint:latest-ubuntu_noble@sha256:6c1f647df798b61e16a16528f3706eb2497c95d4ed75c0b4709f4506bc6abdc2
+        memcached: quay.io/airshipit/memcached:1.6.32@sha256:387fd8d91c7e41eb2178715942dd6fd7974b8258b854972ebcdfeef637235a59
+    manifests:
+      job_image_repo_sync: false
+    pod:
+      replicas:
+        server: 3
+      resources:
+        enabled: true
+        memcached:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 512Mi

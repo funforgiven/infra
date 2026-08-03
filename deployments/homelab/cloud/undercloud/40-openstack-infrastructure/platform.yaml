@@ -33,6 +33,18 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
+  name: memcached
+  namespace: openstack
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      application: memcached
+      component: server
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
   name: rabbitmq-server
   namespace: openstack
 spec:
