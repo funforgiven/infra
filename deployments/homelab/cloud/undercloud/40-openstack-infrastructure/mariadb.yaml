@@ -108,6 +108,11 @@ spec:
               issuerRef:
                 name: openstack-ca
                 kind: Issuer
+              dnsNames:
+                - mariadb
+                - mariadb.openstack
+                - mariadb.openstack.svc.cluster.local
+                - localhost
     manifests:
       certificates: true
       job_image_repo_sync: false
