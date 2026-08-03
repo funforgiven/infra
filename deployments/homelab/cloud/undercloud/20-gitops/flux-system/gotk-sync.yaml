@@ -34,7 +34,7 @@ spec:
   timeout: 15m
   path: ./deployments/homelab/cloud/undercloud
   prune: true
-  wait: true
+  wait: false
   sourceRef:
     kind: GitRepository
     name: flux-system
