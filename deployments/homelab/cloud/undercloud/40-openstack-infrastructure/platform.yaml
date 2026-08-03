@@ -3,6 +3,7 @@ kind: Namespace
 metadata:
   name: openstack
   labels:
+    gateway.fahrican.com/private: allowed
     pod-security.kubernetes.io/enforce: privileged
     pod-security.kubernetes.io/enforce-version: v1.35
     pod-security.kubernetes.io/audit: privileged
