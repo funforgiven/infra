@@ -1,0 +1,32 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ceph-adapter-rook
+  namespace: openstack
+spec:
+  interval: 30m
+  timeout: 15m
+  releaseName: ceph-adapter-rook
+  chart:
+    spec:
+      chart: ./ceph-adapter-rook
+      interval: 24h
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: openstack-helm
+      valuesFiles:
+        - ceph-adapter-rook/values.yaml
+  driftDetection:
+    mode: enabled
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    ceph_cluster_namespace: rook-ceph
+    pod:
+      resources:
+        enabled: true
