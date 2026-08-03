@@ -1,0 +1,83 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: glance
+  namespace: openstack
+spec:
+  interval: 30m
+  timeout: 30m
+  releaseName: glance
+  chart:
+    spec:
+      chart: ./glance
+      interval: 24h
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: openstack-helm
+      valuesFiles:
+        - glance/values.yaml
+        - values_overrides/glance/2026.1-ubuntu_noble.yaml
+        - values_overrides/glance/mariadb-tls.yaml
+        - values_overrides/glance/messaging-tls.yaml
+  driftDetection:
+    mode: enabled
+  install:
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 1m
+  upgrade:
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 1m
+  test:
+    enable: true
+  valuesFrom:
+    - kind: Secret
+      name: glance-values
+      valuesKey: values.yaml
+  values:
+    storage: rbd
+    endpoints:
+      image:
+        host_fqdn_override:
+          public:
+            host: image.cloud.fahrican.com
+      oslo_db:
+        host_fqdn_override:
+          default:
+            tls:
+              issuerRef:
+                name: openstack-ca
+                kind: Issuer
+              usages:
+                - client auth
+    manifests:
+      job_image_repo_sync: false
+    pod:
+      replicas:
+        api: 3
+      lifecycle:
+        disruption_budget:
+          api:
+            min_available: 2
+      resources:
+        enabled: true
+    extraObjects:
+      - apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        metadata:
+          name: glance
+          namespace: openstack
+        spec:
+          parentRefs:
+            - name: private
+              namespace: network-services
+          hostnames:
+            - image.cloud.fahrican.com
+          rules:
+            - backendRefs:
+                - name: glance-api
+                  port: 9292
