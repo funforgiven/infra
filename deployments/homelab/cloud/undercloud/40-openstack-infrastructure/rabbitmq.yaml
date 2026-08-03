@@ -1,0 +1,85 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: rabbitmq
+  namespace: openstack
+spec:
+  interval: 30m
+  timeout: 20m
+  releaseName: rabbitmq
+  chart:
+    spec:
+      chart: ./rabbitmq
+      interval: 24h
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: openstack-helm
+  driftDetection:
+    mode: enabled
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  test:
+    enable: true
+  valuesFrom:
+    - kind: Secret
+      name: openstack-infrastructure-secrets
+      valuesKey: rabbitmq-values.yaml
+  values:
+    images:
+      tags:
+        rabbitmq_init: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        rabbitmq: quay.io/airshipit/rabbitmq:3.10.18@sha256:6920027be467c36b314ef6f808bba3d299df4b33a454fd3664f5461e57267654
+        scripted_test: quay.io/airshipit/rabbitmq:3.10.18-management@sha256:fad0e93362eba8b3d7c8978ff3c4ab2c1c94ef6b635e59b11d1de78d71138203
+        dep_check: quay.io/airshipit/kubernetes-entrypoint:latest-ubuntu_noble@sha256:6c1f647df798b61e16a16528f3706eb2497c95d4ed75c0b4709f4506bc6abdc2
+    pod:
+      affinity:
+        anti:
+          type:
+            default: requiredDuringSchedulingIgnoredDuringExecution
+      replicas:
+        server: 3
+      resources:
+        enabled: true
+        server:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: "2"
+            memory: 2Gi
+    volume:
+      size: 5Gi
+    conf:
+      rabbitmq:
+        ssl_options:
+          cacertfile: /etc/rabbitmq/certs/ca.crt
+          certfile: /etc/rabbitmq/certs/tls.crt
+          keyfile: /etc/rabbitmq/certs/tls.key
+          verify: verify_peer
+          fail_if_no_peer_cert: true
+        management:
+          ssl:
+            cacertfile: /etc/rabbitmq/certs/ca.crt
+            certfile: /etc/rabbitmq/certs/tls.crt
+            keyfile: /etc/rabbitmq/certs/tls.key
+    endpoints:
+      oslo_messaging:
+        host_fqdn_override:
+          default:
+            tls:
+              secretName: rabbitmq-tls-direct
+              issuerRef:
+                name: openstack-ca
+                kind: Issuer
+        port:
+          https:
+            default: 15680
+            public: 443
+    manifests:
+      certificates: true
+      job_image_repo_sync: false

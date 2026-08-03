@@ -1,0 +1,115 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: mariadb
+  namespace: openstack
+spec:
+  interval: 30m
+  timeout: 20m
+  releaseName: mariadb
+  chart:
+    spec:
+      chart: ./mariadb
+      interval: 24h
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: openstack-helm
+  driftDetection:
+    mode: enabled
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  test:
+    enable: true
+  valuesFrom:
+    - kind: Secret
+      name: openstack-infrastructure-secrets
+      valuesKey: mariadb-values.yaml
+  values:
+    images:
+      tags:
+        mariadb: quay.io/airshipit/mariadb:latest-ubuntu_noble@sha256:eca9a6776872a7f882d4f02000902c720999f902514f95713978da923f99abcb
+        mariadb_controller: quay.io/airshipit/mariadb:latest-ubuntu_noble@sha256:eca9a6776872a7f882d4f02000902c720999f902514f95713978da923f99abcb
+        scripted_test: quay.io/airshipit/mariadb:latest-ubuntu_noble@sha256:eca9a6776872a7f882d4f02000902c720999f902514f95713978da923f99abcb
+        prometheus_create_mysql_user: quay.io/airshipit/mariadb:11.4.8-noble@sha256:713a78da9f9d2d3b59be7e687926f579272db2262e06a052b18e61331407942f
+        prometheus_mysql_exporter: docker.io/prom/mysqld-exporter:v0.12.1@sha256:9fe9938c4ac9216cc24005144338f14fac4f604f139b481cc541bead008db3c1
+        dep_check: quay.io/airshipit/kubernetes-entrypoint:latest-ubuntu_noble@sha256:6c1f647df798b61e16a16528f3706eb2497c95d4ed75c0b4709f4506bc6abdc2
+        mariadb_backup: quay.io/airshipit/porthole-mysqlclient-utility:latest-ubuntu_jammy@sha256:18479e16b66719a2e7a4d8df9249d76c16f91776d4332f4939fdd9529f318be2
+    pod:
+      affinity:
+        anti:
+          type:
+            default: requiredDuringSchedulingIgnoredDuringExecution
+      probes:
+        server:
+          mariadb:
+            readiness:
+              disk_usage_percent: 90
+      lifecycle:
+        disruption_budget:
+          mariadb:
+            min_available: 2
+      resources:
+        enabled: true
+        server:
+          requests:
+            cpu: 500m
+            memory: 2Gi
+          limits:
+            memory: 4Gi
+        controller:
+          requests:
+            cpu: 25m
+            memory: 64Mi
+          limits:
+            memory: 256Mi
+        prometheus_mysql_exporter:
+          requests:
+            cpu: 25m
+            memory: 64Mi
+          limits:
+            memory: 256Mi
+      security_context:
+        server:
+          container:
+            perms:
+              readOnlyRootFilesystem: false
+            mariadb:
+              runAsUser: 0
+              allowPrivilegeEscalation: true
+              readOnlyRootFilesystem: false
+    volume:
+      size: 20Gi
+      backup:
+        size: 20Gi
+    jobs:
+      mariadb_backup:
+        activeDeadlineSeconds: 3600
+    conf:
+      backup:
+        enabled: true
+    dependencies:
+      static:
+        mariadb_backup:
+          jobs: null
+    monitoring:
+      prometheus:
+        enabled: true
+    endpoints:
+      oslo_db:
+        host_fqdn_override:
+          default:
+            tls:
+              secretName: mariadb-tls-direct
+              issuerRef:
+                name: openstack-ca
+                kind: Issuer
+    manifests:
+      certificates: true
+      job_image_repo_sync: false
+      cron_job_mariadb_backup: true
+      pvc_backup: true

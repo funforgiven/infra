@@ -2,6 +2,8 @@ apiVersion: v1
 kind: Node
 metadata:
   name: pecorino
+  labels:
+    openstack-control-plane: enabled
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
     kustomize.toolkit.fluxcd.io/ssa: Merge
@@ -11,6 +13,8 @@ apiVersion: v1
 kind: Node
 metadata:
   name: taleggio
+  labels:
+    openstack-control-plane: enabled
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
     kustomize.toolkit.fluxcd.io/ssa: Merge
@@ -20,6 +24,8 @@ apiVersion: v1
 kind: Node
 metadata:
   name: asiago
+  labels:
+    openstack-control-plane: enabled
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
     kustomize.toolkit.fluxcd.io/ssa: Merge
