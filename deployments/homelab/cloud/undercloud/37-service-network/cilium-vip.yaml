@@ -3,6 +3,7 @@ kind: CiliumLoadBalancerIPPool
 metadata:
   name: internal-dns
 spec:
+  disabled: false
   blocks:
     - cidr: 10.21.20.129/32
   serviceSelector:

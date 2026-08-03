@@ -1,0 +1,28 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: cert-manager-qualification
+  namespace: cert-manager
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: cert-manager-qualification
+  namespace: cert-manager
+spec:
+  secretName: cert-manager-qualification-tls
+  duration: 24h
+  renewBefore: 8h
+  commonName: cert-manager-qualification.cert-manager.svc
+  dnsNames:
+    - cert-manager-qualification.cert-manager.svc
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  issuerRef:
+    group: cert-manager.io
+    kind: Issuer
+    name: cert-manager-qualification

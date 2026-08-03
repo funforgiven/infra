@@ -257,3 +257,137 @@ spec:
     - apiVersion: monitoring.coreos.com/v1
       kind: PrometheusRule
       current: "true"
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave38-service-api-controllers
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 15m
+  path: ./deployments/homelab/cloud/undercloud/38-service-api-foundation/controllers
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: wave37-service-network
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: cert-manager
+      namespace: cert-manager
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: envoy-gateway
+      namespace: envoy-gateway-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave38-metallb-fallback-controller
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  path: ./deployments/homelab/cloud/undercloud/38-service-api-foundation/metallb-fallback/inactive
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: wave37-service-network
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: metallb
+      namespace: metallb-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave38-cert-manager-qualification
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 5m
+  path: ./deployments/homelab/cloud/undercloud/38-service-api-foundation/qualification
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: wave38-service-api-controllers
+    - name: wave38-metallb-fallback-controller
+  healthChecks:
+    - apiVersion: cert-manager.io/v1
+      kind: Certificate
+      name: cert-manager-qualification
+      namespace: cert-manager
+  healthCheckExprs:
+    - apiVersion: cert-manager.io/v1
+      kind: Certificate
+      current: >-
+        has(status.conditions) &&
+        status.conditions.exists(condition,
+          condition.type == 'Ready' && condition.status == 'True' &&
+          condition.observedGeneration == metadata.generation)
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave38-private-gateway
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  path: ./deployments/homelab/cloud/undercloud/38-service-api-foundation/private-gateway
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: wave38-cert-manager-qualification
+  healthChecks:
+    - apiVersion: gateway.networking.k8s.io/v1
+      kind: GatewayClass
+      name: private-envoy
+    - apiVersion: gateway.networking.k8s.io/v1
+      kind: Gateway
+      name: private
+      namespace: network-services
+  healthCheckExprs:
+    - apiVersion: gateway.networking.k8s.io/v1
+      kind: GatewayClass
+      failed: >-
+        has(status.conditions) &&
+        status.conditions.exists(condition,
+          condition.type == 'Accepted' && condition.status == 'False')
+      current: >-
+        has(status.conditions) &&
+        status.conditions.exists(condition,
+          condition.type == 'Accepted' && condition.status == 'True' &&
+          condition.observedGeneration == metadata.generation)
+    - apiVersion: gateway.networking.k8s.io/v1
+      kind: Gateway
+      failed: >-
+        has(status.conditions) &&
+        status.conditions.exists(condition,
+          (condition.type == 'Accepted' || condition.type == 'Programmed') &&
+          condition.status == 'False')
+      current: >-
+        has(status.conditions) &&
+        status.conditions.exists(condition,
+          condition.type == 'Accepted' && condition.status == 'True' &&
+          condition.observedGeneration == metadata.generation) &&
+        status.conditions.exists(condition,
+          condition.type == 'Programmed' && condition.status == 'True' &&
+          condition.observedGeneration == metadata.generation) &&
+        has(status.addresses) &&
+        status.addresses.exists(address,
+          address.type == 'IPAddress' && address.value == '10.21.20.130')

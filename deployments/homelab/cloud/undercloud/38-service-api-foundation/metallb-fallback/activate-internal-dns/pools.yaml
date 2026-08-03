@@ -1,0 +1,31 @@
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: internal-dns
+  namespace: metallb-system
+spec:
+  addresses:
+    - 10.21.20.129/32
+  autoAssign: false
+  serviceAllocation:
+    priority: 10
+    namespaces:
+      - network-services
+    serviceSelectors:
+      - matchLabels:
+          infra.fahrican.com/lb-implementation: metallb-fallback
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: internal-dns-vlan20
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - internal-dns
+  interfaces:
+    - bond0.20
+  nodeSelectors:
+    - matchExpressions:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
