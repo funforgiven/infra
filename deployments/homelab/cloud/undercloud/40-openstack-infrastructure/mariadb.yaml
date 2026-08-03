@@ -112,6 +112,9 @@ spec:
                 - mariadb
                 - mariadb.openstack
                 - mariadb.openstack.svc.cluster.local
+                - mariadb-server
+                - mariadb-server.openstack
+                - mariadb-server.openstack.svc.cluster.local
                 - localhost
     manifests:
       certificates: true
