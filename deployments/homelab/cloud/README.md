@@ -36,8 +36,10 @@ and RabbitMQ clusters with strict TLS, host spread, one-node disruption
 budgets, and six healthy Prometheus targets. Galera passed all-member health,
 TLS, replication, and rolling-restart checks; RabbitMQ passed an AMQPS
 publish/consume check; and the daily MariaDB backup passed its built-in clean
-restore and grant verification. Wave 50—Keystone, Glance, Nova, Neutron, and
-Cinder—is next. A disposable
+restore and grant verification. Wave 50 core is deployed: Keystone, Glance,
+Cinder, Placement, Nova, Neutron, OVN, libvirt, and Open vSwitch reconcile from
+Git; the upstream service tests pass; and Nova registers all three compute
+hosts. A disposable
 RBD qualification image sustained about 89.7k 4 KiB random-write IOPS, 109.9k
 random-read IOPS, and 84.3k IOPS at a 70:30 read/write mix before being
 removed. Production eligibility remains false.
@@ -252,12 +254,13 @@ non-authoritative transport state and are not backed up: service charts recreate
 users and virtual hosts from Git, while durable service state remains in
 MariaDB. Do not add a second database or broker operator to solve recovery.
 
-Nova starts with the common custom CPU model `x86-64-v2-AES`; host passthrough is
-forbidden. `x86-64-v3` remains a disabled candidate until idle, CPU-loaded, AES,
-disk-write, and network-stream guests migrate successfully in every direction
-between all three hosts. Nova initially reserves 32 GiB of every 64 GiB host and
-uses `ram_allocation_ratio=1.0` until measured one-host-loss headroom justifies a
-change.
+Nova starts with the common custom CPU model `Westmere`, the named model exposed
+by all three hosts that provides the intended x86-64-v2-era AES baseline; host
+passthrough is forbidden. `x86-64-v3` remains a disabled candidate until idle,
+CPU-loaded, AES, disk-write, and network-stream guests migrate successfully in
+every direction between all three hosts. Nova initially reserves 32 GiB of
+every 64 GiB host and uses `ram_allocation_ratio=1.0` until measured
+one-host-loss headroom justifies a change.
 
 ## Magnum bootstrap and recovery
 
