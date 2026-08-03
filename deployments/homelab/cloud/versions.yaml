@@ -157,6 +157,9 @@ openstack:
     repository: https://opendev.org/openstack/openstack-helm.git
     commit: ce8c7069bcba495e3df4cc6075dc6870472f6c14
     infrastructure:
+      memcached:
+        version: 1.6.32
+        image: quay.io/airshipit/memcached:1.6.32@sha256:387fd8d91c7e41eb2178715942dd6fd7974b8258b854972ebcdfeef637235a59
       mariadb:
         version: 11.4.8
         image: quay.io/airshipit/mariadb:latest-ubuntu_noble@sha256:eca9a6776872a7f882d4f02000902c720999f902514f95713978da923f99abcb

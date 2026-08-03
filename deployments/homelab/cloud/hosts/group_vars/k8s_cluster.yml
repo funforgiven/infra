@@ -3,6 +3,13 @@ ip: "{{ ansible_host }}"
 access_ip: "{{ ansible_host }}"
 etcd_member_name: "{{ inventory_hostname }}"
 
+node_labels:
+  openstack-control-plane: enabled
+  openstack-compute-node: enabled
+  openstack-network-node: enabled
+  openvswitch: enabled
+  l3-agent: enabled
+
 kube_version: "1.35.4"
 container_manager: containerd
 kube_network_plugin: cilium
