@@ -27,6 +27,12 @@ spec:
       retries: 3
   values:
     ceph_cluster_namespace: rook-ceph
+    conf:
+      ceph:
+        global:
+          mon_host: 10.21.30.12:3300,10.21.30.11:3300,10.21.30.10:3300
+    manifests:
+      job_namespace_client_ceph_config: false
     pod:
       resources:
         enabled: true
