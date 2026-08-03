@@ -26,4 +26,7 @@ spec:
       port: 80
       allowedRoutes:
         namespaces:
-          from: Same
+          from: Selector
+          selector:
+            matchLabels:
+              gateway.fahrican.com/private: allowed
