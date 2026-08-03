@@ -23,10 +23,12 @@ spec:
   driftDetection:
     mode: enabled
   install:
+    disableWait: true
     strategy:
       name: RetryOnFailure
       retryInterval: 1m
   upgrade:
+    disableWait: true
     strategy:
       name: RetryOnFailure
       retryInterval: 1m
