@@ -39,10 +39,13 @@ publish/consume check; and the daily MariaDB backup passed its built-in clean
 restore and grant verification. Wave 50 core is deployed: Keystone, Glance,
 Cinder, Placement, Nova, Neutron, OVN, libvirt, and Open vSwitch reconcile from
 Git; the upstream service tests pass; and Nova registers all three compute
-hosts. A disposable
-RBD qualification image sustained about 89.7k 4 KiB random-write IOPS, 109.9k
-random-read IOPS, and 84.3k IOPS at a 70:30 read/write mix before being
-removed. Production eligibility remains false.
+hosts. A disposable CirrOS 0.6.3 guest booted with DHCP and metadata, completed
+all six directed live-migration paths in 24–26 seconds per move, and passed a
+1 GiB Cinder attach/detach cycle before all test objects were removed. A
+disposable RBD qualification image sustained about 89.7k 4 KiB random-write
+IOPS, 109.9k random-read IOPS, and 84.3k IOPS at a 70:30 read/write mix before
+being removed. The full five-workload migration matrix remains open, so
+production eligibility remains false.
 
 The small set of current documents is intentional:
 
