@@ -559,3 +559,53 @@ spec:
       kind: Certificate
       name: placement-client
       namespace: openstack
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave50-compute
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 30m
+  path: ./deployments/homelab/cloud/undercloud/50-openstack-core/compute
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+    - name: wave50-placement
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: openvswitch
+      namespace: openstack
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: libvirt
+      namespace: openstack
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: ovn
+      namespace: openstack
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: nova
+      namespace: openstack
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: neutron
+      namespace: openstack
+    - apiVersion: cert-manager.io/v1
+      kind: Certificate
+      name: nova-client
+      namespace: openstack
+    - apiVersion: cert-manager.io/v1
+      kind: Certificate
+      name: neutron-client
+      namespace: openstack
