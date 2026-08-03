@@ -119,7 +119,7 @@ spec:
           reserved_host_memory_mb: 32768
         libvirt:
           cpu_mode: custom
-          cpu_models: x86-64-v2-AES
+          cpu_models: Westmere
           images_type: rbd
           images_rbd_pool: vms
     console:
