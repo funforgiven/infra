@@ -340,6 +340,23 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
+  name: wave38-private-gateway-config
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 5m
+  path: ./deployments/homelab/cloud/undercloud/38-service-api-foundation/private-gateway-config
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: wave38-cert-manager-qualification
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
   name: wave38-private-gateway
   namespace: flux-system
 spec:
@@ -352,7 +369,7 @@ spec:
     kind: GitRepository
     name: flux-system
   dependsOn:
-    - name: wave38-cert-manager-qualification
+    - name: wave38-private-gateway-config
   healthChecks:
     - apiVersion: gateway.networking.k8s.io/v1
       kind: Gateway
