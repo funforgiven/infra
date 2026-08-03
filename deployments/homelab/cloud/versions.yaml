@@ -156,3 +156,10 @@ openstack:
     chartVersion: 2026.1.0
     repository: https://opendev.org/openstack/openstack-helm.git
     commit: ce8c7069bcba495e3df4cc6075dc6870472f6c14
+    infrastructure:
+      mariadb:
+        version: 11.4.8
+        image: quay.io/airshipit/mariadb:latest-ubuntu_noble@sha256:eca9a6776872a7f882d4f02000902c720999f902514f95713978da923f99abcb
+      rabbitmq:
+        version: 3.10.18
+        image: quay.io/airshipit/rabbitmq:3.10.18@sha256:6920027be467c36b314ef6f808bba3d299df4b33a454fd3664f5461e57267654
