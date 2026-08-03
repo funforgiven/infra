@@ -364,10 +364,6 @@ spec:
   healthCheckExprs:
     - apiVersion: gateway.networking.k8s.io/v1
       kind: GatewayClass
-      failed: >-
-        has(status.conditions) &&
-        status.conditions.exists(condition,
-          condition.type == 'Accepted' && condition.status == 'False')
       current: >-
         has(status.conditions) &&
         status.conditions.exists(condition,
@@ -375,11 +371,6 @@ spec:
           condition.observedGeneration == metadata.generation)
     - apiVersion: gateway.networking.k8s.io/v1
       kind: Gateway
-      failed: >-
-        has(status.conditions) &&
-        status.conditions.exists(condition,
-          (condition.type == 'Accepted' || condition.type == 'Programmed') &&
-          condition.status == 'False')
       current: >-
         has(status.conditions) &&
         status.conditions.exists(condition,
