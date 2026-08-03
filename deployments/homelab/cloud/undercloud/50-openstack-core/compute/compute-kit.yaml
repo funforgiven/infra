@@ -13,6 +13,8 @@ spec:
         - values_overrides/openvswitch/ubuntu_noble.yaml
         - values_overrides/openvswitch/ovn.yaml
   values:
+    conf:
+      ovs_user_name: null
     manifests:
       job_image_repo_sync: false
     pod:
