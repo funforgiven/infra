@@ -469,3 +469,33 @@ spec:
       kind: Certificate
       name: keystone-client
       namespace: openstack
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave50-image
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 30m
+  path: ./deployments/homelab/cloud/undercloud/50-openstack-core/image
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+    - name: wave50-identity
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: glance
+      namespace: openstack
+    - apiVersion: cert-manager.io/v1
+      kind: Certificate
+      name: glance-client
+      namespace: openstack
