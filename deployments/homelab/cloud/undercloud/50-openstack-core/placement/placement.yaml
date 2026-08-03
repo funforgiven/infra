@@ -1,0 +1,79 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: placement
+  namespace: openstack
+spec:
+  interval: 30m
+  timeout: 30m
+  releaseName: placement
+  chart:
+    spec:
+      chart: ./placement
+      interval: 24h
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: openstack-helm
+      valuesFiles:
+        - placement/values.yaml
+        - values_overrides/placement/2026.1-ubuntu_noble.yaml
+        - values_overrides/placement/mariadb-tls.yaml
+  driftDetection:
+    mode: enabled
+  install:
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 1m
+  upgrade:
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 1m
+  valuesFrom:
+    - kind: Secret
+      name: placement-values
+      valuesKey: values.yaml
+  values:
+    endpoints:
+      placement:
+        host_fqdn_override:
+          public:
+            host: placement.cloud.fahrican.com
+      oslo_db:
+        host_fqdn_override:
+          default:
+            tls:
+              issuerRef:
+                name: openstack-ca
+                kind: Issuer
+              usages:
+                - client auth
+    manifests:
+      job_image_repo_sync: false
+    pod:
+      replicas:
+        api: 3
+      lifecycle:
+        disruption_budget:
+          api:
+            min_available: 2
+      resources:
+        enabled: true
+    extraObjects:
+      - apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        metadata:
+          name: placement
+          namespace: openstack
+        spec:
+          parentRefs:
+            - name: private
+              namespace: network-services
+          hostnames:
+            - placement.cloud.fahrican.com
+          rules:
+            - backendRefs:
+                - name: placement-api
+                  port: 8778
