@@ -58,6 +58,63 @@ spec:
                           failureThreshold: 18
                           periodSeconds: 10
                           timeoutSeconds: 2
+                        volumeMounts:
+                          - name: octavia-driver-agents
+                            mountPath: /var/run/octavia
+                      - name: octavia-agent
+                        image: ghcr.io/rackerlabs/genestack-images/octavia:2026.1-latest@sha256:d17cc410c3e95bfa95943364707befd827aa6068639a4fe317a21c191422d160
+                        imagePullPolicy: IfNotPresent
+                        command:
+                          - octavia-driver-agent
+                          - --config-file
+                          - /etc/octavia/octavia.conf
+                          - --config-dir
+                          - /etc/octavia/octavia.conf.d
+                        securityContext:
+                          runAsUser: 42424
+                          capabilities:
+                            add:
+                              - SYS_NICE
+                        resources:
+                          requests:
+                            cpu: 100m
+                            memory: 128Mi
+                          limits:
+                            cpu: "2"
+                            memory: 1Gi
+                        volumeMounts:
+                          - name: oslo-lock-path
+                            mountPath: /var/lock
+                          - name: pod-etc-octavia
+                            mountPath: /etc/octavia
+                          - name: octavia-etc
+                            mountPath: /etc/octavia/octavia.conf
+                            subPath: octavia.conf
+                            readOnly: true
+                          - name: octavia-etc-snippets
+                            mountPath: /etc/octavia/octavia.conf.d/
+                            readOnly: true
+                          - name: octavia-etc
+                            mountPath: /etc/octavia/logging.conf
+                            subPath: logging.conf
+                            readOnly: true
+                          - name: octavia-driver-agents
+                            mountPath: /var/run/octavia
+                          - name: run-openvswitch
+                            mountPath: /var/run/ovn
+                          - name: client-certs
+                            mountPath: /etc/mysql/certs
+                            readOnly: true
+                          - name: client-certs
+                            mountPath: /etc/rabbitmq/certs
+                            readOnly: true
+                    volumes:
+                      - name: octavia-driver-agents
+                        emptyDir: {}
+                      - name: run-openvswitch
+                        hostPath:
+                          path: /run/openvswitch
+                          type: DirectoryOrCreate
           - target:
               group: batch
               version: v1
@@ -138,7 +195,6 @@ spec:
         ks_endpoints: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
         dep_check: quay.io/airshipit/kubernetes-entrypoint:latest-ubuntu_noble@sha256:6c1f647df798b61e16a16528f3706eb2497c95d4ed75c0b4709f4506bc6abdc2
         octavia_api: ghcr.io/rackerlabs/genestack-images/octavia:2026.1-latest@sha256:d17cc410c3e95bfa95943364707befd827aa6068639a4fe317a21c191422d160
-        octavia_driver_agent: ghcr.io/rackerlabs/genestack-images/octavia:2026.1-latest@sha256:d17cc410c3e95bfa95943364707befd827aa6068639a4fe317a21c191422d160
         octavia_housekeeping: ghcr.io/rackerlabs/genestack-images/octavia:2026.1-latest@sha256:d17cc410c3e95bfa95943364707befd827aa6068639a4fe317a21c191422d160
     conf:
       octavia:
@@ -170,6 +226,7 @@ spec:
     manifests:
       daemonset_health_manager: false
       daemonset_worker: false
+      deployment_driver_agent: false
       job_image_repo_sync: false
     pod:
       affinity:
@@ -178,7 +235,6 @@ spec:
             default: requiredDuringSchedulingIgnoredDuringExecution
       replicas:
         api: 3
-        driver_agent: 1
         housekeeping: 1
       lifecycle:
         disruption_budget:
@@ -198,8 +254,6 @@ spec:
               - name: client-certs
                 secret:
                   secretName: octavia-client
-        octavia_driver_agent:
-          octavia_driver_agent: *service-client-certs
         octavia_housekeeping:
           octavia_housekeeping: *service-client-certs
         octavia_db_sync:
