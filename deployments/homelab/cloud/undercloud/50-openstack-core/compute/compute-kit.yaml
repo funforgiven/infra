@@ -66,6 +66,9 @@ spec:
         - values_overrides/ovn/ubuntu_noble.yaml
   values:
     conf:
+      auto_bridge_add:
+        br-ex: bond0.40
+      ovn_bridge_mappings: physnet-external:br-ex
       ovs_user_name: root
     network:
       interface:
@@ -235,6 +238,11 @@ spec:
       neutron:
         DEFAULT:
           global_physnet_mtu: 9000
+          physical_network_mtus: physnet-external:1500
+      plugins:
+        ml2_conf:
+          ml2_type_flat:
+            flat_networks: physnet-external
     endpoints:
       network:
         host_fqdn_override:
