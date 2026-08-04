@@ -734,9 +734,5 @@ spec:
       namespace: openstack
     - apiVersion: apps/v1
       kind: Deployment
-      name: octavia-driver-agent
-      namespace: openstack
-    - apiVersion: apps/v1
-      kind: Deployment
       name: octavia-housekeeping
       namespace: openstack
