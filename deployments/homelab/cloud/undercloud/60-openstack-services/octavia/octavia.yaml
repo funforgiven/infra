@@ -257,12 +257,14 @@ spec:
                   trap cleanup EXIT
                   providers=
                   for attempt in $(seq 1 60); do
-                    if providers=$(openstack loadbalancer provider list -f value -c name 2>/dev/null); then
+                    providers=$(openstack loadbalancer provider list -f value -c name 2>/dev/null) || true
+                    if test "$providers" = ovn; then
                       break
                     fi
                     test "$attempt" -lt 60
                     sleep 5
                   done
+                  printf 'Octavia providers: %s\n' "$providers"
                   test "$providers" = ovn
                   cleanup
                   network_id=$(openstack network create "$name" -f value -c id)
