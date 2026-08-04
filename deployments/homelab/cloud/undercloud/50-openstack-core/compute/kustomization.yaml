@@ -44,3 +44,15 @@ patches:
           strategy:
             name: RetryOnFailure
             retryInterval: 1m
+  - target:
+      group: helm.toolkit.fluxcd.io
+      version: v2
+      kind: HelmRelease
+      name: ovn
+    patch: |-
+      - op: replace
+        path: /spec/install/disableWait
+        value: false
+      - op: replace
+        path: /spec/upgrade/disableWait
+        value: false
