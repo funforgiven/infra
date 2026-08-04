@@ -100,8 +100,6 @@ spec:
                             readOnly: true
                           - name: octavia-driver-agents
                             mountPath: /var/run/octavia
-                          - name: run-openvswitch
-                            mountPath: /var/run/ovn
                           - name: client-certs
                             mountPath: /etc/mysql/certs
                             readOnly: true
@@ -111,10 +109,6 @@ spec:
                     volumes:
                       - name: octavia-driver-agents
                         emptyDir: {}
-                      - name: run-openvswitch
-                        hostPath:
-                          path: /run/openvswitch
-                          type: DirectoryOrCreate
           - target:
               group: batch
               version: v1
@@ -205,8 +199,8 @@ spec:
         driver_agent:
           enabled_provider_agents: ovn
         ovn:
-          ovn_nb_connection: unix:/var/run/ovn/ovnnb_db.sock
-          ovn_sb_connection: unix:/var/run/ovn/ovnsb_db.sock
+          ovn_nb_connection: tcp:10.233.0.241:6641
+          ovn_sb_connection: tcp:10.233.0.242:6642
         oslo_messaging_rabbit:
           ssl: true
           ssl_ca_file: /etc/rabbitmq/certs/ca.crt
@@ -269,6 +263,36 @@ spec:
       resources:
         enabled: true
     extraObjects:
+      - apiVersion: v1
+        kind: Service
+        metadata:
+          name: octavia-ovn-ovsdb-nb
+          namespace: openstack
+        spec:
+          clusterIP: 10.233.0.241
+          ports:
+            - name: ovsdb
+              port: 6641
+              targetPort: 6641
+          publishNotReadyAddresses: true
+          selector:
+            application: ovn
+            component: ovn-ovsdb-nb
+      - apiVersion: v1
+        kind: Service
+        metadata:
+          name: octavia-ovn-ovsdb-sb
+          namespace: openstack
+        spec:
+          clusterIP: 10.233.0.242
+          ports:
+            - name: ovsdb
+              port: 6642
+              targetPort: 6642
+          publishNotReadyAddresses: true
+          selector:
+            application: ovn
+            component: ovn-ovsdb-sb
       - apiVersion: cert-manager.io/v1
         kind: Certificate
         metadata:
