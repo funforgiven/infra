@@ -201,6 +201,8 @@ spec:
         ovn:
           ovn_nb_connection: tcp:10.233.0.241:6641
           ovn_sb_connection: tcp:10.233.0.242:6642
+        neutron:
+          endpoint_type: internalURL
         oslo_messaging_rabbit:
           ssl: true
           ssl_ca_file: /etc/rabbitmq/certs/ca.crt
