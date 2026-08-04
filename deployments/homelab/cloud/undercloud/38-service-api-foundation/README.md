@@ -2,33 +2,33 @@
 
 This wave installs the private service-entry layer used by OpenStack and later
 platform services. It owns cert-manager, Envoy Gateway, the private Envoy
-Gateway at `10.21.20.130`, and a dormant MetalLB controller. It does not publish
-public DNS records or create a Cloudflare credential.
+Gateway at `10.21.20.130`, and MetalLB. It does not publish public DNS records
+or create a Cloudflare credential.
 
-## Normal operation
+## L2 ownership
 
-Cilium remains the load-balancer IPAM and L2-announcement implementation.
-Internal CoreDNS uses `10.21.20.129`; Envoy Gateway uses `10.21.20.130`. Both
-addresses live on VLAN 20 and use `externalTrafficPolicy: Cluster` so an L2
-holder can forward to a healthy backend on any node.
+Cilium remains the Kubernetes CNI and owns the internal CoreDNS VIP at
+`10.21.20.129`. MetalLB owns the private Envoy Gateway VIP at `10.21.20.130`.
+The address pools and Service selectors are disjoint, so an address can never
+have both announcers. Both Services use `externalTrafficPolicy: Cluster` so an
+L2 holder can forward to a healthy backend on any node.
 
 cert-manager is ready only after its permanent short-lived certificate canary
 has issued a certificate. Envoy Gateway is ready only when its `GatewayClass`
 is accepted and the private `Gateway` is both accepted and programmed at
-`10.21.20.130`. The MetalLB release is continuously reconciled but has no
-address pool or advertisement in normal operation.
+`10.21.20.130`. MetalLB uses the `private-gateway` pool and advertises only on
+`bond0.20` from control-plane nodes.
 
 Public Cloudflare DNS remains an allow-list. No private Service or Gateway is
 eligible for automatic public publication. DNS-01 authorization, when added,
 will grant access only to ACME challenge records and will not change that
 publication boundary.
 
-## Cilium L2 rollback
+## Changing L2 ownership
 
-MetalLB is a rollback implementation, not a second active announcer. Qualify
-the rollback with the internal DNS VIP before relying on it for Envoy. Every
-transition uses separate commits and stops at a no-owner boundary; never
-combine the stages into one change.
+MetalLB is the qualified rollback implementation, not a second owner for the
+same VIP. Every ownership transition uses separate commits and stops at a
+no-owner boundary; never combine the stages into one change.
 
 Normal paths in `../20-gitops/waves.yaml` are:
 
@@ -71,9 +71,10 @@ Restore Cilium in reverse order:
    above; require one Cilium lease and ARP MAC, no MetalLB status, and
    successful UDP/TCP queries.
 
-If Cilium must also be withdrawn from `10.21.20.130`, keep the `Gateway`,
-`GatewayClass`, and HTTPRoutes unchanged. Only the EnvoyProxy Service template,
-the mutually exclusive IP pool, and the L2 advertisement change. Apply the
-same withdraw/no-owner/activate sequence and recreate the generated Envoy
-Service if its immutable load-balancer class changes. This transition must be
-qualified before production traffic uses the MetalLB path.
+To return `10.21.20.130` to Cilium, keep the `Gateway`, `GatewayClass`, and
+HTTPRoutes unchanged. First remove the MetalLB advertisement and verify that
+its `ServiceL2Status` and ARP owner are gone. Then enable the Cilium pool,
+restore the Cilium annotation and L2 selector in the EnvoyProxy Service
+template, and recreate the generated Envoy Service because
+`loadBalancerClass` is immutable. Accept the change only after every node can
+reach the VIP and exactly one Cilium lease and ARP MAC exist.
