@@ -601,6 +601,26 @@ spec:
       kind: HelmRelease
       name: neutron
       namespace: openstack
+    - apiVersion: apps/v1
+      kind: StatefulSet
+      name: ovn-ovsdb-nb
+      namespace: openstack
+    - apiVersion: apps/v1
+      kind: StatefulSet
+      name: ovn-ovsdb-sb
+      namespace: openstack
+    - apiVersion: apps/v1
+      kind: DaemonSet
+      name: ovn-controller-default
+      namespace: openstack
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: neutron-server
+      namespace: openstack
+    - apiVersion: apps/v1
+      kind: DaemonSet
+      name: neutron-ovn-metadata-agent-default
+      namespace: openstack
     - apiVersion: cert-manager.io/v1
       kind: Certificate
       name: nova-client

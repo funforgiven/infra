@@ -214,6 +214,8 @@ metadata:
   name: neutron
   namespace: openstack
 spec:
+  dependsOn:
+    - name: ovn
   releaseName: neutron
   chart:
     spec:
