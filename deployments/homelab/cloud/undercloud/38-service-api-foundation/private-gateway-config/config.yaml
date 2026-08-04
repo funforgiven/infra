@@ -10,6 +10,31 @@ spec:
     matchLabels:
       infra.fahrican.com/vip-purpose: private-gateway
 ---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: private-gateway
+  namespace: metallb-system
+spec:
+  addresses:
+    - 10.21.20.130/32
+  autoAssign: false
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: private-gateway-vlan20
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - private-gateway
+  interfaces:
+    - bond0.20
+  nodeSelectors:
+    - matchExpressions:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
@@ -39,13 +64,14 @@ spec:
               memory: 512Mi
       envoyService:
         type: LoadBalancer
-        loadBalancerClass: io.cilium/l2-announcer
+        loadBalancerClass: metallb.io/metallb
         allocateLoadBalancerNodePorts: false
         externalTrafficPolicy: Cluster
         annotations:
-          lbipam.cilium.io/ips: 10.21.20.130
+          metallb.io/address-pool: private-gateway
+          metallb.io/loadBalancerIPs: 10.21.20.130
         labels:
-          infra.fahrican.com/l2-announcement: cilium-withdrawn
+          infra.fahrican.com/lb-implementation: metallb-fallback
           infra.fahrican.com/vip-purpose: private-gateway
       envoyPDB:
         minAvailable: 1
