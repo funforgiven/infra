@@ -1,0 +1,133 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: heat
+  namespace: openstack
+spec:
+  interval: 30m
+  timeout: 30m
+  releaseName: heat
+  chart:
+    spec:
+      chart: ./heat
+      interval: 24h
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: openstack-helm
+      valuesFiles:
+        - heat/values.yaml
+        - values_overrides/heat/2026.1-ubuntu_noble.yaml
+        - values_overrides/heat/mariadb-tls.yaml
+        - values_overrides/heat/messaging-tls.yaml
+  driftDetection:
+    mode: enabled
+  install:
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 1m
+  upgrade:
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 1m
+  test:
+    enable: true
+  valuesFrom:
+    - kind: Secret
+      name: heat-values
+      valuesKey: values.yaml
+  values:
+    images:
+      tags:
+        test: docker.io/xrally/xrally-openstack:2.0.0@sha256:32e9ee3edd2900b10efed209f8f9443ab2a6774fe2515c3ada8c269e946ff05d
+        bootstrap: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        db_init: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        heat_db_sync: quay.io/airshipit/heat:2026.1-ubuntu_noble@sha256:2aadb7928aba9f26dbfee7ad9be2acf2bd6c9c4588b8692255fc56c0525b894c
+        db_drop: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        rabbit_init: docker.io/library/rabbitmq:3.13-management@sha256:e582c0bc7766f3342496d8485efb5a1df782b5ce3886ad017e2eaae442311f69
+        ks_user: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        ks_service: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        ks_endpoints: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        heat_api: quay.io/airshipit/heat:2026.1-ubuntu_noble@sha256:2aadb7928aba9f26dbfee7ad9be2acf2bd6c9c4588b8692255fc56c0525b894c
+        heat_cfn: quay.io/airshipit/heat:2026.1-ubuntu_noble@sha256:2aadb7928aba9f26dbfee7ad9be2acf2bd6c9c4588b8692255fc56c0525b894c
+        heat_engine: quay.io/airshipit/heat:2026.1-ubuntu_noble@sha256:2aadb7928aba9f26dbfee7ad9be2acf2bd6c9c4588b8692255fc56c0525b894c
+        heat_engine_cleaner: quay.io/airshipit/heat:2026.1-ubuntu_noble@sha256:2aadb7928aba9f26dbfee7ad9be2acf2bd6c9c4588b8692255fc56c0525b894c
+        heat_purge_deleted: quay.io/airshipit/heat:2026.1-ubuntu_noble@sha256:2aadb7928aba9f26dbfee7ad9be2acf2bd6c9c4588b8692255fc56c0525b894c
+        dep_check: quay.io/airshipit/kubernetes-entrypoint:latest-ubuntu_noble@sha256:6c1f647df798b61e16a16528f3706eb2497c95d4ed75c0b4709f4506bc6abdc2
+    endpoints:
+      orchestration:
+        host_fqdn_override:
+          public:
+            host: orchestration.cloud.fahrican.com
+      cloudformation:
+        host_fqdn_override:
+          public:
+            host: cloudformation.cloud.fahrican.com
+      oslo_db:
+        host_fqdn_override:
+          default:
+            tls:
+              issuerRef:
+                name: openstack-ca
+                kind: Issuer
+              usages:
+                - client auth
+    manifests:
+      job_image_repo_sync: false
+    pod:
+      replicas:
+        api: 3
+        cfn: 3
+        engine: 3
+      lifecycle:
+        disruption_budget:
+          api:
+            min_available: 2
+          cfn:
+            min_available: 2
+      resources:
+        enabled: true
+    extraObjects:
+      - apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        metadata:
+          name: heat
+          namespace: openstack
+        spec:
+          parentRefs:
+            - name: private
+              namespace: network-services
+          hostnames:
+            - orchestration.cloud.fahrican.com
+          rules:
+            - backendRefs:
+                - name: heat-api
+                  port: 8004
+      - apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        metadata:
+          name: heat-cfn
+          namespace: openstack
+        spec:
+          parentRefs:
+            - name: private
+              namespace: network-services
+          hostnames:
+            - cloudformation.cloud.fahrican.com
+          rules:
+            - backendRefs:
+                - name: heat-cfn
+                  port: 8000
+      - apiVersion: policy/v1
+        kind: PodDisruptionBudget
+        metadata:
+          name: heat-engine
+          namespace: openstack
+        spec:
+          minAvailable: 2
+          selector:
+            matchLabels:
+              application: heat
+              component: engine

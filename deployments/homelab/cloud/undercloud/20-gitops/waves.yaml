@@ -656,3 +656,45 @@ spec:
       kind: CronJob
       failed: "false"
       current: has(status.lastSuccessfulTime)
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave60-heat
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 30m
+  path: ./deployments/homelab/cloud/undercloud/60-openstack-services/heat
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+    - name: wave55-external-network
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: heat
+      namespace: openstack
+    - apiVersion: cert-manager.io/v1
+      kind: Certificate
+      name: heat-client
+      namespace: openstack
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: heat-api
+      namespace: openstack
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: heat-cfn
+      namespace: openstack
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: heat-engine
+      namespace: openstack
