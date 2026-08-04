@@ -3,7 +3,7 @@ kind: CiliumLoadBalancerIPPool
 metadata:
   name: private-gateway
 spec:
-  disabled: false
+  disabled: true
   blocks:
     - cidr: 10.21.20.130/32
   serviceSelector:
@@ -45,7 +45,7 @@ spec:
         annotations:
           lbipam.cilium.io/ips: 10.21.20.130
         labels:
-          infra.fahrican.com/l2-announcement: vlan20
+          infra.fahrican.com/l2-announcement: cilium-withdrawn
           infra.fahrican.com/vip-purpose: private-gateway
       envoyPDB:
         minAvailable: 1
