@@ -108,16 +108,16 @@ spec:
         test: docker.io/xrally/xrally-openstack:2.0.0@sha256:32e9ee3edd2900b10efed209f8f9443ab2a6774fe2515c3ada8c269e946ff05d
         bootstrap: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
         db_init: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
-        octavia_db_sync: quay.io/airshipit/octavia:2026.1-ubuntu_noble@sha256:68895293154e0ef9549cf0b00d48926d02739fe9fe88129a1c304655f34ac58f
+        octavia_db_sync: ghcr.io/rackerlabs/genestack-images/octavia:2026.1-latest@sha256:d17cc410c3e95bfa95943364707befd827aa6068639a4fe317a21c191422d160
         db_drop: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
         rabbit_init: docker.io/library/rabbitmq:3.13-management@sha256:e582c0bc7766f3342496d8485efb5a1df782b5ce3886ad017e2eaae442311f69
         ks_user: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
         ks_service: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
         ks_endpoints: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
         dep_check: quay.io/airshipit/kubernetes-entrypoint:latest-ubuntu_noble@sha256:6c1f647df798b61e16a16528f3706eb2497c95d4ed75c0b4709f4506bc6abdc2
-        octavia_api: quay.io/airshipit/octavia:2026.1-ubuntu_noble@sha256:68895293154e0ef9549cf0b00d48926d02739fe9fe88129a1c304655f34ac58f
-        octavia_driver_agent: quay.io/airshipit/octavia:2026.1-ubuntu_noble@sha256:68895293154e0ef9549cf0b00d48926d02739fe9fe88129a1c304655f34ac58f
-        octavia_housekeeping: quay.io/airshipit/octavia:2026.1-ubuntu_noble@sha256:68895293154e0ef9549cf0b00d48926d02739fe9fe88129a1c304655f34ac58f
+        octavia_api: ghcr.io/rackerlabs/genestack-images/octavia:2026.1-latest@sha256:d17cc410c3e95bfa95943364707befd827aa6068639a4fe317a21c191422d160
+        octavia_driver_agent: ghcr.io/rackerlabs/genestack-images/octavia:2026.1-latest@sha256:d17cc410c3e95bfa95943364707befd827aa6068639a4fe317a21c191422d160
+        octavia_housekeeping: ghcr.io/rackerlabs/genestack-images/octavia:2026.1-latest@sha256:d17cc410c3e95bfa95943364707befd827aa6068639a4fe317a21c191422d160
     conf:
       octavia:
         api_settings:
