@@ -1,0 +1,194 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: external-network-reconcile
+  namespace: openstack
+data:
+  reconcile.sh: |
+    #!/bin/sh
+    set -eu
+
+    network_name=public
+    subnet_name=public-v4
+
+    network_ids="$(openstack network list --name "$network_name" -f value -c ID)"
+    network_count="$(printf '%s\n' "$network_ids" | sed '/^$/d' | wc -l)"
+    case "$network_count" in
+      0)
+        network_id="$(openstack network create \
+          --enable \
+          --external \
+          --share \
+          --provider-network-type flat \
+          --provider-physical-network physnet-external \
+          --mtu 1500 \
+          -f value -c id \
+          "$network_name")"
+        ;;
+      1)
+        network_id="$network_ids"
+        ;;
+      *)
+        echo "multiple networks are named $network_name" >&2
+        exit 1
+        ;;
+    esac
+
+    openstack network set \
+      --enable \
+      --external \
+      --share \
+      --mtu 1500 \
+      "$network_id"
+
+    openstack network show "$network_id" -f json | python3 -c '
+    import json
+    import sys
+
+    network = json.load(sys.stdin)
+
+    def enabled(value):
+        return str(value).lower() in {"true", "up"}
+
+    expected = {
+        "name": "public",
+        "provider:network_type": "flat",
+        "provider:physical_network": "physnet-external",
+        "mtu": 1500,
+    }
+    errors = [
+        f"{key}={network.get(key)!r}, expected {value!r}"
+        for key, value in expected.items()
+        if network.get(key) != value
+    ]
+    if not enabled(network.get("admin_state_up")):
+        errors.append("admin_state_up is not enabled")
+    if not enabled(network.get("router:external", network.get("is_router_external"))):
+        errors.append("network is not external")
+    if not enabled(network.get("shared")):
+        errors.append("network is not shared")
+    if errors:
+        raise SystemExit("external network conflict: " + "; ".join(errors))
+    '
+
+    subnet_ids="$(openstack subnet list --name "$subnet_name" -f value -c ID)"
+    subnet_count="$(printf '%s\n' "$subnet_ids" | sed '/^$/d' | wc -l)"
+    case "$subnet_count" in
+      0)
+        subnet_id="$(openstack subnet create \
+          --network "$network_id" \
+          --subnet-range 10.21.40.0/24 \
+          --gateway 10.21.40.1 \
+          --allocation-pool start=10.21.40.100,end=10.21.40.254 \
+          --no-dhcp \
+          -f value -c id \
+          "$subnet_name")"
+        ;;
+      1)
+        subnet_id="$subnet_ids"
+        ;;
+      *)
+        echo "multiple subnets are named $subnet_name" >&2
+        exit 1
+        ;;
+    esac
+
+    openstack subnet show "$subnet_id" -f json | NETWORK_ID="$network_id" python3 -c '
+    import json
+    import os
+    import sys
+
+    subnet = json.load(sys.stdin)
+    expected = {
+        "name": "public-v4",
+        "network_id": os.environ["NETWORK_ID"],
+        "cidr": "10.21.40.0/24",
+        "gateway_ip": "10.21.40.1",
+        "ip_version": 4,
+    }
+    errors = [
+        f"{key}={subnet.get(key)!r}, expected {value!r}"
+        for key, value in expected.items()
+        if subnet.get(key) != value
+    ]
+    if str(subnet.get("enable_dhcp")).lower() != "false":
+        errors.append("DHCP is enabled")
+    pools = str(subnet.get("allocation_pools", "")).replace(" ", "")
+    if pools.count("10.21.40.100") != 1 or pools.count("10.21.40.254") != 1:
+        errors.append(f"allocation_pools={pools!r}")
+    if errors:
+        raise SystemExit("external subnet conflict: " + "; ".join(errors))
+    '
+
+    echo "external network ready: $network_name/$subnet_name ($network_id/$subnet_id)"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: external-network-reconcile-v1
+  namespace: openstack
+spec:
+  schedule: "*/5 * * * *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 300
+      backoffLimit: 3
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: external-network-reconcile
+            app.kubernetes.io/part-of: openstack
+        spec:
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          securityContext:
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: reconcile
+              image: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+              command:
+                - /opt/reconcile/reconcile.sh
+              envFrom:
+                - secretRef:
+                    name: neutron-keystone-admin
+              env:
+                - name: HOME
+                  value: /tmp
+                - name: OS_IDENTITY_API_VERSION
+                  value: "3"
+              resources:
+                requests:
+                  cpu: 25m
+                  memory: 64Mi
+                limits:
+                  cpu: 500m
+                  memory: 256Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+                readOnlyRootFilesystem: true
+              volumeMounts:
+                - name: reconcile
+                  mountPath: /opt/reconcile
+                  readOnly: true
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: reconcile
+              configMap:
+                name: external-network-reconcile
+                defaultMode: 0555
+            - name: tmp
+              emptyDir:
+                sizeLimit: 64Mi
