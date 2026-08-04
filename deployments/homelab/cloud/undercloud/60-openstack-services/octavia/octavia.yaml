@@ -200,6 +200,7 @@ spec:
           namespace: openstack
         spec:
           secretName: octavia-client
+          commonName: octavia-client
           issuerRef:
             name: openstack-ca
             kind: Issuer
