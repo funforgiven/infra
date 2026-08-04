@@ -167,6 +167,13 @@ openstack:
         version: 3.10.18
         image: quay.io/airshipit/rabbitmq:3.10.18@sha256:6920027be467c36b314ef6f808bba3d299df4b33a454fd3664f5461e57267654
     services:
+      octavia:
+        version: 18.0.0
+        images:
+          octavia: quay.io/airshipit/octavia:2026.1-ubuntu_noble@sha256:68895293154e0ef9549cf0b00d48926d02739fe9fe88129a1c304655f34ac58f
+          openstackClient: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+          kubernetesEntrypoint: quay.io/airshipit/kubernetes-entrypoint:latest-ubuntu_noble@sha256:6c1f647df798b61e16a16528f3706eb2497c95d4ed75c0b4709f4506bc6abdc2
+          rabbitmqInit: docker.io/library/rabbitmq:3.13-management@sha256:e582c0bc7766f3342496d8485efb5a1df782b5ce3886ad017e2eaae442311f69
       heat:
         version: 26.0.0
         images:

@@ -1,0 +1,281 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: octavia
+  namespace: openstack
+spec:
+  interval: 30m
+  timeout: 30m
+  releaseName: octavia
+  chart:
+    spec:
+      chart: ./octavia
+      interval: 24h
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: openstack-helm
+      valuesFiles:
+        - octavia/values.yaml
+        - values_overrides/octavia/2026.1-ubuntu_noble.yaml
+  driftDetection:
+    mode: enabled
+  install:
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 1m
+  upgrade:
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 1m
+  test:
+    enable: true
+  postRenderStrategy: combined
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: batch
+              version: v1
+              kind: Job
+              name: octavia-db-init
+            patch: |
+              apiVersion: batch/v1
+              kind: Job
+              metadata:
+                name: octavia-db-init
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: octavia-db-init-0
+                        env:
+                          - name: MARIADB_X509
+                            value: REQUIRE X509
+                        volumeMounts:
+                          - name: client-certs
+                            mountPath: /etc/mysql/certs
+                            readOnly: true
+                      - name: octavia-db-init-1
+                        env:
+                          - name: MARIADB_X509
+                            value: REQUIRE X509
+                        volumeMounts:
+                          - name: client-certs
+                            mountPath: /etc/mysql/certs
+                            readOnly: true
+                    volumes:
+                      - name: client-certs
+                        secret:
+                          secretName: octavia-client
+          - target:
+              group: batch
+              version: v1
+              kind: Job
+              name: octavia-rabbit-init
+            patch: |
+              apiVersion: batch/v1
+              kind: Job
+              metadata:
+                name: octavia-rabbit-init
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: rabbit-init
+                        env:
+                          - name: RABBITMQ_X509
+                            value: REQUIRE X509
+                          - name: USER_CERT_PATH
+                            value: /etc/rabbitmq/certs
+                        volumeMounts:
+                          - name: client-certs
+                            mountPath: /etc/rabbitmq/certs
+                            readOnly: true
+                    volumes:
+                      - name: client-certs
+                        secret:
+                          secretName: octavia-client
+  valuesFrom:
+    - kind: Secret
+      name: octavia-values
+      valuesKey: values.yaml
+  values:
+    images:
+      tags:
+        test: docker.io/xrally/xrally-openstack:2.0.0@sha256:32e9ee3edd2900b10efed209f8f9443ab2a6774fe2515c3ada8c269e946ff05d
+        bootstrap: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        db_init: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        octavia_db_sync: quay.io/airshipit/octavia:2026.1-ubuntu_noble@sha256:68895293154e0ef9549cf0b00d48926d02739fe9fe88129a1c304655f34ac58f
+        db_drop: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        rabbit_init: docker.io/library/rabbitmq:3.13-management@sha256:e582c0bc7766f3342496d8485efb5a1df782b5ce3886ad017e2eaae442311f69
+        ks_user: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        ks_service: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        ks_endpoints: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        dep_check: quay.io/airshipit/kubernetes-entrypoint:latest-ubuntu_noble@sha256:6c1f647df798b61e16a16528f3706eb2497c95d4ed75c0b4709f4506bc6abdc2
+        octavia_api: quay.io/airshipit/octavia:2026.1-ubuntu_noble@sha256:68895293154e0ef9549cf0b00d48926d02739fe9fe88129a1c304655f34ac58f
+        octavia_driver_agent: quay.io/airshipit/octavia:2026.1-ubuntu_noble@sha256:68895293154e0ef9549cf0b00d48926d02739fe9fe88129a1c304655f34ac58f
+        octavia_housekeeping: quay.io/airshipit/octavia:2026.1-ubuntu_noble@sha256:68895293154e0ef9549cf0b00d48926d02739fe9fe88129a1c304655f34ac58f
+    conf:
+      octavia:
+        api_settings:
+          api_handler: queue_producer
+          default_provider_driver: ovn
+          enabled_provider_drivers: "ovn:Octavia OVN driver."
+        driver_agent:
+          enabled_provider_agents: ovn
+        ovn:
+          ovn_nb_connection: unix:/var/run/ovn/ovnnb_db.sock
+          ovn_sb_connection: unix:/var/run/ovn/ovnsb_db.sock
+        oslo_messaging_rabbit:
+          ssl: true
+          ssl_ca_file: /etc/rabbitmq/certs/ca.crt
+          ssl_cert_file: /etc/rabbitmq/certs/tls.crt
+          ssl_key_file: /etc/rabbitmq/certs/tls.key
+        task_flow:
+          jobboard_enabled: false
+    endpoints:
+      load_balancer:
+        host_fqdn_override:
+          public:
+            host: load-balancer.cloud.fahrican.com
+      oslo_messaging:
+        port:
+          https:
+            default: 15680
+    manifests:
+      daemonset_health_manager: false
+      daemonset_worker: false
+      job_image_repo_sync: false
+    pod:
+      affinity:
+        anti:
+          type:
+            default: requiredDuringSchedulingIgnoredDuringExecution
+      replicas:
+        api: 3
+        driver_agent: 1
+        housekeeping: 1
+      lifecycle:
+        disruption_budget:
+          api:
+            min_available: 2
+      mounts:
+        octavia_api:
+          octavia_api: &service-client-certs
+            volumeMounts:
+              - name: client-certs
+                mountPath: /etc/mysql/certs
+                readOnly: true
+              - name: client-certs
+                mountPath: /etc/rabbitmq/certs
+                readOnly: true
+            volumes:
+              - name: client-certs
+                secret:
+                  secretName: octavia-client
+        octavia_driver_agent:
+          octavia_driver_agent: *service-client-certs
+        octavia_housekeeping:
+          octavia_housekeeping: *service-client-certs
+        octavia_db_sync:
+          octavia_db_sync:
+            volumeMounts:
+              - name: client-certs
+                mountPath: /etc/mysql/certs
+                readOnly: true
+            volumes:
+              - name: client-certs
+                secret:
+                  secretName: octavia-client
+      resources:
+        enabled: true
+    extraObjects:
+      - apiVersion: cert-manager.io/v1
+        kind: Certificate
+        metadata:
+          name: octavia-client
+          namespace: openstack
+        spec:
+          secretName: octavia-client
+          issuerRef:
+            name: openstack-ca
+            kind: Issuer
+          usages:
+            - client auth
+      - apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        metadata:
+          name: octavia
+          namespace: openstack
+        spec:
+          parentRefs:
+            - name: private
+              namespace: network-services
+          hostnames:
+            - load-balancer.cloud.fahrican.com
+          rules:
+            - backendRefs:
+                - name: octavia-api
+                  port: 9876
+      - apiVersion: v1
+        kind: Pod
+        metadata:
+          name: octavia-test
+          namespace: openstack
+          annotations:
+            helm.sh/hook: test
+            helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+        spec:
+          restartPolicy: Never
+          nodeSelector:
+            openstack-control-plane: enabled
+          containers:
+            - name: octavia-test
+              image: '{{ .Values.images.tags.bootstrap }}'
+              imagePullPolicy: IfNotPresent
+              envFrom:
+                - secretRef:
+                    name: octavia-keystone-admin
+              env:
+                - name: OS_IDENTITY_API_VERSION
+                  value: "3"
+              command:
+                - /bin/bash
+                - -ec
+              args:
+                - |
+                  name=octavia-helm-test
+                  cleanup() {
+                    openstack loadbalancer delete --cascade --wait "$name" >/dev/null 2>&1 || true
+                    openstack subnet delete "$name" >/dev/null 2>&1 || true
+                    openstack network delete "$name" >/dev/null 2>&1 || true
+                  }
+                  trap cleanup EXIT
+                  providers=
+                  for attempt in $(seq 1 60); do
+                    if providers=$(openstack loadbalancer provider list -f value -c name 2>/dev/null); then
+                      break
+                    fi
+                    test "$attempt" -lt 60
+                    sleep 5
+                  done
+                  test "$providers" = ovn
+                  cleanup
+                  network_id=$(openstack network create "$name" -f value -c id)
+                  subnet_id=$(openstack subnet create "$name" --network "$network_id" --subnet-range 192.0.2.0/28 --no-dhcp -f value -c id)
+                  loadbalancer_id=$(openstack loadbalancer create --name "$name" --provider ovn --vip-subnet-id "$subnet_id" --wait -f value -c id)
+                  listener_id=$(openstack loadbalancer listener create --name "$name" --protocol TCP --protocol-port 80 --wait "$loadbalancer_id" -f value -c id)
+                  pool_id=$(openstack loadbalancer pool create --name "$name" --protocol TCP --lb-algorithm SOURCE_IP_PORT --listener "$listener_id" --wait -f value -c id)
+                  openstack loadbalancer member create --subnet-id "$subnet_id" --address 192.0.2.10 --protocol-port 8080 --wait "$pool_id"
+                  test "$(openstack loadbalancer show "$loadbalancer_id" -f value -c provider)" = ovn
+                  test "$(openstack loadbalancer show "$loadbalancer_id" -f value -c provisioning_status)" = ACTIVE
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: "1"
+                  memory: 512Mi
