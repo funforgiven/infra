@@ -202,7 +202,7 @@ spec:
           ovn_nb_connection: tcp:10.233.0.241:6641
           ovn_sb_connection: tcp:10.233.0.242:6642
         neutron:
-          endpoint_type: internalURL
+          endpoint_override: http://neutron-server.openstack.svc.cluster.local:9696
         oslo_messaging_rabbit:
           ssl: true
           ssl_ca_file: /etc/rabbitmq/certs/ca.crt
