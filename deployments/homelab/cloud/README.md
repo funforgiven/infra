@@ -55,8 +55,12 @@ and answered all five floating-IP probes from the trusted workstation before
 the tenant network, router, security group, server, and floating IP were
 removed. Read-only CRS/CCR reconciliation found no drift, and every host
 failed WAN probes sourced through switch-local VLANs 30-32. VLAN 33 remains
-absent until the Manila wave. The full five-workload migration matrix remains
-open, so production eligibility remains false.
+absent until the Manila wave. Wave 60 is complete: three host-spread Heat API,
+CloudFormation API, and engine replicas reconcile from the upstream chart, and
+all seven upstream Rally stack create, list, check, snapshot/restore, update,
+and delete scenarios passed with no residual test resources. The full
+five-workload migration matrix remains open, so production eligibility remains
+false.
 
 The small set of current documents is intentional:
 
@@ -108,7 +112,7 @@ control/compute/network node, and Ceph host failure domain.
 | Host | Processor | RAM | Host storage | Ceph storage |
 | --- | --- | ---: | --- | --- |
 | `pecorino` | Intel Core i9-14900K | 64 GiB | 2×256 GB SATA RAID1 | 2×2 TB NVMe |
-| `taleggio` | Intel Core i5-13600K | 64 GiB | 2×256 GB SATA RAID1 | 2×2 TB NVMe |
+| `taleggio` | Intel Core i5-13600K | 96 GiB | 2×256 GB SATA RAID1 | 2×2 TB NVMe |
 | `asiago` | AMD Ryzen 9 9900X | 64 GiB | 2×256 GB SATA RAID1 | 2×2 TB NVMe |
 
 The accepted lab failure domains include consumer CPUs, non-ECC RAM, non-PLP
@@ -395,12 +399,13 @@ intentionally has no Object Lock and therefore makes no immutability claim.
 Manila still needs its approved project IDs and negative access test. Later
 OpenStack gates must continue using immutable disposable test-object inputs.
 
-Magnum remains blocked on reproducible driver/provider images, exact Heat
-inputs, a pinned Manila-over-NFS CSI derivative, and its workload qualification
-matrix. Production remains blocked on one-member RAID repair and one-at-a-time
-OSD replacement runbooks, a matched OVN NB/SB backup and restore, off-cluster
-Glance/Cinder/Manila recovery, dedicated Swift capacity, and a highly available
-long-term log backend decision.
+Heat is deployed and behaviorally qualified. Octavia is the next service wave;
+Manila follows after VLAN 33 is introduced and negatively qualified. Magnum
+still needs reproducible driver/provider images, a pinned Manila-over-NFS CSI
+derivative, and its workload qualification matrix. Production remains blocked
+on one-at-a-time OSD replacement runbooks, a matched OVN NB/SB backup and
+restore, off-cluster Glance/Cinder/Manila recovery, dedicated Swift capacity,
+and a highly available long-term log backend decision.
 
 ## Flux bootstrap, backups, and rebuild
 
