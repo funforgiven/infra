@@ -143,7 +143,7 @@ spec:
             host: load-balancer.cloud.fahrican.com
       oslo_messaging:
         port:
-          https:
+          http:
             default: 15680
     manifests:
       daemonset_health_manager: false
