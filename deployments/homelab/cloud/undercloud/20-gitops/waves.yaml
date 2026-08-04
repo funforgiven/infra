@@ -698,3 +698,45 @@ spec:
       kind: Deployment
       name: heat-engine
       namespace: openstack
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave61-octavia
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 30m
+  path: ./deployments/homelab/cloud/undercloud/60-openstack-services/octavia
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+    - name: wave60-heat
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: octavia
+      namespace: openstack
+    - apiVersion: cert-manager.io/v1
+      kind: Certificate
+      name: octavia-client
+      namespace: openstack
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: octavia-api
+      namespace: openstack
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: octavia-driver-agent
+      namespace: openstack
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: octavia-housekeeping
+      namespace: openstack
