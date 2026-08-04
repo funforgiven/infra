@@ -16,7 +16,16 @@ switch:
     fallbackAddress: 192.168.90.5/24
     previousInterface: disabled
 
+  networks:
+    CLOUD-EXTERNAL: 40
+
   profiles:
+    infra-ccr-trunk:
+      nativeVlan: 1
+      taggedVlans: [10, 20, 40, 50, 60, 90]
+    infra-crs-trunk:
+      nativeVlan: 1
+      taggedVlans: [10, 20, 40, 90]
     infra-trusted-access:
       nativeVlan: 10
       taggedVlans: []
@@ -31,10 +40,12 @@ switch:
       taggedVlans: [10, 50]
 
   ports:
+    1: infra-ccr-trunk
     2: infra-trusted-access
     3: infra-management-access
     6: infra-ap-trunk
     8: infra-iot-access
+    9: infra-crs-trunk
 
 accessPoint:
   name: 9C-A2-F4-C2-ED-74

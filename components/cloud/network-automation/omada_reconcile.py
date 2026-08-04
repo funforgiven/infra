@@ -54,6 +54,12 @@ class Credentials:
 
 
 @dataclass(frozen=True)
+class Network:
+    name: str
+    vlan: int
+
+
+@dataclass(frozen=True)
 class Profile:
     name: str
     native_vlan: int
@@ -75,6 +81,7 @@ class Desired:
     switch_mac: str
     switch_model: str
     profile_template: str
+    networks: tuple[Network, ...]
     profiles: tuple[Profile, ...]
     ports: Mapping[int, str]
     ap_name: str
@@ -157,6 +164,10 @@ def load_desired(path: Path = DEFAULT_DESIRED_STATE) -> Desired:
         if root["version"] != 1 or root["wireless"]["policy"] != "standard":
             raise ValueError
         switch, ap, wireless = root["switch"], root["accessPoint"], root["wireless"]
+        networks = tuple(
+            Network(str(name), _vlan(vlan, "network VLAN"))
+            for name, vlan in switch.get("networks", {}).items()
+        )
         profiles = tuple(
             Profile(str(name), _vlan(item["nativeVlan"], "profile VLAN"),
                     tuple(_vlan(vlan, "tagged VLAN") for vlan in item["taggedVlans"]))
@@ -173,7 +184,8 @@ def load_desired(path: Path = DEFAULT_DESIRED_STATE) -> Desired:
         desired = Desired(
             site=str(root["site"]), switch_name=str(switch["name"]),
             switch_mac=normalize_mac(switch["mac"]), switch_model=str(switch["model"]),
-            profile_template=str(switch["profileTemplate"]), profiles=profiles, ports=ports,
+            profile_template=str(switch["profileTemplate"]), networks=networks,
+            profiles=profiles, ports=ports,
             ap_name=str(ap["name"]), ap_mac=normalize_mac(ap["mac"]),
             ap_model=str(ap["model"]), ap_address=str(interface.ip),
             ap_netmask=str(interface.netmask), ap_gateway=str(gateway), ap_dns=str(dns),
@@ -186,6 +198,8 @@ def load_desired(path: Path = DEFAULT_DESIRED_STATE) -> Desired:
             and ap_profile.native_vlan == _vlan(ap["managementVlan"], "AP VLAN")
             and {ssid.vlan for ssid in ssids} == set(ap_profile.tagged_vlans)
             and gateway in interface.network and dns in interface.network
+            and len({network.name for network in networks}) == len(networks)
+            and len({network.vlan for network in networks}) == len(networks)
             and all(profile.native_vlan not in profile.tagged_vlans
                     and len(profile.tagged_vlans) == len(set(profile.tagged_vlans))
                     for profile in profiles)
@@ -378,7 +392,16 @@ class OmadaApi:
 
     def write(self, resource: str, values: Sequence[str], payload: Mapping[str, Any]) -> None:
         quoted = (*[self._segment(value) for value in values], "", "", "")
+        controller = urllib.parse.quote(self.credentials.controller_id, safe="")
         routes = {
+            "network-create": (
+                "LAN network creation", "POST",
+                f"/openapi/v2/{controller}/sites/{quoted[0]}/lan-networks",
+            ),
+            "network-update": (
+                "LAN network update", "PATCH",
+                f"/openapi/v2/{controller}/sites/{quoted[0]}/lan-networks/{quoted[1]}",
+            ),
             "profile-create": ("LAN profile creation", "POST", self._v1(f"sites/{quoted[0]}/lan-profiles")),
             "profile-update": ("LAN profile update", "PATCH", self._v1(f"sites/{quoted[0]}/lan-profiles/{quoted[1]}")),
             "port-assign": ("switch port assignment", "PUT", self._v1(f"sites/{quoted[0]}/switches/{quoted[1]}/ports/{quoted[2]}/profile")),
@@ -393,6 +416,17 @@ class OmadaApi:
 
 def _profile_id(profile: Mapping[str, Any]) -> str:
     return _string(profile.get("id"), "profile ID")
+
+
+def _network_payload(network: Network) -> dict[str, Any]:
+    return {
+        "name": network.name,
+        "purpose": 0,
+        "vlan": network.vlan,
+        "application": 1,
+        "allLan": True,
+        "igmpSnoopEnable": False,
+    }
 
 
 def _one_device(devices: Sequence[Mapping[str, Any]], mac: str, label: str) -> Mapping[str, Any]:
@@ -620,9 +654,33 @@ def _ssid_payload(ssid: Ssid, psk: str, *, create: bool) -> dict[str, Any]:
 
 def make_plan(desired: Desired, snapshot: Snapshot, *, include_write_only: bool = False) -> tuple[Action, ...]:
     actions: list[Action] = []
+    desired_network_vlans = {network.vlan for network in desired.networks}
+    desired_network_names = {network.name for network in desired.networks}
+    for network in desired.networks:
+        actual = snapshot.networks_by_vlan.get(network.vlan)
+        same_name = [
+            item for item in snapshot.networks_by_vlan.values()
+            if item.get("name") == network.name
+        ]
+        if actual is None and same_name:
+            operation, detail = "blocked", "network name exists on another VLAN"
+        elif actual is None:
+            operation, detail = "create", f"create switch-only VLAN {network.vlan}"
+        elif all(actual.get(key) == value for key, value in _network_payload(network).items()):
+            operation, detail = "noop", "switch-only VLAN matches"
+        elif actual.get("name") in desired_network_names:
+            operation, detail = "update", "switch-only VLAN differs"
+        else:
+            operation, detail = "blocked", "VLAN is owned by another LAN network"
+        actions.append(Action("network", network.name, operation, detail))
+
     profile_names = {profile.name for profile in desired.profiles}
     for profile in desired.profiles:
-        missing = {profile.native_vlan, *profile.tagged_vlans} - set(snapshot.networks_by_vlan)
+        missing = (
+            {profile.native_vlan, *profile.tagged_vlans}
+            - set(snapshot.networks_by_vlan)
+            - desired_network_vlans
+        )
         actual = snapshot.profiles_by_name.get(profile.name)
         if missing:
             operation, detail = "blocked", f"LAN networks are missing VLANs {sorted(missing)}"
@@ -709,6 +767,35 @@ def apply(
 ) -> int:
     if any(action.blocked for action in actions):
         raise SafeError("apply refused because the plan contains blockers")
+
+    networks = [action for action in actions if action.domain == "network" and action.mutates]
+    desired_networks = {network.name: network for network in desired.networks}
+    for action in networks:
+        current = snapshot.networks_by_vlan.get(desired_networks[action.target].vlan)
+        values = (snapshot.site_id,)
+        if action.operation == "create":
+            resource = "network-create"
+        else:
+            if current is None:
+                raise SafeError("LAN network disappeared before apply")
+            resource, values = "network-update", (
+                *values, _string(current.get("id"), "network ID")
+            )
+        api.write(resource, values, _network_payload(desired_networks[action.target]))
+
+    if networks:
+        snapshot = _wait(
+            api, desired,
+            lambda plan: all(
+                action.operation == "noop" for action in plan
+                if action.domain == "network"
+            ),
+            attempts, delay, sleeper,
+        )
+        actions = make_plan(desired, snapshot, include_write_only=include_write_only)
+        if any(action.blocked for action in actions):
+            raise SafeError("apply became blocked after LAN network reconciliation")
+
     wireless = [action for action in actions if action.domain == "wireless" and action.mutates]
     if wireless and not include_write_only:
         raise SafeError("wireless changes require explicit --include-write-only")
@@ -784,7 +871,7 @@ def apply(
         lambda plan: all(action.operation == "noop" for action in plan),
         attempts, delay, sleeper,
     )
-    return len(profiles) + len(ports) + len(wireless)
+    return len(networks) + len(profiles) + len(ports) + len(wireless)
 
 
 def render(actions: Sequence[Action]) -> None:

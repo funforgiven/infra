@@ -402,7 +402,7 @@
         - never
         - apply
 
-- name: Reconcile current CCR2004 management DHCP and private DNS
+- name: Reconcile current CCR2004 routed services
   hosts: core_router
   gather_facts: false
   pre_tasks:
@@ -424,6 +424,18 @@
           - routeros_private_dns_forward.forward_to | length > 0
           - routeros_private_dns_forward.match_subdomain is boolean
           - routeros_private_dns_forward.comment | length > 0
+          - routeros_provider_network.name | length > 0
+          - routeros_provider_network.interface | length > 0
+          - routeros_provider_network.vlan_id | int > 0
+          - routeros_provider_network.bridge | length > 0
+          - routeros_provider_network.trunk | length > 0
+          - routeros_provider_network.address | length > 0
+          - routeros_provider_network.network | length > 0
+          - routeros_provider_network.nat_address_list | length > 0
+          - routeros_provider_network.wan_interface_list | length > 0
+          - routeros_provider_network.trusted_interface | length > 0
+          - routeros_provider_network.forward_chain | length > 0
+          - routeros_provider_network.final_drop_comment | length > 0
           - >-
             routeros_static_leases | map(attribute='comment') | list |
             unique | length == routeros_static_leases | length
@@ -434,8 +446,8 @@
             routeros_static_leases | map(attribute='address') | list |
             unique | length == routeros_static_leases | length
         fail_msg: >-
-          Refusing CCR2004 access: management DHCP, private DNS, and static
-          leases must be complete and unique.
+          Refusing CCR2004 access: provider routing, management DHCP, private
+          DNS, and static leases must be complete and unique.
       tags:
         - always
         - inventory-contract
@@ -461,12 +473,83 @@
       changed_when: false
       tags: [always]
 
+    - name: Require the external provider network prerequisites
+      community.routeros.command:
+        commands:
+          - >-
+            :if ([:len [/interface bridge find where
+            name="{{ routeros_provider_network.bridge }}" and disabled=no and
+            vlan-filtering=yes]] != 1) do={
+            :error "provider prerequisite: active VLAN-aware bridge missing" };
+            :if ([:len [/interface ethernet find where
+            default-name="{{ routeros_provider_network.trunk }}" and
+            disabled=no]] != 1) do={
+            :error "provider prerequisite: trunk interface missing" };
+            :if ([:len [/interface vlan find where
+            name="{{ routeros_provider_network.trusted_interface }}" and
+            disabled=no]] != 1) do={
+            :error "provider prerequisite: trusted interface missing" };
+            :if ([:len [/ip firewall filter find where
+            chain="{{ routeros_provider_network.forward_chain }}" and
+            comment="{{ routeros_provider_network.final_drop_comment }}" and
+            disabled=no]] != 1) do={
+            :error "provider prerequisite: final forward drop missing" }
+      changed_when: false
+      tags: [always]
+
+    - name: Refuse conflicting external provider network objects
+      community.routeros.command:
+        commands:
+          - >-
+            :local named [/interface vlan find where
+            name="{{ routeros_provider_network.interface }}"];
+            :local tagged [/interface vlan find where
+            interface="{{ routeros_provider_network.bridge }}" and
+            vlan-id={{ routeros_provider_network.vlan_id }}];
+            :if ([:len $named] > 1 or [:len $tagged] > 1) do={
+            :error "duplicate provider VLAN interface" };
+            :if ([:len $tagged] = 1 and [:len [/interface vlan find where
+            name="{{ routeros_provider_network.interface }}" and
+            interface="{{ routeros_provider_network.bridge }}" and
+            vlan-id={{ routeros_provider_network.vlan_id }}]] != 1) do={
+            :error "provider VLAN is owned by another interface" };
+            :if ([:len [/interface bridge vlan find where
+            bridge="{{ routeros_provider_network.bridge }}" and
+            vlan-ids={{ routeros_provider_network.vlan_id }}]] > 1) do={
+            :error "duplicate provider bridge VLAN" };
+            :if ([:len [/ip address find where
+            comment="infra: {{ routeros_provider_network.name }} gateway"]] > 1)
+            do={ :error "duplicate provider gateway" };
+            :if ([:len [/ip firewall address-list find where
+            list="{{ routeros_provider_network.nat_address_list }}" and
+            address={{ routeros_provider_network.network }}]] > 1) do={
+            :error "duplicate provider NAT membership" };
+            :if ([:len [/ip firewall filter find where
+            comment="infra: {{ routeros_provider_network.name }} to WAN"]] > 1 or
+            [:len [/ip firewall filter find where
+            comment="infra: TRUSTED to {{ routeros_provider_network.name }}"]] > 1)
+            do={ :error "duplicate provider firewall rule" }
+      changed_when: false
+      tags: [always]
+
     - name: Read current CCR2004 static leases
       community.routeros.command:
         commands:
           - /system identity print
           - /ip dns print
           - /ip dns static print detail without-paging where type=FWD
+          - >-
+            /interface vlan print detail without-paging where
+            name="{{ routeros_provider_network.interface }}"
+          - >-
+            /interface bridge vlan print detail without-paging where
+            vlan-ids={{ routeros_provider_network.vlan_id }}
+          - >-
+            /ip address print detail without-paging where
+            comment="infra: {{ routeros_provider_network.name }} gateway"
+          - >-
+            /ip firewall filter print detail without-paging where
+            comment~"{{ routeros_provider_network.name }}"
           - >-
             /ip dhcp-server print detail without-paging where
             name="{{ routeros_management_dhcp.name }}"
@@ -502,6 +585,138 @@
       ansible.builtin.debug:
         var: ccr_preflight.stdout_lines
       tags: [always]
+
+    - name: Reconcile the external provider network
+      community.routeros.command:
+        commands:
+          - >-
+            :local row [/interface vlan find where
+            name="{{ routeros_provider_network.interface }}"];
+            :if ([:len $row] = 0) do={
+            /interface vlan add
+            comment="infra: {{ routeros_provider_network.name }}"
+            disabled=no interface={{ routeros_provider_network.bridge }}
+            name={{ routeros_provider_network.interface }}
+            vlan-id={{ routeros_provider_network.vlan_id }} } else={
+            /interface vlan set $row
+            comment="infra: {{ routeros_provider_network.name }}"
+            disabled=no interface={{ routeros_provider_network.bridge }}
+            vlan-id={{ routeros_provider_network.vlan_id }} };
+            :set row [/interface bridge vlan find where
+            bridge="{{ routeros_provider_network.bridge }}" and
+            vlan-ids={{ routeros_provider_network.vlan_id }}];
+            :if ([:len $row] = 0) do={
+            /interface bridge vlan add
+            bridge={{ routeros_provider_network.bridge }}
+            comment="infra: {{ routeros_provider_network.name }}"
+            tagged="{{ routeros_provider_network.bridge }},{{ routeros_provider_network.trunk }}"
+            untagged="" vlan-ids={{ routeros_provider_network.vlan_id }} } else={
+            /interface bridge vlan set $row
+            comment="infra: {{ routeros_provider_network.name }}"
+            tagged="{{ routeros_provider_network.bridge }},{{ routeros_provider_network.trunk }}"
+            untagged="" };
+            :set row [/ip address find where
+            comment="infra: {{ routeros_provider_network.name }} gateway"];
+            :if ([:len $row] = 0) do={
+            /ip address add address={{ routeros_provider_network.address }}
+            comment="infra: {{ routeros_provider_network.name }} gateway"
+            disabled=no interface={{ routeros_provider_network.interface }} } else={
+            /ip address set $row address={{ routeros_provider_network.address }}
+            disabled=no interface={{ routeros_provider_network.interface }} };
+            :set row [/ip firewall address-list find where
+            list="{{ routeros_provider_network.nat_address_list }}" and
+            address={{ routeros_provider_network.network }}];
+            :if ([:len $row] = 0) do={
+            /ip firewall address-list add
+            address={{ routeros_provider_network.network }}
+            comment="infra: {{ routeros_provider_network.name }} NAT"
+            disabled=no list={{ routeros_provider_network.nat_address_list }} } else={
+            /ip firewall address-list set $row
+            comment="infra: {{ routeros_provider_network.name }} NAT" disabled=no };
+            :local drop [/ip firewall filter find where
+            chain="{{ routeros_provider_network.forward_chain }}" and
+            comment="{{ routeros_provider_network.final_drop_comment }}"];
+            :set row [/ip firewall filter find where
+            comment="infra: {{ routeros_provider_network.name }} to WAN"];
+            :if ([:len $row] = 0) do={
+            /ip firewall filter add action=accept
+            chain={{ routeros_provider_network.forward_chain }}
+            comment="infra: {{ routeros_provider_network.name }} to WAN"
+            disabled=no in-interface={{ routeros_provider_network.interface }}
+            out-interface-list={{ routeros_provider_network.wan_interface_list }}
+            place-before=$drop } else={
+            /ip firewall filter set $row action=accept
+            chain={{ routeros_provider_network.forward_chain }} disabled=no
+            in-interface={{ routeros_provider_network.interface }}
+            out-interface-list={{ routeros_provider_network.wan_interface_list }} };
+            :set row [/ip firewall filter find where
+            comment="infra: TRUSTED to {{ routeros_provider_network.name }}"];
+            :if ([:len $row] = 0) do={
+            /ip firewall filter add action=accept
+            chain={{ routeros_provider_network.forward_chain }}
+            comment="infra: TRUSTED to {{ routeros_provider_network.name }}"
+            disabled=no dst-address={{ routeros_provider_network.network }}
+            in-interface={{ routeros_provider_network.trusted_interface }}
+            place-before=$drop } else={
+            /ip firewall filter set $row action=accept
+            chain={{ routeros_provider_network.forward_chain }} disabled=no
+            dst-address={{ routeros_provider_network.network }}
+            in-interface={{ routeros_provider_network.trusted_interface }} };
+            /ip firewall filter move [find where
+            comment="infra: {{ routeros_provider_network.name }} to WAN"]
+            destination=$drop;
+            /ip firewall filter move [find where
+            comment="infra: TRUSTED to {{ routeros_provider_network.name }}"]
+            destination=$drop
+      tags:
+        - never
+        - apply
+
+    - name: Prove the external provider network
+      community.routeros.command:
+        commands:
+          - >-
+            :if ([:len [/interface vlan find where
+            name="{{ routeros_provider_network.interface }}" and disabled=no and
+            interface="{{ routeros_provider_network.bridge }}" and
+            vlan-id={{ routeros_provider_network.vlan_id }}]] != 1) do={
+            :error "provider postflight: invalid VLAN interface" };
+            :local row [/interface bridge vlan find where
+            bridge="{{ routeros_provider_network.bridge }}" and
+            vlan-ids={{ routeros_provider_network.vlan_id }}];
+            :if ([:len $row] != 1 or
+            [:tostr [/interface bridge vlan get $row tagged]] !=
+            "{{ routeros_provider_network.bridge }};{{ routeros_provider_network.trunk }}" or
+            [:tostr [/interface bridge vlan get $row untagged]] != "") do={
+            :error "provider postflight: invalid bridge VLAN" };
+            :if ([:len [/ip address find where
+            address={{ routeros_provider_network.address }} and disabled=no and
+            interface="{{ routeros_provider_network.interface }}" and
+            comment="infra: {{ routeros_provider_network.name }} gateway"]] != 1)
+            do={ :error "provider postflight: invalid gateway" };
+            :if ([:len [/ip firewall address-list find where
+            list="{{ routeros_provider_network.nat_address_list }}" and
+            address={{ routeros_provider_network.network }} and disabled=no and
+            comment="infra: {{ routeros_provider_network.name }} NAT"]] != 1)
+            do={ :error "provider postflight: invalid NAT membership" };
+            :if ([:len [/ip firewall filter find where
+            chain="{{ routeros_provider_network.forward_chain }}" and
+            comment="infra: {{ routeros_provider_network.name }} to WAN" and
+            action=accept and disabled=no and
+            in-interface="{{ routeros_provider_network.interface }}" and
+            out-interface-list="{{ routeros_provider_network.wan_interface_list }}"]]
+            != 1) do={ :error "provider postflight: invalid WAN rule" };
+            :if ([:len [/ip firewall filter find where
+            chain="{{ routeros_provider_network.forward_chain }}" and
+            comment="infra: TRUSTED to {{ routeros_provider_network.name }}" and
+            action=accept and disabled=no and
+            dst-address={{ routeros_provider_network.network }} and
+            in-interface="{{ routeros_provider_network.trusted_interface }}"]]
+            != 1) do={ :error "provider postflight: invalid trusted rule" }
+      changed_when: false
+      tags:
+        - never
+        - apply
 
     - name: Reconcile the static-only management DHCP network
       community.routeros.command:

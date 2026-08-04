@@ -81,6 +81,11 @@ all:
                 comment: "infra: OVN-GENEVE; switch-local only"
                 additional_tagged_interfaces: []
                 scope: switch-local
+              - id: 40
+                comment: "infra: CLOUD-EXTERNAL"
+                additional_tagged_interfaces:
+                  - sfp28-1
+                scope: routed
     core_router:
       hosts:
         ccr2004:
@@ -100,6 +105,19 @@ all:
             forward_to: 10.21.20.129
             match_subdomain: true
             comment: "infra: private cloud split DNS"
+          routeros_provider_network:
+            name: CLOUD-EXTERNAL
+            interface: vlan40-external
+            vlan_id: 40
+            bridge: bridge-lan
+            trunk: ether15
+            address: 10.21.40.1/24
+            network: 10.21.40.0/24
+            nat_address_list: INFRA-LAN-NAT
+            wan_interface_list: INFRA-WAN
+            trusted_interface: vlan10-trusted
+            forward_chain: infra-forward
+            final_drop_comment: "infra: forward final drop"
           routeros_static_leases:
             - comment: "infra: primary admin workstation"
               mac_address: 60:CF:84:ED:E9:1E

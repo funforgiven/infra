@@ -133,13 +133,22 @@ class NetworkInventoryTests(unittest.TestCase):
         ):
             self.assertIn(field, self.playbook)
 
-    def test_only_current_physical_wave_vlans_are_reconciled(self) -> None:
-        self.assertEqual([20, 30, 31, 32], list(self.host_defaults["cloud_vlan_mtu"]))
+    def test_external_provider_vlan_is_reconciled_end_to_end(self) -> None:
+        self.assertEqual(
+            [20, 30, 31, 32, 40],
+            list(self.host_defaults["cloud_vlan_mtu"]),
+        )
         self.assertNotIn("cloud_provider_vlans", self.host_defaults)
         self.assertEqual(
-            [20, 30, 31, 32],
+            [20, 30, 31, 32, 40],
             [row["id"] for row in self.switch["crs_cloud_fabric"]["bridge_vlans"]],
         )
+        provider = self.router["routeros_provider_network"]
+        self.assertEqual(40, provider["vlan_id"])
+        self.assertEqual("10.21.40.1/24", provider["address"])
+        self.assertEqual("10.21.40.0/24", provider["network"])
+        self.assertIn("Reconcile the external provider network", self.playbook)
+        self.assertIn("Prove the external provider network", self.playbook)
 
     def test_apply_tag_keeps_credentials_and_preflight_before_mutations(self) -> None:
         result = subprocess.run(

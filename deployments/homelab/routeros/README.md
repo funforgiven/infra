@@ -7,8 +7,8 @@ CCR/CRS uplinks.
 There are two current-state inputs:
 
 - `../cloud/network-inventory.yaml` is the RouterOS inventory: device
-  identity, current cloud bonds/VLANs, link policy, declared static DHCP
-  leases, and the private cloud DNS forward.
+  identity, current cloud bonds/VLANs, link policy, provider routing, declared
+  static DHCP leases, and the private cloud DNS forward.
 - `components/cloud/network-automation/reconcile-routeros.yaml` is the
   current convergence owner until the RouterOS Terraform import described
   below is complete.
@@ -39,11 +39,11 @@ active/fast 802.3ad, minimum links 1, layer-3+4 hashing, and MTU 9000. Every
 individual LACP member has passed supervised failure testing. Cable make/model
 is observation, not stable desired identity.
 
-Current reconciliation carries VLAN 20 to the routed/admin uplinks and keeps
-VLANs 30–32 on the CRS server bonds. VLAN 40 is architectural desired state,
-but is deferred until its Omada port 1/9 transit and CCR policy can be applied
-and qualified in the same wave. The CCR's 1 Gb/s core uplink must never become
-an east-west path.
+Current reconciliation carries VLAN 20 to the routed/admin uplinks, keeps
+VLANs 30–32 on the CRS server bonds, and carries VLAN 40 through Omada ports
+1/9 to the CCR provider gateway. VLAN 40 passed every-direction host probes at
+MTU 1500, trusted routing, and provider-sourced WAN NAT at the 1492-byte PPPoE
+path MTU. The CCR's 1 Gb/s core uplink is not an east-west path.
 
 The CCR desired state contains exactly one split-DNS row: a `FWD` entry for
 `cloud.fahrican.com` and all subdomains to the internal CoreDNS service at
