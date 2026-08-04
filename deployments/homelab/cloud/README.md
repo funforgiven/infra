@@ -44,8 +44,11 @@ all six directed live-migration paths in 24–26 seconds per move, and passed a
 1 GiB Cinder attach/detach cycle before all test objects were removed. A
 disposable RBD qualification image sustained about 89.7k 4 KiB random-write
 IOPS, 109.9k random-read IOPS, and 84.3k IOPS at a 70:30 read/write mix before
-being removed. The full five-workload migration matrix remains open, so
-production eligibility remains false.
+being removed. The physical Neutron-provider path is also qualified: unnumbered
+`bond0.40` exists on every host, VLAN 40 crosses only the server/Omada/CCR
+trunks, every host pair passes at MTU 1500, and provider-sourced WAN traffic
+passes at the 1492-byte PPPoE path MTU. The full five-workload migration matrix
+remains open, so production eligibility remains false.
 
 The small set of current documents is intentional:
 
@@ -372,9 +375,9 @@ The minimum evidence at each boundary is behavioral:
 
 Independent-OS-disk boot proof remains a deferred resilience gate. The shared
 rebuild-media template is inventory-rendered and qualified for every current
-host. VLAN 40 is deliberately deferred to the Neutron external-network wave and
-does not block Kubernetes bootstrap; its later acceptance must prove that VLANs
-30–33 do not leak northbound.
+host. VLAN 40's physical path is qualified; the Neutron bridge mapping,
+external network, floating-IP behavior, and negative proof that VLANs 30–33 do
+not leak northbound remain part of the external-network service wave.
 
 Internal DNS and the primary Cilium service-VIP ownership and failover contract
 are qualified. Before service waves open, qualify certificate issuance,

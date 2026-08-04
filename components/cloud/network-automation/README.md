@@ -15,18 +15,18 @@ resets, adoption, or undeclared controller objects.
 `reconcile-routeros.yaml`. The playbook currently owns:
 
 - CRS510 server bonds `bond-server1` through `bond-server3`;
-- their bridge ports and VLANs 20 and 30–32;
+- their bridge ports and VLANs 20, 30–32, and 40;
 - the observed E810/DAC 25 GbE/RS-FEC policy on all server-member ports;
 - the static-only VLAN-90 management DHCP server and network; and
 - the inventory-declared CCR2004 static leases; and
 - the single private-zone DNS forward from `cloud.fahrican.com` to the
-  internal CoreDNS VIP `10.21.20.129`.
+  internal CoreDNS VIP `10.21.20.129`; and
+- the VLAN-40 provider gateway, Omada trunk, WAN NAT membership, and scoped
+  trusted/provider forwarding rules.
 
 The CRS bootstrap must already provide one enabled VLAN-filtering bridge named
-`bridge`. Manila VLAN 33 and external VLAN 40, including the latter's Omada
-port 1/9 transit and CCR gateway/firewall, belong to later service waves. They
-are intentionally absent from current reconciliation so a partial path cannot
-be created.
+`bridge`. Manila VLAN 33 belongs to its later service wave and is intentionally
+absent until Ganesha is introduced.
 The CCR bootstrap must already provide the enabled `vlan90-mgmt` interface and
 its `10.21.90.1/24` address. The future RouterOS Terraform import takes ownership
 of both bootstrap substrates.
@@ -85,8 +85,9 @@ the RouterOS Terraform import is complete.
 ## Omada
 
 `omada_reconcile.py` validates the exact `Hark` site, switch, and EAP670
-identities. It owns only the profiles, port assignments, and `Rooftrollen`
-SSIDs declared in `deployments/homelab/cloud/omada-network.yaml`.
+identities. It owns only the switch-only networks, profiles, port assignments,
+and `Rooftrollen` SSIDs declared in
+`deployments/homelab/cloud/omada-network.yaml`.
 The same file records the switch management interface, which remains a
 controller-UI setting because the public OpenAPI does not expose it.
 `wireless.policy: standard` expands to the one qualified WPA2/AES policy.

@@ -18,6 +18,13 @@ import omada_reconcile as omada  # noqa: E402
 DESIRED_PATH = REPOSITORY_ROOT / "deployments/homelab/cloud/omada-network.yaml"
 
 
+def network(name: str, vlan: int) -> dict[str, object]:
+    return {
+        "id": f"n{vlan}", "name": name, "vlan": vlan, "purpose": 0,
+        "application": 1, "allLan": True, "igmpSnoopEnable": False,
+    }
+
+
 def profile(name: str, profile_id: str, native: int, tagged: list[int]) -> dict[str, object]:
     native_id = f"n{native}"
     return {
@@ -66,19 +73,29 @@ def ssid_detail(name: str, ssid_id: str, band: int, vlan: int) -> dict[str, obje
 class FakeApi:
     def __init__(self) -> None:
         self.calls: list[tuple[str, object]] = []
-        self.networks = [{"id": f"n{vlan}", "vlan": vlan} for vlan in (1, 10, 50, 90)]
+        self.networks = [
+            network(name, vlan) for name, vlan in (
+                ("Default", 1), ("TRUSTED", 10), ("SERVERS", 20),
+                ("CLOUD-EXTERNAL", 40), ("IOT", 50), ("GUEST", 60),
+                ("MGMT", 90),
+            )
+        ]
         self.profiles = [
             profile("All", "p-all", 1, []),
+            profile("infra-ccr-trunk", "p-ccr", 1, [10, 20, 40, 50, 60, 90]),
+            profile("infra-crs-trunk", "p-crs", 1, [10, 20, 40, 90]),
             profile("infra-trusted-access", "p-trusted", 10, []),
             profile("infra-iot-access", "p-iot", 50, []),
             profile("infra-management-access", "p-management", 90, []),
             profile("infra-ap-trunk", "p-ap", 90, [10, 50]),
         ]
         self.ports = {
+            1: {"profileId": "p-ccr", "profileName": "infra-ccr-trunk"},
             2: {"profileId": "p-trusted", "profileName": "infra-trusted-access"},
             3: {"profileId": "p-management", "profileName": "infra-management-access"},
             6: {"profileId": "p-ap", "profileName": "infra-ap-trunk"},
             8: {"profileId": "p-iot", "profileName": "infra-iot-access"},
+            9: {"profileId": "p-crs", "profileName": "infra-crs-trunk"},
         }
         self.ssids = {
             "Rooftrollen": ssid_detail("Rooftrollen", "s-personal", 3, 10),
@@ -147,7 +164,13 @@ class FakeApi:
         raise AssertionError(resource)
 
     def write(self, resource: str, values: tuple[str, ...], payload: dict[str, object]) -> None:
-        if resource == "profile-create":
+        if resource == "network-create":
+            self.networks.append({"id": f"n{payload['vlan']}", **payload})
+            self.calls.append(("create_network", payload["name"]))
+        elif resource == "network-update":
+            next(item for item in self.networks if item["id"] == values[1]).update(payload)
+            self.calls.append(("update_network", payload["name"]))
+        elif resource == "profile-create":
             created = dict(payload)
             created["id"] = f"p-{payload['name']}"
             self.profiles.append(created)
@@ -246,6 +269,16 @@ class ReconcilerTests(unittest.TestCase):
         self.assertEqual(mutations, 2)
         self.assertIn(("create_profile", "infra-trusted-access"), self.api.calls)
         self.assertIn(("assign_profile", 2), self.api.calls)
+        self.assertTrue(all(action.operation == "noop" for action in self.plan()))
+
+    def test_network_is_created_before_dependent_profiles(self) -> None:
+        self.api.networks = [item for item in self.api.networks if item["vlan"] != 40]
+        for item in self.api.profiles:
+            if item["name"] in {"infra-ccr-trunk", "infra-crs-trunk"}:
+                item["tagNetworkIds"].remove("n40")
+        mutations = self.reconcile(include_psks=False)
+        self.assertEqual(mutations, 3)
+        self.assertEqual(self.api.calls[0], ("create_network", "CLOUD-EXTERNAL"))
         self.assertTrue(all(action.operation == "noop" for action in self.plan()))
 
     def test_ap_management_drift_blocks_all_mutation(self) -> None:
