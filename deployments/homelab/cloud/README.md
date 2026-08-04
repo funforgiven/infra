@@ -47,8 +47,16 @@ IOPS, 109.9k random-read IOPS, and 84.3k IOPS at a 70:30 read/write mix before
 being removed. The physical Neutron-provider path is also qualified: unnumbered
 `bond0.40` exists on every host, VLAN 40 crosses only the server/Omada/CCR
 trunks, every host pair passes at MTU 1500, and provider-sourced WAN traffic
-passes at the 1492-byte PPPoE path MTU. The full five-workload migration matrix
-remains open, so production eligibility remains false.
+passes at the 1492-byte PPPoE path MTU. Wave 55 is complete: Flux continuously
+reconciles the `public` flat network on `physnet-external` and its
+`10.21.40.0/24` subnet, with `10.21.40.100-254` reserved for Neutron. A
+disposable CirrOS 0.6.2 guest received DHCP and metadata, reached the Internet,
+and answered all five floating-IP probes from the trusted workstation before
+the tenant network, router, security group, server, and floating IP were
+removed. Read-only CRS/CCR reconciliation found no drift, and every host
+failed WAN probes sourced through switch-local VLANs 30-32. VLAN 33 remains
+absent until the Manila wave. The full five-workload migration matrix remains
+open, so production eligibility remains false.
 
 The small set of current documents is intentional:
 
@@ -375,17 +383,17 @@ The minimum evidence at each boundary is behavioral:
 
 Independent-OS-disk boot proof remains a deferred resilience gate. The shared
 rebuild-media template is inventory-rendered and qualified for every current
-host. VLAN 40's physical path is qualified; the Neutron bridge mapping,
-external network, floating-IP behavior, and negative proof that VLANs 30–33 do
-not leak northbound remain part of the external-network service wave.
+host. VLAN 40, the Neutron bridge mapping, the external network, and
+floating-IP behavior are qualified. VLANs 30-32 have no northbound path. VLAN
+33 does not yet exist and must be introduced and negatively qualified with the
+Manila wave rather than being added speculatively.
 
-Internal DNS and the primary Cilium service-VIP ownership and failover contract
-are qualified. Before service waves open, qualify certificate issuance,
-Gateway API, Envoy Gateway, and the MetalLB rollback contract. Decide whether
-any public endpoint exists; the default remains none. The bucket intentionally
-has no Object Lock and therefore makes no immutability claim. Manila needs its
-approved project IDs and negative access test. OpenStack gates need immutable
-disposable test-object inputs.
+Internal DNS, Cilium service-VIP ownership and failover, certificate issuance,
+Gateway API, Envoy Gateway, and the mutually exclusive MetalLB rollback are
+qualified. No public API endpoint is currently approved. The bucket
+intentionally has no Object Lock and therefore makes no immutability claim.
+Manila still needs its approved project IDs and negative access test. Later
+OpenStack gates must continue using immutable disposable test-object inputs.
 
 Magnum remains blocked on reproducible driver/provider images, exact Heat
 inputs, a pinned Manila-over-NFS CSI derivative, and its workload qualification
