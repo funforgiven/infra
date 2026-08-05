@@ -8,41 +8,36 @@ data:
     #!/bin/sh
     set -eu
 
-    network_name=public
-    subnet_name=public-v4
+    reconcile_network() {
+      name="$1"
+      scope_flag="$2"
+      share_flag="$3"
+      physical_network="$4"
 
-    network_ids="$(openstack network list --name "$network_name" -f value -c ID)"
-    network_count="$(printf '%s\n' "$network_ids" | sed '/^$/d' | wc -l)"
-    case "$network_count" in
-      0)
-        network_id="$(openstack network create \
-          --enable \
-          --external \
-          --share \
-          --provider-network-type flat \
-          --provider-physical-network physnet-external \
-          --mtu 1500 \
-          -f value -c id \
-          "$network_name")"
-        ;;
-      1)
-        network_id="$network_ids"
-        ;;
-      *)
-        echo "multiple networks are named $network_name" >&2
-        exit 1
-        ;;
-    esac
+      ids="$(openstack network list --name "$name" -f value -c ID)"
+      count="$(printf '%s\n' "$ids" | sed '/^$/d' | wc -l)"
+      case "$count" in
+        0)
+          id="$(openstack network create \
+            --enable "$scope_flag" "$share_flag" \
+            --provider-network-type flat \
+            --provider-physical-network "$physical_network" \
+            --mtu 1500 \
+            -f value -c id "$name")"
+          ;;
+        1) id="$ids" ;;
+        *) echo "multiple networks are named $name" >&2; exit 1 ;;
+      esac
 
-    openstack network set \
-      --enable \
-      --external \
-      --share \
-      --mtu 1500 \
-      "$network_id"
-
-    openstack network show "$network_id" -f json | python3 -c '
+      openstack network set --enable "$scope_flag" "$share_flag" --mtu 1500 "$id"
+      openstack network show "$id" -f json | \
+        EXPECTED_NAME="$name" \
+        EXPECTED_PHYSICAL_NETWORK="$physical_network" \
+        EXPECTED_EXTERNAL="$([ "$scope_flag" = --external ] && echo true || echo false)" \
+        EXPECTED_SHARED="$([ "$share_flag" = --share ] && echo true || echo false)" \
+        python3 -c '
     import json
+    import os
     import sys
 
     network = json.load(sys.stdin)
@@ -51,9 +46,9 @@ data:
         return str(value).lower() in {"true", "up"}
 
     expected = {
-        "name": "public",
+        "name": os.environ["EXPECTED_NAME"],
         "provider:network_type": "flat",
-        "provider:physical_network": "physnet-external",
+        "provider:physical_network": os.environ["EXPECTED_PHYSICAL_NETWORK"],
         "mtu": 1500,
     }
     errors = [
@@ -61,49 +56,74 @@ data:
         for key, value in expected.items()
         if network.get(key) != value
     ]
-    if not enabled(network.get("admin_state_up")):
-        errors.append("admin_state_up is not enabled")
-    if not enabled(network.get("router:external", network.get("is_router_external"))):
-        errors.append("network is not external")
-    if not enabled(network.get("shared")):
-        errors.append("network is not shared")
+    checks = {
+        "admin_state_up": True,
+        "router:external": os.environ["EXPECTED_EXTERNAL"] == "true",
+        "shared": os.environ["EXPECTED_SHARED"] == "true",
+    }
+    for key, value in checks.items():
+        actual = network.get(key)
+        if key == "router:external":
+            actual = network.get(key, network.get("is_router_external"))
+        if enabled(actual) != value:
+            errors.append(f"{key}={actual!r}, expected {value!r}")
     if errors:
-        raise SystemExit("external network conflict: " + "; ".join(errors))
+        raise SystemExit("network conflict: " + "; ".join(errors))
     '
+      printf '%s\n' "$id"
+    }
 
-    subnet_ids="$(openstack subnet list --name "$subnet_name" -f value -c ID)"
-    subnet_count="$(printf '%s\n' "$subnet_ids" | sed '/^$/d' | wc -l)"
-    case "$subnet_count" in
-      0)
-        subnet_id="$(openstack subnet create \
-          --network "$network_id" \
-          --subnet-range 10.21.40.0/24 \
-          --gateway 10.21.40.1 \
-          --allocation-pool start=10.21.40.100,end=10.21.40.254 \
-          --no-dhcp \
-          -f value -c id \
-          "$subnet_name")"
-        ;;
-      1)
-        subnet_id="$subnet_ids"
-        ;;
-      *)
-        echo "multiple subnets are named $subnet_name" >&2
-        exit 1
-        ;;
-    esac
+    reconcile_subnet() {
+      network_id="$1"
+      name="$2"
+      cidr="$3"
+      gateway="$4"
+      dhcp_flag="$5"
+      pool_start="$6"
+      pool_end="$7"
 
-    openstack subnet show "$subnet_id" -f json | NETWORK_ID="$network_id" python3 -c '
+      ids="$(openstack subnet list --name "$name" -f value -c ID)"
+      count="$(printf '%s\n' "$ids" | sed '/^$/d' | wc -l)"
+      case "$count" in
+        0)
+          id="$(openstack subnet create \
+            --network "$network_id" \
+            --subnet-range "$cidr" \
+            --gateway "$gateway" \
+            --allocation-pool start="$pool_start",end="$pool_end" \
+            "$dhcp_flag" \
+            -f value -c id "$name")"
+          ;;
+        1) id="$ids" ;;
+        *) echo "multiple subnets are named $name" >&2; exit 1 ;;
+      esac
+
+      openstack subnet set \
+        --gateway "$gateway" "$dhcp_flag" \
+        --no-allocation-pool \
+        --allocation-pool start="$pool_start",end="$pool_end" \
+        "$id"
+      openstack subnet show "$id" -f json | \
+        EXPECTED_NETWORK_ID="$network_id" \
+        EXPECTED_NAME="$name" \
+        EXPECTED_CIDR="$cidr" \
+        EXPECTED_GATEWAY="$gateway" \
+        EXPECTED_DHCP="$([ "$dhcp_flag" = --dhcp ] && echo true || echo false)" \
+        EXPECTED_POOL_START="$pool_start" \
+        EXPECTED_POOL_END="$pool_end" \
+        python3 -c '
+    import ast
     import json
     import os
     import sys
 
     subnet = json.load(sys.stdin)
+    gateway = None if os.environ["EXPECTED_GATEWAY"] == "none" else os.environ["EXPECTED_GATEWAY"]
     expected = {
-        "name": "public-v4",
-        "network_id": os.environ["NETWORK_ID"],
-        "cidr": "10.21.40.0/24",
-        "gateway_ip": "10.21.40.1",
+        "name": os.environ["EXPECTED_NAME"],
+        "network_id": os.environ["EXPECTED_NETWORK_ID"],
+        "cidr": os.environ["EXPECTED_CIDR"],
+        "gateway_ip": gateway,
         "ip_version": 4,
     }
     errors = [
@@ -111,16 +131,40 @@ data:
         for key, value in expected.items()
         if subnet.get(key) != value
     ]
-    if str(subnet.get("enable_dhcp")).lower() != "false":
-        errors.append("DHCP is enabled")
-    pools = str(subnet.get("allocation_pools", "")).replace(" ", "")
-    if pools.count("10.21.40.100") != 1 or pools.count("10.21.40.254") != 1:
-        errors.append(f"allocation_pools={pools!r}")
+    expected_dhcp = os.environ["EXPECTED_DHCP"] == "true"
+    actual_dhcp = str(subnet.get("enable_dhcp")).lower() == "true"
+    if actual_dhcp != expected_dhcp:
+        errors.append(f"enable_dhcp={subnet.get('enable_dhcp')!r}, expected {expected_dhcp!r}")
+    pools = subnet.get("allocation_pools", [])
+    if isinstance(pools, str):
+        pools = ast.literal_eval(pools)
+    actual_pools = sorted((pool.get("start"), pool.get("end")) for pool in pools)
+    expected_pools = [(os.environ["EXPECTED_POOL_START"], os.environ["EXPECTED_POOL_END"])]
+    if actual_pools != expected_pools:
+        errors.append(f"allocation_pools={actual_pools!r}, expected {expected_pools!r}")
     if errors:
-        raise SystemExit("external subnet conflict: " + "; ".join(errors))
+        raise SystemExit("subnet conflict: " + "; ".join(errors))
     '
+      printf '%s\n' "$id"
+    }
 
-    echo "external network ready: $network_name/$subnet_name ($network_id/$subnet_id)"
+    public_network_id="$(reconcile_network public --external --share physnet-external)"
+    public_subnet_id="$(reconcile_subnet \
+      "$public_network_id" public-v4 10.21.40.0/24 10.21.40.1 --no-dhcp \
+      10.21.40.100 10.21.40.254)"
+    echo "provider network ready: public/public-v4 ($public_network_id/$public_subnet_id)"
+
+    manila_network_id="$(reconcile_network manila-service --internal --no-share physnet-manila)"
+    manila_subnet_id="$(reconcile_subnet \
+      "$manila_network_id" manila-service-v4 10.21.33.0/24 none --dhcp \
+      10.21.33.40 10.21.33.254)"
+    router_owners="$(openstack port list --network "$manila_network_id" \
+      -f value -c 'Device Owner' | sed -n '/^network:router_/p')"
+    if [ -n "$router_owners" ]; then
+      echo "manila-service has a router attachment: $router_owners" >&2
+      exit 1
+    fi
+    echo "provider network ready: manila-service/manila-service-v4 ($manila_network_id/$manila_subnet_id)"
 ---
 apiVersion: batch/v1
 kind: CronJob
