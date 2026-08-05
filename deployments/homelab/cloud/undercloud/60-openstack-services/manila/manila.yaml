@@ -89,6 +89,8 @@ spec:
                         emptyDir:
                           sizeLimit: 4Mi
   valuesFrom:
+    # The pinned chart's MariaDB TLS override does not add its client-certificate
+    # options to manila.conf, so the encrypted values provide that connection.
     - kind: Secret
       name: manila-values
       valuesKey: values.yaml
