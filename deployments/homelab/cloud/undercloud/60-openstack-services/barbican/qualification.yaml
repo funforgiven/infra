@@ -60,7 +60,7 @@ spec:
                 --payload-content-type text/plain \
                 -f value -c 'Secret href')"
               received="$(openstack --os-interface public secret get \
-                "${href}" --payload)"
+                "${href}" --payload -f value -c Payload)"
               test "${received}" = "${payload}"
               openstack --os-interface public secret delete "${href}"
               href=""
