@@ -852,3 +852,32 @@ spec:
       kind: Deployment
       name: barbican-api
       namespace: openstack
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave70-capi-management-infrastructure
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 60m
+  path: ./deployments/homelab/cloud/undercloud/70-capi-management-infrastructure
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: wave63-barbican
+  healthChecks:
+    - apiVersion: batch/v1
+      kind: CronJob
+      name: capi-management-stack-reconcile-v1
+      namespace: openstack
+  healthCheckExprs:
+    - apiVersion: batch/v1
+      kind: CronJob
+      current: >-
+        has(status.observedGeneration) &&
+        status.observedGeneration == metadata.generation &&
+        has(status.lastSuccessfulTime)
