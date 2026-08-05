@@ -49,7 +49,9 @@ kube_vip_enableServicesElection: true
 kube_vip_lb_enable: false
 kube_vip_address: 10.21.20.128
 kube_vip_interface: bond0.20
-kube_vip_cidr: 32
+# kube-vip v1.0.3 uses one prefix for control-plane and Service VIPs. The
+# Manila VIP needs the VLAN 33 prefix so replies remain on br-manila.
+kube_vip_cidr: 24
 kube_vip_image_repo: ghcr.io/kube-vip/kube-vip
 kube_vip_image_digest: sha256:4e2791cc0238ae01b3986d827f4d568a25d846c94bab51238fe6241281a27113
 kube_vip_image_tag: "v{{ kube_vip_version }}@{{ kube_vip_image_digest }}"
