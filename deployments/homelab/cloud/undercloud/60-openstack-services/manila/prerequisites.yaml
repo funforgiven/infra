@@ -1,0 +1,164 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: manila-rook-export-ip-compat-v1
+  namespace: openstack
+data:
+  manila-rook.patch: |
+    --- a/manila/share/drivers/cephfs/driver.py
+    +++ b/manila/share/drivers/cephfs/driver.py
+    @@ -1590,6 +1590,12 @@
+             nfs_clusterid = self.nfs_clusterid
+             ceph_nfs_export_ips = []
+             ganesha_export_ips = self._get_configured_export_ips()
+    +        if ganesha_export_ips:
+    +            return [
+    +                {'ip': ip, 'preferred': True}
+    +                for ip in sorted(ganesha_export_ips)
+    +            ]
+    +
+             argdict = {
+                 "cluster_id": nfs_clusterid,
+             }
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: manila-ceph-key
+  namespace: openstack
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: manila-ceph-key
+  namespace: openstack
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - create
+      - update
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: manila-ceph-key
+  namespace: openstack
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: manila-ceph-key
+subjects:
+  - kind: ServiceAccount
+    name: manila-ceph-key
+    namespace: openstack
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: manila-ceph-key
+  namespace: rook-ceph
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+  - apiGroups:
+      - ""
+    resources:
+      - pods/exec
+    verbs:
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: manila-ceph-key
+  namespace: rook-ceph
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: manila-ceph-key
+subjects:
+  - kind: ServiceAccount
+    name: manila-ceph-key
+    namespace: openstack
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: manila-ceph-key-v1
+  namespace: openstack
+spec:
+  activeDeadlineSeconds: 600
+  backoffLimit: 6
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: manila-ceph-key
+        app.kubernetes.io/part-of: manila
+    spec:
+      serviceAccountName: manila-ceph-key
+      restartPolicy: OnFailure
+      securityContext:
+        runAsGroup: 99
+        runAsNonRoot: true
+        runAsUser: 99
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: reconcile
+          image: quay.io/airshipit/ceph-config-helper@sha256:44f0317107260ac70b83eb3b9621533812bec34add804542e42a2125d02c9a7a
+          command:
+            - /bin/bash
+            - -ec
+          args:
+            - |
+              set -o pipefail
+              tools_pod="$(kubectl --namespace rook-ceph get pods \
+                --selector app=rook-ceph-tools \
+                --field-selector status.phase=Running \
+                --output jsonpath='{.items[0].metadata.name}')"
+              test -n "$tools_pod"
+
+              kubectl --namespace rook-ceph exec "$tools_pod" -- \
+                ceph auth get-or-create client.manila \
+                  mon 'allow r' \
+                  mgr 'allow rw' \
+                  osd 'allow rw tag cephfs metadata=manila-cephfs, allow rw tag cephfs data=manila-cephfs' \
+                  mds 'allow rw fsname=manila-cephfs' >/dev/null
+
+              trap 'rm -f /tmp/manila-key' EXIT
+              kubectl --namespace rook-ceph exec "$tools_pod" -- \
+                ceph auth print-key client.manila > /tmp/manila-key
+              kubectl --namespace openstack create secret generic manila-keyring \
+                --from-file=key=/tmp/manila-key \
+                --dry-run=client \
+                --output yaml | kubectl apply --filename -
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 16Mi

@@ -1,0 +1,265 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: manila
+  namespace: openstack
+spec:
+  interval: 30m
+  timeout: 30m
+  releaseName: manila
+  chart:
+    spec:
+      chart: ./manila
+      interval: 24h
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: openstack-helm
+      valuesFiles:
+        - manila/values.yaml
+        - values_overrides/manila/2026.1-ubuntu_noble.yaml
+        - values_overrides/manila/mariadb-tls.yaml
+        - values_overrides/manila/messaging-tls.yaml
+  driftDetection:
+    mode: enabled
+  install:
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 1m
+  upgrade:
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 1m
+  test:
+    enable: true
+  postRenderStrategy: combined
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: apps
+              version: v1
+              kind: StatefulSet
+              name: manila-share
+            patch: |
+              apiVersion: apps/v1
+              kind: StatefulSet
+              metadata:
+                name: manila-share
+              spec:
+                template:
+                  spec:
+                    initContainers:
+                      - name: manila-rook-export-ip-compat-v1
+                        image: quay.io/airshipit/manila:2026.1-ubuntu_noble@sha256:8228796761c8ebc127b97f54f36f30fc5e25e4cd79d3aee59e7b3ccedb03bcfb
+                        command:
+                          - /bin/bash
+                          - -ec
+                        args:
+                          - |
+                            cp /var/lib/openstack/lib/python3.12/site-packages/manila/share/drivers/cephfs/driver.py /patched/driver.py
+                            patch --batch --fuzz=0 /patched/driver.py < /compat/manila-rook.patch
+                            python3 -m py_compile /patched/driver.py
+                        securityContext:
+                          allowPrivilegeEscalation: false
+                          capabilities:
+                            drop:
+                              - ALL
+                          readOnlyRootFilesystem: true
+                        volumeMounts:
+                          - name: manila-rook-export-ip-compat
+                            mountPath: /compat
+                            readOnly: true
+                          - name: manila-patched-driver
+                            mountPath: /patched
+                    containers:
+                      - name: manila-share
+                        volumeMounts:
+                          - name: manila-patched-driver
+                            mountPath: /var/lib/openstack/lib/python3.12/site-packages/manila/share/drivers/cephfs/driver.py
+                            subPath: driver.py
+                            readOnly: true
+                    volumes:
+                      - name: manila-rook-export-ip-compat
+                        configMap:
+                          name: manila-rook-export-ip-compat-v1
+                      - name: manila-patched-driver
+                        emptyDir:
+                          sizeLimit: 4Mi
+  valuesFrom:
+    - kind: Secret
+      name: manila-values
+      valuesKey: values.yaml
+  values:
+    images:
+      tags:
+        test: docker.io/xrally/xrally-openstack:2.0.0@sha256:32e9ee3edd2900b10efed209f8f9443ab2a6774fe2515c3ada8c269e946ff05d
+        bootstrap: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        dep_check: quay.io/airshipit/kubernetes-entrypoint:latest-ubuntu_noble@sha256:6c1f647df798b61e16a16528f3706eb2497c95d4ed75c0b4709f4506bc6abdc2
+        db_init: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        manila_db_sync: quay.io/airshipit/manila:2026.1-ubuntu_noble@sha256:8228796761c8ebc127b97f54f36f30fc5e25e4cd79d3aee59e7b3ccedb03bcfb
+        db_drop: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        ks_user: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        ks_service: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        ks_endpoints: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        manila_api: quay.io/airshipit/manila:2026.1-ubuntu_noble@sha256:8228796761c8ebc127b97f54f36f30fc5e25e4cd79d3aee59e7b3ccedb03bcfb
+        manila_data: quay.io/airshipit/manila:2026.1-ubuntu_noble@sha256:8228796761c8ebc127b97f54f36f30fc5e25e4cd79d3aee59e7b3ccedb03bcfb
+        manila_scheduler: quay.io/airshipit/manila:2026.1-ubuntu_noble@sha256:8228796761c8ebc127b97f54f36f30fc5e25e4cd79d3aee59e7b3ccedb03bcfb
+        manila_share: quay.io/airshipit/manila:2026.1-ubuntu_noble@sha256:8228796761c8ebc127b97f54f36f30fc5e25e4cd79d3aee59e7b3ccedb03bcfb
+        manila_db_purge: quay.io/airshipit/manila:2026.1-ubuntu_noble@sha256:8228796761c8ebc127b97f54f36f30fc5e25e4cd79d3aee59e7b3ccedb03bcfb
+        rabbit_init: docker.io/library/rabbitmq:3.13-management@sha256:e582c0bc7766f3342496d8485efb5a1df782b5ce3886ad017e2eaae442311f69
+    bootstrap:
+      structured:
+        flavors:
+          manila-service-flavor: null
+        images:
+          manila-service-image: null
+      script: |
+        dhss="$(openstack share type show default --column required_extra_specs --format value 2>/dev/null \
+          | tr -d "{} '" | awk -F: '/driver_handles_share_servers/ {print $2}')"
+        if [ "$dhss" = True ]; then
+          openstack share group type delete default || true
+          openstack share type delete default
+          openstack share type create default false --public true \
+            --extra-specs share_backend_name=CEPHFSNFS storage_protocol=NFS vendor_name=Ceph
+          openstack share group type create default default --public true
+        fi
+    conf:
+      manila:
+        DEFAULT:
+          enabled_share_backends: cephfsnfs
+          enabled_share_protocols: NFS
+          cephfs_auth_id: manila
+          host: null
+          osapi_share_workers: 2
+        cephfsnfs:
+          share_backend_name: CEPHFSNFS
+          share_driver: manila.share.drivers.cephfs.driver.CephFSDriver
+          driver_handles_share_servers: false
+          cephfs_conf_path: /etc/ceph/ceph.conf
+          cephfs_auth_id: manila
+          cephfs_cluster_name: ceph
+          cephfs_filesystem_name: manila-cephfs
+          cephfs_protocol_helper_type: NFS
+          cephfs_nfs_cluster_id: manila-nfs
+          cephfs_ganesha_export_ips: 10.21.33.20
+      rally_tests:
+        tests:
+          ManilaShares.create_and_delete_share:
+            - args:
+                share_proto: nfs
+                size: 1
+                share_type: default
+                min_sleep: 1
+                max_sleep: 2
+              context:
+                quotas:
+                  manila:
+                    shares: 4
+                    gigabytes: 4
+                    share_networks: 0
+                users:
+                  tenants: 2
+                  users_per_tenant: 1
+                  user_choice_method: round_robin
+                manila_share_networks:
+                  use_share_networks: false
+              runner:
+                concurrency: 2
+                times: 4
+                type: constant
+              sla:
+                failure_rate:
+                  max: 0
+    dependencies:
+      static:
+        bootstrap:
+          services:
+            - endpoint: internal
+              service: identity
+            - endpoint: internal
+              service: sharev2
+    endpoints:
+      oslo_db:
+        host_fqdn_override:
+          default:
+            tls:
+              issuerRef:
+                name: openstack-ca
+                kind: Issuer
+              usages:
+                - client auth
+      sharev2:
+        host_fqdn_override:
+          public:
+            host: share.cloud.fahrican.com
+    manifests:
+      cron_db_purge: true
+      deployment_data: false
+      job_image_repo_sync: false
+      statefulset_share: true
+    pod:
+      affinity:
+        anti:
+          type:
+            default: requiredDuringSchedulingIgnoredDuringExecution
+      lifecycle:
+        disruption_budget:
+          api:
+            min_available: 2
+      replicas:
+        api: 3
+        scheduler: 3
+        share: 3
+      resources:
+        enabled: true
+      security_context:
+        manila:
+          container:
+            manila_share:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+              privileged: false
+              readOnlyRootFilesystem: true
+    extraObjects:
+      - apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        metadata:
+          name: manila
+          namespace: openstack
+        spec:
+          parentRefs:
+            - name: private
+              namespace: network-services
+          hostnames:
+            - share.cloud.fahrican.com
+          rules:
+            - backendRefs:
+                - name: manila-api
+                  port: 8786
+      - apiVersion: policy/v1
+        kind: PodDisruptionBudget
+        metadata:
+          name: manila-scheduler
+          namespace: openstack
+        spec:
+          minAvailable: 2
+          selector:
+            matchLabels:
+              application: manila
+              component: scheduler
+      - apiVersion: policy/v1
+        kind: PodDisruptionBudget
+        metadata:
+          name: manila-share
+          namespace: openstack
+        spec:
+          minAvailable: 2
+          selector:
+            matchLabels:
+              application: manila
+              component: share
