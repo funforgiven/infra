@@ -36,15 +36,16 @@ kubectl_localhost: false
 credentials_dir: /run/kubespray
 artifacts_dir: /run/kubespray
 
-# kube-vip owns only the highly available Kubernetes API endpoint. It never
-# competes with Cilium or the MetalLB fallback for Service addresses.
+# kube-vip owns the API endpoint on bond0.20 and only explicitly classed
+# host-network Services on br-manila. Cilium and MetalLB use different classes.
 kube_vip_version: "1.0.3"
 kube_vip_enabled: true
 kube_vip_arp_enabled: true
 kube_vip_bgp_enabled: false
 kube_vip_controlplane_enabled: true
-kube_vip_services_enabled: false
-kube_vip_enableServicesElection: false
+kube_vip_services_interface: br-manila
+kube_vip_services_enabled: true
+kube_vip_enableServicesElection: true
 kube_vip_lb_enable: false
 kube_vip_address: 10.21.20.128
 kube_vip_interface: bond0.20
