@@ -40,6 +40,42 @@ spec:
       valuesKey: values.yaml
   values:
     storage: rbd
+    bootstrap:
+      structured:
+        images:
+          ubuntu-noble-20260801:
+            id: null
+            name: Ubuntu 24.04 Noble 20260801 amd64
+            source_url: https://cloud-images.ubuntu.com/releases/noble/release-20260801/
+            image_file: ubuntu-24.04-server-cloudimg-amd64.img
+            min_disk: 4
+            image_type: qcow2
+            container_format: bare
+            private: false
+            properties:
+              architecture: x86_64
+              canonical_sha256: 0533b0655c32e68b31d792ecd6ccfca95abdbc536c4446874fe0513bd4140ffe
+              hw_disk_bus: virtio
+              hw_vif_model: virtio
+              os_distro: ubuntu
+              os_version: "24.04"
+      script: |
+        name='Ubuntu 24.04 Noble 20260801 amd64'
+        file='ubuntu-24.04-server-cloudimg-amd64.img'
+        expected='0533b0655c32e68b31d792ecd6ccfca95abdbc536c4446874fe0513bd4140ffe'
+
+        if [ -f "$file" ]; then
+          actual="$(sha256sum "$file" | awk '{print $1}')"
+          if [ "$actual" != "$expected" ]; then
+            openstack image delete "$name"
+            exit 1
+          fi
+        fi
+
+        test "$(openstack image show "$name" -f value -c status)" = active
+        test "$(openstack image show "$name" -f value -c visibility)" = public
+        openstack image show "$name" -f value -c properties |
+          grep -Fq "canonical_sha256='$expected'"
     conf:
       software:
         rbd:
