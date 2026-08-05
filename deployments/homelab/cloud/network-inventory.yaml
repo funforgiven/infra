@@ -81,6 +81,10 @@ all:
                 comment: "infra: OVN-GENEVE; switch-local only"
                 additional_tagged_interfaces: []
                 scope: switch-local
+              - id: 33
+                comment: "infra: MANILA-NFS; switch-local only"
+                additional_tagged_interfaces: []
+                scope: switch-local
               - id: 40
                 comment: "infra: CLOUD-EXTERNAL"
                 additional_tagged_interfaces:

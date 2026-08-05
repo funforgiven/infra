@@ -135,12 +135,12 @@ class NetworkInventoryTests(unittest.TestCase):
 
     def test_external_provider_vlan_is_reconciled_end_to_end(self) -> None:
         self.assertEqual(
-            [20, 30, 31, 32, 40],
+            [20, 30, 31, 32, 33, 40],
             list(self.host_defaults["cloud_vlan_mtu"]),
         )
         self.assertNotIn("cloud_provider_vlans", self.host_defaults)
         self.assertEqual(
-            [20, 30, 31, 32, 40],
+            [20, 30, 31, 32, 33, 40],
             [row["id"] for row in self.switch["crs_cloud_fabric"]["bridge_vlans"]],
         )
         provider = self.router["routeros_provider_network"]
