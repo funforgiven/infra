@@ -68,7 +68,9 @@ spec:
     conf:
       auto_bridge_add:
         br-ex: bond0.40
-      ovn_bridge_mappings: physnet-external:br-ex
+        br-manila: bond0.33
+      ovn_bridge_mappings: >-
+        physnet-external:br-ex,physnet-manila:br-manila
       ovs_user_name: root
     network:
       interface:
@@ -240,11 +242,11 @@ spec:
       neutron:
         DEFAULT:
           global_physnet_mtu: 9000
-          physical_network_mtus: physnet-external:1500
+          physical_network_mtus: physnet-external:1500,physnet-manila:1500
       plugins:
         ml2_conf:
           ml2_type_flat:
-            flat_networks: physnet-external
+            flat_networks: physnet-external,physnet-manila
     endpoints:
       network:
         host_fqdn_override:
