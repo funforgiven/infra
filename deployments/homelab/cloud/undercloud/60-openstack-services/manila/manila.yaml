@@ -228,6 +228,16 @@ spec:
               privileged: false
               readOnlyRootFilesystem: true
     extraObjects:
+      # The pinned chart's rally pod references this Secret but does not render it.
+      - |
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: {{ .Values.secrets.identity.test }}
+          namespace: {{ .Release.Namespace }}
+        type: Opaque
+        data:
+        {{- tuple "test" "internal" . | include "helm-toolkit.snippets.keystone_secret_openrc" | nindent 2 }}
       - apiVersion: gateway.networking.k8s.io/v1
         kind: HTTPRoute
         metadata:
