@@ -74,8 +74,10 @@ spec:
 
         test "$(openstack image show "$name" -f value -c status)" = active
         test "$(openstack image show "$name" -f value -c visibility)" = public
-        openstack image show "$name" -f value -c properties |
-          grep -Fq "canonical_sha256='$expected'"
+        openstack image show "$name" -f json -c properties |
+          python3 -c \
+            'import json, sys; assert json.load(sys.stdin)["properties"]["canonical_sha256"] == sys.argv[1]' \
+            "$expected"
     conf:
       software:
         rbd:
