@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - secrets.sops.yaml
   - barbican.yaml
+  - qualification.yaml
