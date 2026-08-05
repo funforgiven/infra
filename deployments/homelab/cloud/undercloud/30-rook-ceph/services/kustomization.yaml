@@ -3,4 +3,5 @@ kind: Kustomization
 resources:
   - pools.yaml
   - filesystem.yaml
+  - nfs.yaml
   - undercloud-storage.yaml
