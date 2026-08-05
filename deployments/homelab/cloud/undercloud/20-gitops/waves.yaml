@@ -836,6 +836,10 @@ spec:
   dependsOn:
     - name: wave62-manila
   healthChecks:
+    - apiVersion: batch/v1
+      kind: Job
+      name: barbican-public-qualification-v1
+      namespace: openstack
     - apiVersion: helm.toolkit.fluxcd.io/v2
       kind: HelmRelease
       name: barbican
