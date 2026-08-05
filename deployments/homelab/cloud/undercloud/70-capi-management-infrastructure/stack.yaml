@@ -1,0 +1,477 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: capi-management-stack
+  namespace: openstack
+data:
+  reconcile.sh: |
+    #!/bin/sh
+    set -eu
+
+    stack=capi-management
+    template=/config/template.yaml
+    node_template=/config/node.yaml
+    revision="$(
+      sha256sum "$template" "$node_template" |
+        sha256sum |
+        cut -d ' ' -f 1
+    )"
+
+    if openstack stack show "$stack" >/dev/null 2>&1; then
+      status="$(openstack stack show "$stack" -f value -c stack_status)"
+      case "$status" in
+        *_IN_PROGRESS|*_FAILED|ROLLBACK_*)
+          echo "$stack is not safe to update: $status" >&2
+          exit 1
+          ;;
+      esac
+
+      current_revision="$(
+        openstack stack output show "$stack" desired_revision \
+          -f value -c output_value 2>/dev/null || true
+      )"
+      if [ "$current_revision" != "$revision" ]; then
+        openstack stack update --wait --timeout 45 \
+          --template "$template" \
+          --parameter desired_revision="$revision" \
+          "$stack"
+      fi
+    else
+      openstack stack create --wait --timeout 45 \
+        --template "$template" \
+        --parameter desired_revision="$revision" \
+        "$stack"
+    fi
+
+    status="$(openstack stack show "$stack" -f value -c stack_status)"
+    case "$status" in
+      CREATE_COMPLETE|UPDATE_COMPLETE|CHECK_COMPLETE) ;;
+      *) echo "$stack is not ready: $status" >&2; exit 1 ;;
+    esac
+
+    for node in 1 2 3; do
+      server_status="$(
+        openstack server show "capi-management-$node" -f value -c status
+      )"
+      [ "$server_status" = ACTIVE ] || {
+        echo "capi-management-$node is $server_status" >&2
+        exit 1
+      }
+    done
+
+    load_balancer_id="$(
+      openstack stack output show "$stack" api_load_balancer_id \
+        -f value -c output_value
+    )"
+    load_balancer_status="$(
+      openstack loadbalancer show "$load_balancer_id" \
+        -f value -c provisioning_status
+    )"
+    [ "$load_balancer_status" = ACTIVE ] || {
+      echo "management API load balancer is $load_balancer_status" >&2
+      exit 1
+    }
+
+    echo "$stack is ready at revision $revision"
+  template.yaml: |
+    heat_template_version: 2021-04-16
+
+    description: Three-node HA k3s management infrastructure for Magnum CAPI
+
+    parameters:
+      desired_revision:
+        type: string
+        description: Git-owned template revision
+      public_network:
+        type: string
+        default: public
+      image:
+        type: string
+        default: Ubuntu 24.04 Noble 20260801 amd64
+      flavor:
+        type: string
+        default: m1.medium
+      volume_type:
+        type: string
+        default: rbd1
+
+    resources:
+      management_network:
+        type: OS::Neutron::Net
+        properties:
+          name: capi-management
+          admin_state_up: true
+
+      management_subnet:
+        type: OS::Neutron::Subnet
+        properties:
+          name: capi-management-v4
+          network: { get_resource: management_network }
+          cidr: 192.168.70.0/24
+          gateway_ip: 192.168.70.1
+          ip_version: 4
+          enable_dhcp: true
+          allocation_pools:
+            - start: 192.168.70.100
+              end: 192.168.70.254
+          dns_nameservers:
+            - 1.1.1.1
+            - 1.0.0.1
+
+      management_router:
+        type: OS::Neutron::Router
+        properties:
+          name: capi-management
+          external_gateway_info:
+            network: { get_param: public_network }
+            enable_snat: true
+
+      management_router_interface:
+        type: OS::Neutron::RouterInterface
+        properties:
+          router: { get_resource: management_router }
+          subnet: { get_resource: management_subnet }
+
+      management_security_group:
+        type: OS::Neutron::SecurityGroup
+        properties:
+          name: capi-management
+          description: Magnum CAPI management nodes
+          rules:
+            - direction: ingress
+              ethertype: IPv4
+              remote_ip_prefix: 192.168.70.0/24
+            - direction: ingress
+              ethertype: IPv4
+              protocol: tcp
+              port_range_min: 22
+              port_range_max: 22
+              remote_ip_prefix: 10.21.10.20/32
+            - direction: ingress
+              ethertype: IPv4
+              protocol: tcp
+              port_range_min: 6443
+              port_range_max: 6443
+              remote_ip_prefix: 10.21.20.0/24
+            - direction: ingress
+              ethertype: IPv4
+              protocol: tcp
+              port_range_min: 6443
+              port_range_max: 6443
+              remote_ip_prefix: 10.21.10.20/32
+            - direction: ingress
+              ethertype: IPv4
+              protocol: icmp
+              remote_ip_prefix: 10.21.10.20/32
+            - direction: egress
+              ethertype: IPv4
+
+      management_server_group:
+        type: OS::Nova::ServerGroup
+        properties:
+          name: capi-management
+          policies:
+            - anti-affinity
+
+      management_keypair:
+        type: OS::Nova::KeyPair
+        properties:
+          name: capi-management
+          public_key: >-
+            ssh-ed25519
+            AAAAC3NzaC1lZDI1NTE5AAAAIL1nHHxNA1YUl+89HhieA+YOyOLYJaSRBmutEOVxVQeB
+            github-funforgiven-2026-07-18
+
+      management_node_1:
+        type: node.yaml
+        depends_on: management_router_interface
+        properties:
+          name: capi-management-1
+          node: "1"
+          fixed_ip: 192.168.70.11
+          floating_ip: 10.21.40.101
+          network: { get_resource: management_network }
+          subnet: { get_resource: management_subnet }
+          security_group: { get_resource: management_security_group }
+          server_group: { get_resource: management_server_group }
+          key_name: { get_resource: management_keypair }
+          image: { get_param: image }
+          flavor: { get_param: flavor }
+          volume_type: { get_param: volume_type }
+          desired_revision: { get_param: desired_revision }
+          public_network: { get_param: public_network }
+
+      management_node_2:
+        type: node.yaml
+        depends_on: management_router_interface
+        properties:
+          name: capi-management-2
+          node: "2"
+          fixed_ip: 192.168.70.12
+          floating_ip: 10.21.40.102
+          network: { get_resource: management_network }
+          subnet: { get_resource: management_subnet }
+          security_group: { get_resource: management_security_group }
+          server_group: { get_resource: management_server_group }
+          key_name: { get_resource: management_keypair }
+          image: { get_param: image }
+          flavor: { get_param: flavor }
+          volume_type: { get_param: volume_type }
+          desired_revision: { get_param: desired_revision }
+          public_network: { get_param: public_network }
+
+      management_node_3:
+        type: node.yaml
+        depends_on: management_router_interface
+        properties:
+          name: capi-management-3
+          node: "3"
+          fixed_ip: 192.168.70.13
+          floating_ip: 10.21.40.103
+          network: { get_resource: management_network }
+          subnet: { get_resource: management_subnet }
+          security_group: { get_resource: management_security_group }
+          server_group: { get_resource: management_server_group }
+          key_name: { get_resource: management_keypair }
+          image: { get_param: image }
+          flavor: { get_param: flavor }
+          volume_type: { get_param: volume_type }
+          desired_revision: { get_param: desired_revision }
+          public_network: { get_param: public_network }
+
+      api_load_balancer:
+        type: OS::Octavia::LoadBalancer
+        depends_on: management_router_interface
+        properties:
+          name: capi-management-api
+          provider: ovn
+          vip_subnet: { get_resource: management_subnet }
+          vip_address: 192.168.70.10
+
+      api_listener:
+        type: OS::Octavia::Listener
+        properties:
+          name: capi-management-api
+          loadbalancer: { get_resource: api_load_balancer }
+          protocol: TCP
+          protocol_port: 6443
+          allowed_cidrs:
+            - 10.21.10.20/32
+            - 10.21.20.0/24
+
+      api_pool:
+        type: OS::Octavia::Pool
+        properties:
+          name: capi-management-api
+          listener: { get_resource: api_listener }
+          protocol: TCP
+          lb_algorithm: SOURCE_IP_PORT
+
+      api_health_monitor:
+        type: OS::Octavia::HealthMonitor
+        properties:
+          pool: { get_resource: api_pool }
+          type: TCP
+          delay: 5
+          timeout: 3
+          max_retries: 3
+
+      api_member_1:
+        type: OS::Octavia::PoolMember
+        properties:
+          pool: { get_resource: api_pool }
+          address: 192.168.70.11
+          protocol_port: 6443
+          subnet: { get_resource: management_subnet }
+
+      api_member_2:
+        type: OS::Octavia::PoolMember
+        properties:
+          pool: { get_resource: api_pool }
+          address: 192.168.70.12
+          protocol_port: 6443
+          subnet: { get_resource: management_subnet }
+
+      api_member_3:
+        type: OS::Octavia::PoolMember
+        properties:
+          pool: { get_resource: api_pool }
+          address: 192.168.70.13
+          protocol_port: 6443
+          subnet: { get_resource: management_subnet }
+
+      api_floating_ip:
+        type: OS::Neutron::FloatingIP
+        depends_on: management_router_interface
+        properties:
+          floating_network: { get_param: public_network }
+          floating_ip_address: 10.21.40.100
+          port_id: { get_attr: [api_load_balancer, vip_port_id] }
+
+    outputs:
+      desired_revision:
+        value: { get_param: desired_revision }
+      api_load_balancer_id:
+        value: { get_resource: api_load_balancer }
+      api_endpoint:
+        value: https://10.21.40.100:6443
+      node_floating_ips:
+        value:
+          - 10.21.40.101
+          - 10.21.40.102
+          - 10.21.40.103
+      node_fixed_ips:
+        value:
+          - 192.168.70.11
+          - 192.168.70.12
+          - 192.168.70.13
+  node.yaml: |
+    heat_template_version: 2021-04-16
+
+    description: One durable Magnum CAPI management node
+
+    parameters:
+      name: { type: string }
+      node: { type: string }
+      fixed_ip: { type: string }
+      floating_ip: { type: string }
+      network: { type: string }
+      subnet: { type: string }
+      security_group: { type: string }
+      server_group: { type: string }
+      key_name: { type: string }
+      image: { type: string }
+      flavor: { type: string }
+      volume_type: { type: string }
+      desired_revision: { type: string }
+      public_network: { type: string }
+
+    resources:
+      volume:
+        type: OS::Cinder::Volume
+        properties:
+          name: { get_param: name }
+          size: 40
+          volume_type: { get_param: volume_type }
+          image: { get_param: image }
+          metadata:
+            purpose: capi-management
+            node: { get_param: node }
+
+      port:
+        type: OS::Neutron::Port
+        properties:
+          name: { get_param: name }
+          network: { get_param: network }
+          security_groups:
+            - { get_param: security_group }
+          fixed_ips:
+            - subnet: { get_param: subnet }
+              ip_address: { get_param: fixed_ip }
+
+      server:
+        type: OS::Nova::Server
+        properties:
+          name: { get_param: name }
+          flavor: { get_param: flavor }
+          key_name: { get_param: key_name }
+          scheduler_hints:
+            group: { get_param: server_group }
+          networks:
+            - port: { get_resource: port }
+          block_device_mapping_v2:
+            - device_name: vda
+              volume_id: { get_resource: volume }
+              boot_index: 0
+              delete_on_termination: false
+          user_data_format: RAW
+          user_data:
+            str_replace:
+              template: |
+                #cloud-config
+                hostname: NODE_NAME
+                manage_etc_hosts: true
+                disable_root: true
+                ssh_pwauth: false
+              params:
+                NODE_NAME: { get_param: name }
+          metadata:
+            desired_revision: { get_param: desired_revision }
+
+      floating_ip:
+        type: OS::Neutron::FloatingIP
+        properties:
+          floating_network: { get_param: public_network }
+          floating_ip_address: { get_param: floating_ip }
+          port_id: { get_resource: port }
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: capi-management-stack-reconcile-v1
+  namespace: openstack
+spec:
+  schedule: "*/5 * * * *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 3600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: capi-management-stack-reconcile
+        spec:
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          securityContext:
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: reconcile
+              image: "quay.io/airshipit/openstack-client:2026.1-ubuntu_noble\
+                @sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676"
+              env:
+                - name: HOME
+                  value: /tmp
+              envFrom:
+                - secretRef:
+                    name: nova-keystone-admin
+              command:
+                - /bin/sh
+                - /config/reconcile.sh
+              resources:
+                requests:
+                  cpu: 25m
+                  memory: 64Mi
+                limits:
+                  cpu: "1"
+                  memory: 512Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+                readOnlyRootFilesystem: true
+              volumeMounts:
+                - name: config
+                  mountPath: /config
+                  readOnly: true
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: config
+              configMap:
+                name: capi-management-stack
+                defaultMode: 0555
+            - name: tmp
+              emptyDir:
+                sizeLimit: 64Mi
