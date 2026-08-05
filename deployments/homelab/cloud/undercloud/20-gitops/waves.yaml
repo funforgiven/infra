@@ -123,8 +123,24 @@ spec:
       name: undercloud
       namespace: rook-ceph
     - apiVersion: ceph.rook.io/v1
+      kind: CephBlockPool
+      name: builtin-nfs
+      namespace: rook-ceph
+    - apiVersion: ceph.rook.io/v1
       kind: CephFilesystem
       name: manila-cephfs
+      namespace: rook-ceph
+    - apiVersion: ceph.rook.io/v1
+      kind: CephNFS
+      name: manila-nfs
+      namespace: rook-ceph
+    - apiVersion: batch/v1
+      kind: Job
+      name: rook-orchestrator-configure-v1
+      namespace: rook-ceph
+    - apiVersion: v1
+      kind: Service
+      name: manila-nfs
       namespace: rook-ceph
   healthCheckExprs:
     - apiVersion: ceph.rook.io/v1
@@ -139,6 +155,22 @@ spec:
         has(status.observedGeneration) &&
         status.observedGeneration == metadata.generation &&
         has(status.phase) && status.phase == 'Ready'
+    - apiVersion: ceph.rook.io/v1
+      kind: CephNFS
+      current: >-
+        has(status.observedGeneration) &&
+        status.observedGeneration == metadata.generation &&
+        has(status.phase) && status.phase == 'Ready'
+    - apiVersion: v1
+      kind: Service
+      failed: >-
+        has(status.loadBalancer.ingress) &&
+        size(status.loadBalancer.ingress) > 0 &&
+        status.loadBalancer.ingress[0].ip != '10.21.33.129'
+      current: >-
+        has(status.loadBalancer.ingress) &&
+        size(status.loadBalancer.ingress) == 1 &&
+        status.loadBalancer.ingress[0].ip == '10.21.33.129'
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization

@@ -61,3 +61,20 @@ spec:
   parameters:
     min_size: "2"
     pg_autoscale_mode: "on"
+---
+apiVersion: ceph.rook.io/v1
+kind: CephBlockPool
+metadata:
+  name: builtin-nfs
+  namespace: rook-ceph
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  name: .nfs
+  failureDomain: host
+  replicated:
+    size: 3
+    requireSafeReplicaSize: true
+  parameters:
+    min_size: "2"
+    pg_autoscale_mode: "on"
