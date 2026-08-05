@@ -183,3 +183,11 @@ openstack:
           kubernetesEntrypoint: quay.io/airshipit/kubernetes-entrypoint:latest-ubuntu_noble@sha256:6c1f647df798b61e16a16528f3706eb2497c95d4ed75c0b4709f4506bc6abdc2
           rabbitmqInit: docker.io/library/rabbitmq:3.13-management@sha256:e582c0bc7766f3342496d8485efb5a1df782b5ce3886ad017e2eaae442311f69
           rally: docker.io/xrally/xrally-openstack:2.0.0@sha256:32e9ee3edd2900b10efed209f8f9443ab2a6774fe2515c3ada8c269e946ff05d
+      manila:
+        version: 22.0.0
+        images:
+          manila: quay.io/airshipit/manila:2026.1-ubuntu_noble@sha256:8228796761c8ebc127b97f54f36f30fc5e25e4cd79d3aee59e7b3ccedb03bcfb
+          openstackClient: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+          kubernetesEntrypoint: quay.io/airshipit/kubernetes-entrypoint:latest-ubuntu_noble@sha256:6c1f647df798b61e16a16528f3706eb2497c95d4ed75c0b4709f4506bc6abdc2
+          rabbitmqInit: docker.io/library/rabbitmq:3.13-management@sha256:e582c0bc7766f3342496d8485efb5a1df782b5ce3886ad017e2eaae442311f69
+          rally: docker.io/xrally/xrally-openstack:2.0.0@sha256:32e9ee3edd2900b10efed209f8f9443ab2a6774fe2515c3ada8c269e946ff05d

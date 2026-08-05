@@ -768,3 +768,49 @@ spec:
       kind: Deployment
       name: octavia-housekeeping
       namespace: openstack
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave62-manila
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 30m
+  path: ./deployments/homelab/cloud/undercloud/60-openstack-services/manila
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+    - name: wave61-octavia
+  healthChecks:
+    - apiVersion: batch/v1
+      kind: Job
+      name: manila-ceph-key-v1
+      namespace: openstack
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: manila
+      namespace: openstack
+    - apiVersion: cert-manager.io/v1
+      kind: Certificate
+      name: manila-client
+      namespace: openstack
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: manila-api
+      namespace: openstack
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: manila-scheduler
+      namespace: openstack
+    - apiVersion: apps/v1
+      kind: StatefulSet
+      name: manila-share
+      namespace: openstack
