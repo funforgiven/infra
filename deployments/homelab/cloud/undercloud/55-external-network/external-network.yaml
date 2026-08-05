@@ -158,7 +158,7 @@ data:
     manila_subnet_id="$(reconcile_subnet \
       "$manila_network_id" manila-service-v4 10.21.33.0/24 none --dhcp \
       10.21.33.40 10.21.33.254)"
-    router_owners="$(openstack port list --network "$manila_network_id" \
+    router_owners="$(openstack port list --long --network "$manila_network_id" \
       -f value -c 'Device Owner' | sed -n '/^network:router_/p')"
     if [ -n "$router_owners" ]; then
       echo "manila-service has a router attachment: $router_owners" >&2
