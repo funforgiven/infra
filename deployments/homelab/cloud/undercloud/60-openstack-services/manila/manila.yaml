@@ -157,6 +157,10 @@ spec:
                 min_sleep: 1
                 max_sleep: 2
               context:
+                api_versions:
+                  manila:
+                    version: 2
+                    service_type: sharev2
                 quotas:
                   manila:
                     shares: 4
