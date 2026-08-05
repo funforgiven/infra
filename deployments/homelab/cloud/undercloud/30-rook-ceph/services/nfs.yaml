@@ -115,45 +115,19 @@ spec:
       limits:
         memory: 2Gi
 ---
-apiVersion: metallb.io/v1beta1
-kind: IPAddressPool
-metadata:
-  name: manila-nfs
-  namespace: metallb-system
-spec:
-  addresses:
-    - 10.21.33.20/32
-  autoAssign: false
----
-apiVersion: metallb.io/v1beta1
-kind: L2Advertisement
-metadata:
-  name: manila-nfs-vlan33
-  namespace: metallb-system
-spec:
-  ipAddressPools:
-    - manila-nfs
-  interfaces:
-    - br-manila
-  nodeSelectors:
-    - matchExpressions:
-        - key: node-role.kubernetes.io/control-plane
-          operator: Exists
----
 apiVersion: v1
 kind: Service
 metadata:
   name: manila-nfs
   namespace: rook-ceph
   annotations:
-    metallb.io/address-pool: manila-nfs
-    metallb.io/loadBalancerIPs: 10.21.33.20
+    kube-vip.io/loadbalancerIPs: 10.21.33.20
   labels:
     app.kubernetes.io/name: manila-nfs
     app.kubernetes.io/part-of: openstack
 spec:
   type: LoadBalancer
-  loadBalancerClass: metallb.io/metallb
+  loadBalancerClass: kube-vip.io/kube-vip-class
   allocateLoadBalancerNodePorts: false
   externalTrafficPolicy: Local
   selector:
