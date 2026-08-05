@@ -1,0 +1,102 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: barbican
+  namespace: openstack
+spec:
+  interval: 30m
+  timeout: 30m
+  releaseName: barbican
+  chart:
+    spec:
+      chart: ./barbican
+      interval: 24h
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: openstack-helm
+      valuesFiles:
+        - barbican/values.yaml
+        - values_overrides/barbican/2026.1-ubuntu_noble.yaml
+        - values_overrides/barbican/mariadb-tls.yaml
+        - values_overrides/barbican/messaging-tls.yaml
+  driftDetection:
+    mode: enabled
+  install:
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 1m
+  upgrade:
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 1m
+  test:
+    enable: true
+  valuesFrom:
+    - kind: Secret
+      name: barbican-values
+      valuesKey: values.yaml
+  values:
+    images:
+      tags:
+        bootstrap: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        scripted_test: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        db_init: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        barbican_db_sync: quay.io/airshipit/barbican:2026.1-ubuntu_noble@sha256:acd8625110b1b4dac00bc96e91b5d51dea9f91e3c1dd0943b129fb789a6da34b
+        db_drop: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        ks_user: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        ks_service: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        ks_endpoints: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        barbican_api: quay.io/airshipit/barbican:2026.1-ubuntu_noble@sha256:acd8625110b1b4dac00bc96e91b5d51dea9f91e3c1dd0943b129fb789a6da34b
+        rabbit_init: docker.io/library/rabbitmq:3.13-management@sha256:e582c0bc7766f3342496d8485efb5a1df782b5ce3886ad017e2eaae442311f69
+        dep_check: quay.io/airshipit/kubernetes-entrypoint:latest-ubuntu_noble@sha256:6c1f647df798b61e16a16528f3706eb2497c95d4ed75c0b4709f4506bc6abdc2
+    conf:
+      simple_crypto_kek_rewrap:
+        old_kek: ""
+    endpoints:
+      key_manager:
+        host_fqdn_override:
+          public:
+            host: key-manager.cloud.fahrican.com
+      oslo_db:
+        host_fqdn_override:
+          default:
+            tls:
+              issuerRef:
+                name: openstack-ca
+                kind: Issuer
+              usages:
+                - client auth
+    manifests:
+      job_image_repo_sync: false
+    pod:
+      affinity:
+        anti:
+          type:
+            default: requiredDuringSchedulingIgnoredDuringExecution
+      replicas:
+        api: 3
+      lifecycle:
+        disruption_budget:
+          api:
+            min_available: 2
+      resources:
+        enabled: true
+    extraObjects:
+      - apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        metadata:
+          name: barbican
+          namespace: openstack
+        spec:
+          parentRefs:
+            - name: private
+              namespace: network-services
+          hostnames:
+            - key-manager.cloud.fahrican.com
+          rules:
+            - backendRefs:
+                - name: barbican-api
+                  port: 9311

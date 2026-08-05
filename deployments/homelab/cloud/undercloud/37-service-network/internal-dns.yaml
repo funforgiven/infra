@@ -26,7 +26,7 @@ data:
     $ORIGIN cloud.fahrican.com.
     $TTL 60
     @ IN SOA ns1.cloud.fahrican.com. hostmaster.cloud.fahrican.com. (
-        2026080502 3600 600 86400 60
+        2026080601 3600 600 86400 60
     )
     @   IN NS ns1.cloud.fahrican.com.
     ns1 IN A  10.21.20.129
@@ -41,6 +41,7 @@ data:
     cloudformation IN A 10.21.20.130
     load-balancer IN A 10.21.20.130
     share IN A 10.21.20.130
+    key-manager IN A 10.21.20.130
 ---
 apiVersion: apps/v1
 kind: Deployment
