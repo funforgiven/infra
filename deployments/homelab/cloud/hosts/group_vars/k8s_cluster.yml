@@ -91,6 +91,7 @@ cilium_extra_values:
       maxUnavailable: 1
   devices:
     - bond0.20
+    - br-manila
   # Two five-second service leases require less than one QPS per agent. Keep
   # the explicit budget comfortably above that while bounding API pressure.
   k8sClientRateLimit:
