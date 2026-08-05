@@ -12,6 +12,10 @@ uses pod MTU 1500, and replaces kube-proxy. It must not select VLANs 30-32.
 ConfigMap changes roll the agent DaemonSet with at most one unavailable agent,
 preserving networking on the other two nodes.
 
+Host automation owns `systemd-resolved`; `resolvconf_mode: none` prevents
+Kubespray from competing for the host resolver configuration. Kubernetes DNS
+remains Kubespray-managed.
+
 ## Runner
 
 Kubespray 2.31 requires Ansible Core 2.18 and must not run from the repository's
