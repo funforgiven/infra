@@ -91,6 +91,8 @@ cilium_hubble_envoy_digest_checksum: >-
 cilium_extra_values:
   routingMode: native
   rollOutCiliumPods: true
+  socketLB:
+    enabled: true
   updateStrategy:
     rollingUpdate:
       maxUnavailable: 1
