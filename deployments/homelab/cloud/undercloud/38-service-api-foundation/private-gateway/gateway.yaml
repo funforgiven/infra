@@ -17,9 +17,6 @@ metadata:
   namespace: network-services
 spec:
   gatewayClassName: private-envoy
-  addresses:
-    - type: IPAddress
-      value: 10.21.20.130
   listeners:
     - name: http
       protocol: HTTP
