@@ -166,11 +166,11 @@ spec:
       failed: >-
         has(status.loadBalancer.ingress) &&
         size(status.loadBalancer.ingress) > 0 &&
-        status.loadBalancer.ingress[0].ip != '10.21.33.129'
+        status.loadBalancer.ingress[0].ip != '10.21.33.20'
       current: >-
         has(status.loadBalancer.ingress) &&
         size(status.loadBalancer.ingress) == 1 &&
-        status.loadBalancer.ingress[0].ip == '10.21.33.129'
+        status.loadBalancer.ingress[0].ip == '10.21.33.20'
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
