@@ -8,7 +8,8 @@ The inventory keeps every node address on VLAN 20. kube-vip owns only
 `10.21.20.128:6443`. Cilium owns active Service L2 announcements; MetalLB is an
 inactive, mutually exclusive rollback implementation. Cilium uses native
 routing through `bond0.20`, admits the Manila NFS Service through `br-manila`,
-uses pod MTU 1500, and replaces kube-proxy. It must not select VLANs 30-32.
+uses pod MTU 1500, enables socket load balancing, and replaces kube-proxy. It
+must not select VLANs 30-32.
 ConfigMap changes roll the agent DaemonSet with at most one unavailable agent,
 preserving networking on the other two nodes.
 
@@ -52,6 +53,7 @@ Playbook success alone is insufficient. The wave closes only after:
   has one holder;
 - the API VIP survives loss of its current owner;
 - no kube-proxy DaemonSet exists;
-- Cilium reports native routing, MTU 1500, and kube-proxy replacement;
+- Cilium reports native routing, MTU 1500, socket load balancing, and
+  kube-proxy replacement;
 - Cilium health and cross-node connectivity pass; and
 - VLANs 30-32 retain their existing direct, jumbo-MTU paths.
