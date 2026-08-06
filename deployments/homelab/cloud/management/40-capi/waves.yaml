@@ -65,18 +65,7 @@ spec:
     kind: GitRepository
     name: cluster-api
   postBuild:
-    substitute:
-      CAPI_DIAGNOSTICS_ADDRESS: ":8443"
-      CAPI_INSECURE_DIAGNOSTICS: "false"
-      EXP_MACHINE_POOL: "true"
-      CLUSTER_TOPOLOGY: "false"
-      EXP_RUNTIME_SDK: "false"
-      EXP_MACHINE_SET_PREFLIGHT_CHECKS: "true"
-      EXP_MACHINE_WAITFORVOLUMEDETACH_CONSIDER_VOLUMEATTACHMENTS: "true"
-      EXP_PRIORITY_QUEUE: "true"
-      EXP_RECONCILER_RATE_LIMITING: "true"
-      EXP_IN_PLACE_UPDATES: "false"
-      EXP_MACHINE_TAINT_PROPAGATION: "false"
+    substituteStrategy: Always
   dependsOn:
     - name: wave41-cert-manager-qualification
   images:
@@ -104,6 +93,8 @@ spec:
   sourceRef:
     kind: GitRepository
     name: cluster-api
+  postBuild:
+    substituteStrategy: Always
   dependsOn:
     - name: wave42-capi-core
   images:
@@ -131,6 +122,8 @@ spec:
   sourceRef:
     kind: GitRepository
     name: cluster-api
+  postBuild:
+    substituteStrategy: Always
   dependsOn:
     - name: wave42-capi-core
   images:
@@ -185,6 +178,8 @@ spec:
   sourceRef:
     kind: GitRepository
     name: cluster-api-provider-openstack
+  postBuild:
+    substituteStrategy: Always
   dependsOn:
     - name: wave42-capi-core
     - name: wave44-openstack-resource-controller
