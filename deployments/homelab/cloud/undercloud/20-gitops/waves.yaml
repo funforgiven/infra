@@ -925,3 +925,25 @@ spec:
       kind: Job
       name: magnum-qualification-v3
       namespace: openstack
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave80-magnum-workload
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 125m
+  path: ./deployments/homelab/cloud/undercloud/80-magnum-workload
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: wave71-magnum
+  healthChecks:
+    - apiVersion: batch/v1
+      kind: Job
+      name: magnum-workload-cinder-v1
+      namespace: openstack

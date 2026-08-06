@@ -1,0 +1,177 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: magnum-workload-cinder-v1
+  namespace: openstack
+spec:
+  activeDeadlineSeconds: 7200
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: magnum-workload-cinder
+    spec:
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      nodeSelector:
+        openstack-control-plane: enabled
+      securityContext:
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: qualify
+          image: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+          env:
+            - name: HOME
+              value: /tmp
+          envFrom:
+            - secretRef:
+                name: magnum-keystone-admin
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              template=qualification-kubernetes-v1.35.6
+              cluster=platform-canary
+              kubeconfig=/tmp/kube/config
+
+              curl -fsSL -o /tmp/kubectl \
+                https://dl.k8s.io/release/v1.35.4/bin/linux/amd64/kubectl
+              python3 - <<'PY'
+              import hashlib
+              path = "/tmp/kubectl"
+              expected = "b529430df69a688fd61b64ad2299edb5fd71cb58be2a4779dba624c7d3510efd"
+              with open(path, "rb") as stream:
+                  actual = hashlib.file_digest(stream, "sha256").hexdigest()
+              assert actual == expected, (actual, expected)
+              PY
+              chmod 0500 /tmp/kubectl
+
+              if ! openstack coe cluster template show "$template" >/dev/null 2>&1; then
+                openstack coe cluster template create "$template" \
+                  --coe kubernetes \
+                  --image ubuntu-jammy-kube-v1.35.6-260705-1940 \
+                  --external-network public \
+                  --network-driver calico \
+                  --volume-driver cinder \
+                  --flavor m1.medium \
+                  --master-flavor m1.medium \
+                  --dns-nameserver 1.1.1.1 \
+                  --master-lb-enabled \
+                  --floating-ip-enabled \
+                  --labels capi_helm_chart_version=0.27.0
+              fi
+
+              if ! openstack coe cluster show "$cluster" >/dev/null 2>&1; then
+                openstack coe cluster create "$cluster" \
+                  --cluster-template "$template" \
+                  --master-count 3 \
+                  --node-count 1 \
+                  --timeout 60
+              fi
+
+              for attempt in $(seq 1 720); do
+                status=$(openstack coe cluster show "$cluster" -f value -c status)
+                case "$status" in
+                  CREATE_COMPLETE|UPDATE_COMPLETE) break ;;
+                  *_FAILED)
+                    openstack coe cluster show "$cluster" -f yaml
+                    exit 1
+                    ;;
+                esac
+                test "$attempt" -lt 720
+                sleep 10
+              done
+
+              mkdir -p /tmp/kube
+              openstack coe cluster config "$cluster" --dir /tmp/kube --force
+              export KUBECONFIG="$kubeconfig"
+
+              /tmp/kubectl wait --for=condition=Ready --timeout=20m nodes --all
+              test "$(/tmp/kubectl get nodes --no-headers | wc -l)" -eq 4
+              /tmp/kubectl -n calico-system rollout status \
+                daemonset/calico-node --timeout=10m
+
+              for attempt in $(seq 1 120); do
+                if /tmp/kubectl get csidriver cinder.csi.openstack.org >/dev/null 2>&1 &&
+                   /tmp/kubectl get storageclass rbd1 >/dev/null 2>&1; then
+                  break
+                fi
+                test "$attempt" -lt 120
+                sleep 5
+              done
+              test -z "$(/tmp/kubectl get csidriver -o name | grep -E 'ceph|rbd' || true)"
+              test -z "$(/tmp/kubectl get namespace -o name | grep -E 'rook-ceph|csi-ceph' || true)"
+
+              /tmp/kubectl apply -f - <<'YAML'
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: platform-qualification
+              ---
+              apiVersion: v1
+              kind: PersistentVolumeClaim
+              metadata:
+                name: cinder-rwo
+                namespace: platform-qualification
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 1Gi
+                storageClassName: rbd1
+              ---
+              apiVersion: v1
+              kind: Pod
+              metadata:
+                name: cinder-rwo
+                namespace: platform-qualification
+              spec:
+                restartPolicy: Always
+                containers:
+                  - name: sentinel
+                    image: docker.io/library/busybox:1.38.0@sha256:dc2d74b28e4cf8984fa52af1f39bc7d3c73760b41a74d629f5d11b1ab28616
+                    command:
+                      - /bin/sh
+                      - -ec
+                      - printf 'cinder-qualified\n' > /data/sentinel; exec sleep 365d
+                    securityContext:
+                      allowPrivilegeEscalation: false
+                      capabilities:
+                        drop:
+                          - ALL
+                    volumeMounts:
+                      - name: data
+                        mountPath: /data
+                volumes:
+                  - name: data
+                    persistentVolumeClaim:
+                      claimName: cinder-rwo
+              YAML
+              /tmp/kubectl -n platform-qualification wait \
+                --for=condition=Ready --timeout=20m pod/cinder-rwo
+              test "$(/tmp/kubectl -n platform-qualification exec cinder-rwo -- cat /data/sentinel)" = cinder-qualified
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 256Mi
