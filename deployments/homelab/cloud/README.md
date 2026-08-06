@@ -270,6 +270,14 @@ policy, load-balancer, replacement, and upgrade matrix. No template is published
 until Cinder CSI, Manila CSI, NFS-only security, node-port `/32` access
 reconciliation, and lifecycle tests are complete.
 
+The upstream Magnum driver supplies Cinder CSI values directly. Its pinned
+workload chart also supports Manila CSI, but the driver does not yet expose that
+chart option. The first qualification cluster therefore receives its Manila
+add-on as a Git-owned Azimuth `HelmRelease` in the Magnum project namespace.
+Template publication remains closed until that add-on provisions and mounts an
+RWX claim successfully; a second add-on operator or a local driver fork is not
+part of the initial platform.
+
 ## Reconciliation, readiness, and dependency graphs
 
 Flux ordering and Kubernetes `Ready` conditions are necessary but insufficient.
