@@ -75,6 +75,7 @@ spec:
               hw_scsi_model: virtio-scsi
               hw_vif_model: virtio
               kube_version: v1.35.6
+              magnum_driver: k8s_capi_helm_v1
               os_distro: ubuntu
               os_version: "22.04"
       script: |
@@ -103,6 +104,9 @@ spec:
           'Ubuntu 24.04 Noble 20260801 amd64' \
           'ubuntu-24.04-server-cloudimg-amd64.img' \
           '0533b0655c32e68b31d792ecd6ccfca95abdbc536c4446874fe0513bd4140ffe'
+        openstack image set \
+          'ubuntu-jammy-kube-v1.35.6-260705-1940' \
+          --property magnum_driver=k8s_capi_helm_v1
         verify_image \
           'ubuntu-jammy-kube-v1.35.6-260705-1940' \
           'ubuntu-jammy-kube-v1.35.6-260705-1940.qcow2' \

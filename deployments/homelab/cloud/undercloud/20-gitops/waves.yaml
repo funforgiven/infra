@@ -923,5 +923,5 @@ spec:
       namespace: openstack
     - apiVersion: batch/v1
       kind: Job
-      name: magnum-qualification-v2
+      name: magnum-qualification-v3
       namespace: openstack
