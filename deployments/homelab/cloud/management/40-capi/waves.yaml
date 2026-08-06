@@ -140,7 +140,6 @@ metadata:
   name: wave44-openstack-resource-controller
   namespace: flux-system
 spec:
-  suspend: true
   interval: 10m
   retryInterval: 1m
   timeout: 15m
