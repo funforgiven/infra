@@ -84,7 +84,6 @@ metadata:
   name: wave43-kubeadm-bootstrap
   namespace: flux-system
 spec:
-  suspend: true
   interval: 10m
   retryInterval: 1m
   timeout: 15m
@@ -113,7 +112,6 @@ metadata:
   name: wave43-kubeadm-control-plane
   namespace: flux-system
 spec:
-  suspend: true
   interval: 10m
   retryInterval: 1m
   timeout: 15m
