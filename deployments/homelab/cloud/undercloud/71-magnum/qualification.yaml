@@ -67,10 +67,10 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: magnum-qualification-v1
+  name: magnum-qualification-v2
   namespace: openstack
 spec:
-  backoffLimit: 12
+  backoffLimit: 2
   template:
     metadata:
       labels:
@@ -138,7 +138,6 @@ spec:
                 --external-network public \
                 --network-driver calico \
                 --volume-driver cinder \
-                --driver k8s_capi_helm_v1 \
                 --flavor m1.medium \
                 --master-flavor m1.medium \
                 --dns-nameserver 1.1.1.1 \
