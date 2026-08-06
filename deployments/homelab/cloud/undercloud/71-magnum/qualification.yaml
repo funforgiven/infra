@@ -67,7 +67,7 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: magnum-qualification-v2
+  name: magnum-qualification-v3
   namespace: openstack
 spec:
   backoffLimit: 2
@@ -127,6 +127,7 @@ spec:
               assert image["status"] == "active", image
               assert image["visibility"] == "public", image
               assert properties["kube_version"] == "v1.35.6", properties
+              assert properties["magnum_driver"] == "k8s_capi_helm_v1", properties
               assert properties["os_distro"] == "ubuntu", properties
               assert properties["canonical_sha256"] == "a6e33e155936c00187f47e83f835cadc5a8b0f7bb8b1cdad837bdb981c32757d", properties
               '
@@ -144,7 +145,7 @@ spec:
                 --master-lb-enabled \
                 --floating-ip-enabled \
                 --labels capi_helm_chart_version=0.27.0
-              test "$(openstack coe cluster template show "$name" -f value -c driver)" = k8s_capi_helm_v1
+              test "$(openstack coe cluster template show "$name" -f value -c cluster_distro)" = ubuntu
           resources:
             requests:
               cpu: 50m
