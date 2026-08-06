@@ -877,7 +877,5 @@ spec:
   healthCheckExprs:
     - apiVersion: batch/v1
       kind: CronJob
-      current: >-
-        has(status.observedGeneration) &&
-        status.observedGeneration == metadata.generation &&
-        has(status.lastSuccessfulTime)
+      failed: "false"
+      current: has(status.lastSuccessfulTime)
