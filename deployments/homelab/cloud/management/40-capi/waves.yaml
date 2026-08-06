@@ -4,7 +4,6 @@ metadata:
   name: wave40-cert-manager
   namespace: flux-system
 spec:
-  suspend: true
   interval: 10m
   retryInterval: 1m
   timeout: 10m
