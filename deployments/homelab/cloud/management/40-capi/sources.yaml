@@ -1,0 +1,43 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: cluster-api
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: https://github.com/kubernetes-sigs/cluster-api
+  ref:
+    commit: cf0f6c00fbf7d5c5dbf37bd09554c6389de93861
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: cluster-api-provider-openstack
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: https://github.com/kubernetes-sigs/cluster-api-provider-openstack
+  ref:
+    commit: 2bfcd2a48b296963191238d2411643bb73179297
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: openstack-resource-controller
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: https://github.com/k-orc/openstack-resource-controller
+  ref:
+    commit: 699ab0b3888c33dbf9957b4e47d003b466525a0a
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: cluster-api-addon-provider
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: https://github.com/azimuth-cloud/cluster-api-addon-provider
+  ref:
+    commit: 14580810a9546dba3a68330b930fced2bb1e5408
