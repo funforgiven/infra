@@ -1,0 +1,235 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave40-cert-manager
+  namespace: flux-system
+spec:
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  path: ./deployments/homelab/cloud/management/40-capi/cert-manager
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: cert-manager
+      namespace: cert-manager
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave41-cert-manager-qualification
+  namespace: flux-system
+spec:
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  timeout: 5m
+  path: ./deployments/homelab/cloud/management/40-capi/cert-manager-qualification
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: wave40-cert-manager
+  healthChecks:
+    - apiVersion: cert-manager.io/v1
+      kind: Certificate
+      name: cert-manager-qualification
+      namespace: cert-manager
+  healthCheckExprs:
+    - apiVersion: cert-manager.io/v1
+      kind: Certificate
+      current: >-
+        has(status.conditions) &&
+        status.conditions.exists(condition,
+          condition.type == 'Ready' && condition.status == 'True' &&
+          condition.observedGeneration == metadata.generation)
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave42-capi-core
+  namespace: flux-system
+spec:
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  timeout: 15m
+  path: ./config/default
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: cluster-api
+  dependsOn:
+    - name: wave41-cert-manager-qualification
+  images:
+    - name: gcr.io/k8s-staging-cluster-api/cluster-api-controller
+      newName: registry.k8s.io/cluster-api/cluster-api-controller
+      digest: sha256:19fb0d80ce1e0a06cd3383b92663afd9d20fd7fd0707824c6196b05113691fbc
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: capi-controller-manager
+      namespace: capi-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave43-kubeadm-bootstrap
+  namespace: flux-system
+spec:
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  timeout: 15m
+  path: ./bootstrap/kubeadm/config/default
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: cluster-api
+  dependsOn:
+    - name: wave42-capi-core
+  images:
+    - name: gcr.io/k8s-staging-cluster-api/kubeadm-bootstrap-controller
+      newName: registry.k8s.io/cluster-api/kubeadm-bootstrap-controller
+      digest: sha256:df3eeead04e4dd9ec12d5b68cea1220aa3ed92e66fd4561f5b6643b3886ea2ec
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: capi-kubeadm-bootstrap-controller-manager
+      namespace: capi-kubeadm-bootstrap-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave43-kubeadm-control-plane
+  namespace: flux-system
+spec:
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  timeout: 15m
+  path: ./controlplane/kubeadm/config/default
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: cluster-api
+  dependsOn:
+    - name: wave42-capi-core
+  images:
+    - name: gcr.io/k8s-staging-cluster-api/kubeadm-control-plane-controller
+      newName: registry.k8s.io/cluster-api/kubeadm-control-plane-controller
+      digest: sha256:dcacbd75d88bf8b5a50389e6d4e129c9fecb9f71ded22d03d309acca73ff0539
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: capi-kubeadm-control-plane-controller-manager
+      namespace: capi-kubeadm-control-plane-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave44-openstack-resource-controller
+  namespace: flux-system
+spec:
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  timeout: 15m
+  path: ./config/default
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: openstack-resource-controller
+  dependsOn:
+    - name: wave41-cert-manager-qualification
+  images:
+    - name: controller
+      newName: quay.io/orc/openstack-resource-controller
+      digest: sha256:f700f4f650042ebebae7315bdb7ce2fba1f0d73e59a646e26c1e44c7a4e8b358
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: orc-controller-manager
+      namespace: orc-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave45-capo
+  namespace: flux-system
+spec:
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  timeout: 15m
+  path: ./config/default
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: cluster-api-provider-openstack
+  dependsOn:
+    - name: wave42-capi-core
+    - name: wave44-openstack-resource-controller
+  images:
+    - name: gcr.io/k8s-staging-capi-openstack/capi-openstack-controller
+      newName: registry.k8s.io/capi-openstack/capi-openstack-controller
+      digest: sha256:c81c487b38d4525d505b859e48fba92af8c0042b9857992e166f004580049873
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: capo-controller-manager
+      namespace: capo-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave46-addon-provider
+  namespace: flux-system
+spec:
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  path: ./deployments/homelab/cloud/management/40-capi/addon-provider
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: wave43-kubeadm-bootstrap
+    - name: wave43-kubeadm-control-plane
+    - name: wave45-capo
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: cluster-api-addon-provider
+      namespace: capi-addon-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave47-capi-qualification
+  namespace: flux-system
+spec:
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  path: ./deployments/homelab/cloud/management/40-capi/qualification
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: wave46-addon-provider
+  healthChecks:
+    - apiVersion: batch/v1
+      kind: Job
+      name: capi-readiness-1-13-3-0-14-6
+      namespace: capi-qualification
