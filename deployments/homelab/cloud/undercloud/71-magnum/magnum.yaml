@@ -57,11 +57,16 @@ spec:
                               - python3
                               - -c
                               - >-
-                                import urllib.request;
-                                urllib.request.urlopen('http://127.0.0.1:9511/', timeout=3).read();
-                                from kubernetes import client, config;
-                                config.load_kube_config(config_file='/etc/magnum/kubeconfig.conf');
-                                client.VersionApi().get_code(_request_timeout=3)
+                                import base64,pathlib,socket,tempfile,yaml,requests;
+                                socket.create_connection(('127.0.0.1',9511),timeout=3).close();
+                                d=yaml.safe_load(open('/etc/magnum/kubeconfig.conf'));
+                                c=d['clusters'][0]['cluster'];u=d['users'][0]['user'];
+                                t=tempfile.TemporaryDirectory();p=pathlib.Path(t.name);
+                                (p/'ca').write_bytes(base64.b64decode(c['certificate-authority-data']));
+                                (p/'cert').write_bytes(base64.b64decode(u['client-certificate-data']));
+                                (p/'key').write_bytes(base64.b64decode(u['client-key-data']));
+                                r=requests.get(c['server']+'/version',verify=p/'ca',cert=(p/'cert',p/'key'),timeout=3);
+                                r.raise_for_status();assert r.json()['gitVersion']=='v1.35.4+k3s1'
                           failureThreshold: 3
                           periodSeconds: 10
                           timeoutSeconds: 8
@@ -86,9 +91,15 @@ spec:
                               - python3
                               - -c
                               - >-
-                                from kubernetes import client, config;
-                                config.load_kube_config(config_file='/etc/magnum/kubeconfig.conf');
-                                client.VersionApi().get_code(_request_timeout=3)
+                                import base64,pathlib,tempfile,yaml,requests;
+                                d=yaml.safe_load(open('/etc/magnum/kubeconfig.conf'));
+                                c=d['clusters'][0]['cluster'];u=d['users'][0]['user'];
+                                t=tempfile.TemporaryDirectory();p=pathlib.Path(t.name);
+                                (p/'ca').write_bytes(base64.b64decode(c['certificate-authority-data']));
+                                (p/'cert').write_bytes(base64.b64decode(u['client-certificate-data']));
+                                (p/'key').write_bytes(base64.b64decode(u['client-key-data']));
+                                r=requests.get(c['server']+'/version',verify=p/'ca',cert=(p/'cert',p/'key'),timeout=3);
+                                r.raise_for_status();assert r.json()['gitVersion']=='v1.35.4+k3s1'
                           failureThreshold: 3
                           periodSeconds: 10
                           timeoutSeconds: 8

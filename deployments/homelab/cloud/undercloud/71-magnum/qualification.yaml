@@ -27,10 +27,15 @@ spec:
             - python3
             - -c
             - >-
-              from kubernetes import client, config;
-              config.load_kube_config(config_file='/etc/magnum/kubeconfig.conf');
-              version = client.VersionApi().get_code(_request_timeout=5);
-              assert version.git_version == 'v1.35.4', version.git_version
+              import base64,pathlib,tempfile,yaml,requests;
+              d=yaml.safe_load(open('/etc/magnum/kubeconfig.conf'));
+              c=d['clusters'][0]['cluster'];u=d['users'][0]['user'];
+              t=tempfile.TemporaryDirectory();p=pathlib.Path(t.name);
+              (p/'ca').write_bytes(base64.b64decode(c['certificate-authority-data']));
+              (p/'cert').write_bytes(base64.b64decode(u['client-certificate-data']));
+              (p/'key').write_bytes(base64.b64decode(u['client-key-data']));
+              r=requests.get(c['server']+'/version',verify=p/'ca',cert=(p/'cert',p/'key'),timeout=5);
+              r.raise_for_status();assert r.json()['gitVersion']=='v1.35.4+k3s1'
           resources:
             requests:
               cpu: 25m
@@ -49,10 +54,15 @@ spec:
               mountPath: /etc/magnum/kubeconfig.conf
               subPath: kubeconfig.conf
               readOnly: true
+            - name: tmp
+              mountPath: /tmp
       volumes:
         - name: magnum-etc
           secret:
             secretName: magnum-etc
+        - name: tmp
+          emptyDir:
+            sizeLimit: 16Mi
 ---
 apiVersion: batch/v1
 kind: Job
