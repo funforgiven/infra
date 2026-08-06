@@ -53,6 +53,14 @@ let
       key = "undercloud/flux_age_identity";
       sopsFile = kubernetesSecretsFile;
     };
+    management-k3s-token = {
+      key = "management/k3s_token";
+      sopsFile = kubernetesSecretsFile;
+    };
+    management-flux-age-identity = {
+      key = "management/flux_age_identity";
+      sopsFile = kubernetesSecretsFile;
+    };
   };
   runtimeSecretNames = builtins.attrNames runtimeSecretSpecs;
 
