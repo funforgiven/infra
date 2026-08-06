@@ -236,5 +236,5 @@ spec:
   healthChecks:
     - apiVersion: batch/v1
       kind: Job
-      name: capi-readiness-1-13-3-0-14-6-r2
+      name: capi-readiness-1-13-3-0-14-6-r3
       namespace: capi-qualification
