@@ -117,6 +117,9 @@
 
             yamllint -d relaxed components/cloud deployments/homelab/cloud
             kustomize build deployments/homelab/cloud/undercloud >/dev/null
+            kustomize build deployments/homelab/cloud/management >/dev/null
+            kustomize build --load-restrictor LoadRestrictionsNone \
+              deployments/homelab/cloud/management/bootstrap >/dev/null
             shellcheck components/cloud/host-automation/build-autoinstall-iso.sh
 
             touch "$out"
