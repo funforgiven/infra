@@ -240,10 +240,15 @@ MariaDB. Do not add a second database or broker operator to solve recovery.
 Nova starts with the common custom CPU model `Westmere`, the named model exposed
 by all three hosts that provides the intended x86-64-v2-era AES baseline; host
 passthrough is forbidden. This baseline has passed the full migration matrix.
-`x86-64-v3` remains a disabled candidate until it is enabled deliberately and
-the same matrix is repeated against that model. Nova initially reserves 32 GiB
-of every 64 GiB host and uses `ram_allocation_ratio=1.0` until measured
-one-host-loss headroom justifies a change.
+The live libvirt model catalogue was compared across all three hosts on
+2026-08-06. Their common usable named-model intersection reaches
+`IvyBridge-IBRS`; the v3-era Haswell and Broadwell models are not usable on the
+AMD host, the EPYC models are not usable on the Intel hosts, and this QEMU
+catalogue exposes no generic `x86-64-v3` model. `x86-64-v3` therefore remains
+disabled. Do not synthesize it with a hand-maintained feature list; reassess
+the named-model intersection after a QEMU/libvirt upgrade. Nova initially
+reserves 32 GiB of every 64 GiB host and uses `ram_allocation_ratio=1.0` until
+measured one-host-loss headroom justifies a change.
 
 The idle, CPU-loaded, AES-256-GCM, repeated disk-write, and network-stream
 workloads passed the six directed `pecorino`, `taleggio`, and `asiago` host
