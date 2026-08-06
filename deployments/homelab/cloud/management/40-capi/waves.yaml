@@ -26,7 +26,6 @@ metadata:
   name: wave41-cert-manager-qualification
   namespace: flux-system
 spec:
-  suspend: true
   interval: 10m
   retryInterval: 1m
   timeout: 5m
