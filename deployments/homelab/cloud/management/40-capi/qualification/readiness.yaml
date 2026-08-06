@@ -22,14 +22,6 @@ rules:
       - get
       - list
       - watch
-  - apiGroups:
-      - ""
-    resources:
-      - endpoints
-    verbs:
-      - get
-      - list
-      - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -63,6 +55,12 @@ rules:
     verbs:
       - create
   - apiGroups:
+      - controlplane.cluster.x-k8s.io
+    resources:
+      - kubeadmcontrolplanes
+    verbs:
+      - create
+  - apiGroups:
       - infrastructure.cluster.x-k8s.io
     resources:
       - openstackclusters
@@ -83,10 +81,55 @@ subjects:
     name: capi-readiness
     namespace: capi-qualification
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: capi-admission-qualification
+  namespace: capi-qualification
+data:
+  resources.yaml: |
+    apiVersion: cluster.x-k8s.io/v1beta1
+    kind: Cluster
+    metadata:
+      name: qualification
+      namespace: capi-qualification
+    spec: {}
+    ---
+    apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+    kind: KubeadmConfig
+    metadata:
+      name: qualification
+      namespace: capi-qualification
+    spec: {}
+    ---
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    kind: KubeadmControlPlane
+    metadata:
+      name: qualification
+      namespace: capi-qualification
+    spec:
+      version: v1.35.4
+      machineTemplate:
+        infrastructureRef:
+          apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+          kind: OpenStackMachineTemplate
+          name: qualification
+      kubeadmConfigSpec: {}
+    ---
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    kind: OpenStackCluster
+    metadata:
+      name: qualification
+      namespace: capi-qualification
+    spec:
+      identityRef:
+        cloudName: qualification
+        name: qualification
+---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: capi-readiness-1-13-3-0-14-6
+  name: capi-readiness-1-13-3-0-14-6-r2
   namespace: capi-qualification
 spec:
   activeDeadlineSeconds: 600
@@ -101,75 +144,60 @@ spec:
       restartPolicy: Never
       securityContext:
         runAsNonRoot: true
+        runAsGroup: 65532
+        runAsUser: 65532
         seccompProfile:
           type: RuntimeDefault
-      containers:
-        - name: readiness
+      initContainers:
+        - name: wait-for-crds
           image: registry.k8s.io/kubectl:v1.35.4@sha256:e8bc9c71a813d90d5f7689fa57516b2aacd7a02bb9d70d3ab6664ed6d202fc10
-          command:
-            - /bin/sh
-            - -ec
           args:
-            - |
-              for crd in \
-                clusters.cluster.x-k8s.io \
-                kubeadmconfigs.bootstrap.cluster.x-k8s.io \
-                kubeadmcontrolplanes.controlplane.cluster.x-k8s.io \
-                openstackclusters.infrastructure.cluster.x-k8s.io \
-                images.openstack.k-orc.cloud \
-                helmreleases.addons.stackhpc.com \
-                manifests.addons.stackhpc.com; do
-                kubectl wait \
-                  --for=condition=Established \
-                  --timeout=300s \
-                  "crd/${crd}"
-              done
-
-              for endpoint in \
-                capi-system/capi-webhook-service \
-                capi-kubeadm-bootstrap-system/capi-kubeadm-bootstrap-webhook-service \
-                capi-kubeadm-control-plane-system/capi-kubeadm-control-plane-webhook-service \
-                capo-system/capo-webhook-service; do
-                namespace="${endpoint%/*}"
-                name="${endpoint#*/}"
-                test -n "$(kubectl get endpoints "$name" -n "$namespace" \
-                  -o jsonpath='{.subsets[0].addresses[0].ip}')"
-              done
-
-              kubectl api-resources --api-group=cluster.x-k8s.io \
-                | grep -q '^clusters'
-              kubectl api-resources --api-group=infrastructure.cluster.x-k8s.io \
-                | grep -q '^openstackclusters'
-              kubectl api-resources --api-group=openstack.k-orc.cloud \
-                | grep -q '^images'
-              kubectl api-resources --api-group=addons.stackhpc.com \
-                | grep -q '^helmreleases'
-
-              kubectl create --dry-run=server -o name -f - >/dev/null <<'EOF'
-              apiVersion: cluster.x-k8s.io/v1beta1
-              kind: Cluster
-              metadata:
-                name: qualification
-                namespace: capi-qualification
-              spec: {}
-              ---
-              apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
-              kind: KubeadmConfig
-              metadata:
-                name: qualification
-                namespace: capi-qualification
-              spec: {}
-              ---
-              apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-              kind: OpenStackCluster
-              metadata:
-                name: qualification
-                namespace: capi-qualification
-              spec:
-                identityRef:
-                  cloudName: qualification
-                  name: qualification
-              EOF
+            - wait
+            - --for=condition=Established
+            - --timeout=300s
+            - crd/clusters.cluster.x-k8s.io
+            - crd/kubeadmconfigs.bootstrap.cluster.x-k8s.io
+            - crd/kubeadmcontrolplanes.controlplane.cluster.x-k8s.io
+            - crd/openstackclusters.infrastructure.cluster.x-k8s.io
+            - crd/images.openstack.k-orc.cloud
+            - crd/helmreleases.addons.stackhpc.com
+            - crd/manifests.addons.stackhpc.com
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+        - name: discover-orc-api
+          image: registry.k8s.io/kubectl:v1.35.4@sha256:e8bc9c71a813d90d5f7689fa57516b2aacd7a02bb9d70d3ab6664ed6d202fc10
+          args:
+            - get
+            - --raw=/apis/openstack.k-orc.cloud/v1alpha1
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+        - name: discover-addon-api
+          image: registry.k8s.io/kubectl:v1.35.4@sha256:e8bc9c71a813d90d5f7689fa57516b2aacd7a02bb9d70d3ab6664ed6d202fc10
+          args:
+            - get
+            - --raw=/apis/addons.stackhpc.com/v1alpha1
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+      containers:
+        - name: admission
+          image: registry.k8s.io/kubectl:v1.35.4@sha256:e8bc9c71a813d90d5f7689fa57516b2aacd7a02bb9d70d3ab6664ed6d202fc10
+          args:
+            - create
+            - --dry-run=server
+            - --output=name
+            - --filename=/qualification/resources.yaml
           resources:
             requests:
               cpu: 25m
@@ -183,12 +211,16 @@ spec:
               drop:
                 - ALL
             readOnlyRootFilesystem: true
-            runAsGroup: 65532
-            runAsUser: 65532
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            - name: qualification
+              mountPath: /qualification
+              readOnly: true
       volumes:
         - name: tmp
           emptyDir:
             sizeLimit: 16Mi
+        - name: qualification
+          configMap:
+            name: capi-admission-qualification
