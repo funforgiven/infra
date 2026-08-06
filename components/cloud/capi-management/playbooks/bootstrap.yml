@@ -224,13 +224,17 @@
       no_log: true
 
     - name: Qualify the external API endpoint
-      ansible.builtin.uri:
-        url: "https://{{ k3s_api_dns_name }}:6443/readyz"
-        validate_certs: false
-        return_content: true
-        status_code: 200
+      ansible.builtin.command:
+        argv:
+          - kubectl
+          - --kubeconfig=/tmp/capi-management-kubeconfig
+          - get
+          - --raw=/readyz
+      changed_when: false
       register: external_api
-      until: external_api.content | trim == "ok"
+      until:
+        - external_api.rc == 0
+        - external_api.stdout | trim == "ok"
       retries: 60
       delay: 5
       delegate_to: localhost
