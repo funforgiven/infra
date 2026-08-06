@@ -174,27 +174,6 @@ data:
           policies:
             - anti-affinity
 
-      api_security_group:
-        type: OS::Neutron::SecurityGroup
-        properties:
-          name: capi-management-api
-          description: Magnum CAPI management API
-          rules:
-            - direction: ingress
-              ethertype: IPv4
-              protocol: tcp
-              port_range_min: 6443
-              port_range_max: 6443
-              remote_ip_prefix: 10.21.10.20/32
-            - direction: ingress
-              ethertype: IPv4
-              protocol: tcp
-              port_range_min: 6443
-              port_range_max: 6443
-              remote_ip_prefix: 10.21.20.0/24
-            - direction: egress
-              ethertype: IPv4
-
       management_keypair:
         type: OS::Nova::KeyPair
         properties:
@@ -261,24 +240,14 @@ data:
           desired_revision: { get_param: desired_revision }
           public_network: { get_param: public_network }
 
-      api_port:
-        type: OS::Neutron::Port
-        properties:
-          name: capi-management-api
-          network: { get_resource: management_network }
-          security_groups:
-            - { get_resource: api_security_group }
-          fixed_ips:
-            - subnet: { get_resource: management_subnet }
-              ip_address: 192.168.70.10
-
       api_load_balancer:
         type: OS::Octavia::LoadBalancer
         depends_on: management_router_interface
         properties:
           name: capi-management-api
           provider: ovn
-          vip_port: { get_resource: api_port }
+          vip_subnet: { get_resource: management_subnet }
+          vip_address: 192.168.70.10
 
       api_listener:
         type: OS::Octavia::Listener
@@ -335,7 +304,7 @@ data:
         properties:
           floating_network: { get_param: public_network }
           floating_ip_address: 10.21.40.100
-          port_id: { get_resource: api_port }
+          port_id: { get_attr: [api_load_balancer, vip_port_id] }
 
     outputs:
       desired_revision:

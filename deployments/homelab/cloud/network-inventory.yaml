@@ -122,6 +122,12 @@ all:
             trusted_interface: vlan10-trusted
             forward_chain: infra-forward
             final_drop_comment: "infra: forward final drop"
+            management_api:
+              comment: "infra: SERVERS to CAPI management API"
+              source_interface: vlan20-servers
+              destination: 10.21.40.100
+              protocol: tcp
+              destination_port: 6443
           routeros_static_leases:
             - comment: "infra: primary admin workstation"
               mac_address: 60:CF:84:ED:E9:1E

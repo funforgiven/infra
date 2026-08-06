@@ -436,6 +436,11 @@
           - routeros_provider_network.trusted_interface | length > 0
           - routeros_provider_network.forward_chain | length > 0
           - routeros_provider_network.final_drop_comment | length > 0
+          - routeros_provider_network.management_api.comment | length > 0
+          - routeros_provider_network.management_api.source_interface | length > 0
+          - routeros_provider_network.management_api.destination | length > 0
+          - routeros_provider_network.management_api.protocol == 'tcp'
+          - routeros_provider_network.management_api.destination_port | int == 6443
           - >-
             routeros_static_leases | map(attribute='comment') | list |
             unique | length == routeros_static_leases | length
@@ -489,6 +494,10 @@
             name="{{ routeros_provider_network.trusted_interface }}" and
             disabled=no]] != 1) do={
             :error "provider prerequisite: trusted interface missing" };
+            :if ([:len [/interface vlan find where
+            name="{{ routeros_provider_network.management_api.source_interface }}" and
+            disabled=no]] != 1) do={
+            :error "provider prerequisite: management API source interface missing" };
             :if ([:len [/ip firewall filter find where
             chain="{{ routeros_provider_network.forward_chain }}" and
             comment="{{ routeros_provider_network.final_drop_comment }}" and
@@ -527,7 +536,9 @@
             :if ([:len [/ip firewall filter find where
             comment="infra: {{ routeros_provider_network.name }} to WAN"]] > 1 or
             [:len [/ip firewall filter find where
-            comment="infra: TRUSTED to {{ routeros_provider_network.name }}"]] > 1)
+            comment="infra: TRUSTED to {{ routeros_provider_network.name }}"]] > 1 or
+            [:len [/ip firewall filter find where
+            comment="{{ routeros_provider_network.management_api.comment }}"]] > 1)
             do={ :error "duplicate provider firewall rule" }
       changed_when: false
       tags: [always]
@@ -662,11 +673,32 @@
             chain={{ routeros_provider_network.forward_chain }} disabled=no
             dst-address={{ routeros_provider_network.network }}
             in-interface={{ routeros_provider_network.trusted_interface }} };
+            :set row [/ip firewall filter find where
+            comment="{{ routeros_provider_network.management_api.comment }}"];
+            :if ([:len $row] = 0) do={
+            /ip firewall filter add action=accept
+            chain={{ routeros_provider_network.forward_chain }}
+            comment="{{ routeros_provider_network.management_api.comment }}"
+            disabled=no
+            dst-address={{ routeros_provider_network.management_api.destination }}
+            dst-port={{ routeros_provider_network.management_api.destination_port }}
+            in-interface={{ routeros_provider_network.management_api.source_interface }}
+            protocol={{ routeros_provider_network.management_api.protocol }}
+            place-before=$drop } else={
+            /ip firewall filter set $row action=accept
+            chain={{ routeros_provider_network.forward_chain }} disabled=no
+            dst-address={{ routeros_provider_network.management_api.destination }}
+            dst-port={{ routeros_provider_network.management_api.destination_port }}
+            in-interface={{ routeros_provider_network.management_api.source_interface }}
+            protocol={{ routeros_provider_network.management_api.protocol }} };
             /ip firewall filter move [find where
             comment="infra: {{ routeros_provider_network.name }} to WAN"]
             destination=$drop;
             /ip firewall filter move [find where
             comment="infra: TRUSTED to {{ routeros_provider_network.name }}"]
+            destination=$drop;
+            /ip firewall filter move [find where
+            comment="{{ routeros_provider_network.management_api.comment }}"]
             destination=$drop
       tags:
         - never
@@ -712,7 +744,16 @@
             action=accept and disabled=no and
             dst-address={{ routeros_provider_network.network }} and
             in-interface="{{ routeros_provider_network.trusted_interface }}"]]
-            != 1) do={ :error "provider postflight: invalid trusted rule" }
+            != 1) do={ :error "provider postflight: invalid trusted rule" };
+            :if ([:len [/ip firewall filter find where
+            chain="{{ routeros_provider_network.forward_chain }}" and
+            comment="{{ routeros_provider_network.management_api.comment }}" and
+            action=accept and disabled=no and
+            dst-address={{ routeros_provider_network.management_api.destination }} and
+            dst-port={{ routeros_provider_network.management_api.destination_port }} and
+            in-interface="{{ routeros_provider_network.management_api.source_interface }}" and
+            protocol={{ routeros_provider_network.management_api.protocol }}]]
+            != 1) do={ :error "provider postflight: invalid management API rule" }
       changed_when: false
       tags:
         - never
