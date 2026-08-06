@@ -37,8 +37,10 @@ in
           baseline and supervised failure of each LACP member. Independent
           OS-disk boot acceptance is a deferred resilience exercise. Kubernetes,
           Flux, Ceph, observability, private service ingress, MariaDB Galera, and
-          RabbitMQ are installed and qualified. The core OpenStack API services
-          are the next deployment wave.
+          RabbitMQ are installed and qualified. Keystone, Glance, Cinder, Nova,
+          Neutron, Heat, Octavia, Manila, and Barbican are running. The current
+          deployment boundary is the separately recoverable CAPI management cluster
+          required before Magnum is enabled.
 
           This is a concrete environment, not a reusable distribution. It can still
           serve as a reference for a dendritic flake, a Niri desktop, declarative
@@ -140,8 +142,9 @@ in
           qualification, including failure of each LACP member. Kubernetes, Flux,
           Rook-Ceph, observability, service ingress, and the OpenStack-Helm
           MariaDB and RabbitMQ infrastructure charts are running. Keystone,
-          Glance, Nova, Neutron, and Cinder are the next installation wave;
-          Magnum remains deferred.
+          Glance, Cinder, Placement, Nova, Neutron, Heat, Octavia, Manila, and
+          Barbican are running. The three-node CAPI management cluster and its Flux
+          root are also running; off-site recovery, CAPI/CAPO, and Magnum remain.
 
           The current repository records:
 

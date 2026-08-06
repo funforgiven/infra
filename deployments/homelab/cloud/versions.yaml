@@ -50,6 +50,32 @@ kubernetes:
       downloadUrl: >-
         https://github.com/k3s-io/k3s/releases/download/v1.35.4%2Bk3s1/k3s
       linuxAmd64Sha256: 080498ece50acdaf23fe5d736f41c616e276a89a4e5605a3f274f39b0fcee85b
+    clusterApi:
+      version: 1.13.3
+      commit: cf0f6c00fbf7d5c5dbf37bd09554c6389de93861
+      images:
+        core: registry.k8s.io/cluster-api/cluster-api-controller:v1.13.3@sha256:19fb0d80ce1e0a06cd3383b92663afd9d20fd7fd0707824c6196b05113691fbc
+        kubeadmBootstrap: registry.k8s.io/cluster-api/kubeadm-bootstrap-controller:v1.13.3@sha256:df3eeead04e4dd9ec12d5b68cea1220aa3ed92e66fd4561f5b6643b3886ea2ec
+        kubeadmControlPlane: registry.k8s.io/cluster-api/kubeadm-control-plane-controller:v1.13.3@sha256:dcacbd75d88bf8b5a50389e6d4e129c9fecb9f71ded22d03d309acca73ff0539
+    providerOpenStack:
+      version: 0.14.6
+      commit: 2bfcd2a48b296963191238d2411643bb73179297
+      image: registry.k8s.io/capi-openstack/capi-openstack-controller:v0.14.6@sha256:c81c487b38d4525d505b859e48fba92af8c0042b9857992e166f004580049873
+    openStackResourceController:
+      version: 2.6.0
+      commit: 699ab0b3888c33dbf9957b4e47d003b466525a0a
+      image: quay.io/orc/openstack-resource-controller:v2.6.0@sha256:f700f4f650042ebebae7315bdb7ce2fba1f0d73e59a646e26c1e44c7a4e8b358
+    addonProvider:
+      version: 0.12.1
+      commit: 14580810a9546dba3a68330b930fced2bb1e5408
+      chart:
+        repository: https://azimuth-cloud.github.io/cluster-api-addon-provider
+        sha256: 8c4b5c4c9914b41dc8fba0455fed17006aa907fb68fdac1a2d1e24a4201e8309
+      image: ghcr.io/azimuth-cloud/cluster-api-addon-provider:0.12.1@sha256:40f01c5252674335b16b22f97dd332d0d1c5c7a2ea25f62dcd51285c5439b3a8
+    qualificationImage: registry.k8s.io/kubectl:v1.35.4@sha256:e8bc9c71a813d90d5f7689fa57516b2aacd7a02bb9d70d3ab6664ed6d202fc10
+    workloadChart:
+      version: 0.27.0
+      commit: 89334f5a9eaff941dcb270b2c8cd90144c236f6e
   backup:
     sops:
       version: 3.13.1
