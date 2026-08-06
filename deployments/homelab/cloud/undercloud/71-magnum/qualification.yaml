@@ -1,0 +1,158 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: magnum-management-readiness-v1
+  namespace: openstack
+spec:
+  backoffLimit: 12
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: magnum-management-readiness
+    spec:
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      nodeSelector:
+        openstack-control-plane: enabled
+      securityContext:
+        runAsGroup: 42424
+        runAsNonRoot: true
+        runAsUser: 42424
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: qualify
+          image: ghcr.io/rackerlabs/genestack-images/magnum:2026.1-1785630465@sha256:010b3ba694b58fbd136cfb1a0f09a766718ab92c2524f6e89ce7efe31d85bf8c
+          command:
+            - python3
+            - -c
+            - >-
+              from kubernetes import client, config;
+              config.load_kube_config(config_file='/etc/magnum/kubeconfig.conf');
+              version = client.VersionApi().get_code(_request_timeout=5);
+              assert version.git_version == 'v1.35.4', version.git_version
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: magnum-etc
+              mountPath: /etc/magnum/kubeconfig.conf
+              subPath: kubeconfig.conf
+              readOnly: true
+      volumes:
+        - name: magnum-etc
+          secret:
+            secretName: magnum-etc
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: magnum-qualification-v1
+  namespace: openstack
+spec:
+  backoffLimit: 12
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: magnum-qualification
+    spec:
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      nodeSelector:
+        openstack-control-plane: enabled
+      securityContext:
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: qualify
+          image: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+          env:
+            - name: HOME
+              value: /tmp
+          envFrom:
+            - secretRef:
+                name: magnum-keystone-admin
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              name=wave71-magnum-qualification
+              cleanup() {
+                openstack coe cluster template delete "$name" >/dev/null 2>&1 || true
+              }
+              trap cleanup EXIT HUP INT TERM
+
+              for attempt in $(seq 1 120); do
+                if openstack coe service list -f json | python3 -c '
+              import json, sys
+              services = json.load(sys.stdin)
+              assert len(services) == 3, services
+              assert all(item["state"] == "up" for item in services), services
+              assert not any(item["disabled"] for item in services), services
+              '; then
+                  break
+                fi
+                test "$attempt" -lt 120
+                sleep 5
+              done
+
+              openstack image show ubuntu-jammy-kube-v1.35.6-260705-1940 -f json |
+                python3 -c '
+              import json, sys
+              image = json.load(sys.stdin)
+              properties = image["properties"]
+              assert image["status"] == "active", image
+              assert image["visibility"] == "public", image
+              assert properties["kube_version"] == "v1.35.6", properties
+              assert properties["os_distro"] == "ubuntu", properties
+              assert properties["canonical_sha256"] == "a6e33e155936c00187f47e83f835cadc5a8b0f7bb8b1cdad837bdb981c32757d", properties
+              '
+
+              cleanup
+              openstack coe cluster template create "$name" \
+                --coe kubernetes \
+                --image ubuntu-jammy-kube-v1.35.6-260705-1940 \
+                --external-network public \
+                --network-driver calico \
+                --volume-driver cinder \
+                --driver k8s_capi_helm_v1 \
+                --flavor m1.medium \
+                --master-flavor m1.medium \
+                --dns-nameserver 1.1.1.1 \
+                --master-lb-enabled \
+                --floating-ip-enabled \
+                --labels capi_helm_chart_version=0.27.0
+              test "$(openstack coe cluster template show "$name" -f value -c driver)" = k8s_capi_helm_v1
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi

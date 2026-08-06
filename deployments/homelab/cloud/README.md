@@ -257,10 +257,12 @@ undercloud bootstrap. The target sequence is:
 
 The management kubeconfig is SOPS-encrypted, etcd snapshots are encrypted and
 copied to B2, and recovery recreates the VM stack, restores etcd, bootstraps
-Flux, rotates credentials, and proves CAPO ownership before writes reopen. When
-the management plane is unhealthy, reads may remain available but mutating
-Magnum requests return 503 and conductors scale to zero. Writes require ten
-continuous healthy minutes before reopening.
+Flux, rotates credentials, and proves CAPO ownership before Magnum is enabled.
+Magnum API and conductor readiness both require a successful request to the
+management Kubernetes API. An outage therefore removes the Magnum API from its
+Service endpoints and prevents conductors from being considered ready, while
+already-running workload clusters continue independently. This fail-closed
+behavior is qualified before a cluster template is published.
 
 Calico is the initial workload-cluster CNI target because it is the regularly
 tested upstream path. Cilium remains a preview template requiring its own MTU,

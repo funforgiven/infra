@@ -1,0 +1,311 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: magnum
+  namespace: openstack
+spec:
+  interval: 30m
+  timeout: 30m
+  releaseName: magnum
+  chart:
+    spec:
+      chart: ./magnum
+      interval: 24h
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: openstack-helm
+      valuesFiles:
+        - magnum/values.yaml
+  driftDetection:
+    mode: enabled
+  install:
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 1m
+  upgrade:
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 1m
+  test:
+    enable: false
+  postRenderStrategy: combined
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: magnum-api
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: magnum-api
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: magnum-api
+                        readinessProbe:
+                          exec:
+                            command:
+                              - python3
+                              - -c
+                              - >-
+                                import urllib.request;
+                                urllib.request.urlopen('http://127.0.0.1:9511/', timeout=3).read();
+                                from kubernetes import client, config;
+                                config.load_kube_config(config_file='/etc/magnum/kubeconfig.conf');
+                                client.VersionApi().get_code(_request_timeout=3)
+                          failureThreshold: 3
+                          periodSeconds: 10
+                          timeoutSeconds: 8
+          - target:
+              group: apps
+              version: v1
+              kind: StatefulSet
+              name: magnum-conductor
+            patch: |
+              apiVersion: apps/v1
+              kind: StatefulSet
+              metadata:
+                name: magnum-conductor
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: magnum-conductor
+                        readinessProbe:
+                          exec:
+                            command:
+                              - python3
+                              - -c
+                              - >-
+                                from kubernetes import client, config;
+                                config.load_kube_config(config_file='/etc/magnum/kubeconfig.conf');
+                                client.VersionApi().get_code(_request_timeout=3)
+                          failureThreshold: 3
+                          periodSeconds: 10
+                          timeoutSeconds: 8
+          - target:
+              group: batch
+              version: v1
+              kind: Job
+              name: magnum-db-init
+            patch: |
+              apiVersion: batch/v1
+              kind: Job
+              metadata:
+                name: magnum-db-init
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: magnum-db-init-0
+                        env:
+                          - name: MARIADB_X509
+                            value: REQUIRE X509
+                        volumeMounts:
+                          - name: client-certs
+                            mountPath: /etc/mysql/certs
+                            readOnly: true
+                    volumes:
+                      - name: client-certs
+                        secret:
+                          secretName: magnum-client
+          - target:
+              group: batch
+              version: v1
+              kind: Job
+              name: magnum-rabbit-init
+            patch: |
+              apiVersion: batch/v1
+              kind: Job
+              metadata:
+                name: magnum-rabbit-init
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: rabbit-init
+                        env:
+                          - name: RABBITMQ_X509
+                            value: REQUIRE X509
+                          - name: USER_CERT_PATH
+                            value: /etc/rabbitmq/certs
+                        volumeMounts:
+                          - name: client-certs
+                            mountPath: /etc/rabbitmq/certs
+                            readOnly: true
+                    volumes:
+                      - name: client-certs
+                        secret:
+                          secretName: magnum-client
+  valuesFrom:
+    - kind: Secret
+      name: magnum-values
+      valuesKey: values.yaml
+  values:
+    images:
+      tags:
+        bootstrap: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        db_init: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        magnum_db_sync: ghcr.io/rackerlabs/genestack-images/magnum:2026.1-1785630465@sha256:010b3ba694b58fbd136cfb1a0f09a766718ab92c2524f6e89ce7efe31d85bf8c
+        db_drop: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        rabbit_init: docker.io/library/rabbitmq:3.13-management@sha256:e582c0bc7766f3342496d8485efb5a1df782b5ce3886ad017e2eaae442311f69
+        ks_user: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        ks_service: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        ks_endpoints: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        magnum_api: ghcr.io/rackerlabs/genestack-images/magnum:2026.1-1785630465@sha256:010b3ba694b58fbd136cfb1a0f09a766718ab92c2524f6e89ce7efe31d85bf8c
+        magnum_conductor: ghcr.io/rackerlabs/genestack-images/magnum:2026.1-1785630465@sha256:010b3ba694b58fbd136cfb1a0f09a766718ab92c2524f6e89ce7efe31d85bf8c
+        dep_check: quay.io/airshipit/kubernetes-entrypoint:latest-ubuntu_noble@sha256:6c1f647df798b61e16a16528f3706eb2497c95d4ed75c0b4709f4506bc6abdc2
+    conf:
+      capi:
+        enabled: true
+        clusterName: capi-management
+        contextName: capi-management
+        userName: magnum
+      magnum:
+        capi-helm: null
+        api:
+          workers: 2
+        conductor:
+          workers: 1
+        capi_helm:
+          kubeconfig_file: /etc/magnum/kubeconfig.conf
+          namespace_prefix: magnum
+          helm_chart_repo: https://azimuth-cloud.github.io/capi-helm-charts
+          helm_chart_name: openstack-cluster
+          default_helm_chart_version: 0.27.0
+          minimum_flavor_ram: 2048
+          minimum_flavor_vcpus: 2
+          csi_cinder_default_volume_type: rbd1
+        capi_helm_cluster_labels:
+          monitoring_enabled: false
+          kube_dashboard_enabled: false
+          auto_healing_enabled: true
+          auto_scaling_enabled: false
+          csi_cinder_availability_zone: nova
+          csi_cinder_reclaim_policy: Retain
+          csi_cinder_volume_binding_mode: WaitForFirstConsumer
+          csi_cinder_fstype: ext4
+          csi_cinder_allow_volume_expansion: true
+          octavia_provider: ovn
+          octavia_lb_algorithm: SOURCE_IP_PORT
+          octavia_lb_healthcheck: false
+          master_lb_floating_ip_enabled: true
+          fixed_subnet_cidr: 10.0.0.0/24
+          pod_network_cidr: 10.100.0.0/16
+          service_network_cidr: 172.24.0.0/13
+        oslo_messaging_rabbit:
+          ssl: true
+          ssl_ca_file: /etc/rabbitmq/certs/ca.crt
+          ssl_cert_file: /etc/rabbitmq/certs/tls.crt
+          ssl_key_file: /etc/rabbitmq/certs/tls.key
+    endpoints:
+      container_infra:
+        host_fqdn_override:
+          public:
+            host: container-infra.cloud.fahrican.com
+      oslo_db:
+        host_fqdn_override:
+          default:
+            tls:
+              issuerRef:
+                name: openstack-ca
+                kind: Issuer
+              usages:
+                - client auth
+      oslo_messaging:
+        statefulset:
+          replicas: 3
+          name: rabbitmq-rabbitmq
+        port:
+          http:
+            default: 15680
+    manifests:
+      job_image_repo_sync: false
+    pod:
+      affinity:
+        anti:
+          type:
+            default: requiredDuringSchedulingIgnoredDuringExecution
+      replicas:
+        api: 3
+        conductor: 3
+      lifecycle:
+        disruption_budget:
+          api:
+            min_available: 2
+      mounts:
+        magnum_api:
+          magnum_api: &service-client-certs
+            volumeMounts:
+              - name: client-certs
+                mountPath: /etc/mysql/certs
+                readOnly: true
+              - name: client-certs
+                mountPath: /etc/rabbitmq/certs
+                readOnly: true
+            volumes:
+              - name: client-certs
+                secret:
+                  secretName: magnum-client
+        magnum_conductor:
+          magnum_conductor: *service-client-certs
+        magnum_db_sync:
+          magnum_db_sync:
+            volumeMounts:
+              - name: client-certs
+                mountPath: /etc/mysql/certs
+                readOnly: true
+            volumes:
+              - name: client-certs
+                secret:
+                  secretName: magnum-client
+      resources:
+        enabled: true
+    extraObjects:
+      - apiVersion: cert-manager.io/v1
+        kind: Certificate
+        metadata:
+          name: magnum-client
+          namespace: openstack
+        spec:
+          secretName: magnum-client
+          commonName: magnum-client
+          issuerRef:
+            name: openstack-ca
+            kind: Issuer
+          usages:
+            - client auth
+      - apiVersion: policy/v1
+        kind: PodDisruptionBudget
+        metadata:
+          name: magnum-conductor
+          namespace: openstack
+        spec:
+          minAvailable: 2
+          selector:
+            matchLabels:
+              application: magnum
+              component: conductor
+      - apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        metadata:
+          name: magnum
+          namespace: openstack
+        spec:
+          parentRefs:
+            - name: private
+              namespace: network-services
+          hostnames:
+            - container-infra.cloud.fahrican.com
+          rules:
+            - backendRefs:
+                - name: magnum-api
+                  port: 9511

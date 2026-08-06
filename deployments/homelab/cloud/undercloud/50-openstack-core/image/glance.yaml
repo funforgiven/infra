@@ -59,25 +59,54 @@ spec:
               hw_vif_model: virtio
               os_distro: ubuntu
               os_version: "24.04"
+          ubuntu-jammy-kube-v1.35.6-260705-1940:
+            id: null
+            name: ubuntu-jammy-kube-v1.35.6-260705-1940
+            source_url: https://azimuth-images.stackhpc.cloud/
+            image_file: ubuntu-jammy-kube-v1.35.6-260705-1940.qcow2
+            min_disk: 20
+            image_type: qcow2
+            container_format: bare
+            private: false
+            properties:
+              architecture: x86_64
+              canonical_sha256: a6e33e155936c00187f47e83f835cadc5a8b0f7bb8b1cdad837bdb981c32757d
+              hw_disk_bus: scsi
+              hw_scsi_model: virtio-scsi
+              hw_vif_model: virtio
+              kube_version: v1.35.6
+              os_distro: ubuntu
+              os_version: "22.04"
       script: |
-        name='Ubuntu 24.04 Noble 20260801 amd64'
-        file='ubuntu-24.04-server-cloudimg-amd64.img'
-        expected='0533b0655c32e68b31d792ecd6ccfca95abdbc536c4446874fe0513bd4140ffe'
+        verify_image() {
+          name="$1"
+          file="$2"
+          expected="$3"
 
-        if [ -f "$file" ]; then
-          actual="$(sha256sum "$file" | awk '{print $1}')"
-          if [ "$actual" != "$expected" ]; then
-            openstack image delete "$name"
-            exit 1
+          if [ -f "$file" ]; then
+            actual="$(sha256sum "$file" | awk '{print $1}')"
+            if [ "$actual" != "$expected" ]; then
+              openstack image delete "$name"
+              exit 1
+            fi
           fi
-        fi
 
-        test "$(openstack image show "$name" -f value -c status)" = active
-        test "$(openstack image show "$name" -f value -c visibility)" = public
-        openstack image show "$name" -f json -c properties |
-          python3 -c \
-            'import json, sys; assert json.load(sys.stdin)["properties"]["canonical_sha256"] == sys.argv[1]' \
-            "$expected"
+          test "$(openstack image show "$name" -f value -c status)" = active
+          test "$(openstack image show "$name" -f value -c visibility)" = public
+          openstack image show "$name" -f json -c properties |
+            python3 -c \
+              'import json, sys; assert json.load(sys.stdin)["properties"]["canonical_sha256"] == sys.argv[1]' \
+              "$expected"
+        }
+
+        verify_image \
+          'Ubuntu 24.04 Noble 20260801 amd64' \
+          'ubuntu-24.04-server-cloudimg-amd64.img' \
+          '0533b0655c32e68b31d792ecd6ccfca95abdbc536c4446874fe0513bd4140ffe'
+        verify_image \
+          'ubuntu-jammy-kube-v1.35.6-260705-1940' \
+          'ubuntu-jammy-kube-v1.35.6-260705-1940.qcow2' \
+          'a6e33e155936c00187f47e83f835cadc5a8b0f7bb8b1cdad837bdb981c32757d'
     conf:
       software:
         rbd:

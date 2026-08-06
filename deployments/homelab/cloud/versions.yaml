@@ -189,6 +189,12 @@ openstack:
       release: "20260801"
       url: https://cloud-images.ubuntu.com/releases/noble/release-20260801/ubuntu-24.04-server-cloudimg-amd64.img
       sha256: 0533b0655c32e68b31d792ecd6ccfca95abdbc536c4446874fe0513bd4140ffe
+    kubernetesJammy:
+      version: 1.35.6
+      release: "260705-1940"
+      name: ubuntu-jammy-kube-v1.35.6-260705-1940
+      url: https://azimuth-images.stackhpc.cloud/ubuntu-jammy-kube-v1.35.6-260705-1940.qcow2
+      sha256: a6e33e155936c00187f47e83f835cadc5a8b0f7bb8b1cdad837bdb981c32757d
   openstackHelm:
     chartVersion: 2026.1.0
     repository: https://opendev.org/openstack/openstack-helm.git
@@ -235,3 +241,14 @@ openstack:
           kubernetesEntrypoint: quay.io/airshipit/kubernetes-entrypoint:latest-ubuntu_noble@sha256:6c1f647df798b61e16a16528f3706eb2497c95d4ed75c0b4709f4506bc6abdc2
           rabbitmqInit: docker.io/library/rabbitmq:3.13-management@sha256:e582c0bc7766f3342496d8485efb5a1df782b5ce3886ad017e2eaae442311f69
           rally: docker.io/xrally/xrally-openstack:2.0.0@sha256:32e9ee3edd2900b10efed209f8f9443ab2a6774fe2515c3ada8c269e946ff05d
+      magnum:
+        version: 22.0.0
+        image: ghcr.io/rackerlabs/genestack-images/magnum:2026.1-1785630465@sha256:010b3ba694b58fbd136cfb1a0f09a766718ab92c2524f6e89ce7efe31d85bf8c
+        imageSourceCommit: 74c4092d74d718f5c5c00900611c3338983ea959
+        capiDriver:
+          version: 1.4.1.dev14
+          commit: fe245aeccb20c6118c5e06038ea172c02ca1e6f6
+        images:
+          openstackClient: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+          kubernetesEntrypoint: quay.io/airshipit/kubernetes-entrypoint:latest-ubuntu_noble@sha256:6c1f647df798b61e16a16528f3706eb2497c95d4ed75c0b4709f4506bc6abdc2
+          rabbitmqInit: docker.io/library/rabbitmq:3.13-management@sha256:e582c0bc7766f3342496d8485efb5a1df782b5ce3886ad017e2eaae442311f69
