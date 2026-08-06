@@ -212,6 +212,10 @@ spec:
       kind: HelmRelease
       name: cluster-api-addon-provider
       namespace: capi-addon-system
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: cluster-api-addon-provider
+      namespace: capi-addon-system
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
