@@ -886,7 +886,6 @@ metadata:
   name: wave71-magnum
   namespace: flux-system
 spec:
-  suspend: true
   interval: 10m
   retryInterval: 1m
   timeout: 45m
