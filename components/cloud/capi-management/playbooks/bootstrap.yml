@@ -1,0 +1,250 @@
+---
+- name: Configure the management servers
+  hosts: k3s_servers
+  become: true
+  gather_facts: true
+  vars_files:
+    - ../../../../deployments/homelab/cloud/versions.yaml
+  vars:
+    k3s_release: "{{ kubernetes.management.k3s }}"
+  pre_tasks:
+    - name: Require the intended Ubuntu image and architecture
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.distribution == "Ubuntu"
+          - ansible_facts.distribution_release == "noble"
+          - ansible_facts.architecture == "x86_64"
+
+    - name: Require the local k3s token
+      ansible.builtin.stat:
+        path: "{{ k3s_token_file }}"
+      delegate_to: localhost
+      become: false
+      run_once: true
+      register: k3s_token
+
+    - name: Reject a missing k3s token
+      ansible.builtin.assert:
+        that:
+          - k3s_token.stat.exists
+          - k3s_token.stat.mode == "0400"
+      run_once: true
+
+  tasks:
+    - name: Install the guest agent
+      ansible.builtin.apt:
+        name: qemu-guest-agent
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Enable the guest agent
+      ansible.builtin.systemd_service:
+        name: qemu-guest-agent
+        enabled: true
+        state: started
+
+    - name: Load Kubernetes kernel modules at boot
+      ansible.builtin.copy:
+        dest: /etc/modules-load.d/k3s.conf
+        mode: "0644"
+        content: |
+          br_netfilter
+          overlay
+
+    - name: Load Kubernetes kernel modules now
+      ansible.builtin.command: "modprobe {{ item }}"
+      changed_when: false
+      loop:
+        - br_netfilter
+        - overlay
+
+    - name: Configure Kubernetes network sysctls
+      ansible.builtin.copy:
+        dest: /etc/sysctl.d/90-k3s.conf
+        mode: "0644"
+        content: |
+          net.bridge.bridge-nf-call-ip6tables = 1
+          net.bridge.bridge-nf-call-iptables = 1
+          net.ipv4.ip_forward = 1
+      register: k3s_sysctls
+
+    - name: Apply Kubernetes network sysctls
+      ansible.builtin.command: systemd-sysctl --system
+      changed_when: false
+      when: k3s_sysctls is changed
+
+    - name: Disable active swap
+      ansible.builtin.command: swapoff -a
+      changed_when: ansible_facts.swaptotal_mb | int > 0
+      when: ansible_facts.swaptotal_mb | int > 0
+
+    - name: Create k3s configuration directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+      loop:
+        - /etc/rancher/k3s
+        - /var/lib/rancher/k3s
+
+    - name: Install the pinned k3s binary
+      ansible.builtin.get_url:
+        url: "{{ k3s_release.downloadUrl }}"
+        dest: /usr/local/bin/k3s
+        owner: root
+        group: root
+        mode: "0755"
+        checksum: "sha256:{{ k3s_release.linuxAmd64Sha256 }}"
+      register: k3s_binary
+
+    - name: Install the shared k3s token
+      ansible.builtin.copy:
+        dest: /etc/rancher/k3s/token
+        owner: root
+        group: root
+        mode: "0600"
+        content: "{{ lookup('ansible.builtin.file', k3s_token_file) | trim }}\n"
+      no_log: true
+      register: k3s_token_config
+
+    - name: Render the k3s configuration
+      ansible.builtin.template:
+        src: ../templates/config.yaml.j2
+        dest: /etc/rancher/k3s/config.yaml
+        owner: root
+        group: root
+        mode: "0600"
+      register: k3s_config
+
+    - name: Install the k3s systemd unit
+      ansible.builtin.template:
+        src: ../templates/k3s.service.j2
+        dest: /etc/systemd/system/k3s.service
+        owner: root
+        group: root
+        mode: "0644"
+      register: k3s_unit
+
+    - name: Record whether k3s needs a restart
+      ansible.builtin.set_fact:
+        k3s_restart_required: >-
+          {{
+            k3s_binary is changed
+            or k3s_token_config is changed
+            or k3s_config is changed
+            or k3s_unit is changed
+          }}
+
+    - name: Reload systemd units
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+
+- name: Start the first management server
+  hosts: k3s_bootstrap
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Start or restart k3s
+      ansible.builtin.systemd_service:
+        name: k3s
+        enabled: true
+        state: "{{ 'restarted' if k3s_restart_required else 'started' }}"
+
+    - name: Wait for the first API server
+      ansible.builtin.command: /usr/local/bin/k3s kubectl get --raw=/readyz
+      changed_when: false
+      register: bootstrap_ready
+      retries: 60
+      delay: 5
+      until:
+        - bootstrap_ready.rc == 0
+        - bootstrap_ready.stdout == "ok"
+
+- name: Join the remaining management servers
+  hosts: k3s_joiners
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Wait for the bootstrap server
+      ansible.builtin.wait_for:
+        host: "{{ k3s_bootstrap_address }}"
+        port: 6443
+        timeout: 300
+
+    - name: Start or restart k3s
+      ansible.builtin.systemd_service:
+        name: k3s
+        enabled: true
+        state: "{{ 'restarted' if k3s_restart_required else 'started' }}"
+
+- name: Qualify the management cluster
+  hosts: k3s_bootstrap
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Wait for all management nodes
+      ansible.builtin.command: >-
+        /usr/local/bin/k3s kubectl wait
+        --for=condition=Ready
+        --timeout=300s
+        nodes
+        --all
+      changed_when: false
+
+    - name: Inventory the management nodes
+      ansible.builtin.command: /usr/local/bin/k3s kubectl get nodes -o json
+      changed_when: false
+      register: management_nodes
+
+    - name: Inventory the management control-plane nodes
+      ansible.builtin.command: >-
+        /usr/local/bin/k3s kubectl get nodes
+        -l node-role.kubernetes.io/control-plane
+        -o name
+      changed_when: false
+      register: management_control_plane_nodes
+
+    - name: Require exactly three ready control-plane nodes
+      ansible.builtin.assert:
+        that:
+          - (management_nodes.stdout | from_json).items | length == 3
+          - management_control_plane_nodes.stdout_lines | length == 3
+
+    - name: Read the management kubeconfig
+      ansible.builtin.slurp:
+        src: /etc/rancher/k3s/k3s.yaml
+      register: management_kubeconfig
+      no_log: true
+
+    - name: Write the temporary external kubeconfig
+      ansible.builtin.copy:
+        dest: /tmp/capi-management-kubeconfig
+        mode: "0600"
+        content: >-
+          {{
+            management_kubeconfig.content
+            | b64decode
+            | regex_replace(
+                'server: https://127.0.0.1:6443',
+                'server: https://' + k3s_api_dns_name + ':6443'
+              )
+          }}
+      delegate_to: localhost
+      become: false
+      no_log: true
+
+    - name: Qualify the external API endpoint
+      ansible.builtin.uri:
+        url: "https://{{ k3s_api_dns_name }}:6443/readyz"
+        validate_certs: false
+        return_content: true
+        status_code: 200
+      register: external_api
+      until: external_api.content | trim == "ok"
+      retries: 60
+      delay: 5
+      delegate_to: localhost
+      become: false

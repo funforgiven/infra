@@ -1,0 +1,18 @@
+---
+all:
+  children:
+    k3s_servers:
+      children:
+        k3s_bootstrap:
+          hosts:
+            capi-management-1:
+              ansible_host: 10.21.40.101
+              k3s_node_ip: 192.168.70.11
+        k3s_joiners:
+          hosts:
+            capi-management-2:
+              ansible_host: 10.21.40.102
+              k3s_node_ip: 192.168.70.12
+            capi-management-3:
+              ansible_host: 10.21.40.103
+              k3s_node_ip: 192.168.70.13

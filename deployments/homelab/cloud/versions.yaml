@@ -44,6 +44,12 @@ kubernetes:
         version: 1.9.2
         image: ghcr.io/fluxcd/notification-controller
         digest: sha256:cb17eefffbc442412ba6f63336defd04c0fc387d5082d951998d1ff163a9180d
+  management:
+    k3s:
+      version: 1.35.4+k3s1
+      downloadUrl: >-
+        https://github.com/k3s-io/k3s/releases/download/v1.35.4%2Bk3s1/k3s
+      linuxAmd64Sha256: 080498ece50acdaf23fe5d736f41c616e276a89a4e5605a3f274f39b0fcee85b
   backup:
     sops:
       version: 3.13.1

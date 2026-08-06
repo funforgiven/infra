@@ -2,6 +2,7 @@ keys:
   - &admin_funforgiven age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
   - &host_parmigiano age124tkmur0lvtqykjrv7um30s74rp9a5s8djytsd3kj5pet9v5hq3qzsm7r6
   - &undercloud_flux age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2
+  - &management_flux age1pshevdsu2fplu7hzwnpnmhsfcmg0325srsw7z630xz2dd8re6ysq4p9gd5
 
 creation_rules:
   - path_regex: ^secrets/omada\.yaml$
@@ -18,6 +19,12 @@ creation_rules:
       - age:
           - *admin_funforgiven
           - *undercloud_flux
+  - path_regex: ^deployments/homelab/cloud/management/.*\.sops\.yaml$
+    encrypted_regex: '^(data|stringData)$'
+    key_groups:
+      - age:
+          - *admin_funforgiven
+          - *management_flux
   - path_regex: ^secrets/[^/]+\.(yaml|json|sops)$
     key_groups:
       - age:

@@ -109,6 +109,11 @@
               ansible-inventory --graph >/dev/null
               ansible-playbook --syntax-check reconcile-routeros.yaml
             )
+            (
+              cd components/cloud/capi-management
+              ansible-inventory --graph >/dev/null
+              ansible-playbook --syntax-check playbooks/bootstrap.yml
+            )
 
             yamllint -d relaxed components/cloud deployments/homelab/cloud
             kustomize build deployments/homelab/cloud/undercloud >/dev/null
