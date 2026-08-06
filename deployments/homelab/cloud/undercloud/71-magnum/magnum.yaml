@@ -181,6 +181,13 @@ spec:
         clusterName: capi-management
         contextName: capi-management
         userName: magnum
+      paste:
+        pipeline:main:
+          pipeline: cors request_id authtoken api_v1
+      magnum_api_uwsgi:
+        uwsgi:
+          module: magnum.wsgi.api:application
+          wsgi-file: null
       magnum:
         capi-helm: null
         api:
