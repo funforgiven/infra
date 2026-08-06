@@ -223,7 +223,6 @@ metadata:
   name: wave47-capi-qualification
   namespace: flux-system
 spec:
-  suspend: true
   interval: 10m
   retryInterval: 1m
   timeout: 10m
