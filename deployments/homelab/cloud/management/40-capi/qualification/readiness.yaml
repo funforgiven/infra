@@ -93,7 +93,15 @@ data:
     metadata:
       name: qualification
       namespace: capi-qualification
-    spec: {}
+    spec:
+      controlPlaneRef:
+        apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+        kind: KubeadmControlPlane
+        name: qualification
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: OpenStackCluster
+        name: qualification
     ---
     apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
     kind: KubeadmConfig
@@ -129,7 +137,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: capi-readiness-1-13-3-0-14-6-r2
+  name: capi-readiness-1-13-3-0-14-6-r3
   namespace: capi-qualification
 spec:
   activeDeadlineSeconds: 600
