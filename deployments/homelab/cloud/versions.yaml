@@ -1,6 +1,6 @@
 schemaVersion: 1
 document: homelab-cloud-version-selection
-lastReviewed: "2026-08-06"
+lastReviewed: "2026-08-07"
 
 host:
   ubuntu:
@@ -14,6 +14,8 @@ host:
 
 kubernetes:
   version: 1.35.4
+  kubectl:
+    linuxAmd64Sha256: b529430df69a688fd61b64ad2299edb5fd71cb58be2a4779dba624c7d3510efd
   kubespray:
     version: 2.31.0
     commit: 1c9add48975060f45396b34d8e022c30d7f80dab
@@ -76,6 +78,15 @@ kubernetes:
     workloadChart:
       version: 0.27.0
       commit: 89334f5a9eaff941dcb270b2c8cd90144c236f6e
+    workloadAddons:
+      nfsCsi:
+        version: 4.13.4
+        repository: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
+        digest: sha256:815ac441a2dd0e48c82fa92d043e96caac4dd8ac422fbba91ed76892ed32da54
+      manilaCsi:
+        version: 2.35.0
+        repository: https://kubernetes.github.io/cloud-provider-openstack
+        digest: sha256:a419e5f73d49fdad80e5b7e93fc2dce269336aa97c164ed24f9fff65794c9138
   backup:
     sops:
       version: 3.13.1
