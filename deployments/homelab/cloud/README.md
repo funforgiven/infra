@@ -22,9 +22,11 @@ and readiness gates in Git.
 | 70 | In progress | Three management VMs, HA k3s, Flux, and local compressed etcd snapshots are running; off-site recovery and CAPI/CAPO remain |
 | 80–90 | Not complete | Magnum workload qualification, broader recovery exercises, and production acceptance remain |
 
-Independent OS-disk boot testing and the full five-workload live-migration
-matrix remain open resilience gates. Production eligibility is therefore
-false even though the current services are healthy.
+Independent OS-disk boot testing and four of the five live-migration workload
+classes remain open resilience gates. The idle workload has passed all six
+directed host pairs with post-migration network and disk-state checks.
+Production eligibility is therefore false even though the current services
+are healthy.
 
 The small set of current documents is intentional:
 
@@ -244,6 +246,13 @@ every direction between all three hosts. Nova initially reserves 32 GiB of
 every 64 GiB host and uses `ram_allocation_ratio=1.0` until measured
 one-host-loss headroom justifies a change.
 
+The idle workload passed the six directed `pecorino`, `taleggio`, and `asiago`
+host pairs on 2026-08-06. Every migration completed on the requested host, the
+guest remained reachable through its floating IP, and an on-disk sentinel
+survived each hop. CPU-loaded, AES, disk-write, and network-stream workloads
+remain required before changing the CPU baseline or declaring production
+acceptance.
+
 ## Magnum bootstrap and recovery
 
 Magnum depends on healthy core OpenStack; it cannot be part of initial
@@ -372,11 +381,11 @@ intentionally has no Object Lock and therefore makes no immutability claim.
 
 The immediate remaining chain is management-cluster off-site restore,
 cert-manager, CAPI/CAPO, Magnum write gating, and the workload-cluster
-qualification matrix. Production also requires the five-workload Nova
-migration matrix, one-at-a-time OSD replacement exercises, matched OVN NB/SB
-recovery, and off-cluster recovery for authoritative OpenStack data. Swift and
-a highly available long-term log backend remain capacity-driven later work,
-not blockers for the initial private-cloud API.
+qualification matrix. Production also requires the remaining four Nova
+migration workload classes, one-at-a-time OSD replacement exercises, matched
+OVN NB/SB recovery, and off-cluster recovery for authoritative OpenStack data.
+Swift and a highly available long-term log backend remain capacity-driven
+later work, not blockers for the initial private-cloud API.
 
 ## Flux bootstrap, backups, and rebuild
 
