@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: b2-management-backup-writer
+    namespace: management-backup
+type: Opaque
+stringData:
+    AWS_ACCESS_KEY_ID: ENC[AES256_GCM,data:oP7yaZ34uoptEA87z9M4dxGOYuIzIwwWig==,iv:7RkVLVA0i0yggiUa5PbwHLkp4C7gpaT8HZvzsfFTgDI=,tag:cFL/L4TIz5pt1iseiBHU4g==,type:str]
+    AWS_SECRET_ACCESS_KEY: ENC[AES256_GCM,data:QmS0W5UQ2oBzAqh9s86cJ6rK9/6ubIgK3KNZ1tOCdg==,iv:ctCb0AwzvMK1ciBWMEROh2ckFJxmW8esFswvrpfcy0M=,tag:QeNBtRYcNwIgBG6VnwWHlQ==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBPRUNSc3hQOUJnNXNlek9O
+            SVNveUNDMXgxSFNOV1JFOXNhajQ5RjZ1WXdjCmU4T1p6eGNGSXBCUWpsaUpZeE1z
+            OFFZelRrd2NYdDlibFMvVDFXaVhlTW8KLS0tIFdCdHhza1FXNmFPVGtSbzY0cGFN
+            dFA1SEVtaWVKeS9SeTU0TTdianlteGsKrgdRNAX4QIOMvbGfAwExeDRlWoGRbw6O
+            YzmdP2ssMmRC0ZG7h8XE3m0l8M4R19vR+B4ieUKinRN0ol/OwpZpGw==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBZVVFqWEVnZisydGNHWDFs
+            R3VaT3E4K0Z3WjdicWlNRUFLMmtsckVxSUY4CkZSU0JQcjY1ZCswWFFzNHcvajJK
+            NWx2Mmp1YVBzKy9TS0pENHhXRVNqZjgKLS0tIE5NVnVoMHFpU1FRRWhseGtkVzh1
+            RVhYc1NtcUZ3SXZBK2lEMTdQRzhhd28KIEKZVXAMCOOg9s4U6SCsVZ69ZPdHDBBA
+            lvVg0ErjfoucbruP+fGKcRNG2sCYVrz7owyaYVCDpxkBDAMK3EUtzg==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1pshevdsu2fplu7hzwnpnmhsfcmg0325srsw7z630xz2dd8re6ysq4p9gd5
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-08-06T20:39:16Z"
+    mac: ENC[AES256_GCM,data:Va+IK1Xtmjm7W3pOk1t4fE9vX9iNrwXn9qWc+DJLGiaUwwW4cqpEHZQd0tFPb4oEPols+PFR9P37Ur14JtCcKu3ukPoSypClnOGaupMVAS8t2n5HKXnZIKS1sqNwGVsRaLqgQljcPfx9sJZouJZSztgk0zSJKehwznOgRM6tVg4=,iv:Q61OAvUAlC+OQArDx1/o0Pif912M0F3ZsD6LW4r6nq0=,tag:tCbZhYxAJlHEIsMgP7eI9w==,type:str]
+    version: 3.13.1
