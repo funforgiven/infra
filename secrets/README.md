@@ -21,8 +21,11 @@ Commit secret values only as SOPS ciphertext. Recipients are declared in
 | `backblaze.yaml` → `undercloud/etcd_restore_reader/application_key_id` | Read-only B2 recovery key identifier |
 | `backblaze.yaml` → `undercloud/etcd_restore_reader/application_key` | Read-only B2 recovery key secret |
 | `backblaze.yaml` → `management/etcd_recovery/age_identity` | Cluster-external management-etcd backup decryption identity |
+| `backblaze.yaml` → `management/etcd_restore_reader/application_key_id` | Read-only management B2 recovery key identifier |
+| `backblaze.yaml` → `management/etcd_restore_reader/application_key` | Read-only management B2 recovery key secret |
 | `capi-management-kubeconfig.sops` | Encrypted administrative kubeconfig for management-cluster recovery |
 | `../deployments/homelab/cloud/undercloud/20-backup/writer.sops.yaml` | Flux-managed, upload-only B2 credential |
+| `../deployments/homelab/cloud/management/30-backup/writer.sops.yaml` | Flux-managed, upload-only management B2 credential |
 | `routeros.yaml` → `routeros/pppoe_username` | TurkNet PPPoE username |
 | `routeros.yaml` → `routeros/pppoe_password` | TurkNet PPPoE password |
 | `routeros.yaml` → `routeros/ccr2004_login_password` | CCR2004 `admin` login password |
