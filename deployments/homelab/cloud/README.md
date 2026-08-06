@@ -19,13 +19,13 @@ and readiness gates in Git.
 | 40 | Complete | OpenStack-Helm exclusively owns three-member MariaDB Galera and RabbitMQ clusters; TLS and service tests pass |
 | 50–55 | Complete | Keystone, Glance, Cinder, Placement, Nova, Neutron, OVN, libvirt, Open vSwitch, and the external provider network |
 | 60–63 | Complete | Heat, Octavia, Manila, and Barbican are deployed with their chart and semantic tests passing |
-| 70 | In progress | Three management VMs, HA k3s, Flux, and local compressed etcd snapshots are running; off-site recovery and CAPI/CAPO remain |
+| 70 | In progress | Three management VMs, HA k3s, Flux, and encrypted B2 etcd recovery are qualified; CAPI/CAPO remain |
 | 80–90 | Not complete | Magnum workload qualification, broader recovery exercises, and production acceptance remain |
 
 All five live-migration workload classes have passed every directed host pair.
-Production eligibility remains false until management-cluster off-site
-recovery, CAPI/CAPO, Magnum workload qualification, and the remaining recovery
-exercises pass, even though the current services are healthy.
+Production eligibility remains false until CAPI/CAPO, Magnum workload
+qualification, and the remaining recovery exercises pass, even though the
+current services are healthy.
 
 The small set of current documents is intentional:
 
@@ -274,6 +274,11 @@ undercloud bootstrap. The target sequence is:
 The management kubeconfig is SOPS-encrypted, etcd snapshots are encrypted and
 copied to B2, and recovery recreates the VM stack, restores etcd, bootstraps
 Flux, rotates credentials, and proves CAPO ownership before Magnum is enabled.
+On 2026-08-06, the scheduled upload completed with an upload-only key. A
+separate prefix-restricted reader downloaded the object, matched its recorded
+SHA-256, decrypted it with the admin-only age identity, and restored revision
+269076 into a temporary loopback-only etcd that passed endpoint health. No
+reader or age private key is present in the management cluster.
 Magnum API and conductor readiness both require a successful request to the
 management Kubernetes API. An outage therefore removes the Magnum API from its
 Service endpoints and prevents conductors from being considered ready, while
