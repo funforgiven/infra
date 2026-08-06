@@ -20,6 +20,7 @@ Commit secret values only as SOPS ciphertext. Recipients are declared in
 | `backblaze.yaml` → `undercloud/etcd_recovery/age_identity` | Cluster-external etcd backup decryption identity |
 | `backblaze.yaml` → `undercloud/etcd_restore_reader/application_key_id` | Read-only B2 recovery key identifier |
 | `backblaze.yaml` → `undercloud/etcd_restore_reader/application_key` | Read-only B2 recovery key secret |
+| `capi-management-kubeconfig.sops` | Encrypted administrative kubeconfig for management-cluster recovery |
 | `../deployments/homelab/cloud/undercloud/20-backup/writer.sops.yaml` | Flux-managed, upload-only B2 credential |
 | `routeros.yaml` → `routeros/pppoe_username` | TurkNet PPPoE username |
 | `routeros.yaml` → `routeros/pppoe_password` | TurkNet PPPoE password |
@@ -30,6 +31,8 @@ Commit secret values only as SOPS ciphertext. Recipients are declared in
 | `cloud-hosts.yaml` → `cloud_hosts/pecorino/ubuntu_console_password` | Pecorino local-console and sudo recovery password |
 | `kubernetes.yaml` → `undercloud/kube_encrypt_token` | Stable Kubernetes API secret-at-rest encryption key |
 | `kubernetes.yaml` → `undercloud/flux_age_identity` | Stable Flux SOPS age identity for undercloud reconciliation |
+| `kubernetes.yaml` → `management/k3s_token` | Stable k3s join and recovery token for the management cluster |
+| `kubernetes.yaml` → `management/flux_age_identity` | Stable Flux SOPS age identity for the management cluster |
 | `password-hashes.yaml` → `users/funforgiven/password_hash` | NixOS account password hash |
 
 ## Recovery
@@ -78,6 +81,14 @@ nix run .#sops --accept-flake-config -- encrypt \
   /secure/path/github_ed25519
 ```
 
+Use the management kubeconfig without leaving a plaintext copy behind:
+
+```sh
+nix run .#sops --accept-flake-config -- exec-file \
+  secrets/capi-management-kubeconfig.sops \
+  'kubectl --kubeconfig={} get nodes'
+```
+
 Generate a replacement password hash with `mkpasswd -m yescrypt`, then update
 `users/funforgiven/password_hash` in `password-hashes.yaml`.
 
@@ -111,6 +122,8 @@ files owned by `funforgiven` with mode `0400`:
 | `/run/secrets/cloud-host-pecorino-ubuntu-console-password` | Pecorino Ansible sudo and PiKVM console recovery |
 | `/run/secrets/undercloud-kube-encrypt-token` | Kubespray secret-at-rest encryption configuration |
 | `/run/secrets/undercloud-flux-age-identity` | Flux `flux-system/sops-age` bootstrap and recovery |
+| `/run/secrets/management-k3s-token` | Management k3s bootstrap and recovery |
+| `/run/secrets/management-flux-age-identity` | Management Flux `flux-system/sops-age` bootstrap and recovery |
 
 The two login passwords are independent URL-safe encodings of 32 random bytes:
 exactly 43 characters from `A-Z`, `a-z`, `0-9`, `_`, and `-`. Ansible checks
