@@ -197,7 +197,7 @@
     - name: Require exactly three ready control-plane nodes
       ansible.builtin.assert:
         that:
-          - (management_nodes.stdout | from_json).items | length == 3
+          - (management_nodes.stdout | from_json)['items'] | length == 3
           - management_control_plane_nodes.stdout_lines | length == 3
 
     - name: Read the management kubeconfig
