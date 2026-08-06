@@ -9,7 +9,7 @@ metadata:
   name: management-etcd-backup
   namespace: management-backup
 spec:
-  schedule: "*/5 * * * *"
+  schedule: "27 */6 * * *"
   timeZone: Etc/UTC
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 300

@@ -198,6 +198,7 @@ spec:
           octavia_lb_algorithm: SOURCE_IP_PORT
           octavia_lb_healthcheck: false
           master_lb_floating_ip_enabled: true
+          extra_network_names: manila-service
           fixed_subnet_cidr: 10.0.0.0/24
           pod_network_cidr: 10.100.0.0/16
           service_network_cidr: 172.24.0.0/13
