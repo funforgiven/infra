@@ -5,6 +5,10 @@ cluster-cidr: {{ k3s_cluster_cidr }}
 service-cidr: {{ k3s_service_cidr }}
 write-kubeconfig-mode: "0600"
 secrets-encryption: true
+etcd-snapshot-name: management-etcd
+etcd-snapshot-schedule-cron: "17 */6 * * *"
+etcd-snapshot-retention: 5
+etcd-snapshot-compress: true
 disable:
   - servicelb
   - traefik

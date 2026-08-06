@@ -15,6 +15,10 @@ bucket:
       daysFromUploadingToHiding: null
       daysFromHidingToDeleting: 30
       daysFromStartingToCancelingUnfinishedLargeFiles: null
+    - fileNamePrefix: management/etcd/
+      daysFromUploadingToHiding: null
+      daysFromHidingToDeleting: 30
+      daysFromStartingToCancelingUnfinishedLargeFiles: null
 
 writer:
   keyName: infra-undercloud-backup-writer
@@ -39,3 +43,28 @@ restoreReader:
   capabilities:
     - listFiles
     - readFiles
+
+management:
+  writer:
+    keyName: infra-management-backup-writer
+    namePrefix: management/
+    capabilities:
+      - writeFiles
+  etcd:
+    snapshotSchedule: "17 */6 * * *"
+    uploadSchedule: "27 */6 * * *"
+    timeZone: Etc/UTC
+    objectKey: management/etcd/snapshot.zip.sops.json
+    clientSideEncryption:
+      implementation: sops-age
+      recipient: age1rq6wyxcxyl9xysuy7n3lzx33n2gctk2wzqgx3dfysg3c8vckl4es3pk27d
+    retention:
+      localSnapshotsPerNode: 5
+      latest: retained until replaced
+      replacedVersionsDays: 30
+  restoreReader:
+    keyName: infra-management-restore-reader
+    namePrefix: management/etcd/
+    capabilities:
+      - listFiles
+      - readFiles
