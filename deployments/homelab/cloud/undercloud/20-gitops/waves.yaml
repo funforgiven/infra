@@ -919,7 +919,7 @@ spec:
       namespace: openstack
     - apiVersion: batch/v1
       kind: Job
-      name: magnum-management-readiness-v1
+      name: magnum-management-readiness-v2
       namespace: openstack
     - apiVersion: batch/v1
       kind: Job
