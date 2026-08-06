@@ -152,6 +152,7 @@
 
 - name: Join the remaining management servers
   hosts: k3s_joiners
+  serial: 1
   become: true
   gather_facts: false
   tasks:

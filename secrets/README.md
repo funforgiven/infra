@@ -20,6 +20,7 @@ Commit secret values only as SOPS ciphertext. Recipients are declared in
 | `backblaze.yaml` → `undercloud/etcd_recovery/age_identity` | Cluster-external etcd backup decryption identity |
 | `backblaze.yaml` → `undercloud/etcd_restore_reader/application_key_id` | Read-only B2 recovery key identifier |
 | `backblaze.yaml` → `undercloud/etcd_restore_reader/application_key` | Read-only B2 recovery key secret |
+| `backblaze.yaml` → `management/etcd_recovery/age_identity` | Cluster-external management-etcd backup decryption identity |
 | `capi-management-kubeconfig.sops` | Encrypted administrative kubeconfig for management-cluster recovery |
 | `../deployments/homelab/cloud/undercloud/20-backup/writer.sops.yaml` | Flux-managed, upload-only B2 credential |
 | `routeros.yaml` → `routeros/pppoe_username` | TurkNet PPPoE username |
@@ -50,10 +51,10 @@ host recipient. When replacing the host key, derive the new recipient, add it
 to `../.sops.yaml`, and update every host-consumed SOPS file before
 `nixos-install`.
 
-The undercloud Flux age identity is also a stable recovery asset. sops-nix
-materializes it only on the controller, and bootstrap injects it as
-`flux-system/sops-age`. Do not regenerate it during a workstation, host, or
-cluster rebuild; rotate it only as an explicit recipient migration.
+The undercloud and management Flux age identities are stable recovery assets. sops-nix
+materializes them only on the controller, and bootstrap injects each as
+`flux-system/sops-age`. Do not regenerate them during a workstation, host, or
+cluster rebuild; rotate them only as an explicit recipient migration.
 
 ## Editing
 
@@ -142,11 +143,11 @@ environment. Add a narrowly scoped host recipient and runtime declarations
 only when an unattended consumer exists.
 
 `backblaze.yaml` is likewise an admin-only recovery source. It contains the
-offline age identity and the separate application key that can only list and
-read etcd backup versions. Neither is materialized by sops-nix or injected into
-the cluster. The upload-only credential has exactly one ciphertext source in
-the Flux-managed `20-backup/writer.sops.yaml`; it cannot read, list, delete, or
-administer the bucket. The regenerated B2 master key is never committed.
+separate offline age identity for each cluster and the application keys that
+can only list and read their own etcd backup versions. None is materialized by
+sops-nix or injected into a cluster. Each upload-only credential has exactly
+one Flux-managed ciphertext source and cannot read, list, delete, or administer
+the bucket. The regenerated B2 master key is never committed.
 
 A root `.env` is forbidden; its ignore rule is defense in depth, not a secret
 storage mechanism. Use the SOPS editor above rather than
