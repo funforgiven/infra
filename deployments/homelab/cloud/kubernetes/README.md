@@ -1,8 +1,8 @@
 # Kubernetes bootstrap
 
 Kubespray owns only the initial three-node Kubernetes, etcd, containerd,
-kube-vip, and Cilium installation. Flux becomes the continuous Kubernetes
-owner in the next wave.
+kube-vip, and Cilium installation. Flux is the continuous owner of the
+platform resources installed after that bootstrap boundary.
 
 The inventory keeps every node address on VLAN 20. kube-vip owns only
 `10.21.20.128:6443`. Cilium owns active Service L2 announcements; MetalLB is an

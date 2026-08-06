@@ -6,61 +6,25 @@ configuration is not an installation claim until its readiness gate passes.
 
 ## Current stage
 
-Automated physical qualification and Kubernetes bootstrap wave 10 are
-complete. Ubuntu is installed and Git-managed on all three servers. Every host
-passes the hardware, RAID/EFI, KVM/IOMMU, LACP/FEC, routed-MTU, all-direction
-jumbo-path, and individual-LACP-member failure gates. Kubernetes 1.35.4 has a
-healthy three-member etcd quorum, a qualified kube-vip API endpoint, and a
-healthy Cilium native-routing dataplane. Flux 2.9.3 now reconciles the signed
-public Git source through four digest-pinned controllers; source verification,
-revision convergence, and the SOPS key boundary passed their semantic gates.
-Independent-OS-disk boot testing is deliberately deferred as a resilience
-exercise. The switch map is `taleggio` on ports 3/4, `asiago` on 5/6, and
-`pecorino` on 7/8. Wave 20 is complete: the private B2 destination has bounded
-hidden-version retention, the six-hour client-encrypted etcd uploader is
-enabled, the restore reader remains outside Kubernetes, and a real upload plus
-RAM-backed isolated restore passed. Wave 30 is complete: Rook/Ceph reports
-`HEALTH_OK`, all six OSDs are up and in, the selected RBD pools and CephFS are
-ready, and the storage classes passed their semantic gates. Wave 35
-observability and Wave 36 Ceph monitoring integrations are complete. All four
-Ceph scrape targets are up, every selected alert rule evaluates cleanly, and
-the monitoring admission webhooks fail closed. Wave 37's primary service-VIP
-path is qualified: three host-spread internal DNS replicas serve
-`10.21.20.129`, Cilium has one L2 lease holder, a controlled ownership handoff
-completed with 297 consecutive UDP-and-TCP probes and no failure, and the
-CCR2004 forwards `cloud.fahrican.com` over both transports. The mutually
-exclusive MetalLB rollback remains available. Wave 38's private Gateway API,
-certificate, and fallback-controller foundation is complete. Wave 40 is also
-complete: the upstream OpenStack-Helm charts own three-member MariaDB Galera
-and RabbitMQ clusters with strict TLS, host spread, one-node disruption
-budgets, and six healthy Prometheus targets. Galera passed all-member health,
-TLS, replication, and rolling-restart checks; RabbitMQ passed an AMQPS
-publish/consume check; and the daily MariaDB backup passed its built-in clean
-restore and grant verification. Wave 50 core is deployed: Keystone, Glance,
-Cinder, Placement, Nova, Neutron, OVN, libvirt, and Open vSwitch reconcile from
-Git; the upstream service tests pass; and Nova registers all three compute
-hosts. A disposable CirrOS 0.6.3 guest booted with DHCP and metadata, completed
-all six directed live-migration paths in 24–26 seconds per move, and passed a
-1 GiB Cinder attach/detach cycle before all test objects were removed. A
-disposable RBD qualification image sustained about 89.7k 4 KiB random-write
-IOPS, 109.9k random-read IOPS, and 84.3k IOPS at a 70:30 read/write mix before
-being removed. The physical Neutron-provider path is also qualified: unnumbered
-`bond0.40` exists on every host, VLAN 40 crosses only the server/Omada/CCR
-trunks, every host pair passes at MTU 1500, and provider-sourced WAN traffic
-passes at the 1492-byte PPPoE path MTU. Wave 55 is complete: Flux continuously
-reconciles the `public` flat network on `physnet-external` and its
-`10.21.40.0/24` subnet, with `10.21.40.100-254` reserved for Neutron. A
-disposable CirrOS 0.6.2 guest received DHCP and metadata, reached the Internet,
-and answered all five floating-IP probes from the trusted workstation before
-the tenant network, router, security group, server, and floating IP were
-removed. Read-only CRS/CCR reconciliation found no drift, and every host
-failed WAN probes sourced through switch-local VLANs 30-32. VLAN 33 remains
-absent until the Manila wave. Wave 60 is complete: three host-spread Heat API,
-CloudFormation API, and engine replicas reconcile from the upstream chart, and
-all seven upstream Rally stack create, list, check, snapshot/restore, update,
-and delete scenarios passed with no residual test resources. The full
-five-workload migration matrix remains open, so production eligibility remains
-false.
+The live deployment boundary is summarized below. Flux readiness is not used
+as the only proof; the referenced waves also have their service-specific tests
+and readiness gates in Git.
+
+| Wave | State | Current evidence |
+| ---: | --- | --- |
+| 00–10 | Complete | Three Ubuntu hosts, healthy OS RAID1, 2×25 GbE LACP per host, Kubernetes 1.35.4, kube-vip, and Cilium |
+| 20 | Complete | Encrypted undercloud etcd backup in B2 with separate restore authorization and a tested isolated restore |
+| 30 | Complete | Rook 1.20.3, Ceph 20.2.2, six OSDs, three monitors, RBD pools, CephFS, and NFS-Ganesha report healthy |
+| 35–38 | Complete | Prometheus, Alertmanager, Grafana, Loki, Fluent Bit, internal DNS, private Gateway API, cert-manager, and the MetalLB rollback path |
+| 40 | Complete | OpenStack-Helm exclusively owns three-member MariaDB Galera and RabbitMQ clusters; TLS and service tests pass |
+| 50–55 | Complete | Keystone, Glance, Cinder, Placement, Nova, Neutron, OVN, libvirt, Open vSwitch, and the external provider network |
+| 60–63 | Complete | Heat, Octavia, Manila, and Barbican are deployed with their chart and semantic tests passing |
+| 70 | In progress | Three management VMs, HA k3s, Flux, and local compressed etcd snapshots are running; off-site recovery and CAPI/CAPO remain |
+| 80–90 | Not complete | Magnum workload qualification, broader recovery exercises, and production acceptance remain |
+
+Independent OS-disk boot testing and the full five-workload live-migration
+matrix remain open resilience gates. Production eligibility is therefore
+false even though the current services are healthy.
 
 The small set of current documents is intentional:
 
@@ -79,11 +43,11 @@ Future platform resources are added only when their installation wave is
 reached. A proposed service is recorded here as desired architecture, not as a
 placeholder custom resource or fake-ready manifest.
 
-The first usable API provides Keystone, Glance, Nova, Neutron, and Cinder—the
-private-cloud equivalents of IAM, images, EC2, VPC, and EBS. Octavia, Manila,
-Heat, and Magnum follow in later waves. Swift/S3-compatible object service waits
-for dedicated disks; optional services are not installed merely to resemble
-AWS on day one.
+The installed API set includes Keystone, Glance, Cinder, Placement, Nova,
+Neutron, Heat, Octavia, Manila, and Barbican. Magnum opens only after its
+separate management plane is recoverable and semantically ready.
+Swift/S3-compatible object service waits for dedicated disks; optional
+services are not installed merely to resemble AWS on day one.
 
 ## Authority and ownership
 
@@ -152,9 +116,9 @@ delivered by static DHCP reservations.
 The SG3210XHP-M2 additionally retains `192.168.90.5/24` as a DHCP-failure
 recovery address on its VLAN-90 management interface.
 
-VLAN 33 is an allocated Manila contract, not a physical-wave prerequisite. It
-is absent from current host Netplan and CRS reconciliation and is introduced
-with `bond0.33`/`br-manila` only when the Manila service wave opens.
+VLAN 33 is the live Manila service network. Host automation owns
+`bond0.33`/`br-manila`, and CRS reconciliation carries it only between the
+three server bonds. It has no CCR2004 gateway or northbound route.
 
 Ceph, migration, Geneve, Manila data, and other east-west flows must never use
 the CCR2004. Its current 1 Gb/s core uplink carries WAN-bound traffic and
@@ -388,24 +352,21 @@ The minimum evidence at each boundary is behavioral:
 Independent-OS-disk boot proof remains a deferred resilience gate. The shared
 rebuild-media template is inventory-rendered and qualified for every current
 host. VLAN 40, the Neutron bridge mapping, the external network, and
-floating-IP behavior are qualified. VLANs 30-32 have no northbound path. VLAN
-33 does not yet exist and must be introduced and negatively qualified with the
-Manila wave rather than being added speculatively.
+floating-IP behavior are qualified. VLANs 30-33 have no northbound path, and
+Manila uses the dedicated VLAN 33 Ganesha endpoint rather than Ceph VLAN 30.
 
 Internal DNS, Cilium service-VIP ownership and failover, certificate issuance,
 Gateway API, Envoy Gateway, and the mutually exclusive MetalLB rollback are
 qualified. No public API endpoint is currently approved. The bucket
 intentionally has no Object Lock and therefore makes no immutability claim.
-Manila still needs its approved project IDs and negative access test. Later
-OpenStack gates must continue using immutable disposable test-object inputs.
 
-Heat is deployed and behaviorally qualified. Octavia is the next service wave;
-Manila follows after VLAN 33 is introduced and negatively qualified. Magnum
-still needs reproducible driver/provider images, a pinned Manila-over-NFS CSI
-derivative, and its workload qualification matrix. Production remains blocked
-on one-at-a-time OSD replacement runbooks, a matched OVN NB/SB backup and
-restore, off-cluster Glance/Cinder/Manila recovery, dedicated Swift capacity,
-and a highly available long-term log backend decision.
+The immediate remaining chain is management-cluster off-site restore,
+cert-manager, CAPI/CAPO, Magnum write gating, and the workload-cluster
+qualification matrix. Production also requires the five-workload Nova
+migration matrix, one-at-a-time OSD replacement exercises, matched OVN NB/SB
+recovery, and off-cluster recovery for authoritative OpenStack data. Swift and
+a highly available long-term log backend remain capacity-driven later work,
+not blockers for the initial private-cloud API.
 
 ## Flux bootstrap, backups, and rebuild
 
