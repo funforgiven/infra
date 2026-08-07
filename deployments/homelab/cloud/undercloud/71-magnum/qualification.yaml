@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: magnum-management-readiness-v4
+  name: magnum-management-readiness-v5
   namespace: openstack
 spec:
   backoffLimit: 12
@@ -73,12 +73,7 @@ spec:
             readOnlyRootFilesystem: true
           volumeMounts:
             - name: magnum-etc
-              mountPath: /etc/magnum/kubeconfig.conf
-              subPath: kubeconfig.conf
-              readOnly: true
-            - name: magnum-etc
-              mountPath: /etc/magnum/magnum.conf
-              subPath: magnum.conf
+              mountPath: /etc/magnum
               readOnly: true
             - name: tmp
               mountPath: /tmp
