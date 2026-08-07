@@ -20,7 +20,7 @@ and readiness gates in Git.
 | 50–55 | Complete | Keystone, Glance, Cinder, Placement, Nova, Neutron, OVN, libvirt, Open vSwitch, and the external provider network |
 | 60–63 | Complete | Heat, Octavia, Manila, and Barbican are deployed with their chart and semantic tests passing |
 | 70 | Complete | Three management VMs, HA k3s, Flux, encrypted B2 etcd recovery, cert-manager, CAPI, CAPO, and the add-on provider are qualified |
-| 80 | In progress | A real Magnum cluster has passed create, scale-up, worker replacement, Cinder RWO, Manila RWX, no-tenant-Ceph, and management-outage tests; upgrade and healthy-cluster deletion remain |
+| 80 | In progress | A real Magnum cluster has passed create, scale-up, worker replacement, Kubernetes 1.35.6→1.36.2 upgrade, Cinder RWO, Manila RWX, no-tenant-Ceph, and management-outage tests; healthy-cluster deletion remains |
 | 90 | Not complete | Physical and authoritative-data recovery exercises required for production acceptance remain |
 
 All five live-migration workload classes have passed every directed host pair.
@@ -306,8 +306,12 @@ one-to-two-worker scale-up, and checks proving that neither a Ceph CSI driver
 nor a Rook/Ceph namespace exists in the tenant cluster. A controller-managed
 worker replacement returned the cluster to five Ready nodes; a read-only pod
 then mounted both existing claims on the replacement node and read their
-original sentinels. Publication remains closed until upgrade and deletion of a
-healthy cluster are also qualified.
+original sentinels. A one-node-at-a-time upgrade then moved all three
+control-plane nodes and both workers from Kubernetes 1.35.6 to 1.36.2 while
+preserving those Cinder and Manila sentinels. Replacement control-plane nodes
+wait 40 seconds before kubeadm joins so OVN has time to remove an unhealthy new
+API member from the load-balancer pool. Publication remains closed until
+deletion of a healthy cluster is also qualified.
 
 ## Reconciliation, readiness, and dependency graphs
 
@@ -401,17 +405,15 @@ Gateway API, Envoy Gateway, and the mutually exclusive MetalLB rollback are
 qualified. No public API endpoint is currently approved. The bucket
 intentionally has no Object Lock and therefore makes no immutability claim.
 
-The remaining Magnum lifecycle gates are an actual Kubernetes-version upgrade
-and deletion of a healthy cluster. Upgrade cannot be claimed until a second
-qualified workload image and template version exist. The qualification project
-is currently at its 10-instance and 20-core quota; a zero-instance canary that
-hit this limit was successfully cancelled and deleted, but that does not replace
-a healthy-cluster deletion test. Production also requires one-at-a-time OSD
-replacement and one-host-loss exercises plus off-cluster recovery for
-authoritative OpenStack data. Atomic online OVN Northbound and Southbound
-exports and isolated restores are qualified against the live schema versions;
-scheduled encrypted upload, retention, and separately authorized off-cluster
-restore remain. Independent-OS-disk boot proof remains explicitly deferred.
+The remaining Magnum lifecycle gate is deletion of a healthy cluster. The
+qualification project has a 12-instance, 24-core, and 60 GiB RAM quota so the
+five-node upgrade can surge one control-plane and one worker at a time.
+Production also requires one-at-a-time OSD replacement and one-host-loss
+exercises plus off-cluster recovery for authoritative OpenStack data. Atomic
+online OVN Northbound and Southbound exports and isolated restores are
+qualified against the live schema versions; scheduled encrypted upload,
+retention, and separately authorized off-cluster restore remain.
+Independent-OS-disk boot proof remains explicitly deferred.
 Swift and a highly available long-term log backend remain capacity-driven later
 work, not blockers for the initial private-cloud API.
 
