@@ -22,26 +22,29 @@ data:
         '            "additionalPackages": ["nfs-common"],\n' + packages,
     )
 
-    cinder = '''                    "csiCinder": self._storageclass_definitions(
-                        context, cluster
-                    ),'''
+    cinder = (
+        '                    "csiCinder": self._storageclass_definitions(\n'
+        '                        context, cluster\n'
+        '                    ),'
+    )
     assert text.count(cinder) == 1
-    manila = '''
-                    "csiManila": {
-                        "enabled": True,
-                        "chart": {
-                            "repo": "https://kubernetes.github.io/cloud-provider-openstack",
-                            "name": "openstack-manila-csi",
-                            "version": "2.35.0",
-                        },
-                        "defaultStorageClass": {
-                            "enabled": True,
-                            "name": "manila-nfs",
-                            "provisioner": "nfs.manila.csi.openstack.org",
-                            "reclaimPolicy": "Delete",
-                            "allowVolumeExpansion": True,
-                            "volumeBindingMode": "WaitForFirstConsumer",
-                            "parameters": {"type": "default"},
-                        },
-                    },'''
+    manila = (
+        '\n                    "csiManila": {\n'
+        '                        "enabled": True,\n'
+        '                        "chart": {\n'
+        '                            "repo": "https://kubernetes.github.io/cloud-provider-openstack",\n'
+        '                            "name": "openstack-manila-csi",\n'
+        '                            "version": "2.35.0",\n'
+        '                        },\n'
+        '                        "defaultStorageClass": {\n'
+        '                            "enabled": True,\n'
+        '                            "name": "manila-nfs",\n'
+        '                            "provisioner": "nfs.manila.csi.openstack.org",\n'
+        '                            "reclaimPolicy": "Delete",\n'
+        '                            "allowVolumeExpansion": True,\n'
+        '                            "volumeBindingMode": "WaitForFirstConsumer",\n'
+        '                            "parameters": {"type": "default"},\n'
+        '                        },\n'
+        '                    },'
+    )
     target.write_text(text.replace(cinder, cinder + manila))
