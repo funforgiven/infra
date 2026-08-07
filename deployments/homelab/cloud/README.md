@@ -19,13 +19,13 @@ and readiness gates in Git.
 | 40 | Complete | OpenStack-Helm exclusively owns three-member MariaDB Galera and RabbitMQ clusters; TLS and service tests pass |
 | 50–55 | Complete | Keystone, Glance, Cinder, Placement, Nova, Neutron, OVN, libvirt, Open vSwitch, and the external provider network |
 | 60–63 | Complete | Heat, Octavia, Manila, and Barbican are deployed with their chart and semantic tests passing |
-| 70 | In progress | Three management VMs, HA k3s, Flux, and encrypted B2 etcd recovery are qualified; CAPI/CAPO remain |
-| 80–90 | Not complete | Magnum workload qualification, broader recovery exercises, and production acceptance remain |
+| 70 | Complete | Three management VMs, HA k3s, Flux, encrypted B2 etcd recovery, cert-manager, CAPI, CAPO, and the add-on provider are qualified |
+| 80 | In progress | A real Magnum cluster has passed create, scale-up, worker replacement, Cinder RWO, Manila RWX, no-tenant-Ceph, and management-outage tests; upgrade and healthy-cluster deletion remain |
+| 90 | Not complete | Physical and authoritative-data recovery exercises required for production acceptance remain |
 
 All five live-migration workload classes have passed every directed host pair.
-Production eligibility remains false until CAPI/CAPO, Magnum workload
-qualification, and the remaining recovery exercises pass, even though the
-current services are healthy.
+Production eligibility remains false until the remaining Magnum lifecycle and
+recovery exercises pass, even though the current services are healthy.
 
 The small set of current documents is intentional:
 
@@ -282,8 +282,12 @@ reader or age private key is present in the management cluster.
 Magnum API and conductor readiness both require a successful request to the
 management Kubernetes API. An outage therefore removes the Magnum API from its
 Service endpoints and prevents conductors from being considered ready, while
-already-running workload clusters continue independently. This fail-closed
-behavior is qualified before a cluster template is published.
+already-running workload clusters continue independently. On 2026-08-07, a
+controlled management-API outage reduced both components from three ready
+replicas to zero and removed all Magnum Service endpoints; the existing
+workload cluster remained five-for-five Ready and retained both storage
+sentinels. Restoring the Git-owned router policy returned the API, conductors,
+and all three endpoints without changing the workload cluster.
 
 Calico is the initial workload-cluster CNI target because it is the regularly
 tested upstream path. Cilium remains a preview template requiring its own MTU,
@@ -293,11 +297,17 @@ reconciliation, and lifecycle tests are complete.
 
 The upstream Magnum driver supplies Cinder CSI values directly. Its pinned
 workload chart also supports Manila CSI, but the driver does not yet expose that
-chart option. The first qualification cluster therefore receives its Manila
-add-on as a Git-owned Azimuth `HelmRelease` in the Magnum project namespace.
-Template publication remains closed until that add-on provisions and mounts an
-RWX claim successfully; a second add-on operator or a local driver fork is not
-part of the initial platform.
+chart option. The qualification cluster therefore receives its Manila add-on
+as a Git-owned Azimuth `HelmRelease` in the Magnum project namespace; a second
+add-on operator or a local driver fork is not part of the initial platform.
+The live Calico cluster has three control-plane nodes and two workers. It has
+passed Cinder RWO and Manila RWX provisioning, cross-pod sentinel reads, a
+one-to-two-worker scale-up, and checks proving that neither a Ceph CSI driver
+nor a Rook/Ceph namespace exists in the tenant cluster. A controller-managed
+worker replacement returned the cluster to five Ready nodes; a read-only pod
+then mounted both existing claims on the replacement node and read their
+original sentinels. Publication remains closed until upgrade and deletion of a
+healthy cluster are also qualified.
 
 ## Reconciliation, readiness, and dependency graphs
 
@@ -391,11 +401,15 @@ Gateway API, Envoy Gateway, and the mutually exclusive MetalLB rollback are
 qualified. No public API endpoint is currently approved. The bucket
 intentionally has no Object Lock and therefore makes no immutability claim.
 
-The immediate remaining chain is management-cluster off-site restore,
-cert-manager, CAPI/CAPO, Magnum write gating, and the workload-cluster
-qualification matrix. Production also requires one-at-a-time OSD replacement
-exercises, matched OVN NB/SB recovery, and off-cluster recovery for
-authoritative OpenStack data. Swift and a highly available long-term log
+The remaining Magnum lifecycle gates are an actual Kubernetes-version upgrade
+and deletion of a healthy cluster. Upgrade cannot be claimed until a second
+qualified workload image and template version exist. The qualification project
+is currently at its 10-instance and 20-core quota; a zero-instance canary that
+hit this limit was successfully cancelled and deleted, but that does not replace
+a healthy-cluster deletion test. Production also requires one-at-a-time OSD
+replacement and one-host-loss exercises, matched OVN NB/SB recovery, and
+off-cluster recovery for authoritative OpenStack data. Independent-OS-disk boot
+proof remains explicitly deferred. Swift and a highly available long-term log
 backend remain capacity-driven later work, not blockers for the initial
 private-cloud API.
 
@@ -426,17 +440,21 @@ cluster. A directory appears only with its first real resource.
 
 The independent recovery destination is a private, SSE-B2-encrypted B2 bucket.
 Object Lock is disabled by design, so this destination does not claim immutable
-or ransomware-resistant retention. Its current writer is restricted to the
-`undercloud/` prefix and `writeFiles`; it cannot read, list, delete, change
-retention, or administer the bucket. The separate restore reader and age
-identity are SOPS-encrypted admin-only material outside Kubernetes. Automated
-six-hour uploads and bounded hidden-version retention are enabled; recovery
-still requires supervised access to that separate reader.
+or ransomware-resistant retention. Separate writers are restricted to the
+`undercloud/` and `management/` prefixes and `writeFiles`; they cannot read,
+list, delete, change retention, or administer the bucket. Separate restore
+readers and age identities are SOPS-encrypted admin-only material outside
+Kubernetes. Automated six-hour uploads and bounded hidden-version retention
+are enabled for both etcd backups; recovery still requires supervised access
+to the corresponding reader.
 
-The target backup policy covers undercloud and Magnum etcd, MariaDB, RabbitMQ
-definitions, a writer-quiesced matched OVN NB/SB pair, and selected tenant data.
-RabbitMQ message bodies are not a backup payload. Restore evidence, not object
-existence alone, is the readiness condition.
+Current off-cluster coverage includes undercloud and Magnum-management etcd.
+MariaDB has a restore-tested local logical backup, but it still needs an
+off-cluster copy. The remaining target policy covers MariaDB, a
+writer-quiesced matched OVN NB/SB pair, and selected tenant data. RabbitMQ
+message bodies are not a backup payload: users and virtual hosts are recreated
+from Git and authoritative service state comes from MariaDB. Restore evidence,
+not object existence alone, is the readiness condition.
 
 A full rebuild starts from Git, PiKVM, pinned installation artifacts, the host
 inventory, offline age identities, supervised B2 restore authorization, and
