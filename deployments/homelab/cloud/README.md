@@ -407,11 +407,13 @@ qualified workload image and template version exist. The qualification project
 is currently at its 10-instance and 20-core quota; a zero-instance canary that
 hit this limit was successfully cancelled and deleted, but that does not replace
 a healthy-cluster deletion test. Production also requires one-at-a-time OSD
-replacement and one-host-loss exercises, matched OVN NB/SB recovery, and
-off-cluster recovery for authoritative OpenStack data. Independent-OS-disk boot
-proof remains explicitly deferred. Swift and a highly available long-term log
-backend remain capacity-driven later work, not blockers for the initial
-private-cloud API.
+replacement and one-host-loss exercises plus off-cluster recovery for
+authoritative OpenStack data. Atomic online OVN Northbound and Southbound
+exports and isolated restores are qualified against the live schema versions;
+scheduled encrypted upload, retention, and separately authorized off-cluster
+restore remain. Independent-OS-disk boot proof remains explicitly deferred.
+Swift and a highly available long-term log backend remain capacity-driven later
+work, not blockers for the initial private-cloud API.
 
 ## Flux bootstrap, backups, and rebuild
 
@@ -450,11 +452,13 @@ to the corresponding reader.
 
 Current off-cluster coverage includes undercloud and Magnum-management etcd.
 MariaDB has a restore-tested local logical backup, but it still needs an
-off-cluster copy. The remaining target policy covers MariaDB, a
-writer-quiesced matched OVN NB/SB pair, and selected tenant data. RabbitMQ
-message bodies are not a backup payload: users and virtual hosts are recreated
-from Git and authoritative service state comes from MariaDB. Restore evidence,
-not object existence alone, is the readiness condition.
+off-cluster copy. OVN uses near-consecutive atomic `ovsdb-client backup`
+snapshots of the Northbound and Southbound databases; both snapshot formats and
+isolated restores are qualified. The remaining target policy covers encrypted
+off-cluster MariaDB and OVN uploads plus selected tenant data. RabbitMQ message
+bodies are not a backup payload: users and virtual hosts are recreated from Git
+and authoritative service state comes from MariaDB. Restore evidence, not
+object existence alone, is the readiness condition.
 
 A full rebuild starts from Git, PiKVM, pinned installation artifacts, the host
 inventory, offline age identities, supervised B2 restore authorization, and
@@ -469,6 +473,8 @@ destructive rebuild step may infer its target from a device name or serial.
 - [Neutron MTU guidance](https://docs.openstack.org/neutron/latest/admin/config-mtu.html)
   and the [OVN install guide](https://docs.openstack.org/neutron/latest/install/ovn/manual_install.html)
   define the Geneve allowance.
+- [Open vSwitch OVSDB backup and recovery](https://docs.openvswitch.org/en/latest/ref/ovsdb.7/)
+  defines the atomic online snapshot and restore mechanism used for OVN.
 - [VEXXHOST Atmosphere](https://github.com/vexxhost/atmosphere) informs host
   preflight, version catalogues, HA tests, and Magnum/CAPI operations.
 - [Genestack](https://github.com/rackerlabs/genestack) informs OpenStack-Helm
