@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: magnum-workload-cinder-v1
+  name: magnum-workload-cinder-v2
   namespace: openstack
 spec:
   activeDeadlineSeconds: 7200
@@ -35,7 +35,7 @@ spec:
             - -ec
             - |
               template=qualification-kubernetes-v1.35.6
-              cluster=platform-canary
+              cluster=platform-canary-v2
               kubeconfig=/tmp/kube/config
 
               curl -fsSL -o /tmp/kubectl \
