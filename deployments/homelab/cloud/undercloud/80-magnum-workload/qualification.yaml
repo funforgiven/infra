@@ -92,8 +92,21 @@ spec:
               openstack coe cluster config "$cluster" --dir /tmp/kube --force
               export KUBECONFIG="$kubeconfig"
 
-              /tmp/kubectl wait --for=condition=Ready --timeout=20m nodes --all
-              test "$(/tmp/kubectl get nodes --no-headers | wc -l)" -eq 4
+              wait_ready_nodes() {
+                expected=$1
+                for attempt in $(seq 1 240); do
+                  nodes=$(/tmp/kubectl get nodes --no-headers)
+                  total=$(printf '%s\n' "$nodes" | awk 'NF { count++ } END { print count + 0 }')
+                  ready=$(printf '%s\n' "$nodes" | awk '$2 == "Ready" { count++ } END { print count + 0 }')
+                  if test "$total" -eq "$expected" && test "$ready" -eq "$expected"; then
+                    return
+                  fi
+                  test "$attempt" -lt 240
+                  sleep 5
+                done
+              }
+
+              wait_ready_nodes 4
               /tmp/kubectl -n calico-system rollout status \
                 daemonset/calico-node --timeout=10m
 
@@ -265,8 +278,7 @@ spec:
                 sleep 10
               done
               test "$(openstack coe cluster show "$cluster" -f value -c node_count)" -eq 2
-              /tmp/kubectl wait --for=condition=Ready --timeout=20m nodes --all
-              test "$(/tmp/kubectl get nodes --no-headers | wc -l)" -eq 5
+              wait_ready_nodes 5
               /tmp/kubectl -n openstack-system rollout status \
                 daemonset/csi-manila-openstack-manila-csi-nodeplugin --timeout=10m
               test "$(/tmp/kubectl -n platform-qualification exec manila-reader -- cat /data/sentinel)" = manila-qualified
