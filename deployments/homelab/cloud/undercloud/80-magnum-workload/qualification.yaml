@@ -244,6 +244,30 @@ spec:
               /tmp/kubectl -n platform-qualification wait \
                 --for=condition=Ready --timeout=20m pod/manila-writer pod/manila-reader
               test "$(/tmp/kubectl -n platform-qualification exec manila-reader -- cat /data/sentinel)" = manila-qualified
+
+              if test "$(openstack coe cluster show "$cluster" -f value -c node_count)" -lt 2; then
+                openstack coe cluster resize "$cluster" 2
+              fi
+              for attempt in $(seq 1 360); do
+                status=$(openstack coe cluster show "$cluster" -f value -c status)
+                case "$status" in
+                  CREATE_COMPLETE|UPDATE_COMPLETE)
+                    test "$(openstack coe cluster show "$cluster" -f value -c node_count)" -eq 2 && break
+                    ;;
+                  *_FAILED)
+                    openstack coe cluster show "$cluster" -f yaml
+                    exit 1
+                    ;;
+                esac
+                test "$attempt" -lt 360
+                sleep 10
+              done
+              test "$(openstack coe cluster show "$cluster" -f value -c node_count)" -eq 2
+              /tmp/kubectl wait --for=condition=Ready --timeout=20m nodes --all
+              test "$(/tmp/kubectl get nodes --no-headers | wc -l)" -eq 5
+              /tmp/kubectl -n kube-system rollout status \
+                daemonset/csi-manila-openstack-manila-csi-nodeplugin --timeout=10m
+              test "$(/tmp/kubectl -n platform-qualification exec manila-reader -- cat /data/sentinel)" = manila-qualified
           resources:
             requests:
               cpu: 50m
