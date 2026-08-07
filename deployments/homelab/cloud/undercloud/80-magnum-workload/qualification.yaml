@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: magnum-workload-storage-v11
+  name: magnum-workload-storage-v12
   namespace: openstack
 spec:
   activeDeadlineSeconds: 7200
@@ -308,7 +308,8 @@ spec:
                   --labels capi_helm_chart_version=0.27.0
               fi
 
-              if test "$(openstack coe cluster show "$cluster" -f value -c coe_version)" != v1.36.2; then
+              upgrade_template_id="$(openstack coe cluster template show "$upgrade_template" -f value -c uuid)"
+              if test "$(openstack coe cluster show "$cluster" -f value -c cluster_template_id)" != "$upgrade_template_id"; then
                 openstack coe cluster upgrade \
                   --max-batch-size 1 \
                   "$cluster" \
@@ -318,7 +319,7 @@ spec:
                 status=$(openstack coe cluster show "$cluster" -f value -c status)
                 case "$status" in
                   UPDATE_COMPLETE)
-                    test "$(openstack coe cluster show "$cluster" -f value -c coe_version)" = v1.36.2 && break
+                    test "$(openstack coe cluster show "$cluster" -f value -c cluster_template_id)" = "$upgrade_template_id" && break
                     ;;
                   *_FAILED)
                     openstack coe cluster show "$cluster" -f yaml
