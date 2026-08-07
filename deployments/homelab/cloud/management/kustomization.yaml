@@ -4,3 +4,12 @@ resources:
   - 20-gitops/flux-components.yaml
   - waves.yaml
   - 40-capi
+patches:
+  - target:
+      group: kustomize.toolkit.fluxcd.io
+      version: v1
+      kind: Kustomization
+    patch: |-
+      - op: add
+        path: /spec/retryInterval
+        value: 1m
