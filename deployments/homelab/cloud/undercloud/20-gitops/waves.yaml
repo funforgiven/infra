@@ -945,5 +945,5 @@ spec:
   healthChecks:
     - apiVersion: batch/v1
       kind: Job
-      name: magnum-workload-storage-v8
+      name: magnum-workload-storage-v9
       namespace: openstack
