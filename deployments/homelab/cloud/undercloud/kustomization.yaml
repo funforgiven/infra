@@ -3,3 +3,12 @@ kind: Kustomization
 resources:
   - 20-gitops/flux-system
   - 20-gitops/waves.yaml
+patches:
+  - target:
+      group: kustomize.toolkit.fluxcd.io
+      version: v1
+      kind: Kustomization
+    patch: |-
+      - op: add
+        path: /spec/retryInterval
+        value: 1m
