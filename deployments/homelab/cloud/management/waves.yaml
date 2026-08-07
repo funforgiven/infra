@@ -50,5 +50,5 @@ spec:
       namespace: kube-system
     - apiVersion: batch/v1
       kind: Job
-      name: management-private-dns-v1
+      name: management-private-dns-v2
       namespace: kube-system
