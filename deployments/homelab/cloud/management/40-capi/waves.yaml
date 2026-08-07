@@ -13,7 +13,7 @@ spec:
     kind: GitRepository
     name: flux-system
   dependsOn:
-    - name: wave30-management-backup
+    - name: wave35-management-private-dns
   healthChecks:
     - apiVersion: helm.toolkit.fluxcd.io/v2
       kind: HelmRelease

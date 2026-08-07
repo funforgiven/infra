@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: magnum-workload-cinder-v5
+  name: magnum-workload-cinder-v6
   namespace: openstack
 spec:
   activeDeadlineSeconds: 7200
@@ -34,8 +34,8 @@ spec:
             - /bin/sh
             - -ec
             - |
-              template=qualification-kubernetes-v1.35.6
-              cluster=platform-canary-v5
+              template=qualification-kubernetes-v1.35.6-private-dns-v1
+              cluster=platform-canary-v6
               kubeconfig=/tmp/kube/config
 
               curl -fsSL -o /tmp/kubectl \
@@ -59,7 +59,7 @@ spec:
                   --volume-driver cinder \
                   --flavor m1.medium \
                   --master-flavor m1.medium \
-                  --dns-nameserver 1.1.1.1 \
+                  --dns-nameserver 10.21.40.1 \
                   --master-lb-enabled \
                   --floating-ip-enabled \
                   --labels capi_helm_chart_version=0.27.0

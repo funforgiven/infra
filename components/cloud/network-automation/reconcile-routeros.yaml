@@ -436,11 +436,11 @@
           - routeros_provider_network.trusted_interface | length > 0
           - routeros_provider_network.forward_chain | length > 0
           - routeros_provider_network.final_drop_comment | length > 0
-          - routeros_provider_network.management_api.comment | length > 0
-          - routeros_provider_network.management_api.source_interface | length > 0
-          - routeros_provider_network.management_api.destination | length > 0
-          - routeros_provider_network.management_api.protocol == 'tcp'
-          - routeros_provider_network.management_api.destination_port | int == 6443
+          - routeros_provider_network.access_rules | length > 0
+          - >-
+            routeros_provider_network.access_rules |
+            map(attribute='comment') | list | unique | length ==
+            routeros_provider_network.access_rules | length
           - >-
             routeros_static_leases | map(attribute='comment') | list |
             unique | length == routeros_static_leases | length
@@ -453,6 +453,23 @@
         fail_msg: >-
           Refusing CCR2004 access: provider routing, management DHCP, private
           DNS, and static leases must be complete and unique.
+      tags:
+        - always
+        - inventory-contract
+
+    - name: Validate provider access rules
+      ansible.builtin.assert:
+        that:
+          - item.comment | length > 0
+          - item.chain in ['infra-input', 'infra-forward']
+          - item.final_drop_comment | length > 0
+          - item.source_interface | length > 0
+          - item.protocol in ['tcp', 'udp']
+          - item.destination_port | string | length > 0
+        fail_msg: "Invalid provider access rule: {{ item.comment | default('unnamed') }}"
+      loop: "{{ routeros_provider_network.access_rules }}"
+      loop_control:
+        label: "{{ item.comment | default('unnamed') }}"
       tags:
         - always
         - inventory-contract
@@ -494,15 +511,28 @@
             name="{{ routeros_provider_network.trusted_interface }}" and
             disabled=no]] != 1) do={
             :error "provider prerequisite: trusted interface missing" };
-            :if ([:len [/interface vlan find where
-            name="{{ routeros_provider_network.management_api.source_interface }}" and
-            disabled=no]] != 1) do={
-            :error "provider prerequisite: management API source interface missing" };
             :if ([:len [/ip firewall filter find where
             chain="{{ routeros_provider_network.forward_chain }}" and
             comment="{{ routeros_provider_network.final_drop_comment }}" and
             disabled=no]] != 1) do={
             :error "provider prerequisite: final forward drop missing" }
+      changed_when: false
+      tags: [always]
+
+    - name: Require provider access rule prerequisites
+      community.routeros.command:
+        commands:
+          - >-
+            :if ([:len [/interface vlan find where
+            name="{{ item.source_interface }}" and disabled=no]] != 1) do={
+            :error "access rule source interface missing: {{ item.comment }}" };
+            :if ([:len [/ip firewall filter find where
+            chain="{{ item.chain }}" and
+            comment="{{ item.final_drop_comment }}" and disabled=no]] != 1) do={
+            :error "access rule final drop missing: {{ item.comment }}" }
+      loop: "{{ routeros_provider_network.access_rules }}"
+      loop_control:
+        label: "{{ item.comment }}"
       changed_when: false
       tags: [always]
 
@@ -536,10 +566,21 @@
             :if ([:len [/ip firewall filter find where
             comment="infra: {{ routeros_provider_network.name }} to WAN"]] > 1 or
             [:len [/ip firewall filter find where
-            comment="infra: TRUSTED to {{ routeros_provider_network.name }}"]] > 1 or
-            [:len [/ip firewall filter find where
-            comment="{{ routeros_provider_network.management_api.comment }}"]] > 1)
+            comment="infra: TRUSTED to {{ routeros_provider_network.name }}"]] > 1)
             do={ :error "duplicate provider firewall rule" }
+      changed_when: false
+      tags: [always]
+
+    - name: Refuse duplicate provider access rules
+      community.routeros.command:
+        commands:
+          - >-
+            :if ([:len [/ip firewall filter find where
+            comment="{{ item.comment }}"]] > 1) do={
+            :error "duplicate provider access rule: {{ item.comment }}" }
+      loop: "{{ routeros_provider_network.access_rules }}"
+      loop_control:
+        label: "{{ item.comment }}"
       changed_when: false
       tags: [always]
 
@@ -673,33 +714,44 @@
             chain={{ routeros_provider_network.forward_chain }} disabled=no
             dst-address={{ routeros_provider_network.network }}
             in-interface={{ routeros_provider_network.trusted_interface }} };
-            :set row [/ip firewall filter find where
-            comment="{{ routeros_provider_network.management_api.comment }}"];
-            :if ([:len $row] = 0) do={
-            /ip firewall filter add action=accept
-            chain={{ routeros_provider_network.forward_chain }}
-            comment="{{ routeros_provider_network.management_api.comment }}"
-            disabled=no
-            dst-address={{ routeros_provider_network.management_api.destination }}
-            dst-port={{ routeros_provider_network.management_api.destination_port }}
-            in-interface={{ routeros_provider_network.management_api.source_interface }}
-            protocol={{ routeros_provider_network.management_api.protocol }}
-            place-before=$drop } else={
-            /ip firewall filter set $row action=accept
-            chain={{ routeros_provider_network.forward_chain }} disabled=no
-            dst-address={{ routeros_provider_network.management_api.destination }}
-            dst-port={{ routeros_provider_network.management_api.destination_port }}
-            in-interface={{ routeros_provider_network.management_api.source_interface }}
-            protocol={{ routeros_provider_network.management_api.protocol }} };
             /ip firewall filter move [find where
             comment="infra: {{ routeros_provider_network.name }} to WAN"]
             destination=$drop;
             /ip firewall filter move [find where
             comment="infra: TRUSTED to {{ routeros_provider_network.name }}"]
-            destination=$drop;
-            /ip firewall filter move [find where
-            comment="{{ routeros_provider_network.management_api.comment }}"]
             destination=$drop
+      tags:
+        - never
+        - apply
+
+    - name: Reconcile provider access rules
+      community.routeros.command:
+        commands:
+          - >-
+            :local drop [/ip firewall filter find where
+            chain="{{ item.chain }}" and
+            comment="{{ item.final_drop_comment }}"];
+            :local row [/ip firewall filter find where
+            comment="{{ item.comment }}"];
+            :if ([:len $row] = 0) do={
+            /ip firewall filter add action=accept chain={{ item.chain }}
+            comment="{{ item.comment }}" disabled=no
+            dst-address={{ item.destination | default('0.0.0.0/0') }}
+            dst-port={{ item.destination_port }}
+            in-interface={{ item.source_interface }}
+            protocol={{ item.protocol }} place-before=$drop } else={
+            /ip firewall filter set $row action=accept chain={{ item.chain }}
+            disabled=no
+            dst-address={{ item.destination | default('0.0.0.0/0') }}
+            dst-port={{ item.destination_port }}
+            in-interface={{ item.source_interface }}
+            protocol={{ item.protocol }} };
+            :set row [/ip firewall filter find where
+            comment="{{ item.comment }}"];
+            /ip firewall filter move $row destination=$drop
+      loop: "{{ routeros_provider_network.access_rules }}"
+      loop_control:
+        label: "{{ item.comment }}"
       tags:
         - never
         - apply
@@ -744,16 +796,27 @@
             action=accept and disabled=no and
             dst-address={{ routeros_provider_network.network }} and
             in-interface="{{ routeros_provider_network.trusted_interface }}"]]
-            != 1) do={ :error "provider postflight: invalid trusted rule" };
+            != 1) do={ :error "provider postflight: invalid trusted rule" }
+      changed_when: false
+      tags:
+        - never
+        - apply
+
+    - name: Prove provider access rules
+      community.routeros.command:
+        commands:
+          - >-
             :if ([:len [/ip firewall filter find where
-            chain="{{ routeros_provider_network.forward_chain }}" and
-            comment="{{ routeros_provider_network.management_api.comment }}" and
+            chain="{{ item.chain }}" and comment="{{ item.comment }}" and
             action=accept and disabled=no and
-            dst-address={{ routeros_provider_network.management_api.destination }} and
-            dst-port={{ routeros_provider_network.management_api.destination_port }} and
-            in-interface="{{ routeros_provider_network.management_api.source_interface }}" and
-            protocol={{ routeros_provider_network.management_api.protocol }}]]
-            != 1) do={ :error "provider postflight: invalid management API rule" }
+            dst-address={{ item.destination | default('0.0.0.0/0') }} and
+            dst-port={{ item.destination_port }} and
+            in-interface="{{ item.source_interface }}" and
+            protocol={{ item.protocol }}]] != 1) do={
+            :error "provider access rule failed: {{ item.comment }}" }
+      loop: "{{ routeros_provider_network.access_rules }}"
+      loop_control:
+        label: "{{ item.comment }}"
       changed_when: false
       tags:
         - never
