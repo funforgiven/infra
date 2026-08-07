@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: magnum-workload-cinder-v6
+  name: magnum-workload-storage-v7
   namespace: openstack
 spec:
   activeDeadlineSeconds: 7200
@@ -9,7 +9,7 @@ spec:
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: magnum-workload-cinder
+        app.kubernetes.io/name: magnum-workload-storage
     spec:
       automountServiceAccountToken: false
       restartPolicy: Never
@@ -34,8 +34,8 @@ spec:
             - /bin/sh
             - -ec
             - |
-              template=qualification-kubernetes-v1.35.6-private-dns-v1
-              cluster=platform-canary-v6
+              template=qualification-kubernetes-v1.35.6-storage-v1
+              cluster=platform-canary-v7
               kubeconfig=/tmp/kube/config
 
               curl -fsSL -o /tmp/kubectl \
@@ -97,12 +97,18 @@ spec:
 
               for attempt in $(seq 1 120); do
                 if /tmp/kubectl get csidriver cinder.csi.openstack.org >/dev/null 2>&1 &&
-                   /tmp/kubectl get storageclass rbd1 >/dev/null 2>&1; then
+                   /tmp/kubectl get storageclass rbd1 >/dev/null 2>&1 &&
+                   /tmp/kubectl get csidriver nfs.manila.csi.openstack.org >/dev/null 2>&1 &&
+                   /tmp/kubectl get storageclass manila-nfs >/dev/null 2>&1; then
                   break
                 fi
                 test "$attempt" -lt 120
                 sleep 5
               done
+              /tmp/kubectl -n kube-system rollout status \
+                daemonset/csi-manila-openstack-manila-csi-nodeplugin --timeout=10m
+              /tmp/kubectl -n kube-system rollout status \
+                statefulset/csi-manila-openstack-manila-csi-controllerplugin --timeout=10m
               test -z "$(/tmp/kubectl get csidriver -o name | grep -E 'ceph|rbd' || true)"
               test -z "$(/tmp/kubectl get namespace -o name | grep -E 'rook-ceph|csi-ceph' || true)"
 
@@ -155,6 +161,89 @@ spec:
               /tmp/kubectl -n platform-qualification wait \
                 --for=condition=Ready --timeout=20m pod/cinder-rwo
               test "$(/tmp/kubectl -n platform-qualification exec cinder-rwo -- cat /data/sentinel)" = cinder-qualified
+
+              /tmp/kubectl apply -f - <<'YAML'
+              apiVersion: v1
+              kind: PersistentVolumeClaim
+              metadata:
+                name: manila-rwx
+                namespace: platform-qualification
+              spec:
+                accessModes:
+                  - ReadWriteMany
+                resources:
+                  requests:
+                    storage: 1Gi
+                storageClassName: manila-nfs
+              ---
+              apiVersion: v1
+              kind: Pod
+              metadata:
+                name: manila-writer
+                namespace: platform-qualification
+              spec:
+                restartPolicy: Always
+                containers:
+                  - name: sentinel
+                    image: docker.io/library/busybox:1.38.0@sha256:dc2d74b28e4cf8984fa52af1f39bc7c3d9c73760b41a74d629f5d11b1ab28616
+                    command:
+                      - /bin/sh
+                      - -ec
+                      - printf 'manila-qualified\n' > /data/sentinel; exec sleep 365d
+                    readinessProbe:
+                      exec:
+                        command:
+                          - cat
+                          - /data/sentinel
+                    securityContext:
+                      allowPrivilegeEscalation: false
+                      capabilities:
+                        drop:
+                          - ALL
+                    volumeMounts:
+                      - name: data
+                        mountPath: /data
+                volumes:
+                  - name: data
+                    persistentVolumeClaim:
+                      claimName: manila-rwx
+              ---
+              apiVersion: v1
+              kind: Pod
+              metadata:
+                name: manila-reader
+                namespace: platform-qualification
+              spec:
+                restartPolicy: Always
+                containers:
+                  - name: sentinel
+                    image: docker.io/library/busybox:1.38.0@sha256:dc2d74b28e4cf8984fa52af1f39bc7c3d9c73760b41a74d629f5d11b1ab28616
+                    command:
+                      - /bin/sh
+                      - -ec
+                      - until test "$(cat /data/sentinel 2>/dev/null)" = manila-qualified; do sleep 1; done; exec sleep 365d
+                    readinessProbe:
+                      exec:
+                        command:
+                          - /bin/sh
+                          - -ec
+                          - test "$(cat /data/sentinel)" = manila-qualified
+                    securityContext:
+                      allowPrivilegeEscalation: false
+                      capabilities:
+                        drop:
+                          - ALL
+                    volumeMounts:
+                      - name: data
+                        mountPath: /data
+                volumes:
+                  - name: data
+                    persistentVolumeClaim:
+                      claimName: manila-rwx
+              YAML
+              /tmp/kubectl -n platform-qualification wait \
+                --for=condition=Ready --timeout=20m pod/manila-writer pod/manila-reader
+              test "$(/tmp/kubectl -n platform-qualification exec manila-reader -- cat /data/sentinel)" = manila-qualified
           resources:
             requests:
               cpu: 50m

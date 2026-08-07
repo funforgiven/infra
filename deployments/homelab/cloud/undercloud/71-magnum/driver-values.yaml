@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: magnum-capi-manila-values-v1
+  namespace: openstack
+data:
+  transform.py: |
+    import hashlib
+    from pathlib import Path
+
+    source = Path("/var/lib/openstack/lib/python3.12/site-packages/magnum_capi_helm/driver.py")
+    target = Path("/patched/driver.py")
+    content = source.read_bytes()
+    expected = "3b628d200e29d422b09183d2a3089bd7cf1c25e76f4543a855bb29f9bcc5df1c"
+    assert hashlib.sha256(content).hexdigest() == expected
+    text = content.decode()
+
+    packages = '            "etcd": self._get_etcd_config(cluster),'
+    assert text.count(packages) == 1
+    text = text.replace(
+        packages,
+        '            "additionalPackages": ["nfs-common"],\n' + packages,
+    )
+
+    cinder = '''                    "csiCinder": self._storageclass_definitions(
+                        context, cluster
+                    ),'''
+    assert text.count(cinder) == 1
+    manila = '''
+                    "csiManila": {
+                        "enabled": True,
+                        "chart": {
+                            "repo": "https://kubernetes.github.io/cloud-provider-openstack",
+                            "name": "openstack-manila-csi",
+                            "version": "2.35.0",
+                        },
+                        "defaultStorageClass": {
+                            "enabled": True,
+                            "name": "manila-nfs",
+                            "provisioner": "nfs.manila.csi.openstack.org",
+                            "reclaimPolicy": "Delete",
+                            "allowVolumeExpansion": True,
+                            "volumeBindingMode": "WaitForFirstConsumer",
+                            "parameters": {"type": "default"},
+                        },
+                    },'''
+    target.write_text(text.replace(cinder, cinder + manila))
