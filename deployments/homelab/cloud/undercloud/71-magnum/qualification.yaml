@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: magnum-management-readiness-v2
+  name: magnum-management-readiness-v3
   namespace: openstack
 spec:
   backoffLimit: 12
@@ -24,18 +24,39 @@ spec:
         - name: qualify
           image: ghcr.io/rackerlabs/genestack-images/magnum:2026.1-1785630465@sha256:010b3ba694b58fbd136cfb1a0f09a766718ab92c2524f6e89ce7efe31d85bf8c
           command:
-            - python3
-            - -c
-            - >-
-              import base64,pathlib,tempfile,yaml,requests;
-              d=yaml.safe_load(open('/etc/magnum/kubeconfig.conf'));
-              c=d['clusters'][0]['cluster'];u=d['users'][0]['user'];
-              t=tempfile.TemporaryDirectory();p=pathlib.Path(t.name);
-              (p/'ca').write_bytes(base64.b64decode(c['certificate-authority-data']));
-              (p/'cert').write_bytes(base64.b64decode(u['client-certificate-data']));
-              (p/'key').write_bytes(base64.b64decode(u['client-key-data']));
-              r=requests.get(c['server']+'/version',verify=p/'ca',cert=(p/'cert',p/'key'),timeout=5);
-              r.raise_for_status();assert r.json()['gitVersion']=='v1.35.4+k3s1'
+            - /bin/sh
+            - -ec
+            - |
+              for attempt in $(seq 1 120); do
+                if python3 -c '
+              import configparser
+              required = {"auth_type", "auth_url", "username", "password", "project_name", "project_domain_name", "user_domain_name", "region_name"}
+              config = configparser.ConfigParser(interpolation=None)
+              config.read("/etc/magnum/magnum.conf")
+              assert config.has_section("keystone_auth")
+              assert required <= set(config["keystone_auth"])
+              assert all(config["keystone_auth"][key] for key in required)
+              '; then
+                  break
+                fi
+                test "$attempt" -lt 120
+                sleep 5
+              done
+
+              python3 -c '
+              import base64, pathlib, tempfile, yaml, requests
+              data = yaml.safe_load(open("/etc/magnum/kubeconfig.conf"))
+              cluster = data["clusters"][0]["cluster"]
+              user = data["users"][0]["user"]
+              temp = tempfile.TemporaryDirectory()
+              path = pathlib.Path(temp.name)
+              (path / "ca").write_bytes(base64.b64decode(cluster["certificate-authority-data"]))
+              (path / "cert").write_bytes(base64.b64decode(user["client-certificate-data"]))
+              (path / "key").write_bytes(base64.b64decode(user["client-key-data"]))
+              response = requests.get(cluster["server"] + "/version", verify=path / "ca", cert=(path / "cert", path / "key"), timeout=5)
+              response.raise_for_status()
+              assert response.json()["gitVersion"] == "v1.35.4+k3s1"
+              '
           resources:
             requests:
               cpu: 25m
@@ -53,6 +74,10 @@ spec:
             - name: magnum-etc
               mountPath: /etc/magnum/kubeconfig.conf
               subPath: kubeconfig.conf
+              readOnly: true
+            - name: magnum-etc
+              mountPath: /etc/magnum/magnum.conf
+              subPath: magnum.conf
               readOnly: true
             - name: tmp
               mountPath: /tmp
