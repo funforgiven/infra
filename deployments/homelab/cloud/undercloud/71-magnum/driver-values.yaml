@@ -47,4 +47,24 @@ data:
         '                        },\n'
         '                    },'
     )
-    target.write_text(text.replace(cinder, cinder + manila))
+    text = text.replace(cinder, cinder + manila)
+
+    monitoring = '                "monitoring": {'
+    assert text.count(monitoring) == 1
+    nfs = (
+        '                "custom": {\n'
+        '                    "csi-nfs": {\n'
+        '                        "kind": "HelmRelease",\n'
+        '                        "spec": {\n'
+        '                            "namespace": "openstack-system",\n'
+        '                            "chart": {\n'
+        '                                "repo": "https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts",\n'
+        '                                "name": "csi-driver-nfs",\n'
+        '                                "version": "4.13.4",\n'
+        '                            },\n'
+        '                            "values": {},\n'
+        '                        },\n'
+        '                    },\n'
+        '                },\n'
+    )
+    target.write_text(text.replace(monitoring, nfs + monitoring))

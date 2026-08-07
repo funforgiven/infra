@@ -47,6 +47,9 @@ spec:
                 name: magnum-api
               spec:
                 template:
+                  metadata:
+                    annotations:
+                      cloud.fahrican.com/driver-transform-revision: "2"
                   spec:
                     initContainers:
                       - name: magnum-capi-manila-values
@@ -112,6 +115,9 @@ spec:
                 name: magnum-conductor
               spec:
                 template:
+                  metadata:
+                    annotations:
+                      cloud.fahrican.com/driver-transform-revision: "2"
                   spec:
                     initContainers:
                       - name: magnum-capi-manila-values
