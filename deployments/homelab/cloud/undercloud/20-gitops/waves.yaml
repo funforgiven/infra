@@ -919,7 +919,7 @@ spec:
       namespace: openstack
     - apiVersion: batch/v1
       kind: Job
-      name: magnum-management-readiness-v3
+      name: magnum-management-readiness-v4
       namespace: openstack
     - apiVersion: batch/v1
       kind: Job
@@ -945,5 +945,5 @@ spec:
   healthChecks:
     - apiVersion: batch/v1
       kind: Job
-      name: magnum-workload-cinder-v3
+      name: magnum-workload-cinder-v4
       namespace: openstack

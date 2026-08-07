@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: magnum-management-readiness-v3
+  name: magnum-management-readiness-v4
   namespace: openstack
 spec:
   backoffLimit: 12
@@ -36,6 +36,7 @@ spec:
               assert config.has_section("keystone_auth")
               assert required <= set(config["keystone_auth"])
               assert all(config["keystone_auth"][key] for key in required)
+              assert config["cinder_client"]["region_name"] == "RegionOne"
               '; then
                   break
                 fi
