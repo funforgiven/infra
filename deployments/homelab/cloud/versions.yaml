@@ -206,6 +206,12 @@ openstack:
       name: ubuntu-jammy-kube-v1.35.6-260705-1940
       url: https://azimuth-images.stackhpc.cloud/ubuntu-jammy-kube-v1.35.6-260705-1940.qcow2
       sha256: a6e33e155936c00187f47e83f835cadc5a8b0f7bb8b1cdad837bdb981c32757d
+    kubernetesJammyUpgrade:
+      version: 1.36.2
+      release: "260705-1940"
+      name: ubuntu-jammy-kube-v1.36.2-260705-1940
+      url: https://azimuth-images.stackhpc.cloud/ubuntu-jammy-kube-v1.36.2-260705-1940.qcow2
+      sha256: c3445a1c9e01fb6b4be2ea7296f423f5d16d9cc8be6f146fadc0448bbd507fa3
   openstackHelm:
     chartVersion: 2026.1.0
     repository: https://opendev.org/openstack/openstack-helm.git

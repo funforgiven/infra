@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: magnum-workload-storage-v10
+  name: magnum-workload-storage-v11
   namespace: openstack
 spec:
   activeDeadlineSeconds: 7200
@@ -37,20 +37,28 @@ spec:
             - -ec
             - |
               template=qualification-kubernetes-v1.35.6-storage-v1
+              upgrade_template=qualification-kubernetes-v1.36.2-storage-v1
               cluster=platform-canary-v7
               kubeconfig=/tmp/kube/config
 
               curl -fsSL -o /tmp/kubectl \
-                https://dl.k8s.io/release/v1.35.4/bin/linux/amd64/kubectl
+                https://dl.k8s.io/release/v1.36.2/bin/linux/amd64/kubectl
               python3 - <<'PY'
               import hashlib
               path = "/tmp/kubectl"
-              expected = "b529430df69a688fd61b64ad2299edb5fd71cb58be2a4779dba624c7d3510efd"
+              expected = "1e9045ec32bea85da43de85f0065358529ea7c7a152eca78154fba5b58c27d82"
               with open(path, "rb") as stream:
                   actual = hashlib.file_digest(stream, "sha256").hexdigest()
               assert actual == expected, (actual, expected)
               PY
               chmod 0500 /tmp/kubectl
+
+              project_id="$(openstack token issue -f value -c project_id)"
+              openstack quota set \
+                --instances 12 \
+                --cores 24 \
+                --ram 61440 \
+                "$project_id"
 
               if ! openstack coe cluster template show "$template" >/dev/null 2>&1; then
                 openstack coe cluster template create "$template" \
@@ -282,6 +290,56 @@ spec:
               test "$(/tmp/kubectl get nodes --no-headers | wc -l)" -eq 5
               /tmp/kubectl -n openstack-system rollout status \
                 daemonset/csi-manila-openstack-manila-csi-nodeplugin --timeout=10m
+              test "$(/tmp/kubectl -n platform-qualification exec cinder-rwo -- cat /data/sentinel)" = cinder-qualified
+              test "$(/tmp/kubectl -n platform-qualification exec manila-reader -- cat /data/sentinel)" = manila-qualified
+
+              if ! openstack coe cluster template show "$upgrade_template" >/dev/null 2>&1; then
+                openstack coe cluster template create "$upgrade_template" \
+                  --coe kubernetes \
+                  --image ubuntu-jammy-kube-v1.36.2-260705-1940 \
+                  --external-network public \
+                  --network-driver calico \
+                  --volume-driver cinder \
+                  --flavor m1.medium \
+                  --master-flavor m1.medium \
+                  --dns-nameserver 10.21.40.1 \
+                  --master-lb-enabled \
+                  --floating-ip-enabled \
+                  --labels capi_helm_chart_version=0.27.0
+              fi
+
+              if test "$(openstack coe cluster show "$cluster" -f value -c coe_version)" != v1.36.2; then
+                openstack coe cluster upgrade \
+                  --max-batch-size 1 \
+                  "$cluster" \
+                  "$upgrade_template"
+              fi
+              for attempt in $(seq 1 720); do
+                status=$(openstack coe cluster show "$cluster" -f value -c status)
+                case "$status" in
+                  UPDATE_COMPLETE)
+                    test "$(openstack coe cluster show "$cluster" -f value -c coe_version)" = v1.36.2 && break
+                    ;;
+                  *_FAILED)
+                    openstack coe cluster show "$cluster" -f yaml
+                    exit 1
+                    ;;
+                esac
+                test "$attempt" -lt 720
+                sleep 10
+              done
+
+              openstack coe cluster config "$cluster" --dir /tmp/kube --force
+              export KUBECONFIG="$kubeconfig"
+              wait_ready_nodes 5
+              test -z "$(/tmp/kubectl get nodes -o jsonpath='{range .items[*]}{.status.nodeInfo.kubeletVersion}{"\n"}{end}' | grep -vx v1.36.2 || true)"
+              /tmp/kubectl -n calico-system rollout status \
+                daemonset/calico-node --timeout=10m
+              /tmp/kubectl -n openstack-system rollout status \
+                daemonset/csi-manila-openstack-manila-csi-nodeplugin --timeout=10m
+              /tmp/kubectl -n platform-qualification wait \
+                --for=condition=Ready --timeout=20m pod/cinder-rwo pod/manila-writer pod/manila-reader
+              test "$(/tmp/kubectl -n platform-qualification exec cinder-rwo -- cat /data/sentinel)" = cinder-qualified
               test "$(/tmp/kubectl -n platform-qualification exec manila-reader -- cat /data/sentinel)" = manila-qualified
           resources:
             requests:
