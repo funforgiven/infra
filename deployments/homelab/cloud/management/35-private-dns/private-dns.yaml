@@ -14,7 +14,7 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: management-private-dns-v1
+  name: management-private-dns-v2
   namespace: kube-system
 spec:
   activeDeadlineSeconds: 600
@@ -25,7 +25,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: qualify
-          image: docker.io/library/busybox:1.38.0@sha256:dc2d74b28e4cf8984fa52af1f39bc7d3c73760b41a74d629f5d11b1ab28616
+          image: docker.io/library/busybox:1.38.0@sha256:dc2d74b28e4cf8984fa52af1f39bc7c3d9c73760b41a74d629f5d11b1ab28616
           command:
             - /bin/sh
             - -ec
