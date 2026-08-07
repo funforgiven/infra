@@ -10,6 +10,7 @@
 /deployments/homelab/cloud/**/admin.conf
 /deployments/homelab/cloud/**/kubeconfig
 /hardware-configuration.nix
+/master-b2
 /result
 /result-*
 /secrets/*.hash
