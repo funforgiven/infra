@@ -923,7 +923,7 @@ spec:
       namespace: openstack
     - apiVersion: batch/v1
       kind: Job
-      name: magnum-qualification-v3
+      name: magnum-qualification-v4
       namespace: openstack
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -945,5 +945,5 @@ spec:
   healthChecks:
     - apiVersion: batch/v1
       kind: Job
-      name: magnum-workload-storage-v10
+      name: magnum-workload-storage-v11
       namespace: openstack

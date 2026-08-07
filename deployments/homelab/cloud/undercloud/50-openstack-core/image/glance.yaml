@@ -78,6 +78,25 @@ spec:
               magnum_driver: k8s_capi_helm_v1
               os_distro: ubuntu
               os_version: "22.04"
+          ubuntu-jammy-kube-v1.36.2-260705-1940:
+            id: null
+            name: ubuntu-jammy-kube-v1.36.2-260705-1940
+            source_url: https://azimuth-images.stackhpc.cloud/
+            image_file: ubuntu-jammy-kube-v1.36.2-260705-1940.qcow2
+            min_disk: 20
+            image_type: qcow2
+            container_format: bare
+            private: false
+            properties:
+              architecture: x86_64
+              canonical_sha256: c3445a1c9e01fb6b4be2ea7296f423f5d16d9cc8be6f146fadc0448bbd507fa3
+              hw_disk_bus: scsi
+              hw_scsi_model: virtio-scsi
+              hw_vif_model: virtio
+              kube_version: v1.36.2
+              magnum_driver: k8s_capi_helm_v1
+              os_distro: ubuntu
+              os_version: "22.04"
       script: |
         verify_image() {
           name="$1"
@@ -111,6 +130,13 @@ spec:
           'ubuntu-jammy-kube-v1.35.6-260705-1940' \
           'ubuntu-jammy-kube-v1.35.6-260705-1940.qcow2' \
           'a6e33e155936c00187f47e83f835cadc5a8b0f7bb8b1cdad837bdb981c32757d'
+        openstack image set \
+          'ubuntu-jammy-kube-v1.36.2-260705-1940' \
+          --property magnum_driver=k8s_capi_helm_v1
+        verify_image \
+          'ubuntu-jammy-kube-v1.36.2-260705-1940' \
+          'ubuntu-jammy-kube-v1.36.2-260705-1940.qcow2' \
+          'c3445a1c9e01fb6b4be2ea7296f423f5d16d9cc8be6f146fadc0448bbd507fa3'
     conf:
       software:
         rbd:

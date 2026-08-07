@@ -88,7 +88,7 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: magnum-qualification-v3
+  name: magnum-qualification-v4
   namespace: openstack
 spec:
   backoffLimit: 2
@@ -153,10 +153,23 @@ spec:
               assert properties["canonical_sha256"] == "a6e33e155936c00187f47e83f835cadc5a8b0f7bb8b1cdad837bdb981c32757d", properties
               '
 
+              openstack image show ubuntu-jammy-kube-v1.36.2-260705-1940 -f json |
+                python3 -c '
+              import json, sys
+              image = json.load(sys.stdin)
+              properties = image["properties"]
+              assert image["status"] == "active", image
+              assert image["visibility"] == "public", image
+              assert properties["kube_version"] == "v1.36.2", properties
+              assert properties["magnum_driver"] == "k8s_capi_helm_v1", properties
+              assert properties["os_distro"] == "ubuntu", properties
+              assert properties["canonical_sha256"] == "c3445a1c9e01fb6b4be2ea7296f423f5d16d9cc8be6f146fadc0448bbd507fa3", properties
+              '
+
               cleanup
               openstack coe cluster template create "$name" \
                 --coe kubernetes \
-                --image ubuntu-jammy-kube-v1.35.6-260705-1940 \
+                --image ubuntu-jammy-kube-v1.36.2-260705-1940 \
                 --external-network public \
                 --network-driver calico \
                 --volume-driver cinder \
