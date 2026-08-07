@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: magnum-workload-storage-v7
+  name: magnum-workload-storage-v8
   namespace: openstack
 spec:
   activeDeadlineSeconds: 7200
@@ -27,6 +27,8 @@ spec:
           env:
             - name: HOME
               value: /tmp
+            - name: SHELL
+              value: /bin/sh
           envFrom:
             - secretRef:
                 name: magnum-keystone-admin
@@ -105,9 +107,9 @@ spec:
                 test "$attempt" -lt 120
                 sleep 5
               done
-              /tmp/kubectl -n kube-system rollout status \
+              /tmp/kubectl -n openstack-system rollout status \
                 daemonset/csi-manila-openstack-manila-csi-nodeplugin --timeout=10m
-              /tmp/kubectl -n kube-system rollout status \
+              /tmp/kubectl -n openstack-system rollout status \
                 statefulset/csi-manila-openstack-manila-csi-controllerplugin --timeout=10m
               test -z "$(/tmp/kubectl get csidriver -o name | grep -E 'ceph|rbd' || true)"
               test -z "$(/tmp/kubectl get namespace -o name | grep -E 'rook-ceph|csi-ceph' || true)"
@@ -265,7 +267,7 @@ spec:
               test "$(openstack coe cluster show "$cluster" -f value -c node_count)" -eq 2
               /tmp/kubectl wait --for=condition=Ready --timeout=20m nodes --all
               test "$(/tmp/kubectl get nodes --no-headers | wc -l)" -eq 5
-              /tmp/kubectl -n kube-system rollout status \
+              /tmp/kubectl -n openstack-system rollout status \
                 daemonset/csi-manila-openstack-manila-csi-nodeplugin --timeout=10m
               test "$(/tmp/kubectl -n platform-qualification exec manila-reader -- cat /data/sentinel)" = manila-qualified
           resources:
