@@ -48,6 +48,24 @@ spec:
               spec:
                 template:
                   spec:
+                    initContainers:
+                      - name: magnum-capi-manila-values
+                        image: ghcr.io/rackerlabs/genestack-images/magnum:2026.1-1785630465@sha256:010b3ba694b58fbd136cfb1a0f09a766718ab92c2524f6e89ce7efe31d85bf8c
+                        command:
+                          - python3
+                          - /transform/transform.py
+                        securityContext:
+                          allowPrivilegeEscalation: false
+                          capabilities:
+                            drop:
+                              - ALL
+                          readOnlyRootFilesystem: true
+                        volumeMounts:
+                          - name: driver-transform
+                            mountPath: /transform
+                            readOnly: true
+                          - name: driver-patched
+                            mountPath: /patched
                     containers:
                       - name: magnum-api
                         readinessProbe:
@@ -70,6 +88,18 @@ spec:
                           failureThreshold: 3
                           periodSeconds: 10
                           timeoutSeconds: 8
+                        volumeMounts:
+                          - name: driver-patched
+                            mountPath: /var/lib/openstack/lib/python3.12/site-packages/magnum_capi_helm/driver.py
+                            subPath: driver.py
+                            readOnly: true
+                    volumes:
+                      - name: driver-transform
+                        configMap:
+                          name: magnum-capi-manila-values-v1
+                      - name: driver-patched
+                        emptyDir:
+                          sizeLimit: 1Mi
           - target:
               group: apps
               version: v1
@@ -83,6 +113,24 @@ spec:
               spec:
                 template:
                   spec:
+                    initContainers:
+                      - name: magnum-capi-manila-values
+                        image: ghcr.io/rackerlabs/genestack-images/magnum:2026.1-1785630465@sha256:010b3ba694b58fbd136cfb1a0f09a766718ab92c2524f6e89ce7efe31d85bf8c
+                        command:
+                          - python3
+                          - /transform/transform.py
+                        securityContext:
+                          allowPrivilegeEscalation: false
+                          capabilities:
+                            drop:
+                              - ALL
+                          readOnlyRootFilesystem: true
+                        volumeMounts:
+                          - name: driver-transform
+                            mountPath: /transform
+                            readOnly: true
+                          - name: driver-patched
+                            mountPath: /patched
                     containers:
                       - name: magnum-conductor
                         readinessProbe:
@@ -103,6 +151,18 @@ spec:
                           failureThreshold: 3
                           periodSeconds: 10
                           timeoutSeconds: 8
+                        volumeMounts:
+                          - name: driver-patched
+                            mountPath: /var/lib/openstack/lib/python3.12/site-packages/magnum_capi_helm/driver.py
+                            subPath: driver.py
+                            readOnly: true
+                    volumes:
+                      - name: driver-transform
+                        configMap:
+                          name: magnum-capi-manila-values-v1
+                      - name: driver-patched
+                        emptyDir:
+                          sizeLimit: 1Mi
           - target:
               group: batch
               version: v1
