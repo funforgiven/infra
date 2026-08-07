@@ -147,8 +147,58 @@ class NetworkInventoryTests(unittest.TestCase):
         self.assertEqual(40, provider["vlan_id"])
         self.assertEqual("10.21.40.1/24", provider["address"])
         self.assertEqual("10.21.40.0/24", provider["network"])
+        self.assertEqual(
+            [
+                (
+                    "infra: SERVERS to CAPI management API",
+                    "infra-forward",
+                    "vlan20-servers",
+                    "10.21.40.100",
+                    "tcp",
+                    "6443",
+                ),
+                (
+                    "infra: CLOUD-EXTERNAL DNS UDP",
+                    "infra-input",
+                    "vlan40-external",
+                    None,
+                    "udp",
+                    "53",
+                ),
+                (
+                    "infra: CLOUD-EXTERNAL DNS TCP",
+                    "infra-input",
+                    "vlan40-external",
+                    None,
+                    "tcp",
+                    "53",
+                ),
+                (
+                    "infra: CLOUD-EXTERNAL to private cloud APIs",
+                    "infra-forward",
+                    "vlan40-external",
+                    "10.21.20.130",
+                    "tcp",
+                    "80,443",
+                ),
+            ],
+            [
+                (
+                    rule["comment"],
+                    rule["chain"],
+                    rule["source_interface"],
+                    rule.get("destination"),
+                    rule["protocol"],
+                    rule["destination_port"],
+                )
+                for rule in provider["access_rules"]
+            ],
+        )
+        self.assertIn('loop: "{{ routeros_provider_network.access_rules }}"', self.playbook)
         self.assertIn("Reconcile the external provider network", self.playbook)
+        self.assertIn("Reconcile provider access rules", self.playbook)
         self.assertIn("Prove the external provider network", self.playbook)
+        self.assertIn("Prove provider access rules", self.playbook)
 
     def test_apply_tag_keeps_credentials_and_preflight_before_mutations(self) -> None:
         result = subprocess.run(
