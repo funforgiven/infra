@@ -22,6 +22,21 @@ data:
         '            "additionalPackages": ["nfs-common"],\n' + packages,
     )
 
+    # OVN needs up to 30 seconds to exclude a new, not-yet-ready API member.
+    control_plane = (
+        '            "controlPlane": {\n'
+        '                "machineFlavor": cluster.master_flavor_id,\n'
+        '                "machineCount": cluster.master_count,\n'
+    )
+    assert text.count(control_plane) == 1
+    text = text.replace(
+        control_plane,
+        control_plane
+        + '                "kubeadmConfigSpec": {\n'
+        + '                    "preKubeadmCommands": ["sleep 40"],\n'
+        + '                },\n',
+    )
+
     cinder = (
         '                    "csiCinder": self._storageclass_definitions(\n'
         '                        context, cluster\n'

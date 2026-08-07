@@ -49,7 +49,7 @@ spec:
                 template:
                   metadata:
                     annotations:
-                      cloud.fahrican.com/driver-transform-revision: "2"
+                      cloud.fahrican.com/driver-transform-revision: "3"
                   spec:
                     initContainers:
                       - name: magnum-capi-manila-values
@@ -117,7 +117,7 @@ spec:
                 template:
                   metadata:
                     annotations:
-                      cloud.fahrican.com/driver-transform-revision: "2"
+                      cloud.fahrican.com/driver-transform-revision: "3"
                   spec:
                     initContainers:
                       - name: magnum-capi-manila-values
