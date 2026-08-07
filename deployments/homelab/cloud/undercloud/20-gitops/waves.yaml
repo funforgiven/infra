@@ -945,5 +945,5 @@ spec:
   healthChecks:
     - apiVersion: batch/v1
       kind: Job
-      name: magnum-workload-cinder-v1
+      name: magnum-workload-cinder-v2
       namespace: openstack
