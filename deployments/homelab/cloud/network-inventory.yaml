@@ -127,7 +127,7 @@ all:
                 chain: infra-forward
                 final_drop_comment: "infra: forward final drop"
                 source_interface: vlan20-servers
-                destination: 10.21.40.100
+                destination: 10.21.40.0/24
                 protocol: tcp
                 destination_port: "6443"
               - comment: "infra: CLOUD-EXTERNAL DNS UDP"

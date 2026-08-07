@@ -153,7 +153,7 @@ class NetworkInventoryTests(unittest.TestCase):
                     "infra: SERVERS to CAPI management API",
                     "infra-forward",
                     "vlan20-servers",
-                    "10.21.40.100",
+                    "10.21.40.0/24",
                     "tcp",
                     "6443",
                 ),
