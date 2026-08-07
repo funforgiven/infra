@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: magnum-workload-storage-v9
+  name: magnum-workload-storage-v10
   namespace: openstack
 spec:
   activeDeadlineSeconds: 7200
@@ -98,7 +98,7 @@ spec:
                   nodes=$(/tmp/kubectl get nodes --no-headers)
                   total=$(printf '%s\n' "$nodes" | awk 'NF { count++ } END { print count + 0 }')
                   ready=$(printf '%s\n' "$nodes" | awk '$2 == "Ready" { count++ } END { print count + 0 }')
-                  if test "$total" -eq "$expected" && test "$ready" -eq "$expected"; then
+                  if test "$total" -ge "$expected" && test "$ready" -eq "$total"; then
                     return
                   fi
                   test "$attempt" -lt 240
@@ -279,6 +279,7 @@ spec:
               done
               test "$(openstack coe cluster show "$cluster" -f value -c node_count)" -eq 2
               wait_ready_nodes 5
+              test "$(/tmp/kubectl get nodes --no-headers | wc -l)" -eq 5
               /tmp/kubectl -n openstack-system rollout status \
                 daemonset/csi-manila-openstack-manila-csi-nodeplugin --timeout=10m
               test "$(/tmp/kubectl -n platform-qualification exec manila-reader -- cat /data/sentinel)" = manila-qualified
