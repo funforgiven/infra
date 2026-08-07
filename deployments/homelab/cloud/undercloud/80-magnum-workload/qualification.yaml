@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: magnum-workload-storage-v8
+  name: magnum-workload-storage-v9
   namespace: openstack
 spec:
   activeDeadlineSeconds: 7200
