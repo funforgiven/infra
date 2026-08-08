@@ -17,11 +17,11 @@ and readiness gates in Git.
 | 30 | Complete | Rook 1.20.3, Ceph 20.2.2, six OSDs, three monitors, RBD pools, CephFS, and NFS-Ganesha report healthy |
 | 35–38 | Complete | Prometheus, Alertmanager, Grafana, Loki, Fluent Bit, internal DNS, private Gateway API, cert-manager, and the MetalLB rollback path |
 | 40 | Complete | OpenStack-Helm exclusively owns three-member MariaDB Galera and RabbitMQ clusters; TLS and service tests pass |
-| 50–55 | Complete | Keystone, Glance, Cinder, Placement, Nova, Neutron, OVN, libvirt, Open vSwitch, and the external provider network |
+| 50–55 | Complete | Keystone, Glance, Cinder, Placement, Nova, Neutron, OVN, libvirt, Open vSwitch, the external provider network, and encrypted off-cluster authoritative-state recovery |
 | 60–63 | Complete | Heat, Octavia, Manila, and Barbican are deployed with their chart and semantic tests passing |
 | 70 | Complete | Three management VMs, HA k3s, Flux, encrypted B2 etcd recovery, cert-manager, CAPI, CAPO, and the add-on provider are qualified |
 | 80 | In progress | A real Magnum cluster has passed create, scale-up, worker replacement, Kubernetes 1.35.6→1.36.2 upgrade, Cinder RWO, Manila RWX, no-tenant-Ceph, and management-outage tests; healthy-cluster deletion remains |
-| 90 | Not complete | Physical and authoritative-data recovery exercises required for production acceptance remain |
+| 90 | Not complete | One-at-a-time OSD replacement, one-host-loss, and independent-OS-disk boot exercises remain |
 
 All five live-migration workload classes have passed every directed host pair.
 Production eligibility remains false until the remaining Magnum lifecycle and
@@ -231,11 +231,49 @@ provisioning and schema jobs; cert-manager owns certificates; backup jobs use
 supported export interfaces without owning database or broker topology.
 
 The MariaDB chart writes a restore-verified logical backup to its dedicated
-20 GiB PVC every day and retains three days locally. Off-cluster database
-export is still required before production eligibility. RabbitMQ queues are
-non-authoritative transport state and are not backed up: service charts recreate
-users and virtual hosts from Git, while durable service state remains in
-MariaDB. Do not add a second database or broker operator to solve recovery.
+20 GiB PVC every day and retains three days locally. The authoritative backup
+CronJob exports the newest passed archive off-cluster together with atomic OVN
+Northbound and Southbound snapshots. RabbitMQ queues are non-authoritative
+transport state and are not backed up: service charts recreate users and
+virtual hosts from Git, while durable service state remains in MariaDB. Do not
+add a second database or broker operator to solve recovery.
+
+### Authoritative OpenStack recovery
+
+At 01:17 UTC, `openstack-authoritative-backup` requires a non-empty MariaDB
+archive and its OpenStack-Helm `.passed` sentinel, takes atomic OVN NB and SB
+backups, records checksums, and writes one versioned bundle. SOPS encrypts the
+bundle with age before the upload-only credential replaces
+`undercloud/openstack/authoritative.tar.sops.json`. B2 retains hidden replaced
+versions for 30 days and never expires the latest version merely because
+uploads stop.
+
+The cluster credential can only write that object prefix. The separate reader
+under `undercloud/openstack_restore_reader` in `secrets/backblaze.yaml` can
+only list and read the same prefix; the age identity remains outside
+Kubernetes. Treat MariaDB, OVN NB, and OVN SB from one bundle as one recovery
+point.
+
+For a supervised restore:
+
+1. Select and download one B2 version with the offline reader, verify its
+   `ciphertext-sha256` object metadata, then decrypt it in temporary storage.
+2. Extract the bundle and run `sha256sum -c SHA256SUMS` before reading any
+   payload.
+3. Import `mariadb.openstack.all.sql` and every grant file into an isolated
+   MariaDB 11.4 instance first, then require `mariadb-check --all-databases`.
+4. Boot copies of both OVN database files with the pinned OVN image and query
+   `NB_Global` and `SB_Global`; do not force a schema conversion.
+5. Only after isolated validation, quiesce OpenStack writers, restore the live
+   MariaDB and the matching NB/SB pair, then reopen services in dependency-wave
+   order and rerun their semantic gates.
+6. Remove plaintext SQL, database files, credentials, and restored data from
+   temporary storage after the recovery gate.
+
+The 2026-08-08 qualification downloaded the object through the offline reader,
+verified all bundle checksums, imported and checked 14 application databases,
+and booted isolated OVN NB schema 7.3.0 and SB schema 20.33.0 directly from the
+downloaded backups.
 
 Nova starts with the common custom CPU model `Westmere`, the named model exposed
 by all three hosts that provides the intended x86-64-v2-era AES baseline; host
@@ -409,10 +447,8 @@ The remaining Magnum lifecycle gate is deletion of a healthy cluster. The
 qualification project has a 12-instance, 24-core, and 60 GiB RAM quota so the
 five-node upgrade can surge one control-plane and one worker at a time.
 Production also requires one-at-a-time OSD replacement and one-host-loss
-exercises plus off-cluster recovery for authoritative OpenStack data. Atomic
-online OVN Northbound and Southbound exports and isolated restores are
-qualified against the live schema versions; scheduled encrypted upload,
-retention, and separately authorized off-cluster restore remain.
+exercises. Scheduled encrypted MariaDB and OVN upload, 30-day hidden-version
+retention, separately authorized download, and isolated restore are qualified.
 Independent-OS-disk boot proof remains explicitly deferred.
 Swift and a highly available long-term log backend remain capacity-driven later
 work, not blockers for the initial private-cloud API.
@@ -445,22 +481,20 @@ cluster. A directory appears only with its first real resource.
 The independent recovery destination is a private, SSE-B2-encrypted B2 bucket.
 Object Lock is disabled by design, so this destination does not claim immutable
 or ransomware-resistant retention. Separate writers are restricted to the
-`undercloud/` and `management/` prefixes and `writeFiles`; they cannot read,
-list, delete, change retention, or administer the bucket. Separate restore
-readers and age identities are SOPS-encrypted admin-only material outside
-Kubernetes. Automated six-hour uploads and bounded hidden-version retention
-are enabled for both etcd backups; recovery still requires supervised access
-to the corresponding reader.
+undercloud etcd, OpenStack, and management etcd prefixes and `writeFiles`; they
+cannot read, list, delete, change retention, or administer the bucket. Separate
+restore readers and age identities are SOPS-encrypted admin-only material
+outside Kubernetes. Automated six-hour uploads and bounded hidden-version
+retention are enabled for both etcd backups, and the authoritative OpenStack
+bundle is uploaded daily; recovery still requires supervised access to the
+corresponding reader.
 
-Current off-cluster coverage includes undercloud and Magnum-management etcd.
-MariaDB has a restore-tested local logical backup, but it still needs an
-off-cluster copy. OVN uses near-consecutive atomic `ovsdb-client backup`
-snapshots of the Northbound and Southbound databases; both snapshot formats and
-isolated restores are qualified. The remaining target policy covers encrypted
-off-cluster MariaDB and OVN uploads plus selected tenant data. RabbitMQ message
-bodies are not a backup payload: users and virtual hosts are recreated from Git
-and authoritative service state comes from MariaDB. Restore evidence, not
-object existence alone, is the readiness condition.
+Current off-cluster coverage includes undercloud etcd, Magnum-management etcd,
+MariaDB, and a matched OVN Northbound/Southbound pair. The remaining data-policy
+work is selected tenant-data export outside the Ceph failure domain. RabbitMQ
+message bodies are not a backup payload: users and virtual hosts are recreated
+from Git and authoritative service state comes from MariaDB. Restore evidence,
+not object existence alone, is the readiness condition.
 
 A full rebuild starts from Git, PiKVM, pinned installation artifacts, the host
 inventory, offline age identities, supervised B2 restore authorization, and
