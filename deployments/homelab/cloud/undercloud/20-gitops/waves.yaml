@@ -305,8 +305,9 @@ spec:
       failed: >-
         has(status.phase) && status.phase == 'Unrecoverable'
       current: >-
-        has(status.observedGeneration) &&
-        status.observedGeneration == metadata.generation &&
+        has(status.conditions) &&
+        status.conditions.exists(condition,
+          condition.type == 'Ready' && condition.status == 'True') &&
         has(status.phase) && status.phase == 'Cluster in healthy state' &&
         has(status.readyInstances) && status.readyInstances == 3
 ---
