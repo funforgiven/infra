@@ -1,0 +1,60 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: cloudnative-pg-charts
+  namespace: cnpg-system
+spec:
+  interval: 24h
+  url: https://github.com/cloudnative-pg/charts.git
+  ref:
+    commit: d1b5ad60cee2d9432a9cc05627b42a8d8dc7bbae
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cloudnative-pg
+  namespace: cnpg-system
+spec:
+  interval: 30m
+  timeout: 10m
+  releaseName: cloudnative-pg
+  chart:
+    spec:
+      chart: ./charts/cloudnative-pg
+      interval: 24h
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: cloudnative-pg-charts
+  driftDetection:
+    mode: enabled
+  install:
+    crds: Create
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  values:
+    replicaCount: 2
+    image:
+      repository: ghcr.io/cloudnative-pg/cloudnative-pg
+      tag: 1.30.0@sha256:a2701eb97cdd2a34b1fdb2cb51987f544b706e40bec72ae7146cd8580efefebb
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 384Mi
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: cloudnative-pg
+    monitoring:
+      podMonitorEnabled: true
+      podMonitorAdditionalLabels:
+        release: kube-prometheus-stack

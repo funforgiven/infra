@@ -1,0 +1,65 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: tofu-controller
+  namespace: tofu-system
+spec:
+  interval: 24h
+  url: https://github.com/flux-iac/tofu-controller.git
+  ref:
+    commit: 4cb9876f84af6e2bffc611f946371e5bc5c94ff9
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: tofu-controller
+  namespace: tofu-system
+spec:
+  interval: 30m
+  timeout: 10m
+  releaseName: tofu-controller
+  chart:
+    spec:
+      chart: ./charts/tofu-controller
+      interval: 24h
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: tofu-controller
+  driftDetection:
+    mode: enabled
+  install:
+    crds: Create
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  values:
+    watchAllNamespaces: false
+    awsPackage:
+      install: false
+    image:
+      repository: ghcr.io/flux-iac/tofu-controller
+      tag: v0.16.5@sha256:1d6ee0e34ee56a22827541b1ef44e5a3d65ff21bdb870f79103c4c5d5e6d4cba
+    runner:
+      image:
+        repository: ghcr.io/flux-iac/tf-runner
+        tag: v0.16.5@sha256:7209171093907ec1d0559c682949fcee4b625205a6a058c16fe0ce0017af5f41
+      serviceAccount:
+        allowedNamespaces:
+          - tofu-system
+    resources:
+      requests:
+        cpu: 50m
+        memory: 96Mi
+      limits:
+        memory: 384Mi
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
+        namespace: observability
+        labels:
+          release: kube-prometheus-stack
