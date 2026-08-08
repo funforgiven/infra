@@ -29,6 +29,7 @@
       - item.name | length > 0
       - item.public_key | length == 44
       - item.allowed_address | length > 0
+      - item.preshared_key_file | length > 0
   loop: "{{ routeros_wireguard.peers }}"
   loop_control:
     label: "{{ item.name | default('unnamed') }}"
@@ -61,6 +62,16 @@
   ansible.builtin.assert:
     that:
       - routeros_wireguard_private_key is match('^[A-Za-z0-9+/]{43}=$')
+  no_log: true
+  tags: [never, apply]
+
+- name: Validate WireGuard admin peer preshared keys
+  ansible.builtin.assert:
+    that:
+      - >-
+        lookup('ansible.builtin.file', item.preshared_key_file) | trim is
+        match('^[A-Za-z0-9+/]{43}=$')
+  loop: "{{ routeros_wireguard.peers }}"
   no_log: true
   tags: [never, apply]
 
@@ -127,15 +138,18 @@
         comment="infra: WireGuard peer {{ item.name }}" disabled=no
         interface="{{ routeros_wireguard.name }}"
         persistent-keepalive={{ item.persistent_keepalive | default('25s') }}
+        preshared-key="{{ lookup('ansible.builtin.file', item.preshared_key_file) | trim }}"
         public-key="{{ item.public_key }}" } else={
         /interface wireguard peers set $row
         allowed-address={{ item.allowed_address }} disabled=no
         interface="{{ routeros_wireguard.name }}"
         persistent-keepalive={{ item.persistent_keepalive | default('25s') }}
+        preshared-key="{{ lookup('ansible.builtin.file', item.preshared_key_file) | trim }}"
         public-key="{{ item.public_key }}" }
   loop: "{{ routeros_wireguard.peers }}"
   loop_control:
     label: "{{ item.name }}"
+  no_log: true
   tags: [never, apply]
 
 - name: Prove the WireGuard admin interface
@@ -167,10 +181,12 @@
         allowed-address={{ item.allowed_address }} and
         comment="infra: WireGuard peer {{ item.name }}" and disabled=no and
         interface="{{ routeros_wireguard.name }}" and
+        preshared-key="{{ lookup('ansible.builtin.file', item.preshared_key_file) | trim }}" and
         public-key="{{ item.public_key }}"]] != 1) do={
         :error "WireGuard peer postflight failed" }
   loop: "{{ routeros_wireguard.peers }}"
   loop_control:
     label: "{{ item.name }}"
   changed_when: false
+  no_log: true
   tags: [never, apply]
