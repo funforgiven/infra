@@ -96,6 +96,14 @@ spec:
             memory: 96Mi
     cleanupJob:
       enabled: false
+    podSecurityContext:
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
     env:
       - name: ZITADEL_DATABASE_POSTGRES_DSN
         valueFrom:
