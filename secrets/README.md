@@ -150,10 +150,11 @@ only when an unattended consumer exists.
 
 `backblaze.yaml` is likewise an admin-only recovery source. It contains the
 separate offline age identity for each cluster and the application keys that
-can only list and read their own etcd backup versions. None is materialized by
-sops-nix or injected into a cluster. Each upload-only credential has exactly
-one Flux-managed ciphertext source and cannot read, list, delete, or administer
-the bucket. The regenerated B2 master key is never committed.
+can only list and read their corresponding etcd or OpenStack backup versions.
+None is materialized by sops-nix or injected into a cluster. Each upload-only
+credential has exactly one Flux-managed ciphertext source and cannot read,
+list, delete, or administer the bucket. The regenerated B2 master key is never
+committed.
 
 A root `.env` is forbidden; its ignore rule is defense in depth, not a secret
 storage mechanism. Use the SOPS editor above rather than
