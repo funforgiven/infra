@@ -51,11 +51,11 @@ spec:
           Org:
             Name: Fahrican
             Human:
-              UserName: iam-emergency
+              UserName: iam-breakglass
               FirstName: IAM
-              LastName: Emergency
+              LastName: Breakglass
               Email:
-                Address: iam-emergency@cloud.fahrican.com
+                Address: iam-breakglass@cloud.fahrican.com
                 Verified: true
               PasswordChangeRequired: false
             Machine:
