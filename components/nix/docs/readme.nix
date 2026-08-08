@@ -36,11 +36,11 @@ in
           fabric. All three private-cloud hosts now pass the automated physical
           baseline and supervised failure of each LACP member. Independent
           OS-disk boot acceptance is a deferred resilience exercise. Kubernetes,
-          Flux, Ceph, observability, private service ingress, MariaDB Galera, and
-          RabbitMQ are installed and qualified. Keystone, Glance, Cinder, Nova,
-          Neutron, Heat, Octavia, Manila, and Barbican are running. The current
-          deployment boundary is the separately recoverable CAPI management cluster
-          required before Magnum is enabled.
+          Flux, Ceph, observability, private service ingress, MariaDB Galera, RabbitMQ,
+          and the installed OpenStack services are qualified. The separate HA CAPI
+          management cluster is recoverable, and Magnum has completed create, scale,
+          worker-replacement, upgrade, Cinder/Manila storage, and clean-deletion
+          qualification with a five-node Kubernetes canary.
 
           This is a concrete environment, not a reusable distribution. It can still
           serve as a reference for a dendritic flake, a Niri desktop, declarative
@@ -143,8 +143,11 @@ in
           Rook-Ceph, observability, service ingress, and the OpenStack-Helm
           MariaDB and RabbitMQ infrastructure charts are running. Keystone,
           Glance, Cinder, Placement, Nova, Neutron, Heat, Octavia, Manila, and
-          Barbican are running. The three-node CAPI management cluster and its Flux
-          root are also running; off-site recovery, CAPI/CAPO, and Magnum remain.
+          Barbican are running. The three-node CAPI management cluster, its Flux root,
+          CAPI/CAPO controllers, encrypted off-site etcd recovery, and Magnum are also
+          running. Magnum's initial five-node canary passed its complete lifecycle
+          through clean deletion. Production acceptance still requires the remaining
+          destructive failure and recovery exercises documented in the cloud runbook.
 
           The current repository records:
 
