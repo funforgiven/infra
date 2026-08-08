@@ -154,7 +154,8 @@ output "role_claim" {
 }
 
 output "grafana_client_id" {
-  value = zitadel_application_oidc.web["grafana"].client_id
+  value     = zitadel_application_oidc.web["grafana"].client_id
+  sensitive = true
 }
 
 output "grafana_client_secret" {
@@ -163,7 +164,8 @@ output "grafana_client_secret" {
 }
 
 output "openstack_client_id" {
-  value = zitadel_application_oidc.web["openstack"].client_id
+  value     = zitadel_application_oidc.web["openstack"].client_id
+  sensitive = true
 }
 
 output "openstack_client_secret" {
@@ -172,9 +174,11 @@ output "openstack_client_secret" {
 }
 
 output "undercloud_kubernetes_client_id" {
-  value = zitadel_application_oidc.kubernetes["undercloud"].client_id
+  value     = zitadel_application_oidc.kubernetes["undercloud"].client_id
+  sensitive = true
 }
 
 output "capi_management_kubernetes_client_id" {
-  value = zitadel_application_oidc.kubernetes["capi-management"].client_id
+  value     = zitadel_application_oidc.kubernetes["capi-management"].client_id
+  sensitive = true
 }
