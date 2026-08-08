@@ -20,12 +20,12 @@ and readiness gates in Git.
 | 50–55 | Complete | Keystone, Glance, Cinder, Placement, Nova, Neutron, OVN, libvirt, Open vSwitch, the external provider network, and encrypted off-cluster authoritative-state recovery |
 | 60–63 | Complete | Heat, Octavia, Manila, and Barbican are deployed with their chart and semantic tests passing |
 | 70 | Complete | Three management VMs, HA k3s, Flux, encrypted B2 etcd recovery, cert-manager, CAPI, CAPO, and the add-on provider are qualified |
-| 80 | In progress | A real Magnum cluster has passed create, scale-up, worker replacement, Kubernetes 1.35.6→1.36.2 upgrade, Cinder RWO, Manila RWX, no-tenant-Ceph, and management-outage tests; healthy-cluster deletion remains |
+| 80 | Complete | A real Magnum cluster passed create, scale-up, worker replacement, Kubernetes 1.35.6→1.36.2 upgrade, Cinder RWO, Manila RWX, no-tenant-Ceph, management-outage, and clean-deletion tests |
 | 90 | Not complete | One-at-a-time OSD replacement, one-host-loss, and independent-OS-disk boot exercises remain |
 
 All five live-migration workload classes have passed every directed host pair.
-Production eligibility remains false until the remaining Magnum lifecycle and
-recovery exercises pass, even though the current services are healthy.
+Production eligibility remains false until the wave-90 physical recovery
+exercises pass, even though the current services are healthy.
 
 The small set of current documents is intentional:
 
@@ -348,8 +348,11 @@ original sentinels. A one-node-at-a-time upgrade then moved all three
 control-plane nodes and both workers from Kubernetes 1.35.6 to 1.36.2 while
 preserving those Cinder and Manila sentinels. Replacement control-plane nodes
 wait 40 seconds before kubeadm joins so OVN has time to remove an unhealthy new
-API member from the load-balancer pool. Publication remains closed until
-deletion of a healthy cluster is also qualified.
+API member from the load-balancer pool. Deleting the healthy cluster through
+Magnum then removed its CAPI objects, five Nova servers, Octavia load balancer,
+Neutron resources, floating IP, and disposable CSI backends without affecting
+the retained failed cluster. This completes the initial Calico template's
+lifecycle matrix; publishing it remains an operational product decision.
 
 ## Reconciliation, readiness, and dependency graphs
 
@@ -443,13 +446,13 @@ Gateway API, Envoy Gateway, and the mutually exclusive MetalLB rollback are
 qualified. No public API endpoint is currently approved. The bucket
 intentionally has no Object Lock and therefore makes no immutability claim.
 
-The remaining Magnum lifecycle gate is deletion of a healthy cluster. The
-qualification project has a 12-instance, 24-core, and 60 GiB RAM quota so the
-five-node upgrade can surge one control-plane and one worker at a time.
-Production also requires one-at-a-time OSD replacement and one-host-loss
-exercises. Scheduled encrypted MariaDB and OVN upload, 30-day hidden-version
-retention, separately authorized download, and isolated restore are qualified.
-Independent-OS-disk boot proof remains explicitly deferred.
+The qualification project has a 12-instance, 24-core, and 60 GiB RAM quota so
+the five-node Magnum upgrade can surge one control-plane and one worker at a
+time. Production still requires one-at-a-time OSD replacement, one-host-loss,
+and independent-OS-disk boot exercises. Scheduled encrypted MariaDB and OVN
+upload, 30-day hidden-version retention, separately authorized download, and
+isolated restore are qualified. Independent-OS-disk boot proof remains
+explicitly deferred.
 Swift and a highly available long-term log backend remain capacity-driven later
 work, not blockers for the initial private-cloud API.
 
