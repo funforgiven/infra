@@ -21,11 +21,11 @@ and readiness gates in Git.
 | 60–63 | Complete | Heat, Octavia, Manila, and Barbican are deployed with their chart and semantic tests passing |
 | 70 | Complete | Three management VMs, HA k3s, Flux, encrypted B2 etcd recovery, cert-manager, CAPI, CAPO, and the add-on provider are qualified |
 | 80 | Complete | A real Magnum cluster passed create, scale-up, worker replacement, Kubernetes 1.35.6→1.36.2 upgrade, Cinder RWO, Manila RWX, no-tenant-Ceph, management-outage, and clean-deletion tests |
-| 90 | Not complete | A supervised `pecorino` OSD replacement passed; one-host-loss and independent-OS-disk boot exercises remain |
+| 90 | Not complete | Supervised `pecorino` OSD replacement and `asiago` one-host-loss recovery passed; independent-OS-disk boot proof remains |
 
 All five live-migration workload classes have passed every directed host pair.
-Production eligibility remains false until the wave-90 physical recovery
-exercises pass, even though the current services are healthy.
+Production eligibility remains false until the remaining wave-90 physical
+boot exercise passes, even though the current services are healthy.
 
 The small set of current documents is intentional:
 
@@ -453,11 +453,25 @@ time. On 2026-08-08, `pecorino` `osd.0` on the declared
 safe to destroy, purged, wiped, and automatically recreated by Rook. The
 cluster returned to six OSDs up and in with all 257 placement groups
 active+clean, while Kubernetes, OpenStack, Flux, monitoring, and the CAPI
-management cluster remained healthy. Production still requires the
-one-host-loss and independent-OS-disk boot exercises. Scheduled encrypted
-MariaDB and OVN upload, 30-day hidden-version retention, separately authorized
-download, and isolated restore are qualified. Independent-OS-disk boot proof
-remains explicitly deferred.
+management cluster remained healthy.
+
+Also on 2026-08-08, `asiago` was powered off without draining. The two
+surviving Kubernetes and etcd members kept the API ready; Ceph retained monitor
+quorum with every placement group active, and disposable RBD and CephFS writes
+passed while four of six OSDs were available. Galera remained Primary and
+Synced with two members, RabbitMQ retained two running nodes without alarms or
+partitions, the OpenStack APIs and private service VIPs remained reachable,
+and the CAPI management cluster rescheduled all controllers onto its two
+surviving VMs. After `asiago` returned, Ceph recovered to `HEALTH_OK` with all
+257 placement groups active+clean, its Nova guest resumed, and both clusters
+returned to full readiness. The returning MariaDB member required removal of
+its stale `tc.log` and recreation of only that pod after the two surviving
+members were verified Primary and Synced; it then rejoined through state
+transfer. The post-reboot host preflight passed all 22 checks without changes.
+
+Scheduled encrypted MariaDB and OVN upload, 30-day hidden-version retention,
+separately authorized download, and isolated restore are qualified. Production
+now requires only the independent-OS-disk boot exercise.
 Swift and a highly available long-term log backend remain capacity-driven later
 work, not blockers for the initial private-cloud API.
 
