@@ -135,10 +135,20 @@ spec:
           vncserver_proxyclient_interface: bond0.20
     endpoints:
       compute:
+        scheme:
+          public: https
+        port:
+          api:
+            public: 443
         host_fqdn_override:
           public:
             host: compute.cloud.fahrican.com
       compute_novnc_proxy:
+        scheme:
+          public: https
+        port:
+          novnc_proxy:
+            public: 443
         host_fqdn_override:
           public:
             host: console.cloud.fahrican.com
@@ -188,6 +198,7 @@ spec:
           parentRefs:
             - name: private
               namespace: network-services
+              sectionName: https
           hostnames:
             - compute.cloud.fahrican.com
           rules:
@@ -203,6 +214,7 @@ spec:
           parentRefs:
             - name: private
               namespace: network-services
+              sectionName: https
           hostnames:
             - console.cloud.fahrican.com
           rules:
@@ -249,6 +261,11 @@ spec:
             flat_networks: physnet-external,physnet-manila
     endpoints:
       network:
+        scheme:
+          public: https
+        port:
+          api:
+            public: 443
         host_fqdn_override:
           public:
             host: network.cloud.fahrican.com
@@ -286,6 +303,7 @@ spec:
           parentRefs:
             - name: private
               namespace: network-services
+              sectionName: https
           hostnames:
             - network.cloud.fahrican.com
           rules:

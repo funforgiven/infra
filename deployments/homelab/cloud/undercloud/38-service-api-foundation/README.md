@@ -1,28 +1,29 @@
 # Service and API foundation
 
 This wave installs the private service-entry layer used by OpenStack and later
-platform services. It owns cert-manager, Envoy Gateway, the private Envoy
-Gateway at `10.21.20.130`, and MetalLB. It does not publish public DNS records
-or create a Cloudflare credential.
+platform services. It owns cert-manager, Envoy Gateway, the OpenStack API
+Gateway at `10.21.20.130`, the management UI Gateway at `10.21.20.131`, and
+MetalLB. It does not publish public DNS records.
 
 ## L2 ownership
 
 Cilium remains the Kubernetes CNI and owns the internal CoreDNS VIP at
-`10.21.20.129`. MetalLB owns the private Envoy Gateway VIP at `10.21.20.130`.
-The address pools and Service selectors are disjoint, so an address can never
-have both announcers. Both Services use `externalTrafficPolicy: Cluster` so an
-L2 holder can forward to a healthy backend on any node.
+`10.21.20.129`. MetalLB owns the two Envoy Gateway VIPs at `10.21.20.130` and
+`10.21.20.131`. The address pools and Service selectors are disjoint, so an
+address can never have both announcers. The Services use
+`externalTrafficPolicy: Cluster` so an L2 holder can forward to a healthy
+backend on any node.
 
 cert-manager is ready only after its permanent short-lived certificate canary
-has issued a certificate. Envoy Gateway is ready only when its `GatewayClass`
-is accepted and the private `Gateway` is both accepted and programmed at
-`10.21.20.130`. MetalLB uses the `private-gateway` pool and advertises only on
+has issued a certificate. The Cloudflare token is scoped to DNS-01 validation;
+it does not create endpoint records. Envoy Gateway is ready only when each
+`GatewayClass` is accepted and each `Gateway` is accepted and programmed at its
+declared VIP. MetalLB uses the `private-gateway` pool and advertises only on
 `bond0.20` from control-plane nodes.
 
 Public Cloudflare DNS remains an allow-list. No private Service or Gateway is
-eligible for automatic public publication. DNS-01 authorization, when added,
-will grant access only to ACME challenge records and will not change that
-publication boundary.
+eligible for automatic public publication. DNS-01 authorization grants access
+only for ACME challenge records and does not change that publication boundary.
 
 ## Changing L2 ownership
 

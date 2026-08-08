@@ -57,6 +57,11 @@ spec:
         old_kek: ""
     endpoints:
       key_manager:
+        scheme:
+          public: https
+        port:
+          api:
+            public: 443
         host_fqdn_override:
           public:
             host: key-manager.cloud.fahrican.com
@@ -94,6 +99,7 @@ spec:
           parentRefs:
             - name: private
               namespace: network-services
+              sectionName: https
           hostnames:
             - key-manager.cloud.fahrican.com
           rules:

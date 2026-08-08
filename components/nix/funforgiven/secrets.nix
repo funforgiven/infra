@@ -33,6 +33,10 @@ let
       key = "routeros/crs510_login_password";
       sopsFile = routerosSecretsFile;
     };
+    homelab-routeros-ccr2004-wireguard-private-key = {
+      key = "routeros/ccr2004_wireguard_private_key";
+      sopsFile = routerosSecretsFile;
+    };
     cloud-host-taleggio-ubuntu-console-password = {
       key = "cloud_hosts/taleggio/ubuntu_console_password";
       sopsFile = cloudHostSecretsFile;

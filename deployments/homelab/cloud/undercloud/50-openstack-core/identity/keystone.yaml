@@ -41,6 +41,11 @@ spec:
   values:
     endpoints:
       identity:
+        scheme:
+          public: https
+        port:
+          api:
+            public: 443
         host_fqdn_override:
           public:
             host: identity.cloud.fahrican.com
@@ -74,6 +79,7 @@ spec:
           parentRefs:
             - name: private
               namespace: network-services
+              sectionName: https
           hostnames:
             - identity.cloud.fahrican.com
           rules:

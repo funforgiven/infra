@@ -212,6 +212,11 @@ spec:
           jobboard_enabled: false
     endpoints:
       load_balancer:
+        scheme:
+          public: https
+        port:
+          api:
+            public: 443
         host_fqdn_override:
           public:
             host: load-balancer.cloud.fahrican.com
@@ -317,6 +322,7 @@ spec:
           parentRefs:
             - name: private
               namespace: network-services
+              sectionName: https
           hostnames:
             - load-balancer.cloud.fahrican.com
           rules:

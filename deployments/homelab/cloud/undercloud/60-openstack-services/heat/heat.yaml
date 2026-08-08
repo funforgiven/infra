@@ -58,10 +58,20 @@ spec:
         dep_check: quay.io/airshipit/kubernetes-entrypoint:latest-ubuntu_noble@sha256:6c1f647df798b61e16a16528f3706eb2497c95d4ed75c0b4709f4506bc6abdc2
     endpoints:
       orchestration:
+        scheme:
+          public: https
+        port:
+          api:
+            public: 443
         host_fqdn_override:
           public:
             host: orchestration.cloud.fahrican.com
       cloudformation:
+        scheme:
+          public: https
+        port:
+          api:
+            public: 443
         host_fqdn_override:
           public:
             host: cloudformation.cloud.fahrican.com
@@ -99,6 +109,7 @@ spec:
           parentRefs:
             - name: private
               namespace: network-services
+              sectionName: https
           hostnames:
             - orchestration.cloud.fahrican.com
           rules:
@@ -114,6 +125,7 @@ spec:
           parentRefs:
             - name: private
               namespace: network-services
+              sectionName: https
           hostnames:
             - cloudformation.cloud.fahrican.com
           rules:

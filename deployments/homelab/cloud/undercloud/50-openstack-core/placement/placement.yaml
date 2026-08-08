@@ -38,6 +38,11 @@ spec:
   values:
     endpoints:
       placement:
+        scheme:
+          public: https
+        port:
+          api:
+            public: 443
         host_fqdn_override:
           public:
             host: placement.cloud.fahrican.com
@@ -71,6 +76,7 @@ spec:
           parentRefs:
             - name: private
               namespace: network-services
+              sectionName: https
           hostnames:
             - placement.cloud.fahrican.com
           rules:
