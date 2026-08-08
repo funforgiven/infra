@@ -19,4 +19,4 @@ spec:
               app.kubernetes.io/name: tofu-controller
       ports:
         - protocol: TCP
-          port: 80
+          port: http
