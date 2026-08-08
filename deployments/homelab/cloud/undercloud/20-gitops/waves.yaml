@@ -246,6 +246,125 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
+  name: wave32-identity-controllers
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 15m
+  path: ./deployments/homelab/cloud/undercloud/32-identity-controllers
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: wave38-service-api-controllers
+    - name: wave35-observability
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: cloudnative-pg
+      namespace: cnpg-system
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: barman-cloud
+      namespace: cnpg-system
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: tofu-controller
+      namespace: tofu-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave33-identity-data
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./deployments/homelab/cloud/undercloud/33-identity-data
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+    - name: wave32-identity-controllers
+  healthChecks:
+    - apiVersion: postgresql.cnpg.io/v1
+      kind: Cluster
+      name: zitadel-postgres
+      namespace: identity
+  healthCheckExprs:
+    - apiVersion: postgresql.cnpg.io/v1
+      kind: Cluster
+      failed: >-
+        has(status.phase) && status.phase == 'Unrecoverable'
+      current: >-
+        has(status.observedGeneration) &&
+        status.observedGeneration == metadata.generation &&
+        has(status.phase) && status.phase == 'Cluster in healthy state' &&
+        has(status.readyInstances) && status.readyInstances == 3
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave34-identity
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./deployments/homelab/cloud/undercloud/34-identity
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: wave33-identity-data
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: zitadel
+      namespace: identity
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: zitadel
+      namespace: identity
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: zitadel-login
+      namespace: identity
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave34-identity-qualification
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  path: ./deployments/homelab/cloud/undercloud/34-identity-qualification
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: wave34-identity
+  healthChecks:
+    - apiVersion: batch/v1
+      kind: Job
+      name: zitadel-readiness-v1
+      namespace: identity
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
   name: wave37-service-network
   namespace: flux-system
 spec:
@@ -439,6 +558,7 @@ spec:
     name: flux-system
   dependsOn:
     - name: wave38-private-gateway-config
+    - name: wave34-identity-qualification
   healthChecks:
     - apiVersion: gateway.networking.k8s.io/v1
       kind: Gateway

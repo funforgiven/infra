@@ -1,0 +1,47 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: zitadel-readiness-v1
+  namespace: identity
+spec:
+  backoffLimit: 12
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: zitadel-readiness
+    spec:
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: verify
+          image: docker.io/alpine/k8s:1.35.4@sha256:d9aeef2665287b9918bc57c539ba95382ba4c8d52c8b1310df5666a89d9a3d04
+          command:
+            - /bin/sh
+            - -ec
+          args:
+            - |
+              base=http://zitadel.identity.svc.cluster.local:8080
+              host=auth.cloud.fahrican.com
+              discovery="$(curl --fail --silent --show-error --header "Host: ${host}" "${base}/.well-known/openid-configuration")"
+              test "$(printf '%s' "${discovery}" | jq --raw-output .issuer)" = "https://${host}"
+              test "$(printf '%s' "${discovery}" | jq --raw-output .jwks_uri)" = "https://${host}/oauth/v2/keys"
+              curl --fail --silent --show-error --header "Host: ${host}" "${base}/oauth/v2/keys" | jq --exit-status '.keys | length > 0' >/dev/null
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi

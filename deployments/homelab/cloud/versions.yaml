@@ -1,6 +1,6 @@
 schemaVersion: 1
 document: homelab-cloud-version-selection
-lastReviewed: "2026-08-08"
+lastReviewed: "2026-08-09"
 
 host:
   ubuntu:
@@ -180,6 +180,7 @@ observability:
       alertmanager: quay.io/prometheus/alertmanager:v0.33.1@sha256:9e082985f56f4c8c9f724e18f2288c6708f472e56a5286b8863d080434ea065d
       prometheus: quay.io/prometheus/prometheus:v3.13.2-distroless@sha256:64f71bb84e03c855948418b0fc5dea53e9543d8e3fc9931598f583805507f05e
       configReloader: quay.io/prometheus-operator/prometheus-config-reloader:v0.93.0@sha256:0ccb22ca9f3f6fd9f76ce95585d18bd2e363d421c534dde710be4bd13caa551d
+
   loki:
     version: 3.7.4
     chartVersion: 18.7.0
@@ -192,6 +193,45 @@ observability:
     repository: oci://ghcr.io/fluent/helm-charts/fluent-bit-collector
     digest: sha256:123bfa44d8402367138b3ba39d16e74c5fead51a68daad8082388618115aba92
     image: ghcr.io/fluent/fluent-bit:5.0.9@sha256:ccda4cbd0f87be1e04cc1d5425bc84a6669051d4ac93a6b7a053c3ba9832aa14
+
+identity:
+  zitadel:
+    version: 4.16.3
+    image: ghcr.io/zitadel/zitadel:v4.16.3@sha256:f3738fd984131d3f02e386d37fa480d1a30e42b7d4202e2b322f12f7cf556b64
+    loginImage: ghcr.io/zitadel/zitadel-login:v4.16.3@sha256:7c210b79ae78ae74d76092154fa664601852ce79675a747a1085c2656b195648
+    chart:
+      version: 10.0.4
+      repository: https://github.com/zitadel/zitadel-charts.git
+      commit: b05bb603b2ffd0b3284a4b37bad613871bfed94a
+    provider:
+      version: 3.3.0
+      commit: 83d38c781226f4d3a7af166199757edafabd82f6
+  cloudNativePg:
+    version: 1.30.0
+    image: ghcr.io/cloudnative-pg/cloudnative-pg:1.30.0@sha256:a2701eb97cdd2a34b1fdb2cb51987f544b706e40bec72ae7146cd8580efefebb
+    chart:
+      version: 0.29.0
+      repository: https://github.com/cloudnative-pg/charts.git
+      commit: d1b5ad60cee2d9432a9cc05627b42a8d8dc7bbae
+    supportedKubernetes: ">=1.34.0 <1.37.0"
+    postgres:
+      version: 18.4
+      image: ghcr.io/cloudnative-pg/postgresql:18.4-standard-trixie@sha256:f0cc49632b5cc1e51f65ba03658c89bd31d64ea2672b14843a808a8d281417e1
+  barmanCloud:
+    version: 0.14.0
+    image: ghcr.io/cloudnative-pg/plugin-barman-cloud:v0.14.0@sha256:823a8893690980ba5830bbbb11196a35f695b0488db7d846abc33baebf32417c
+    sidecarImage: ghcr.io/cloudnative-pg/plugin-barman-cloud-sidecar:v0.14.0@sha256:9880817c285c7afa4d195da2145064d21907405489ed6ec39abe59b1feb558a4
+    chart:
+      version: 0.7.1
+      repository: https://github.com/cloudnative-pg/charts.git
+      commit: b111f4a8eddc6c66bd61524e3bf0ec06387b78ab
+  tofuController:
+    version: 0.16.5
+    controllerImage: ghcr.io/flux-iac/tofu-controller:v0.16.5@sha256:1d6ee0e34ee56a22827541b1ef44e5a3d65ff21bdb870f79103c4c5d5e6d4cba
+    runnerImage: ghcr.io/flux-iac/tf-runner:v0.16.5@sha256:7209171093907ec1d0559c682949fcee4b625205a6a058c16fe0ce0017af5f41
+    chart:
+      repository: https://github.com/flux-iac/tofu-controller.git
+      commit: 4cb9876f84af6e2bffc611f946371e5bc5c94ff9
 
 openstack:
   release: "2026.1"

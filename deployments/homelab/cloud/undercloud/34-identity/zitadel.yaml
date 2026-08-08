@@ -1,0 +1,179 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: zitadel-charts
+  namespace: identity
+spec:
+  interval: 24h
+  url: https://github.com/zitadel/zitadel-charts.git
+  ref:
+    commit: b05bb603b2ffd0b3284a4b37bad613871bfed94a
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: zitadel
+  namespace: identity
+spec:
+  interval: 30m
+  timeout: 15m
+  releaseName: zitadel
+  chart:
+    spec:
+      chart: ./charts/zitadel
+      interval: 24h
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: zitadel-charts
+  driftDetection:
+    mode: enabled
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    zitadel:
+      configmapConfig:
+        ExternalDomain: auth.cloud.fahrican.com
+        ExternalPort: 443
+        ExternalSecure: true
+        TLS:
+          Enabled: false
+        Telemetry:
+          Enabled: false
+        FirstInstance:
+          Skip: false
+          InstanceName: Fahrican
+          DefaultLanguage: en
+          Org:
+            Name: Fahrican
+            Human:
+              UserName: iam-emergency
+              FirstName: IAM
+              LastName: Emergency
+              Email:
+                Address: iam-emergency@cloud.fahrican.com
+                Verified: true
+              PasswordChangeRequired: false
+            Machine:
+              Machine:
+                Username: iam-bootstrap
+                Name: Initial identity bootstrap
+              MachineKey:
+                ExpirationDate: "2031-08-09T00:00:00Z"
+                Type: 1
+              Pat:
+                ExpirationDate: "2031-08-09T00:00:00Z"
+      configSecretName: zitadel-secrets
+      configSecretKey: config-yaml
+      masterkeySecretName: zitadel-secrets
+    postgresql:
+      enabled: false
+    initJob:
+      command: zitadel
+      resources:
+        requests:
+          cpu: 50m
+          memory: 96Mi
+        limits:
+          memory: 384Mi
+    setupJob:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 192Mi
+        limits:
+          memory: 768Mi
+      machinekeyWriter:
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            memory: 96Mi
+    cleanupJob:
+      enabled: false
+    env:
+      - name: ZITADEL_DATABASE_POSTGRES_DSN
+        valueFrom:
+          secretKeyRef:
+            name: zitadel-secrets
+            key: dsn
+    replicaCount: 3
+    image:
+      repository: ghcr.io/zitadel/zitadel
+      tag: v4.16.3@sha256:f3738fd984131d3f02e386d37fa480d1a30e42b7d4202e2b322f12f7cf556b64
+    resources:
+      requests:
+        cpu: 150m
+        memory: 256Mi
+      limits:
+        memory: 1Gi
+    pdb:
+      enabled: true
+      minAvailable: 2
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: zitadel
+            app.kubernetes.io/instance: zitadel
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
+        namespace: identity
+        additionalLabels:
+          release: kube-prometheus-stack
+        scrapeInterval: 30s
+    login:
+      enabled: true
+      replicaCount: 3
+      image:
+        repository: ghcr.io/zitadel/zitadel-login
+        tag: v4.16.3@sha256:7c210b79ae78ae74d76092154fa664601852ce79675a747a1085c2656b195648
+      resources:
+        requests:
+          cpu: 75m
+          memory: 128Mi
+        limits:
+          memory: 512Mi
+      pdb:
+        enabled: true
+        minAvailable: 2
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: zitadel-login
+              app.kubernetes.io/instance: zitadel
+      metrics:
+        enabled: true
+        serviceMonitor:
+          enabled: true
+          namespace: identity
+          additionalLabels:
+            release: kube-prometheus-stack
+          scrapeInterval: 30s
+    tools:
+      wait4x:
+        image:
+          repository: wait4x/wait4x
+          tag: 3.6@sha256:bec7ac18547781d854562c3729d3195c3880116d6758c49fdf4573ad58805f14
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            memory: 64Mi
+      kubectl:
+        image:
+          repository: alpine/k8s
+          tag: 1.35.4@sha256:d9aeef2665287b9918bc57c539ba95382ba4c8d52c8b1310df5666a89d9a3d04
