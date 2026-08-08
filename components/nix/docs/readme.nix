@@ -146,8 +146,9 @@ in
           Barbican are running. The three-node CAPI management cluster, its Flux root,
           CAPI/CAPO controllers, encrypted off-site etcd recovery, and Magnum are also
           running. Magnum's initial five-node canary passed its complete lifecycle
-          through clean deletion. Production acceptance still requires the remaining
-          destructive failure and recovery exercises documented in the cloud runbook.
+          through clean deletion. The initial production acceptance waves are complete.
+          Physical boot with either OS disk absent remains an explicitly accepted,
+          unverified resilience risk.
 
           The current repository records:
 

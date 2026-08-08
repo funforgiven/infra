@@ -2,8 +2,9 @@
 
 All three machines are installed members of `cloud_hosts` and pass the automated
 host and all-direction network qualification. Failure of each individual LACP
-member also preserves every required path. Independent-OS-disk boot tests are a
-deferred resilience exercise and do not block Kubernetes bootstrap.
+member also preserves every required path. Physical boot with either OS disk
+absent has not been exercised and is an accepted resilience risk; both EFI
+partitions and both members of each OS RAID1 array are checked automatically.
 
 | Host | State | Management | CPU |
 | --- | --- | --- | --- |
