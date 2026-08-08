@@ -8,7 +8,6 @@ Commit secret values only as SOPS ciphertext. Recipients are declared in
 | SOPS file and key | Purpose |
 | --- | --- |
 | `github-ssh-key.sops` | GitHub SSH/signing and physical-host automation |
-| `pikvm-ssh-key.sops` | Dedicated key-only recovery access to PiKVM `ricotta` |
 | `api-tokens.yaml` → `codex/anwa_github_mcp_token` | Anwa workspace GitHub MCP server |
 | `api-tokens.yaml` → `codex/github_mcp_token` | GitHub MCP server |
 | `api-tokens.yaml` → `codex/context7_api_key` | Context7 MCP server |
@@ -89,11 +88,6 @@ nix run .#sops --accept-flake-config -- encrypt \
   /secure/path/github_ed25519
 ```
 
-Use the same command with `secrets/pikvm-ssh-key.sops` as both the filename
-override and output when rotating PiKVM recovery access. Install the matching
-[`pikvm-ssh-key.pub`](pikvm-ssh-key.pub) for the `funforgiven` account on
-`ricotta` before removing the previous authorized key.
-
 Use the management kubeconfig without leaving a plaintext copy behind:
 
 ```sh
@@ -130,7 +124,6 @@ files owned by `funforgiven` with mode `0400`:
 | --- | --- |
 | `/run/secrets/homelab-routeros-ccr2004-login-password` | CCR2004 Ansible network automation |
 | `/run/secrets/homelab-routeros-crs510-login-password` | CRS510 Ansible network automation |
-| `/run/secrets/pikvm-ssh-key` | PiKVM `ricotta` key-only recovery access |
 | `/run/secrets/cloud-host-taleggio-ubuntu-console-password` | Taleggio Ansible sudo and PiKVM console recovery |
 | `/run/secrets/cloud-host-asiago-ubuntu-console-password` | Asiago Ansible sudo and PiKVM console recovery |
 | `/run/secrets/cloud-host-pecorino-ubuntu-console-password` | Pecorino Ansible sudo and PiKVM console recovery |
