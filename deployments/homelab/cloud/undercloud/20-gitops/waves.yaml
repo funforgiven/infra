@@ -999,7 +999,7 @@ spec:
     secretRef:
       name: sops-age
   dependsOn:
-    - name: wave63-barbican
+    - name: wave50-identity
   healthChecks:
     - apiVersion: helm.toolkit.fluxcd.io/v2
       kind: HelmRelease
