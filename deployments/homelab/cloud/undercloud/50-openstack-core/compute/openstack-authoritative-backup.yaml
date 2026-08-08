@@ -43,7 +43,7 @@ spec:
                   latest="$({
                     for archive in /var/backup/db/openstack/mariadb/archive/*.tar.gz; do
                       test -s "${archive}" || continue
-                      test -s "${archive}.passed" || continue
+                      test -f "${archive}.passed" || continue
                       printf '%s\n' "${archive}"
                     done
                   } | sort | tail -n 1)"
