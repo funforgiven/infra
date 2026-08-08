@@ -1,0 +1,32 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: identity-tofu-source
+  namespace: tofu-system
+spec:
+  interval: 10m
+  url: https://github.com/funforgiven/infra.git
+  ref:
+    branch: main
+---
+apiVersion: infra.contrib.fluxcd.io/v1alpha2
+kind: Terraform
+metadata:
+  name: zitadel
+  namespace: tofu-system
+spec:
+  interval: 10m
+  approvePlan: auto
+  path: ./components/cloud/identity/tofu
+  sourceRef:
+    kind: GitRepository
+    name: identity-tofu-source
+  varsFrom:
+    - kind: Secret
+      name: tofu-zitadel-system-api
+      varsKeys:
+        - system_api_key
+  writeOutputsToSecret:
+    name: zitadel-identity-outputs
+  remediation:
+    retries: 3
