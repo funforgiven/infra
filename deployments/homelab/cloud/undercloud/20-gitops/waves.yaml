@@ -999,7 +999,7 @@ spec:
     secretRef:
       name: sops-age
   dependsOn:
-    - name: wave71-magnum
+    - name: wave63-barbican
   healthChecks:
     - apiVersion: helm.toolkit.fluxcd.io/v2
       kind: HelmRelease

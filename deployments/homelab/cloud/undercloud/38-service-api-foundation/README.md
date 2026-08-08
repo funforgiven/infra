@@ -21,6 +21,9 @@ it does not create endpoint records. Envoy Gateway is ready only when each
 declared VIP. MetalLB uses the `private-gateway` pool and advertises only on
 `bond0.20` from control-plane nodes.
 
+DNS-01 self-checks use Cloudflare's public recursive resolvers so the private
+split-horizon zone cannot hide temporary ACME TXT records from cert-manager.
+
 Public Cloudflare DNS remains an allow-list. No private Service or Gateway is
 eligible for automatic public publication. DNS-01 authorization grants access
 only for ACME challenge records and does not change that publication boundary.
