@@ -195,6 +195,8 @@ observability:
 
 openstack:
   release: "2026.1"
+  authoritativeBackup:
+    ovnImage: quay.io/airshipit/ovn@sha256:2d6e73bca2aa867f16069db733b1ab5a5e09e8e35f7a518aa02d543e401628ee
   guestImages:
     ubuntuNoble:
       release: "20260801"

@@ -1,0 +1,219 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: openstack-authoritative-backup
+  namespace: openstack
+spec:
+  schedule: "17 1 * * *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  suspend: false
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 3600
+      backoffLimit: 2
+      ttlSecondsAfterFinished: 604800
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: openstack-authoritative-backup
+            app.kubernetes.io/part-of: undercloud-recovery
+        spec:
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          nodeSelector:
+            openstack-control-plane: enabled
+          securityContext:
+            fsGroup: 65532
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile:
+              type: RuntimeDefault
+          initContainers:
+            - name: snapshot
+              image: quay.io/airshipit/ovn@sha256:2d6e73bca2aa867f16069db733b1ab5a5e09e8e35f7a518aa02d543e401628ee
+              command:
+                - /bin/sh
+                - -ec
+              args:
+                - |
+                  umask 027
+                  latest="$({
+                    for archive in /var/backup/db/openstack/mariadb/archive/*.tar.gz; do
+                      test -s "${archive}" || continue
+                      test -s "${archive}.passed" || continue
+                      printf '%s\n' "${archive}"
+                    done
+                  } | sort | tail -n 1)"
+                  test -n "${latest}"
+
+                  cp "${latest}" /work/mariadb.tar.gz
+                  cp "${latest}.passed" /work/mariadb.tar.gz.passed
+                  ovsdb-client --timeout=30 backup \
+                    tcp:ovn-ovsdb-nb.openstack.svc.cluster.local:6641 \
+                    OVN_Northbound > /work/ovn-northbound.db
+                  ovsdb-client --timeout=30 backup \
+                    tcp:ovn-ovsdb-sb.openstack.svc.cluster.local:6642 \
+                    OVN_Southbound > /work/ovn-southbound.db
+                  test -s /work/ovn-northbound.db
+                  test -s /work/ovn-southbound.db
+
+                  {
+                    printf 'format=openstack-authoritative-v1\n'
+                    printf 'created_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                    printf 'mariadb_source=%s\n' "$(basename "${latest}")"
+                  } > /work/manifest.txt
+                  cd /work
+                  sha256sum \
+                    mariadb.tar.gz \
+                    mariadb.tar.gz.passed \
+                    ovn-northbound.db \
+                    ovn-southbound.db \
+                    manifest.txt > SHA256SUMS
+                  tar -cf authoritative.tar \
+                    mariadb.tar.gz \
+                    mariadb.tar.gz.passed \
+                    ovn-northbound.db \
+                    ovn-southbound.db \
+                    manifest.txt \
+                    SHA256SUMS
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: "1"
+                  memory: 2Gi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+                readOnlyRootFilesystem: true
+                runAsGroup: 65532
+                runAsNonRoot: false
+                runAsUser: 0
+              volumeMounts:
+                - name: mariadb-backup
+                  mountPath: /var/backup
+                  readOnly: true
+                - name: work
+                  mountPath: /work
+            - name: encrypt
+              image: ghcr.io/getsops/sops@sha256:72c9964902e93643d7f52e86a854ce3c088e0c8aa0c37ad7b2b74f8d8d591429
+              command:
+                - /bin/sh
+                - -ec
+              args:
+                - |
+                  test -s /work/authoritative.tar
+                  sops \
+                    --config /dev/null \
+                    encrypt \
+                    --input-type binary \
+                    --output-type binary \
+                    --output /work/authoritative.tar.sops.json \
+                    /work/authoritative.tar
+                  chmod 0444 /work/authoritative.tar.sops.json
+              env:
+                - name: SOPS_AGE_RECIPIENTS
+                  value: age1z0l8kk9mnr8arupzn7j0tu4kznqnup96jymeey5xkzggzne4df0qjcym75
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 500m
+                  memory: 2Gi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+                readOnlyRootFilesystem: true
+                runAsGroup: 65532
+                runAsNonRoot: false
+                runAsUser: 0
+              volumeMounts:
+                - name: work
+                  mountPath: /work
+          containers:
+            - name: upload
+              image: public.ecr.aws/aws-cli/aws-cli@sha256:aaa7c2e17bace2c0cad977a85b64022248018148f7a936b44315afe2c61dfa91
+              command:
+                - /bin/sh
+                - -ec
+              args:
+                - |
+                  test -s /work/authoritative.tar.sops.json
+                  ciphertext_sha256="$(sha256sum /work/authoritative.tar.sops.json | awk '{print $1}')"
+                  exec aws s3api put-object \
+                    --endpoint-url https://s3.us-west-004.backblazeb2.com \
+                    --region us-west-004 \
+                    --bucket fahrican-cloud-recovery \
+                    --key undercloud/openstack/authoritative.tar.sops.json \
+                    --body /work/authoritative.tar.sops.json \
+                    --content-type application/json \
+                    --server-side-encryption AES256 \
+                    --metadata "ciphertext-sha256=${ciphertext_sha256}" \
+                    --no-cli-pager >/dev/null
+              env:
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: b2-openstack-backup-writer
+                      key: AWS_ACCESS_KEY_ID
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: b2-openstack-backup-writer
+                      key: AWS_SECRET_ACCESS_KEY
+                - name: AWS_CONFIG_FILE
+                  value: /dev/null
+                - name: AWS_SHARED_CREDENTIALS_FILE
+                  value: /dev/null
+                - name: AWS_EC2_METADATA_DISABLED
+                  value: "true"
+                - name: AWS_REQUEST_CHECKSUM_CALCULATION
+                  value: when_required
+                - name: AWS_RETRY_MODE
+                  value: standard
+                - name: AWS_MAX_ATTEMPTS
+                  value: "5"
+                - name: HOME
+                  value: /tmp
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 500m
+                  memory: 256Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+                readOnlyRootFilesystem: true
+                runAsGroup: 65532
+                runAsNonRoot: true
+                runAsUser: 65532
+              volumeMounts:
+                - name: work
+                  mountPath: /work
+                  readOnly: true
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: mariadb-backup
+              persistentVolumeClaim:
+                claimName: mariadb-backup-data
+                readOnly: true
+            - name: work
+              emptyDir:
+                sizeLimit: 10Gi
+            - name: tmp
+              emptyDir:
+                sizeLimit: 64Mi

@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: b2-openstack-backup-writer
+    namespace: openstack
+type: Opaque
+stringData:
+    AWS_ACCESS_KEY_ID: ENC[AES256_GCM,data:KNus1S+byjolT3b+KYcvz5JOsnU5bNKJ2g==,iv:JC4YEb94zei43dlZJ4lgGAg8D1jRUOar/oB6vnyH84M=,tag:h1P7GvFgMF3dLx5SNBcIQA==,type:str]
+    AWS_SECRET_ACCESS_KEY: ENC[AES256_GCM,data:xT3GMtI6Qkf6kaFbQ1vbaJfFZh09/Po7ZRJ7W3lL0g==,iv:qHQMljth+asp7mjW/GvCQI3KaLIh2n1Tfm4Z+HA2W1M=,tag:q8T3ExTpCnx6Cc2RkjS2BA==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBjWlBjVUlQQWxFOWduenAw
+            NDNpdFlQQVIrS1pDTEQ2eHF0U3JRZ0pzOW5VCmtYNEhLcTdpNlJuM0RRTjNNTUk5
+            OUFJbXdPN0VabmcvSWdZak9vUFdnRGsKLS0tIEZmdGVSVEIxcGpReG1RRzlTQ25H
+            bHJJVDFlenpCYkNObklONk42bVp2VXMKfS61xAAxZhoKs1M82RAPBzngG8jGITHJ
+            SDzBfHdCizRmUsslijFnBsqatscOG6S9clyJMjpwaq6Ohb7+Te98Sw==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBMczJSYTVORjlDa1JVZ2tT
+            cDRkYTd0dmd6S1RScjh4S3BQaHdGcmR3K1VnCkZMUEYzUUdBYlJPL0VKcEh5NGR2
+            a3NwTGZnWm1EdSs0TzdLR2dzZFFvNGsKLS0tIDNZaTBwZk5KMzRxTEJVNEEzNC9O
+            L2JOYjE5S0V1cjh1enNnU1Y3eEZKM1kK68qfbXLSV4MYl8NWEJnyFaS+fYRKhEKS
+            GMIphyCRH/dOafbIJF3bhCK0UJMRdWHbf5478K6LoVBUDS+rPZd19w==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-08-08T04:12:25Z"
+    mac: ENC[AES256_GCM,data:c7c202vK+Lyvv7PjrJ6tgiBH86UeT19vgbYroB9rk5AyddpH2ONhBk8CZWB1ydBTFEUODKYwM67vDGcZTu/Y8buoYHE1lb6kjF2ViCEbOzre76cCZKEu5nNwzWaULwjPoZZnyEG/zxGYPNerJ3Q/EAEwMIoSJyLHfWyLcqWbLKU=,iv:7CqAn6KbAFXHq90XERK8wO72tGnX9dbv2/b4fJz5MSc=,tag:MkldlJfQx1IL/Q6R277n4A==,type:str]
+    version: 3.13.1
