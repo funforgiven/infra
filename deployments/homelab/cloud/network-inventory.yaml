@@ -123,7 +123,11 @@ all:
             input_final_drop_comment: "infra: input final drop"
             forward_chain: infra-forward
             forward_final_drop_comment: "infra: forward final drop"
-            peers: []
+            peers:
+              - name: parmigiano
+                public_key: sD9I5RUu8cg9bwtLJK6IGG7Om+iT95Lg3I5bH3xeEDc=
+                allowed_address: 10.21.91.2/32
+                persistent_keepalive: 25s
           routeros_provider_network:
             name: CLOUD-EXTERNAL
             interface: vlan40-external
