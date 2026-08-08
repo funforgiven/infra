@@ -15,18 +15,20 @@ resets, adoption, or undeclared controller objects.
 `reconcile-routeros.yaml`. The playbook currently owns:
 
 - CRS510 server bonds `bond-server1` through `bond-server3`;
-- their bridge ports and VLANs 20, 30–32, and 40;
+- their bridge ports and VLANs 20, 30–33, and 40;
 - the observed E810/DAC 25 GbE/RS-FEC policy on all server-member ports;
 - the static-only VLAN-90 management DHCP server and network; and
 - the inventory-declared CCR2004 static leases; and
 - the single private-zone DNS forward from `cloud.fahrican.com` to the
   internal CoreDNS VIP `10.21.20.129`; and
+- the CCR2004 `wg-admin` interface and its narrowly scoped management
+  firewall rules; and
 - the VLAN-40 provider gateway, Omada trunk, WAN NAT membership, and scoped
   trusted/provider forwarding rules.
 
 The CRS bootstrap must already provide one enabled VLAN-filtering bridge named
-`bridge`. Manila VLAN 33 belongs to its later service wave and is intentionally
-absent until Ganesha is introduced.
+`bridge`. VLAN 33 carries only the qualified Manila NFS service network between
+the three server bonds.
 The CCR bootstrap must already provide the enabled `vlan90-mgmt` interface and
 its `10.21.90.1/24` address. The future RouterOS Terraform import takes ownership
 of both bootstrap substrates.
@@ -66,10 +68,10 @@ playbook defines exact postconditions. Carrier, LACP member failure, MTU, and
 end-to-end traffic are separate supervised qualifications; all three current
 hosts and all six LACP members have passed them.
 
-Each device login password is read from its user-owned `0400` sops-nix file
-immediately before the first connection. Inventory contains only the runtime
-path. Do not pass credentials in arguments, inventory, or environment
-variables.
+Each device login password and the CCR WireGuard private key are read from
+user-owned `0400` sops-nix files. Inventory contains only runtime paths and the
+non-secret WireGuard public key. Do not pass credentials in arguments,
+inventory, or environment variables.
 
 SSH identity has one authority: public keys in
 `deployments/homelab/ssh-host-keys.json`. The NixOS

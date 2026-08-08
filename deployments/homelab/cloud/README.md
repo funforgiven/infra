@@ -152,11 +152,23 @@ changing Service addresses, Gateway API, Envoy Gateway, or DNS.
 
 - a three-replica internal CoreDNS service at `10.21.20.129` is authoritative
   for private Envoy and service VIPs, with RouterOS forwarding the private zone;
+- `10.21.20.130` terminates HTTPS for private OpenStack APIs and
+  `10.21.20.131` terminates HTTPS for administrator web interfaces;
 - public Cloudflare DNS contains only deliberately approved public endpoints;
 - public external-dns may consume only explicit, Git-owned public endpoint
   records and must not infer targets from private Services or Gateways;
 - Cloudflare DNS-01 credentials may create `_acme-challenge` TXT records but do
   not authorize endpoint publication. The initial public endpoint set is empty.
+
+The initial browser-facing management endpoints are private-only:
+
+| Service | URL |
+| --- | --- |
+| OpenStack Skyline | `https://dashboard.cloud.fahrican.com` |
+| Grafana | `https://grafana.cloud.fahrican.com` |
+
+Prometheus, Alertmanager, Loki, Ceph, MariaDB, RabbitMQ, and the Kubernetes API
+remain direct administrative backends rather than additional web routes.
 
 ### Manila NFS
 
@@ -409,6 +421,13 @@ and logs share the Ceph failure domain they observe, so a whole-Ceph outage also
 removes their historical data until Ceph recovers. OpenSearch remains deferred
 until measured retention/search demand and one-host-loss memory headroom
 justify it.
+
+Wave 72 adds three host-spread Skyline API replicas and routes Skyline and
+Grafana through the dedicated management Gateway. Skyline uses the existing
+OpenStack-Helm MariaDB and Keystone ownership model. Grafana deliberately stays
+at one replica because its current RBD-backed SQLite database is single-writer;
+high availability would require a separate shared database and is deferred
+until the operational need justifies it.
 
 Wave 36 keeps Rook's dynamic ServiceMonitor ownership disabled and instead
 Git-owns one manager monitor, one exporter monitor, and a compact selection of

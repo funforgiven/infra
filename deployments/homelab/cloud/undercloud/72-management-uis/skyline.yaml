@@ -1,0 +1,188 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: skyline
+  namespace: openstack
+spec:
+  interval: 30m
+  timeout: 30m
+  releaseName: skyline
+  chart:
+    spec:
+      chart: ./skyline
+      interval: 24h
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: openstack-helm
+      valuesFiles:
+        - skyline/values.yaml
+        - values_overrides/skyline/2026.1-ubuntu_noble.yaml
+        - values_overrides/skyline/mariadb-tls.yaml
+  driftDetection:
+    mode: enabled
+  install:
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 1m
+  upgrade:
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 1m
+  test:
+    enable: false
+  postRenderStrategy: combined
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: skyline
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: skyline
+              spec:
+                template:
+                  spec:
+                    topologySpreadConstraints:
+                      - maxSkew: 1
+                        topologyKey: kubernetes.io/hostname
+                        whenUnsatisfiable: DoNotSchedule
+                        labelSelector:
+                          matchLabels:
+                            application: skyline
+                            component: skyline
+                    containers:
+                      - name: nginx
+                        readinessProbe:
+                          httpGet:
+                            path: /
+                            port: api
+                          periodSeconds: 10
+                        livenessProbe:
+                          httpGet:
+                            path: /
+                            port: api
+                          initialDelaySeconds: 30
+                          periodSeconds: 20
+                      - name: skyline
+                        readinessProbe:
+                          exec:
+                            command:
+                              - python3
+                              - -c
+                              - >-
+                                import socket;
+                                s=socket.socket(socket.AF_UNIX);
+                                s.settimeout(3);
+                                s.connect('/var/lib/skyline/skyline.sock')
+                          periodSeconds: 10
+                        livenessProbe:
+                          exec:
+                            command:
+                              - python3
+                              - -c
+                              - >-
+                                import socket;
+                                s=socket.socket(socket.AF_UNIX);
+                                s.settimeout(3);
+                                s.connect('/var/lib/skyline/skyline.sock')
+                          initialDelaySeconds: 30
+                          periodSeconds: 20
+  valuesFrom:
+    - kind: Secret
+      name: skyline-values
+      valuesKey: values.yaml
+  values:
+    images:
+      tags:
+        skyline_db_sync: quay.io/airshipit/skyline:2026.1-ubuntu_noble@sha256:747234bf73ad76eb8093168d2ac7f68feef143dd9bff4e127881a6f024d79d0f
+        skyline: quay.io/airshipit/skyline:2026.1-ubuntu_noble@sha256:747234bf73ad76eb8093168d2ac7f68feef143dd9bff4e127881a6f024d79d0f
+        skyline_nginx: quay.io/airshipit/skyline:2026.1-ubuntu_noble@sha256:747234bf73ad76eb8093168d2ac7f68feef143dd9bff4e127881a6f024d79d0f
+        db_init: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+        dep_check: quay.io/airshipit/kubernetes-entrypoint:latest-ubuntu_noble@sha256:6c1f647df798b61e16a16528f3706eb2497c95d4ed75c0b4709f4506bc6abdc2
+        ks_user: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+    endpoints:
+      oslo_db:
+        host_fqdn_override:
+          default:
+            tls:
+              issuerRef:
+                name: openstack-ca
+                kind: Issuer
+              usages:
+                - client auth
+      skyline:
+        scheme:
+          public: https
+        port:
+          api:
+            public: 443
+        host_fqdn_override:
+          public:
+            host: dashboard.cloud.fahrican.com
+    conf:
+      skyline:
+        default:
+          debug: false
+    manifests:
+      job_image_repo_sync: false
+    pod:
+      replicas:
+        skyline: 3
+      lifecycle:
+        upgrades:
+          deployments:
+            rolling_update:
+              max_unavailable: 1
+              max_surge: 1
+      mounts:
+        skyline:
+          skyline:
+            volumes:
+              - name: skyline-client
+                secret:
+                  secretName: skyline-client
+            volumeMounts:
+              - name: skyline-client
+                mountPath: /etc/mysql/certs
+                readOnly: true
+      resources:
+        enabled: true
+        skyline:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 1Gi
+        jobs:
+          db_init:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          db_sync:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+    extraObjects:
+      - apiVersion: policy/v1
+        kind: PodDisruptionBudget
+        metadata:
+          name: skyline
+          namespace: openstack
+        spec:
+          minAvailable: 2
+          selector:
+            matchLabels:
+              application: skyline
+              component: skyline

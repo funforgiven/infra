@@ -5,7 +5,7 @@ metadata:
 spec:
   disabled: true
   blocks:
-    - cidr: 10.21.20.130/32
+    - cidr: 10.21.20.130/31
   serviceSelector:
     matchLabels:
       infra.fahrican.com/vip-purpose: private-gateway
@@ -17,7 +17,7 @@ metadata:
   namespace: metallb-system
 spec:
   addresses:
-    - 10.21.20.130/32
+    - 10.21.20.130-10.21.20.131
   autoAssign: false
 ---
 apiVersion: metallb.io/v1beta1
@@ -70,6 +70,47 @@ spec:
         annotations:
           metallb.io/address-pool: private-gateway
           metallb.io/loadBalancerIPs: 10.21.20.130
+        labels:
+          infra.fahrican.com/lb-implementation: metallb-fallback
+          infra.fahrican.com/vip-purpose: private-gateway
+      envoyPDB:
+        minAvailable: 1
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: management
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 2
+        pod:
+          topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: kubernetes.io/hostname
+              whenUnsatisfiable: DoNotSchedule
+              labelSelector:
+                matchLabels:
+                  gateway.envoyproxy.io/owning-gateway-name: management
+                  gateway.envoyproxy.io/owning-gateway-namespace: network-services
+        container:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+      envoyService:
+        type: LoadBalancer
+        loadBalancerClass: metallb.io/metallb
+        allocateLoadBalancerNodePorts: false
+        externalTrafficPolicy: Cluster
+        annotations:
+          metallb.io/address-pool: private-gateway
+          metallb.io/loadBalancerIPs: 10.21.20.131
         labels:
           infra.fahrican.com/lb-implementation: metallb-fallback
           infra.fahrican.com/vip-purpose: private-gateway

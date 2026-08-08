@@ -8,7 +8,8 @@ There are two current-state inputs:
 
 - `../cloud/network-inventory.yaml` is the RouterOS inventory: device
   identity, current cloud bonds/VLANs, link policy, provider routing, declared
-  static DHCP leases, and the private cloud DNS forward.
+  static DHCP leases, private cloud DNS forward, and WireGuard administration
+  boundary.
 - `components/cloud/network-automation/reconcile-routeros.yaml` is the
   current convergence owner until the RouterOS Terraform import described
   below is complete.
@@ -40,7 +41,7 @@ individual LACP member has passed supervised failure testing. Cable make/model
 is observation, not stable desired identity.
 
 Current reconciliation carries VLAN 20 to the routed/admin uplinks, keeps
-VLANs 30–32 on the CRS server bonds, and carries VLAN 40 through Omada ports
+VLANs 30–33 on the CRS server bonds, and carries VLAN 40 through Omada ports
 1/9 to the CCR provider gateway. VLAN 40 passed every-direction host probes at
 MTU 1500, trusted routing, and provider-sourced WAN NAT at the 1492-byte PPPoE
 path MTU. The CCR's 1 Gb/s core uplink is not an east-west path.
@@ -52,6 +53,21 @@ The CCR desired state contains exactly one split-DNS row: a `FWD` entry for
 router-wide setting. Mutation uses the same explicit `apply` tag as the other
 CCR resources and proves the row's unique comment, name, type, target,
 subdomain match, and enabled state afterward.
+
+## Remote administration
+
+The CCR2004 terminates the split-tunnel `wg-admin` network at
+`10.21.91.1/24`, UDP port `51820`, MTU `1420`. It is not added to a trusted
+interface list and is not NATed toward the internet. Firewall rules allow only
+DNS on the CCR, SSH to the three cloud hosts, HTTPS to the two private Gateway
+VIPs, the undercloud and CAPI Kubernetes APIs, and the declared management
+ports for the CCR, CRS, PiKVM, EAP, and Omada switch.
+
+Each administrator device supplies its own WireGuard public key. Add that
+public key under `routeros_wireguard.peers` in `network-inventory.yaml`, using a
+unique `/32` from `10.21.91.0/24`; never commit the client private key. A client
+routes only `10.21.20.0/24`, `10.21.40.100/32`, `10.21.90.0/24`, and
+`10.21.91.1/32` through the tunnel and uses `10.21.91.1` for private DNS.
 
 ## Current reconciliation
 

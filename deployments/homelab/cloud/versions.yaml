@@ -1,6 +1,6 @@
 schemaVersion: 1
 document: homelab-cloud-version-selection
-lastReviewed: "2026-08-07"
+lastReviewed: "2026-08-08"
 
 host:
   ubuntu:
@@ -229,6 +229,13 @@ openstack:
         version: 3.10.18
         image: quay.io/airshipit/rabbitmq:3.10.18@sha256:6920027be467c36b314ef6f808bba3d299df4b33a454fd3664f5461e57267654
     services:
+      skyline:
+        version: 8.0.0
+        chartVersion: 2026.1.0
+        images:
+          skyline: quay.io/airshipit/skyline:2026.1-ubuntu_noble@sha256:747234bf73ad76eb8093168d2ac7f68feef143dd9bff4e127881a6f024d79d0f
+          openstackClient: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+          kubernetesEntrypoint: quay.io/airshipit/kubernetes-entrypoint:latest-ubuntu_noble@sha256:6c1f647df798b61e16a16528f3706eb2497c95d4ed75c0b4709f4506bc6abdc2
       barbican:
         version: 22.0.0
         images:

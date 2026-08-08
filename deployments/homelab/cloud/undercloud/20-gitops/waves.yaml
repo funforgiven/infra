@@ -376,6 +376,39 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
+  name: wave38-acme
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  path: ./deployments/homelab/cloud/undercloud/38-service-api-foundation/acme
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+    - name: wave38-cert-manager-qualification
+  healthChecks:
+    - apiVersion: cert-manager.io/v1
+      kind: ClusterIssuer
+      name: letsencrypt-cloudflare
+  healthCheckExprs:
+    - apiVersion: cert-manager.io/v1
+      kind: ClusterIssuer
+      current: >-
+        has(status.conditions) &&
+        status.conditions.exists(condition,
+          condition.type == 'Ready' && condition.status == 'True' &&
+          condition.observedGeneration == metadata.generation)
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
   name: wave38-private-gateway-config
   namespace: flux-system
 spec:
@@ -388,7 +421,7 @@ spec:
     kind: GitRepository
     name: flux-system
   dependsOn:
-    - name: wave38-cert-manager-qualification
+    - name: wave38-acme
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -411,6 +444,18 @@ spec:
       kind: Gateway
       name: private
       namespace: network-services
+    - apiVersion: gateway.networking.k8s.io/v1
+      kind: Gateway
+      name: management
+      namespace: network-services
+    - apiVersion: cert-manager.io/v1
+      kind: Certificate
+      name: private-api
+      namespace: network-services
+    - apiVersion: cert-manager.io/v1
+      kind: Certificate
+      name: management
+      namespace: network-services
   healthCheckExprs:
     - apiVersion: gateway.networking.k8s.io/v1
       kind: Gateway
@@ -423,8 +468,17 @@ spec:
           condition.type == 'Programmed' && condition.status == 'True' &&
           condition.observedGeneration == metadata.generation) &&
         has(status.addresses) &&
-        status.addresses.exists(address,
-          address.type == 'IPAddress' && address.value == '10.21.20.130')
+        ((metadata.name == 'private' && status.addresses.exists(address,
+          address.type == 'IPAddress' && address.value == '10.21.20.130')) ||
+        (metadata.name == 'management' && status.addresses.exists(address,
+          address.type == 'IPAddress' && address.value == '10.21.20.131')))
+    - apiVersion: cert-manager.io/v1
+      kind: Certificate
+      current: >-
+        has(status.conditions) &&
+        status.conditions.exists(condition,
+          condition.type == 'Ready' && condition.status == 'True' &&
+          condition.observedGeneration == metadata.generation)
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -925,6 +979,56 @@ spec:
       kind: Job
       name: magnum-qualification-v4
       namespace: openstack
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave72-management-uis
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 30m
+  path: ./deployments/homelab/cloud/undercloud/72-management-uis
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+    - name: wave71-magnum
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: skyline
+      namespace: openstack
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: skyline
+      namespace: openstack
+    - apiVersion: gateway.networking.k8s.io/v1
+      kind: HTTPRoute
+      name: skyline
+      namespace: openstack
+    - apiVersion: gateway.networking.k8s.io/v1
+      kind: HTTPRoute
+      name: grafana
+      namespace: observability
+  healthCheckExprs:
+    - apiVersion: gateway.networking.k8s.io/v1
+      kind: HTTPRoute
+      current: >-
+        has(status.parents) &&
+        status.parents.exists(parent,
+          parent.conditions.exists(condition,
+            condition.type == 'Accepted' && condition.status == 'True' &&
+            condition.observedGeneration == metadata.generation) &&
+          parent.conditions.exists(condition,
+            condition.type == 'ResolvedRefs' && condition.status == 'True' &&
+            condition.observedGeneration == metadata.generation))
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization

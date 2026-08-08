@@ -296,6 +296,11 @@ spec:
           ssl_key_file: /etc/rabbitmq/certs/tls.key
     endpoints:
       container_infra:
+        scheme:
+          public: https
+        port:
+          api:
+            public: 443
         host_fqdn_override:
           public:
             host: container-infra.cloud.fahrican.com
@@ -391,6 +396,7 @@ spec:
           parentRefs:
             - name: private
               namespace: network-services
+              sectionName: https
           hostnames:
             - container-infra.cloud.fahrican.com
           rules:

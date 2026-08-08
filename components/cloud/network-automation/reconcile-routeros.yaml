@@ -436,11 +436,11 @@
           - routeros_provider_network.trusted_interface | length > 0
           - routeros_provider_network.forward_chain | length > 0
           - routeros_provider_network.final_drop_comment | length > 0
-          - routeros_provider_network.access_rules | length > 0
+          - routeros_access_rules | length > 0
           - >-
-            routeros_provider_network.access_rules |
+            routeros_access_rules |
             map(attribute='comment') | list | unique | length ==
-            routeros_provider_network.access_rules | length
+            routeros_access_rules | length
           - >-
             routeros_static_leases | map(attribute='comment') | list |
             unique | length == routeros_static_leases | length
@@ -457,7 +457,7 @@
         - always
         - inventory-contract
 
-    - name: Validate provider access rules
+    - name: Validate routed access rules
       ansible.builtin.assert:
         that:
           - item.comment | length > 0
@@ -466,8 +466,8 @@
           - item.source_interface | length > 0
           - item.protocol in ['tcp', 'udp']
           - item.destination_port | string | length > 0
-        fail_msg: "Invalid provider access rule: {{ item.comment | default('unnamed') }}"
-      loop: "{{ routeros_provider_network.access_rules }}"
+        fail_msg: "Invalid routed access rule: {{ item.comment | default('unnamed') }}"
+      loop: "{{ routeros_access_rules }}"
       loop_control:
         label: "{{ item.comment | default('unnamed') }}"
       tags:
@@ -519,18 +519,15 @@
       changed_when: false
       tags: [always]
 
-    - name: Require provider access rule prerequisites
+    - name: Require routed access rule prerequisites
       community.routeros.command:
         commands:
           - >-
-            :if ([:len [/interface vlan find where
-            name="{{ item.source_interface }}" and disabled=no]] != 1) do={
-            :error "access rule source interface missing: {{ item.comment }}" };
             :if ([:len [/ip firewall filter find where
             chain="{{ item.chain }}" and
             comment="{{ item.final_drop_comment }}" and disabled=no]] != 1) do={
             :error "access rule final drop missing: {{ item.comment }}" }
-      loop: "{{ routeros_provider_network.access_rules }}"
+      loop: "{{ routeros_access_rules }}"
       loop_control:
         label: "{{ item.comment }}"
       changed_when: false
@@ -571,14 +568,14 @@
       changed_when: false
       tags: [always]
 
-    - name: Refuse duplicate provider access rules
+    - name: Refuse duplicate routed access rules
       community.routeros.command:
         commands:
           - >-
             :if ([:len [/ip firewall filter find where
             comment="{{ item.comment }}"]] > 1) do={
-            :error "duplicate provider access rule: {{ item.comment }}" }
-      loop: "{{ routeros_provider_network.access_rules }}"
+            :error "duplicate routed access rule: {{ item.comment }}" }
+      loop: "{{ routeros_access_rules }}"
       loop_control:
         label: "{{ item.comment }}"
       changed_when: false
@@ -637,6 +634,9 @@
       ansible.builtin.debug:
         var: ccr_preflight.stdout_lines
       tags: [always]
+
+    - name: Reconcile the WireGuard admin boundary
+      ansible.builtin.import_tasks: tasks/reconcile-routeros-wireguard.yaml
 
     - name: Reconcile the external provider network
       community.routeros.command:
@@ -724,7 +724,7 @@
         - never
         - apply
 
-    - name: Reconcile provider access rules
+    - name: Reconcile routed access rules
       community.routeros.command:
         commands:
           - >-
@@ -749,7 +749,7 @@
             :set row [/ip firewall filter find where
             comment="{{ item.comment }}"];
             /ip firewall filter move $row destination=$drop
-      loop: "{{ routeros_provider_network.access_rules }}"
+      loop: "{{ routeros_access_rules }}"
       loop_control:
         label: "{{ item.comment }}"
       tags:
@@ -802,7 +802,7 @@
         - never
         - apply
 
-    - name: Prove provider access rules
+    - name: Prove routed access rules
       community.routeros.command:
         commands:
           - >-
@@ -813,8 +813,8 @@
             dst-port={{ item.destination_port }} and
             in-interface="{{ item.source_interface }}" and
             protocol={{ item.protocol }}]] != 1) do={
-            :error "provider access rule failed: {{ item.comment }}" }
-      loop: "{{ routeros_provider_network.access_rules }}"
+            :error "routed access rule failed: {{ item.comment }}" }
+      loop: "{{ routeros_access_rules }}"
       loop_control:
         label: "{{ item.comment }}"
       changed_when: false

@@ -201,6 +201,11 @@ spec:
               usages:
                 - client auth
       sharev2:
+        scheme:
+          public: https
+        port:
+          api:
+            public: 443
         host_fqdn_override:
           public:
             host: share.cloud.fahrican.com
@@ -254,6 +259,7 @@ spec:
           parentRefs:
             - name: private
               namespace: network-services
+              sectionName: https
           hostnames:
             - share.cloud.fahrican.com
           rules:

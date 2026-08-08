@@ -143,6 +143,11 @@ spec:
           rbd_store_pool_app_name: rbd
     endpoints:
       image:
+        scheme:
+          public: https
+        port:
+          api:
+            public: 443
         host_fqdn_override:
           public:
             host: image.cloud.fahrican.com
@@ -176,6 +181,7 @@ spec:
           parentRefs:
             - name: private
               namespace: network-services
+              sectionName: https
           hostnames:
             - image.cloud.fahrican.com
           rules:
