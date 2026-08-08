@@ -1,0 +1,176 @@
+---
+- name: Validate the WireGuard admin inventory
+  ansible.builtin.assert:
+    that:
+      - routeros_wireguard.name | length > 0
+      - routeros_wireguard.address | length > 0
+      - routeros_wireguard.network | length > 0
+      - routeros_wireguard.listen_port | int > 0
+      - routeros_wireguard.mtu | int >= 1280
+      - routeros_wireguard.private_key_file | length > 0
+      - routeros_wireguard.public_key | length == 44
+      - routeros_wireguard.wan_interface_list | length > 0
+      - routeros_wireguard.input_chain | length > 0
+      - routeros_wireguard.input_final_drop_comment | length > 0
+      - routeros_wireguard.forward_chain | length > 0
+      - routeros_wireguard.forward_final_drop_comment | length > 0
+      - >-
+        routeros_wireguard.peers | map(attribute='public_key') | list | unique |
+        length == routeros_wireguard.peers | length
+      - >-
+        routeros_wireguard.peers | map(attribute='allowed_address') | list |
+        unique | length == routeros_wireguard.peers | length
+    fail_msg: "The WireGuard interface, firewall, and peers must be complete and unique."
+  tags: [always, inventory-contract]
+
+- name: Validate WireGuard admin peers
+  ansible.builtin.assert:
+    that:
+      - item.name | length > 0
+      - item.public_key | length == 44
+      - item.allowed_address | length > 0
+  loop: "{{ routeros_wireguard.peers }}"
+  loop_control:
+    label: "{{ item.name | default('unnamed') }}"
+  tags: [always, inventory-contract]
+
+- name: Read current WireGuard admin state
+  community.routeros.command:
+    commands:
+      - /interface wireguard print detail without-paging
+      - /interface wireguard peers print detail without-paging
+      - /ip address print detail without-paging where comment~"WireGuard"
+      - /ip firewall filter print detail without-paging where comment~"WireGuard"
+  register: routeros_wireguard_preflight
+  changed_when: false
+  tags: [always]
+
+- name: Show the WireGuard preflight without credentials
+  ansible.builtin.debug:
+    var: routeros_wireguard_preflight.stdout_lines
+  tags: [always]
+
+- name: Load the WireGuard server private key
+  ansible.builtin.set_fact:
+    routeros_wireguard_private_key: >-
+      {{ lookup('ansible.builtin.file', routeros_wireguard.private_key_file) | trim }}
+  no_log: true
+  tags: [never, apply]
+
+- name: Validate the WireGuard server private key
+  ansible.builtin.assert:
+    that:
+      - routeros_wireguard_private_key is match('^[A-Za-z0-9+/]{43}=$')
+  no_log: true
+  tags: [never, apply]
+
+- name: Reconcile the WireGuard admin interface and WAN endpoint
+  community.routeros.command:
+    commands:
+      - >-
+        :local inputDrop [/ip firewall filter find where
+        chain="{{ routeros_wireguard.input_chain }}" and
+        comment="{{ routeros_wireguard.input_final_drop_comment }}" and disabled=no];
+        :if ([:len [/interface list find where
+        name="{{ routeros_wireguard.wan_interface_list }}"]] != 1 or
+        [:len $inputDrop] != 1 or [:len [/ip firewall filter find where
+        chain="{{ routeros_wireguard.forward_chain }}" and
+        comment="{{ routeros_wireguard.forward_final_drop_comment }}" and
+        disabled=no]] != 1) do={ :error "WireGuard firewall prerequisites missing" };
+        :local iface [/interface wireguard find where
+        name="{{ routeros_wireguard.name }}"];
+        :local addr [/ip address find where comment="infra: WireGuard admin address"];
+        :local endpoint [/ip firewall filter find where
+        comment="infra: WireGuard admin endpoint"];
+        :if ([:len $iface] > 1 or [:len $addr] > 1 or [:len $endpoint] > 1) do={
+        :error "duplicate Git-owned WireGuard object" };
+        :if ([:len $iface] = 0) do={ /interface wireguard add
+        comment="infra: WireGuard admin" disabled=no
+        listen-port={{ routeros_wireguard.listen_port }}
+        mtu={{ routeros_wireguard.mtu }} name="{{ routeros_wireguard.name }}"
+        private-key="{{ routeros_wireguard_private_key }}" } else={
+        /interface wireguard set $iface comment="infra: WireGuard admin"
+        disabled=no listen-port={{ routeros_wireguard.listen_port }}
+        mtu={{ routeros_wireguard.mtu }}
+        private-key="{{ routeros_wireguard_private_key }}" };
+        :if ([:len $addr] = 0) do={ /ip address add
+        address={{ routeros_wireguard.address }}
+        comment="infra: WireGuard admin address" disabled=no
+        interface="{{ routeros_wireguard.name }}" } else={ /ip address set $addr
+        address={{ routeros_wireguard.address }} disabled=no
+        interface="{{ routeros_wireguard.name }}" };
+        :if ([:len $endpoint] = 0) do={ /ip firewall filter add action=accept
+        chain={{ routeros_wireguard.input_chain }}
+        comment="infra: WireGuard admin endpoint" disabled=no
+        dst-port={{ routeros_wireguard.listen_port }}
+        in-interface-list={{ routeros_wireguard.wan_interface_list }}
+        protocol=udp place-before=$inputDrop } else={ /ip firewall filter set
+        $endpoint action=accept chain={{ routeros_wireguard.input_chain }}
+        disabled=no dst-address=0.0.0.0/0
+        dst-port={{ routeros_wireguard.listen_port }} in-interface=""
+        in-interface-list={{ routeros_wireguard.wan_interface_list }}
+        protocol=udp src-address=0.0.0.0/0 };
+        /ip firewall filter move [find where
+        comment="infra: WireGuard admin endpoint"] destination=$inputDrop
+  no_log: true
+  tags: [never, apply]
+
+- name: Reconcile WireGuard admin peers
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/interface wireguard peers find where
+        comment="infra: WireGuard peer {{ item.name }}"];
+        :if ([:len $row] > 1) do={ :error "duplicate WireGuard peer" };
+        :if ([:len $row] = 0) do={ /interface wireguard peers add
+        allowed-address={{ item.allowed_address }}
+        comment="infra: WireGuard peer {{ item.name }}" disabled=no
+        interface="{{ routeros_wireguard.name }}"
+        persistent-keepalive={{ item.persistent_keepalive | default('25s') }}
+        public-key="{{ item.public_key }}" } else={
+        /interface wireguard peers set $row
+        allowed-address={{ item.allowed_address }} disabled=no
+        interface="{{ routeros_wireguard.name }}"
+        persistent-keepalive={{ item.persistent_keepalive | default('25s') }}
+        public-key="{{ item.public_key }}" }
+  loop: "{{ routeros_wireguard.peers }}"
+  loop_control:
+    label: "{{ item.name }}"
+  tags: [never, apply]
+
+- name: Prove the WireGuard admin interface
+  community.routeros.command:
+    commands:
+      - >-
+        :if ([:len [/interface wireguard find where
+        name="{{ routeros_wireguard.name }}" and disabled=no and
+        listen-port={{ routeros_wireguard.listen_port }} and
+        mtu={{ routeros_wireguard.mtu }} and
+        public-key="{{ routeros_wireguard.public_key }}"]] != 1 or
+        [:len [/ip address find where address={{ routeros_wireguard.address }} and
+        comment="infra: WireGuard admin address" and disabled=no and
+        interface="{{ routeros_wireguard.name }}"]] != 1 or
+        [:len [/ip firewall filter find where action=accept and
+        chain="{{ routeros_wireguard.input_chain }}" and
+        comment="infra: WireGuard admin endpoint" and disabled=no and
+        dst-port={{ routeros_wireguard.listen_port }} and
+        in-interface-list="{{ routeros_wireguard.wan_interface_list }}" and
+        protocol=udp]] != 1) do={ :error "WireGuard postflight failed" }
+  changed_when: false
+  tags: [never, apply]
+
+- name: Prove WireGuard admin peers
+  community.routeros.command:
+    commands:
+      - >-
+        :if ([:len [/interface wireguard peers find where
+        allowed-address={{ item.allowed_address }} and
+        comment="infra: WireGuard peer {{ item.name }}" and disabled=no and
+        interface="{{ routeros_wireguard.name }}" and
+        public-key="{{ item.public_key }}"]] != 1) do={
+        :error "WireGuard peer postflight failed" }
+  loop: "{{ routeros_wireguard.peers }}"
+  loop_control:
+    label: "{{ item.name }}"
+  changed_when: false
+  tags: [never, apply]

@@ -11,6 +11,59 @@ spec:
     namespace: envoy-gateway-system
 ---
 apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: management-envoy
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: management
+    namespace: envoy-gateway-system
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: private-api
+  namespace: network-services
+spec:
+  secretName: private-api-tls
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt-cloudflare
+  dnsNames:
+    - identity.cloud.fahrican.com
+    - image.cloud.fahrican.com
+    - volume.cloud.fahrican.com
+    - placement.cloud.fahrican.com
+    - compute.cloud.fahrican.com
+    - console.cloud.fahrican.com
+    - network.cloud.fahrican.com
+    - orchestration.cloud.fahrican.com
+    - cloudformation.cloud.fahrican.com
+    - load-balancer.cloud.fahrican.com
+    - share.cloud.fahrican.com
+    - key-manager.cloud.fahrican.com
+    - container-infra.cloud.fahrican.com
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: management
+  namespace: network-services
+spec:
+  secretName: management-tls
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt-cloudflare
+  dnsNames:
+    - dashboard.cloud.fahrican.com
+    - grafana.cloud.fahrican.com
+---
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: private
@@ -27,3 +80,98 @@ spec:
           selector:
             matchLabels:
               gateway.fahrican.com/private: allowed
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: private-api-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              gateway.fahrican.com/private: allowed
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: management
+  namespace: network-services
+spec:
+  gatewayClassName: management-envoy
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              gateway.fahrican.com/management: allowed
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: management-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              gateway.fahrican.com/management: allowed
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: private-https-redirect
+  namespace: network-services
+spec:
+  parentRefs:
+    - name: private
+      sectionName: http
+  hostnames:
+    - identity.cloud.fahrican.com
+    - image.cloud.fahrican.com
+    - volume.cloud.fahrican.com
+    - placement.cloud.fahrican.com
+    - compute.cloud.fahrican.com
+    - console.cloud.fahrican.com
+    - network.cloud.fahrican.com
+    - orchestration.cloud.fahrican.com
+    - cloudformation.cloud.fahrican.com
+    - load-balancer.cloud.fahrican.com
+    - share.cloud.fahrican.com
+    - key-manager.cloud.fahrican.com
+    - container-infra.cloud.fahrican.com
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: management-https-redirect
+  namespace: network-services
+spec:
+  parentRefs:
+    - name: management
+      sectionName: http
+  hostnames:
+    - dashboard.cloud.fahrican.com
+    - grafana.cloud.fahrican.com
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301

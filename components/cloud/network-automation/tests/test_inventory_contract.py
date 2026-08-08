@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[4]
 INVENTORY = ROOT / "deployments/homelab/cloud/network-inventory.yaml"
 HOST_DEFAULTS = ROOT / "deployments/homelab/cloud/hosts/group_vars/all.yml"
 HOST_KEYS = ROOT / "deployments/homelab/ssh-host-keys.json"
+INTERNAL_DNS = ROOT / "deployments/homelab/cloud/undercloud/37-service-network/internal-dns.yaml"
 PLAYBOOK = ROOT / "components/cloud/network-automation/reconcile-routeros.yaml"
 ANSIBLE_CONFIG = ROOT / "components/cloud/network-automation/ansible.cfg"
 CLOUD_COMPONENTS = ROOT / "components/cloud"
@@ -26,6 +27,7 @@ class NetworkInventoryTests(unittest.TestCase):
         cls.router = cls.root["children"]["core_router"]["hosts"]["ccr2004"]
         cls.host_defaults = yaml.safe_load(HOST_DEFAULTS.read_text())
         cls.host_keys = json.loads(HOST_KEYS.read_text())
+        cls.internal_dns = INTERNAL_DNS.read_text()
         cls.playbook = PLAYBOOK.read_text()
         cls.ansible_config = ANSIBLE_CONFIG.read_text()
 
@@ -133,6 +135,49 @@ class NetworkInventoryTests(unittest.TestCase):
         ):
             self.assertIn(field, self.playbook)
 
+    def test_wireguard_is_split_tunnel_and_inventory_driven(self) -> None:
+        wireguard = self.router["routeros_wireguard"]
+        self.assertEqual("10.21.91.1/24", wireguard["address"])
+        self.assertEqual("10.21.91.0/24", wireguard["network"])
+        self.assertEqual(51820, wireguard["listen_port"])
+        self.assertEqual(1420, wireguard["mtu"])
+        self.assertEqual("INFRA-WAN", wireguard["wan_interface_list"])
+        self.assertEqual(
+            "/run/secrets/homelab-routeros-ccr2004-wireguard-private-key",
+            wireguard["private_key_file"],
+        )
+        self.assertTrue(
+            all(
+                peer["allowed_address"].startswith("10.21.91.")
+                and peer["allowed_address"].endswith("/32")
+                for peer in wireguard["peers"]
+            )
+        )
+        self.assertNotIn("nat", wireguard)
+        wireguard_rules = [
+            rule
+            for rule in self.router["routeros_access_rules"]
+            if rule["source_interface"] == wireguard["name"]
+        ]
+        self.assertEqual(
+            len(wireguard_rules),
+            len({rule["comment"] for rule in wireguard_rules}),
+        )
+        self.assertTrue(wireguard_rules)
+        self.assertIn(
+            "tasks/reconcile-routeros-wireguard.yaml",
+            self.playbook,
+        )
+
+    def test_internal_management_dns_matches_host_inventory(self) -> None:
+        for host in ("pecorino", "taleggio", "asiago"):
+            variables = yaml.safe_load(
+                (ROOT / f"deployments/homelab/cloud/hosts/host_vars/{host}.yml").read_text()
+            )
+            address = variables["cloud_vlan_addresses"][20]
+            self.assertIn(f"{host}.mgmt IN A {address}", self.internal_dns)
+        self.assertNotIn("pecorino.mgmt IN A 10.21.20.13", self.internal_dns)
+
     def test_external_provider_vlan_is_reconciled_end_to_end(self) -> None:
         self.assertEqual(
             [20, 30, 31, 32, 33, 40],
@@ -144,6 +189,11 @@ class NetworkInventoryTests(unittest.TestCase):
             [row["id"] for row in self.switch["crs_cloud_fabric"]["bridge_vlans"]],
         )
         provider = self.router["routeros_provider_network"]
+        provider_rules = [
+            rule
+            for rule in self.router["routeros_access_rules"]
+            if rule["source_interface"] != self.router["routeros_wireguard"]["name"]
+        ]
         self.assertEqual(40, provider["vlan_id"])
         self.assertEqual("10.21.40.1/24", provider["address"])
         self.assertEqual("10.21.40.0/24", provider["network"])
@@ -191,14 +241,14 @@ class NetworkInventoryTests(unittest.TestCase):
                     rule["protocol"],
                     rule["destination_port"],
                 )
-                for rule in provider["access_rules"]
+                for rule in provider_rules
             ],
         )
-        self.assertIn('loop: "{{ routeros_provider_network.access_rules }}"', self.playbook)
+        self.assertIn('loop: "{{ routeros_access_rules }}"', self.playbook)
         self.assertIn("Reconcile the external provider network", self.playbook)
-        self.assertIn("Reconcile provider access rules", self.playbook)
+        self.assertIn("Reconcile routed access rules", self.playbook)
         self.assertIn("Prove the external provider network", self.playbook)
-        self.assertIn("Prove provider access rules", self.playbook)
+        self.assertIn("Prove routed access rules", self.playbook)
 
     def test_apply_tag_keeps_credentials_and_preflight_before_mutations(self) -> None:
         result = subprocess.run(
