@@ -63,11 +63,13 @@ DNS on the CCR, SSH to the three cloud hosts, HTTPS to the two private Gateway
 VIPs, the undercloud and CAPI Kubernetes APIs, and the declared management
 ports for the CCR, CRS, PiKVM, EAP, and Omada switch.
 
-Each administrator device supplies its own WireGuard public key. Add that
-public key under `routeros_wireguard.peers` in `network-inventory.yaml`, using a
-unique `/32` from `10.21.91.0/24`; never commit the client private key. A client
-routes only `10.21.20.0/24`, `10.21.40.100/32`, `10.21.90.0/24`, and
-`10.21.91.1/32` through the tunnel and uses `10.21.91.1` for private DNS.
+Each administrator device supplies its own WireGuard public key and receives a
+unique SOPS-encrypted preshared key. Add the public key and sops-nix runtime
+path under `routeros_wireguard.peers` in `network-inventory.yaml`, using a
+unique `/32` from `10.21.91.0/24`; never commit the client private or preshared
+key as plaintext. A client routes only `10.21.20.0/24`, `10.21.40.100/32`,
+`10.21.90.0/24`, and `10.21.91.1/32` through the tunnel and uses `10.21.91.1`
+for private DNS.
 
 ## Current reconciliation
 

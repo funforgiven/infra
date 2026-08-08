@@ -150,6 +150,7 @@ class NetworkInventoryTests(unittest.TestCase):
             all(
                 peer["allowed_address"].startswith("10.21.91.")
                 and peer["allowed_address"].endswith("/32")
+                and peer["preshared_key_file"].startswith("/run/secrets/")
                 for peer in wireguard["peers"]
             )
         )

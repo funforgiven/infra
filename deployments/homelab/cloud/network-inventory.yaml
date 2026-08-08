@@ -128,6 +128,8 @@ all:
                 public_key: sD9I5RUu8cg9bwtLJK6IGG7Om+iT95Lg3I5bH3xeEDc=
                 allowed_address: 10.21.91.2/32
                 persistent_keepalive: 25s
+                preshared_key_file: >-
+                  /run/secrets/homelab-routeros-ccr2004-wireguard-parmigiano-preshared-key
           routeros_provider_network:
             name: CLOUD-EXTERNAL
             interface: vlan40-external
