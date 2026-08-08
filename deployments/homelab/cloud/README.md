@@ -21,11 +21,10 @@ and readiness gates in Git.
 | 60–63 | Complete | Heat, Octavia, Manila, and Barbican are deployed with their chart and semantic tests passing |
 | 70 | Complete | Three management VMs, HA k3s, Flux, encrypted B2 etcd recovery, cert-manager, CAPI, CAPO, and the add-on provider are qualified |
 | 80 | Complete | A real Magnum cluster passed create, scale-up, worker replacement, Kubernetes 1.35.6→1.36.2 upgrade, Cinder RWO, Manila RWX, no-tenant-Ceph, management-outage, and clean-deletion tests |
-| 90 | Not complete | Supervised `pecorino` OSD replacement and `asiago` one-host-loss recovery passed; independent-OS-disk boot proof remains |
+| 90 | Complete | Supervised `pecorino` OSD replacement and `asiago` one-host-loss recovery passed; physical independent-OS-disk boot proof is an accepted residual risk |
 
 All five live-migration workload classes have passed every directed host pair.
-Production eligibility remains false until the remaining wave-90 physical
-boot exercise passes, even though the current services are healthy.
+The initial production acceptance boundary is complete through wave 90.
 
 The small set of current documents is intentional:
 
@@ -433,11 +432,15 @@ The minimum evidence at each boundary is behavioral:
 | Magnum | Management outage closes writes, existing clusters continue, and create/scale/upgrade/replace/delete plus CSI tests pass |
 | Backup | Checksums, bucket/prefix scope, encryption, lifecycle policy, and restore authorization are valid; an isolated restore succeeds inside policy |
 
-### Remaining gates
+### Accepted residual risks
 
-Independent-OS-disk boot proof remains a deferred resilience gate. The shared
-rebuild-media template is inventory-rendered and qualified for every current
-host. VLAN 40, the Neutron bridge mapping, the external network, and
+Physical boot with either OS disk absent was not exercised. Each host has two
+distinct EFI system partitions, synchronized bootloader trees, and clean
+two-member RAID1 arrays for `/boot` and the root volume, but actual firmware
+and OS startup after physical removal of either disk remains unverified. This
+is accepted for the current production boundary. The shared rebuild-media
+template is inventory-rendered and qualified for every current host. VLAN 40,
+the Neutron bridge mapping, the external network, and
 floating-IP behavior are qualified. VLANs 30-33 have no northbound path, and
 Manila uses the dedicated VLAN 33 Ganesha endpoint rather than Ceph VLAN 30.
 
@@ -471,7 +474,8 @@ transfer. The post-reboot host preflight passed all 22 checks without changes.
 
 Scheduled encrypted MariaDB and OVN upload, 30-day hidden-version retention,
 separately authorized download, and isolated restore are qualified. Production
-now requires only the independent-OS-disk boot exercise.
+acceptance is complete through wave 90, subject to the accepted physical
+OS-disk boot risk above.
 Swift and a highly available long-term log backend remain capacity-driven later
 work, not blockers for the initial private-cloud API.
 
