@@ -17,6 +17,12 @@ spec:
         name: openstack-helm
   driftDetection:
     mode: enabled
+    ignore:
+      - paths:
+          - /spec/selector/statefulset.kubernetes.io~1pod-name
+        target:
+          kind: Service
+          name: mariadb
   install:
     strategy:
       name: RetryOnFailure
