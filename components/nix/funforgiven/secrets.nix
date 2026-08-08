@@ -13,6 +13,7 @@ let
   historicalSigningPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHj9lWCKgMOZg6K1QzZvNH0QYY4m0lA0l6A+E4wVdVMT historical-signing-key";
   apiTokensFile = ../../../secrets/api-tokens.yaml;
   githubSshKeyFile = ../../../secrets/github-ssh-key.sops;
+  pikvmSshKeyFile = ../../../secrets/pikvm-ssh-key.sops;
   routerosSecretsFile = ../../../secrets/routeros.yaml;
   cloudHostSecretsFile = ../../../secrets/cloud-hosts.yaml;
   kubernetesSecretsFile = ../../../secrets/kubernetes.yaml;
@@ -23,7 +24,10 @@ let
     context7-api-key = "codex/context7_api_key";
     github-mcp-token = "codex/github_mcp_token";
   };
-  consumerSecretNames = builtins.attrNames apiTokenKeys ++ [ "github-ssh-key" ];
+  consumerSecretNames = builtins.attrNames apiTokenKeys ++ [
+    "github-ssh-key"
+    "pikvm-ssh-key"
+  ];
   runtimeSecretSpecs = {
     homelab-routeros-ccr2004-login-password = {
       key = "routeros/ccr2004_login_password";
@@ -70,6 +74,10 @@ let
     // {
       github-ssh-key = permissions // {
         sopsFile = githubSshKeyFile;
+        format = "binary";
+      };
+      pikvm-ssh-key = permissions // {
+        sopsFile = pikvmSshKeyFile;
         format = "binary";
       };
     };
@@ -238,6 +246,14 @@ let
                 IdentityAgent = "none";
                 IdentitiesOnly = true;
                 IdentityFile = secretPaths.github-ssh-key;
+              };
+              ricotta = {
+                HostName = "10.21.90.3";
+                User = "funforgiven";
+                IdentityAgent = "none";
+                IdentitiesOnly = true;
+                IdentityFile = secretPaths.pikvm-ssh-key;
+                StrictHostKeyChecking = "yes";
               };
               "*".IdentityAgent = "none";
             }
