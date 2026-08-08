@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - gotk-components.yaml
   - gotk-sync.yaml
+  - allow-tofu-artifacts.yaml
 images:
   - name: ghcr.io/fluxcd/source-controller
     digest: sha256:c6c82b3182f48b833252c71aefa0741957ca18296612bc6d2b9b5fb276f926e4
