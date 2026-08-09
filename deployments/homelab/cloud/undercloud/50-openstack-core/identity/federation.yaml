@@ -104,19 +104,18 @@ data:
     fi
     identity_provider_id="$(openstack identity provider show zitadel -f value -c id)"
 
+    method=PUT
     if openstack federation protocol show --identity-provider "$identity_provider_id" openid >/dev/null 2>&1; then
-      openstack federation protocol set --identity-provider "$identity_provider_id" \
-        --mapping "$mapping_id" openid
-    else
-      token="$(openstack token issue -f value -c id)"
-      jq -cn --arg mapping_id "$mapping_id" '{protocol: {mapping_id: $mapping_id}}' | \
-        curl --fail --silent --show-error --output /dev/null \
-          --request PUT \
-          --header "Content-Type: application/json" \
-          --header "X-Auth-Token: $token" \
-          --data-binary @- \
-          "${OS_AUTH_URL%/}/OS-FEDERATION/identity_providers/${identity_provider_id}/protocols/openid"
+      method=PATCH
     fi
+    token="$(openstack token issue -f value -c id)"
+    jq -cn --arg mapping_id "$mapping_id" '{protocol: {mapping_id: $mapping_id}}' | \
+      curl --fail --silent --show-error --output /dev/null \
+        --request "$method" \
+        --header "Content-Type: application/json" \
+        --header "X-Auth-Token: $token" \
+        --data-binary @- \
+        "${OS_AUTH_URL%/}/OS-FEDERATION/identity_providers/${identity_provider_id}/protocols/openid"
 
     openstack federation protocol show --identity-provider "$identity_provider_id" openid >/dev/null
     echo "Keystone federation ready: zitadel/openid"
