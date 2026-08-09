@@ -101,16 +101,17 @@ data:
       openstack identity provider create --enable \
         --remote-id https://auth.cloud.fahrican.com zitadel >/dev/null
     fi
+    identity_provider_id="$(openstack identity provider show zitadel -f value -c id)"
 
-    if openstack federation protocol show --identity-provider zitadel openid >/dev/null 2>&1; then
-      openstack federation protocol set --identity-provider zitadel \
+    if openstack federation protocol show --identity-provider "$identity_provider_id" openid >/dev/null 2>&1; then
+      openstack federation protocol set --identity-provider "$identity_provider_id" \
         --mapping zitadel openid
     else
-      openstack federation protocol create --identity-provider zitadel \
+      openstack federation protocol create --identity-provider "$identity_provider_id" \
         --mapping zitadel openid >/dev/null
     fi
 
-    openstack federation protocol show --identity-provider zitadel openid >/dev/null
+    openstack federation protocol show --identity-provider "$identity_provider_id" openid >/dev/null
     echo "Keystone federation ready: zitadel/openid"
 ---
 apiVersion: batch/v1
