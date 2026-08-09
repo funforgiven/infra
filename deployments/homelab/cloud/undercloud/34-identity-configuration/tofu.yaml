@@ -23,9 +23,9 @@ spec:
     name: identity-tofu-source
   varsFrom:
     - kind: Secret
-      name: tofu-zitadel-system-api
+      name: tofu-zitadel-credentials
       varsKeys:
-        - system_api_key
+        - access_token
   writeOutputsToSecret:
     name: zitadel-identity-outputs
   remediation:

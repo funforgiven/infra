@@ -7,7 +7,7 @@ terraform {
   }
 }
 
-variable "system_api_key" {
+variable "access_token" {
   type      = string
   sensitive = true
 }
@@ -18,13 +18,9 @@ locals {
 }
 
 provider "zitadel" {
-  domain = "auth.cloud.fahrican.com"
-  port   = "443"
-
-  system_api {
-    user = "tofu-identity-controller"
-    key  = var.system_api_key
-  }
+  domain       = "auth.cloud.fahrican.com"
+  port         = "443"
+  access_token = var.access_token
 }
 
 resource "zitadel_project" "infrastructure" {
@@ -80,6 +76,28 @@ resource "zitadel_login_policy" "fahrican" {
   allow_domain_discovery        = false
   disable_login_with_email      = false
   disable_login_with_phone      = true
+}
+
+resource "zitadel_machine_user" "identity_controller" {
+  org_id      = local.org_id
+  user_name   = "tofu-identity-controller"
+  name        = "OpenTofu identity controller"
+  description = "Reconciles identity configuration from Git"
+}
+
+resource "zitadel_org_member" "identity_controller" {
+  org_id  = local.org_id
+  user_id = zitadel_machine_user.identity_controller.id
+  roles   = ["ORG_OWNER"]
+}
+
+resource "zitadel_machine_key" "identity_controller" {
+  org_id          = local.org_id
+  user_id         = zitadel_machine_user.identity_controller.id
+  key_type        = "KEY_TYPE_JSON"
+  expiration_date = "2031-08-09T00:00:00Z"
+
+  depends_on = [zitadel_org_member.identity_controller]
 }
 
 locals {
@@ -180,5 +198,10 @@ output "undercloud_kubernetes_client_id" {
 
 output "capi_management_kubernetes_client_id" {
   value     = zitadel_application_oidc.kubernetes["capi-management"].client_id
+  sensitive = true
+}
+
+output "identity_controller_key" {
+  value     = zitadel_machine_key.identity_controller.key_details
   sensitive = true
 }
