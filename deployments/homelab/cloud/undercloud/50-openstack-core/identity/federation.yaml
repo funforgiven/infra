@@ -72,8 +72,8 @@ data:
     ensure_group() {
       name="$1"
       description="$2"
-      if openstack group show --domain Default "$name" >/dev/null 2>&1; then
-        openstack group set --domain Default --description "$description" "$name"
+      if id="$(openstack group show --domain Default "$name" -f value -c id 2>/dev/null)"; then
+        openstack group set --description "$description" "$id"
       else
         openstack group create --domain Default --description "$description" "$name" >/dev/null
       fi
