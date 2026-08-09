@@ -1,0 +1,240 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: zitadel-restore-test
+  namespace: identity
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: zitadel-restore-test
+  namespace: identity
+rules:
+  - apiGroups: [postgresql.cnpg.io]
+    resources: [clusters]
+    verbs: [create, delete, get, list, watch]
+  - apiGroups: [""]
+    resources: [pods, persistentvolumeclaims, secrets]
+    verbs: [create, delete, get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: zitadel-restore-test
+  namespace: identity
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: zitadel-restore-test
+subjects:
+  - kind: ServiceAccount
+    name: zitadel-restore-test
+    namespace: identity
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zitadel-restore-test
+  namespace: identity
+data:
+  run: |
+    #!/bin/sh
+    set -eu
+
+    name=zitadel-postgres-restore-verification
+
+    cleanup() {
+      kubectl delete pod zitadel-restore-validation --ignore-not-found --wait=false
+      kubectl delete secret zitadel-restore-validation --ignore-not-found --wait=false
+      kubectl delete cluster.postgresql.cnpg.io "$name" --ignore-not-found --wait=false
+    }
+    trap cleanup EXIT
+
+    cleanup
+    kubectl wait --for=delete "cluster.postgresql.cnpg.io/$name" --timeout=5m 2>/dev/null || true
+    kubectl delete persistentvolumeclaim --selector="cnpg.io/cluster=$name" --ignore-not-found
+
+    kubectl apply -f /opt/test/cluster.yaml
+    kubectl wait --for=condition=Ready "cluster.postgresql.cnpg.io/$name" --timeout=30m
+
+    kubectl get secret zitadel-secrets -o json | jq \
+      'del(.metadata.annotations,.metadata.creationTimestamp,.metadata.resourceVersion,.metadata.uid,.metadata.managedFields) |
+       .metadata.name = "zitadel-restore-validation" |
+       .data.dsn = (.data.dsn | @base64d |
+         gsub("zitadel-postgres-rw"; "zitadel-postgres-restore-verification-rw") |
+         @base64)' | kubectl apply -f -
+
+    kubectl apply -f /opt/test/pod.yaml
+    for attempt in $(seq 1 180); do
+      exit_code="$(kubectl get pod zitadel-restore-validation \
+        -o jsonpath='{.status.containerStatuses[?(@.name=="verify")].state.terminated.exitCode}')"
+      case "$exit_code" in
+        0) echo "ZITADEL backup restore verified"; exit 0 ;;
+        '' ) sleep 5 ;;
+        *  ) exit "$exit_code" ;;
+      esac
+    done
+    exit 1
+  cluster.yaml: |
+    apiVersion: postgresql.cnpg.io/v1
+    kind: Cluster
+    metadata:
+      name: zitadel-postgres-restore-verification
+      namespace: identity
+    spec:
+      instances: 1
+      imageName: ghcr.io/cloudnative-pg/postgresql:18.4-standard-trixie@sha256:f0cc49632b5cc1e51f65ba03658c89bd31d64ea2672b14843a808a8d281417e1
+      bootstrap:
+        recovery:
+          source: source
+      externalClusters:
+        - name: source
+          plugin:
+            name: barman-cloud.cloudnative-pg.io
+            parameters:
+              barmanObjectName: zitadel-postgres-backup
+              serverName: zitadel-postgres
+      storage:
+        storageClass: general
+        size: 10Gi
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          memory: 1Gi
+      monitoring:
+        enablePodMonitor: false
+  pod.yaml: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: zitadel-restore-validation
+      namespace: identity
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      restartPolicy: Never
+      securityContext:
+        fsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: zitadel
+          image: ghcr.io/zitadel/zitadel:v4.16.3@sha256:f3738fd984131d3f02e386d37fa480d1a30e42b7d4202e2b322f12f7cf556b64
+          args: [start, --config, /config/zitadel-config-yaml, --config, /zitadel-secret-config-yaml/config-yaml, --masterkeyFromEnv]
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: ZITADEL_MASTERKEY
+              valueFrom:
+                secretKeyRef:
+                  name: zitadel-restore-validation
+                  key: masterkey
+            - name: ZITADEL_DATABASE_POSTGRES_AWAITINITIALCONN
+              value: 5m
+            - name: ZITADEL_DATABASE_POSTGRES_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: zitadel-restore-validation
+                  key: dsn
+          volumeMounts:
+            - {name: config, mountPath: /config}
+            - {name: secrets, mountPath: /zitadel-secret-config-yaml}
+            - {name: login-service-key, mountPath: /secrets/login-client}
+            - {name: tmp, mountPath: /tmp}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {memory: 1Gi}
+        - name: verify
+          image: docker.io/alpine/k8s:1.35.4@sha256:d9aeef2665287b9918bc57c539ba95382ba4c8d52c8b1310df5666a89d9a3d04
+          command: [/bin/sh, -ec]
+          args:
+            - |
+              for attempt in $(seq 1 120); do
+                if discovery="$(curl --fail --silent --show-error --header 'Host: auth.cloud.fahrican.com' http://127.0.0.1:8080/.well-known/openid-configuration 2>/dev/null)"; then
+                  test "$(printf '%s' "$discovery" | jq --raw-output .issuer)" = "https://auth.cloud.fahrican.com"
+                  curl --fail --silent --show-error --header 'Host: auth.cloud.fahrican.com' http://127.0.0.1:8080/oauth/v2/keys | jq --exit-status '.keys | length > 0' >/dev/null
+                  exit 0
+                fi
+                sleep 5
+              done
+              exit 1
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {memory: 128Mi}
+      volumes:
+        - name: config
+          configMap: {name: zitadel-config-yaml}
+        - name: secrets
+          secret: {secretName: zitadel-restore-validation}
+        - name: login-service-key
+          secret: {secretName: zitadel-login-service-key}
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: zitadel-restore-test
+  namespace: identity
+spec:
+  schedule: "17 4 * * 0"
+  timeZone: Europe/Istanbul
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 2700
+      template:
+        spec:
+          serviceAccountName: zitadel-restore-test
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: restore
+              image: docker.io/alpine/k8s:1.35.4@sha256:d9aeef2665287b9918bc57c539ba95382ba4c8d52c8b1310df5666a89d9a3d04
+              command: [/opt/test/run]
+              env:
+                - name: HOME
+                  value: /tmp
+              volumeMounts:
+                - {name: test, mountPath: /opt/test}
+                - {name: tmp, mountPath: /tmp}
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities: {drop: [ALL]}
+                readOnlyRootFilesystem: true
+              resources:
+                requests: {cpu: 25m, memory: 64Mi}
+                limits: {memory: 256Mi}
+          volumes:
+            - name: test
+              configMap:
+                name: zitadel-restore-test
+                defaultMode: 0555
+            - name: tmp
+              emptyDir: {}
