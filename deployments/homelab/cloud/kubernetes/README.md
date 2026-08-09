@@ -41,7 +41,11 @@ generated credentials into this repository.
 The mutation boundary is Kubespray's `cluster.yml`. Before it runs, require the
 pinned container's inventory graph, SSH ping, Ansible syntax check, and an
 unused `10.21.20.128` address. Run with host-key checking explicitly enabled;
-the upstream container's relaxed SSH defaults are not accepted here.
+the upstream container's relaxed SSH defaults are not accepted here. On an
+existing cluster, pass `-e upgrade_cluster_setup=true` when changing control
+plane configuration so kubeadm rewrites the static pod manifests. A normal
+idempotent `cluster.yml` run renders supporting files but does not replace an
+unchanged-version API server manifest.
 
 ## Acceptance
 
