@@ -703,6 +703,15 @@ spec:
       kind: Certificate
       name: keystone-client
       namespace: openstack
+    - apiVersion: batch/v1
+      kind: CronJob
+      name: keystone-zitadel-federation-reconcile-v1
+      namespace: openstack
+  healthCheckExprs:
+    - apiVersion: batch/v1
+      kind: CronJob
+      failed: "false"
+      current: has(status.lastSuccessfulTime)
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
