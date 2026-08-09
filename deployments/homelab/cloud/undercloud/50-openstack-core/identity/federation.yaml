@@ -93,6 +93,7 @@ data:
     else
       openstack mapping create --rules /opt/reconcile/mapping.json zitadel >/dev/null
     fi
+    mapping_id="$(openstack mapping show zitadel -f value -c id)"
 
     if openstack identity provider show zitadel >/dev/null 2>&1; then
       openstack identity provider set --enable \
@@ -105,10 +106,10 @@ data:
 
     if openstack federation protocol show --identity-provider "$identity_provider_id" openid >/dev/null 2>&1; then
       openstack federation protocol set --identity-provider "$identity_provider_id" \
-        --mapping zitadel openid
+        --mapping "$mapping_id" openid
     else
       openstack federation protocol create --identity-provider "$identity_provider_id" \
-        --mapping zitadel openid >/dev/null
+        --mapping "$mapping_id" openid >/dev/null
     fi
 
     openstack federation protocol show --identity-provider "$identity_provider_id" openid >/dev/null
