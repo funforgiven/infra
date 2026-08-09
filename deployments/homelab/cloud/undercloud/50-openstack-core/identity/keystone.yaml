@@ -68,7 +68,6 @@ spec:
         apache2:
           a2enmod:
             - auth_openidc
-            - headers
       keystone:
         auth:
           methods: password,token,openid,application_credential
