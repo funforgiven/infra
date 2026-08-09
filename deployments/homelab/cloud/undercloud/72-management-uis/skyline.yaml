@@ -131,6 +131,11 @@ spec:
       skyline:
         default:
           debug: false
+        openstack:
+          sso_enabled: true
+          sso_protocols:
+            - openid
+          sso_region: RegionOne
     manifests:
       job_image_repo_sync: false
     pod:

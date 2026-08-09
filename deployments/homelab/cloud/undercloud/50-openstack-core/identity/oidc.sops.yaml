@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: keystone-oidc
+    namespace: openstack
+type: Opaque
+stringData:
+    oidc.conf: ENC[AES256_GCM,data:2dFH0WbHatBhM7iHObHvFXCPcIp+HGs4mXJuwcAdcX04XPqPlbRYh3ky3OTjTKeMKT5WHgSbImdXaAMPyXNx/5ihelfMMH6Ntl4zTgdpv66O/8CVej5Zm7uXelT2xNMf5hGd+UOaLqerv42EuEj4mEKseIJoCRkQ6KhKqE1uyjgMmXzgSRw39EeALgfq98NNuRha3ezWHoKRoQksJOYyp0bEs5svX/njyQPH3AJ8sprsyOxHXE782Z8srpHt6KbQczF1j2n6Khv+KUjMzj3OvFc7qokdBGN7Bn1UcPft8qCGe9pJ93Mq91ye2bJHKNbOIX9lleY3PpEMglG8XVbKa6tGirXZ9vCkv9Gm5aNA2nrJ4/OrrLa/Yhh2OP5Hqa8XpokTuWn0eqQ0ey5+Uj/leLQcrrZBQY4Xt8YW/qELx/rb2c23O5qQliL/M2beU5gMMKw8XTe+CDK7kI1f7Y4XJW6YuI3fUo6rBxiYgIZfWW1+20xLjktPjqzMwqAxp4miFao9zYYGd0+BFsK8E4YHLddFAOlws4qHSLxeFkYWCr8u7ake8oDFzIK0+Mu8szfyfeNq3S6xTiZXE0NdKtZz1tXTikMvDM1CxkhILy97aF9uHAgiD2qtd0dCLOe/jnj5XAvHzkX9Pe7n72yCJipl1vSeNqmsxpBHAMraGhH7Oy87n+s9var7Cmv51K3RuuqosId8b0MAFMDfzWAh/T3qSzaoPSG8H5WC/8nb+HWDwdk227PImU1p+ApsXP4KnvlYOC2zXtZ3VMq83Oq9514QYnCIQ7kz3VNxEPTvwtGZDeYkO2ilC/kRQQP2Bd7UiGcWVGQQNFMaI8kpK05yT14Ex5HJpUGKZdNt21H4YUiqb+7gYggxYSel8PlyBy8+PvQIcGbrfiMTGdV3ZO8Rc+WXmfk6RnB8dZ/Jm5xQWYxaEYmAl0fOrhKnbf6RcKuXah9q33/iqJ/Gi89GS9w7JylrualOZ13rKiM7MvqYqLu0kUCzy2I6apPkWNg2XLhE+zVcNqgrQYLv7Q4FWGiHb5VdegxQWvpKrJcm/2SgfNzv0CB80pF0n/ZDOKF22tW5wgUrzKCFEFuI0VfaOZ+7ECqAIf7lK9x3YX65AUdYskY6eQXinNrkv9qnTiSC1EIcJABeX2SyIeXHCmfnLVB4vXDR0M0AOEwUJuzNp/C3ozPUpq0AiPainbGov3Qayt6ZsfhfhfQVEUcy6S+nn3ML7OkiK8PoiNC6z+FwM/GNNAUS0eX2MQt6rF96SW+EMYXGBSweeU5nnYHoWKwJ9SrJyLlNswH8D9cjnT1BwJ/Tqoe2iAXG7qWO7VOh6eCNurnnUStWMJwi0KC1ESRk2oVbmR0GdBTC51uxSzcCKBC99II0ef6/FGGyK3AweodmBscTPOiVTBxE8MV/1h4ygIpK0cYqBObb7apFI5hxX3x09RSaMHyfVX3eRelKDcV2ykF5wqP9hREOjWEdrAWJSqXKX3yBnXdBEtcgFoqoAJt1DmRfBNA26BsjKA7PkoJpmCte6WQliHmEZTzdpw/EwrFQ+D8Fhcgo6uWcUQ==,iv:B+1JXmHDy4VzkRR9uKmyopfOvLMWFdty/PtRALPsYzM=,tag:DOqQvy3BLRBo5rrq7l1t4A==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA4cVRXcFV2dFE3UkhQbU9G
+            WEdvamtIMS84RjZrYkh6YXE3N3RpRjhlOVhVCi9lc09QZGxObGprcmNnSFRleVhU
+            bURvMWtndmpweTRobTQ5UGtJaVdLcGcKLS0tIGZ6amtVSDlKaWw3ZnZNQ05QSW1y
+            b3UyRkVMTUtTbG5raHM5UTFuSVYwUDQKVRxLAuWrUXAXoupNIjboZG3Wb446TPL3
+            TlzxbtW9bBB2c13aK/LGFzw102MM+ViFzS5VtjKcZbVVQz7t9z4Oeg==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBRaDk3UjNESFJUNHczOFFN
+            d3drbW9JN3BpZ3F4RG55V1JsTW4zTEZ2cURZCmlZcFNVZGNzV3VZbWN6alh3OXdn
+            T290RWc0clhyT2N3TjhqV0xrUStoQjAKLS0tIE1UWXNaOGtXeXNiSjZ2UndMRGY4
+            MDlOTFN5WE5NM1psK1NkZEtscWFDQzQKaxqMydpXVgcRTahTaDanSvM6SNA3vSpx
+            zw9rhMyRKvrrVGFNksC6XQ+NoEasFyefIW+kpGIjpcHF1nr0/xfivQ==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-08-09T10:34:57Z"
+    mac: ENC[AES256_GCM,data:wAfV/IhXpTEXkirfcjhcwyjX7bmtvgkUz5FxDThxpdPT8aa7i57UOY//Fts91BOqB79aILYl3jqUWiZmneuhGIoanH0TPcFtsmHV3INhFjKgB+BGnEGr5Mqx22K2iIcNAoUCSkd4Mlml9uQIEBB/zfkXotVPJkv0NqcvRMorfBc=,iv:uPG99xe/MXpUk6tTOKPuVNx6cJbZuKnXE8Jc9rlIk5M=,tag:9S6Dg3n3Z2/7Kan+5L2Q2w==,type:str]
+    version: 3.13.1

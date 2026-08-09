@@ -110,7 +110,7 @@ locals {
     openstack = {
       name         = "OpenStack"
       redirect_uri = "https://identity.cloud.fahrican.com/v3/redirect_uri"
-      post_logout  = "https://skyline.cloud.fahrican.com/"
+      post_logout  = "https://dashboard.cloud.fahrican.com/"
     }
   }
 }

@@ -1,0 +1,185 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keystone-zitadel-federation
+  namespace: openstack
+data:
+  mapping.json: |
+    [
+      {
+        "local": [
+          {
+            "user": {
+              "name": "{0}",
+              "type": "ephemeral"
+            }
+          },
+          {
+            "group": {
+              "name": "fahrican-infra-admin",
+              "domain": {
+                "name": "Default"
+              }
+            }
+          }
+        ],
+        "remote": [
+          {
+            "type": "HTTP_OIDC_SUB",
+            "any_one_of": [
+              "385431068646064441"
+            ]
+          },
+          {
+            "type": "HTTP_OIDC_SUB"
+          }
+        ]
+      },
+      {
+        "local": [
+          {
+            "user": {
+              "name": "{0}",
+              "type": "ephemeral"
+            }
+          },
+          {
+            "group": {
+              "name": "fahrican-infra-viewer",
+              "domain": {
+                "name": "Default"
+              }
+            }
+          }
+        ],
+        "remote": [
+          {
+            "type": "HTTP_OIDC_SUB",
+            "not_any_of": [
+              "385431068646064441"
+            ]
+          },
+          {
+            "type": "HTTP_OIDC_SUB"
+          }
+        ]
+      }
+    ]
+  reconcile.sh: |
+    #!/bin/sh
+    set -eu
+
+    ensure_group() {
+      name="$1"
+      description="$2"
+      if openstack group show --domain Default "$name" >/dev/null 2>&1; then
+        openstack group set --domain Default --description "$description" "$name"
+      else
+        openstack group create --domain Default --description "$description" "$name" >/dev/null
+      fi
+    }
+
+    ensure_group fahrican-infra-admin "ZITADEL infrastructure administrators"
+    ensure_group fahrican-infra-viewer "ZITADEL infrastructure viewers"
+    openstack role show admin >/dev/null
+    openstack role show reader >/dev/null
+    openstack role add --system all --group fahrican-infra-admin --group-domain Default admin
+    openstack role add --project admin --project-domain Default \
+      --group fahrican-infra-admin --group-domain Default admin
+    openstack role add --system all --group fahrican-infra-viewer --group-domain Default reader
+
+    if openstack mapping show zitadel >/dev/null 2>&1; then
+      openstack mapping set --rules /opt/reconcile/mapping.json zitadel
+    else
+      openstack mapping create --rules /opt/reconcile/mapping.json zitadel >/dev/null
+    fi
+
+    if openstack identity provider show zitadel >/dev/null 2>&1; then
+      openstack identity provider set --enable \
+        --remote-id https://auth.cloud.fahrican.com zitadel
+    else
+      openstack identity provider create --enable \
+        --remote-id https://auth.cloud.fahrican.com zitadel >/dev/null
+    fi
+
+    if openstack federation protocol show --identity-provider zitadel openid >/dev/null 2>&1; then
+      openstack federation protocol set --identity-provider zitadel \
+        --mapping zitadel openid
+    else
+      openstack federation protocol create --identity-provider zitadel \
+        --mapping zitadel openid >/dev/null
+    fi
+
+    openstack federation protocol show --identity-provider zitadel openid >/dev/null
+    echo "Keystone federation ready: zitadel/openid"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: keystone-zitadel-federation-reconcile-v1
+  namespace: openstack
+spec:
+  schedule: "*/5 * * * *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 300
+      backoffLimit: 3
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: keystone-zitadel-federation-reconcile
+            app.kubernetes.io/part-of: openstack
+        spec:
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          securityContext:
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: reconcile
+              image: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+              command:
+                - /opt/reconcile/reconcile.sh
+              envFrom:
+                - secretRef:
+                    name: keystone-keystone-admin
+              env:
+                - name: HOME
+                  value: /tmp
+                - name: OS_IDENTITY_API_VERSION
+                  value: "3"
+              resources:
+                requests:
+                  cpu: 25m
+                  memory: 64Mi
+                limits:
+                  cpu: 500m
+                  memory: 256Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+                readOnlyRootFilesystem: true
+              volumeMounts:
+                - name: reconcile
+                  mountPath: /opt/reconcile
+                  readOnly: true
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: reconcile
+              configMap:
+                name: keystone-zitadel-federation
+                defaultMode: 0555
+            - name: tmp
+              emptyDir:
+                sizeLimit: 64Mi

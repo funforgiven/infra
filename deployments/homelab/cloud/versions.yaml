@@ -235,6 +235,9 @@ identity:
 
 openstack:
   release: "2026.1"
+  services:
+    keystone:
+      image: ghcr.io/rackerlabs/genestack-images/keystone@sha256:82a84b532a906160ae3d5d0ec371de6864a8ddda309e78f98a1b686f13ddfdaf
   authoritativeBackup:
     ovnImage: quay.io/airshipit/ovn@sha256:2d6e73bca2aa867f16069db733b1ab5a5e09e8e35f7a518aa02d543e401628ee
   guestImages:
