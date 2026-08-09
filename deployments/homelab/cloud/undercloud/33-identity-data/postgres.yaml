@@ -36,3 +36,9 @@ spec:
       max_connections: "200"
   monitoring:
     enablePodMonitor: true
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      enabled: true
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: zitadel-postgres-backup
