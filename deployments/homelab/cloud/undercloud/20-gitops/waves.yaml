@@ -699,6 +699,10 @@ spec:
       kind: HelmRelease
       name: keystone
       namespace: openstack
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: keystone-api
+      namespace: openstack
     - apiVersion: cert-manager.io/v1
       kind: Certificate
       name: keystone-client
