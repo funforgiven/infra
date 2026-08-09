@@ -175,6 +175,7 @@ spec:
         type: Recreate
         rollingUpdate: null
       defaultDashboardsEditable: false
+      envFromSecret: grafana-oidc
       grafana.ini:
         analytics:
           reporting_enabled: false
@@ -190,6 +191,24 @@ spec:
           allow_sign_up: false
         auth.anonymous:
           enabled: false
+        auth.generic_oauth:
+          enabled: true
+          name: ZITADEL
+          allow_sign_up: true
+          auto_login: false
+          scopes: openid profile email offline_access
+          auth_url: https://auth.cloud.fahrican.com/oauth/v2/authorize
+          token_url: https://auth.cloud.fahrican.com/oauth/v2/token
+          api_url: https://auth.cloud.fahrican.com/oidc/v1/userinfo
+          use_refresh_token: true
+          groups_attribute_path: >-
+            keys("urn:zitadel:iam:org:project:385436919212818448:roles")
+          allowed_groups: infra-admin infra-viewer
+          role_attribute_path: >-
+            contains(keys("urn:zitadel:iam:org:project:385436919212818448:roles"),
+            'infra-admin') && 'GrafanaAdmin' || 'Viewer'
+          allow_assign_grafana_admin: true
+          role_attribute_strict: true
         plugins:
           preinstall_disabled: true
           preinstall_auto_update: false

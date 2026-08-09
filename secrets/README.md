@@ -41,6 +41,7 @@ Commit secret values only as SOPS ciphertext. Recipients are declared in
 | `kubernetes.yaml` → `management/k3s_token` | Stable k3s join and recovery token for the management cluster |
 | `kubernetes.yaml` → `management/flux_age_identity` | Stable Flux SOPS age identity for the management cluster |
 | `password-hashes.yaml` → `users/funforgiven/password_hash` | NixOS account password hash |
+| `zitadel.yaml` → `iam_owner_pat` | Admin-only offline ZITADEL recovery credential |
 
 ## Recovery
 
@@ -74,6 +75,7 @@ nix run .#sops --accept-flake-config -- secrets/kubernetes.yaml
 nix run .#sops --accept-flake-config -- secrets/omada.yaml
 nix run .#sops --accept-flake-config -- secrets/password-hashes.yaml
 nix run .#sops --accept-flake-config -- secrets/routeros.yaml
+nix run .#sops --accept-flake-config -- secrets/zitadel.yaml
 ```
 
 Replace the binary SSH key by encrypting a new private key directly. Do not
@@ -156,6 +158,13 @@ credential has exactly one Flux-managed ciphertext source and cannot read,
 list, delete, or administer the bucket. The regenerated B2 master key is never
 committed.
 
+`zitadel.yaml` is the identity-plane break-glass credential. It is encrypted
+only to the personal age recipient and is not materialized by sops-nix, Flux,
+or any cluster. Normal reconciliation uses the `tofu-identity-controller`
+machine account with `ORG_OWNER`; use the offline PAT only when that account or
+its key must be recovered. The local `iam-breakglass` human and Kubernetes
+certificate kubeconfigs remain independent interactive recovery paths.
+
 A root `.env` is forbidden; its ignore rule is defense in depth, not a secret
 storage mechanism. Use the SOPS editor above rather than
 redirecting decrypted output into a repository or temporary file. Never
@@ -182,6 +191,7 @@ nix run .#sops --accept-flake-config -- updatekeys secrets/github-ssh-key.sops
 nix run .#sops --accept-flake-config -- updatekeys secrets/omada.yaml
 nix run .#sops --accept-flake-config -- updatekeys secrets/password-hashes.yaml
 nix run .#sops --accept-flake-config -- updatekeys secrets/routeros.yaml
+nix run .#sops --accept-flake-config -- updatekeys secrets/zitadel.yaml
 ```
 
 If a recipient is compromised, remove it, run `updatekeys`, and rotate each

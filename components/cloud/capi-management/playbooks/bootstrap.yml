@@ -106,6 +106,15 @@
         mode: "0600"
       register: k3s_config
 
+    - name: Render the Kubernetes authentication configuration
+      ansible.builtin.template:
+        src: ../templates/authentication-config.yaml.j2
+        dest: /etc/rancher/k3s/authentication-config.yaml
+        owner: root
+        group: root
+        mode: "0600"
+      register: k3s_authentication_config
+
     - name: Install the k3s systemd unit
       ansible.builtin.template:
         src: ../templates/k3s.service.j2
@@ -122,6 +131,7 @@
             k3s_binary is changed
             or k3s_token_config is changed
             or k3s_config is changed
+            or k3s_authentication_config is changed
             or k3s_unit is changed
           }}
 

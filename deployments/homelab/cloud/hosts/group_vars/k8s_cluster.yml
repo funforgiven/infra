@@ -23,12 +23,48 @@ kube_service_addresses: 10.233.0.0/18
 kube_pods_subnet: 10.233.64.0/18
 kube_network_node_prefix: 24
 
-kube_api_anonymous_auth: true
+kube_api_anonymous_auth: false
 kube_encrypt_secret_data: true
 kube_encrypt_token: >-
   {{ lookup('ansible.builtin.file', '/run/secrets/undercloud-kube-encrypt-token') }}
 kubernetes_audit: true
 unsafe_show_logs: false
+
+# ZITADEL authenticates people; Kubernetes remains the authorization owner.
+# Certificate kubeconfigs continue to provide an independent recovery path.
+kube_apiserver_use_authentication_config_file: true
+kube_apiserver_authentication_config_anonymous:
+  enabled: true
+  conditions:
+    - path: /livez
+    - path: /readyz
+    - path: /healthz
+kube_apiserver_authentication_config_jwt:
+  - issuer:
+      url: https://auth.cloud.fahrican.com
+      audiences:
+        - "385436919296835600"
+    claimValidationRules:
+      - expression: >-
+          'urn:zitadel:iam:org:project:385436919212818448:roles' in claims &&
+          ('infra-admin' in claims['urn:zitadel:iam:org:project:385436919212818448:roles'] ||
+          'infra-viewer' in claims['urn:zitadel:iam:org:project:385436919212818448:roles'])
+        message: an Infrastructure role is required
+    claimMappings:
+      username:
+        expression: "'zitadel:' + claims.sub"
+      uid:
+        expression: claims.sub
+      groups:
+        expression: >-
+          'infra-admin' in claims['urn:zitadel:iam:org:project:385436919212818448:roles']
+          ? ['fahrican:infra-admin']
+          : ['fahrican:infra-viewer']
+    userValidationRules:
+      - expression: "!user.username.startsWith('system:')"
+        message: usernames in the system namespace are reserved
+      - expression: "user.groups.all(group, !group.startsWith('system:'))"
+        message: groups in the system namespace are reserved
 
 # Keep generated Kubespray material ephemeral and outside the Git worktree.
 kubeconfig_localhost: false
