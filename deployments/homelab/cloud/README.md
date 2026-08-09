@@ -59,7 +59,10 @@ the `fahrican:infra-admin` and `fahrican:infra-viewer` Kubernetes groups.
 OpenStack projects remain Keystone resource boundaries and are not mirrored as
 ZITADEL organizations.
 
-Grafana uses its own confidential OIDC client. The undercloud and CAPI
+Grafana and OpenStack each use their own confidential OIDC client. Keystone
+maps the ZITADEL administrator and viewer identities into Keystone groups and
+roles while continuing to own OpenStack project authorization; Skyline exposes
+the resulting `openid` WebSSO choice. The undercloud and CAPI
 management clusters use separate public clients and native Kubernetes
 `AuthenticationConfiguration` claim mappings. Certificate kubeconfigs, the
 Grafana local administrator, and the ZITADEL `iam-breakglass` human remain
@@ -67,11 +70,12 @@ available when OIDC is unavailable. The permanent OpenTofu controller uses a
 scoped ZITADEL machine key; the IAM-owner PAT in `secrets/zitadel.yaml` is
 admin-only offline recovery material and is never deployed.
 
-Keystone federation is intentionally gated on a Keystone image that contains
-`mod_auth_openidc`. The currently pinned upstream OpenStack-Helm image does not
-contain that Apache module, so the ZITADEL client exists but the federation
-protocol is not enabled. Do not add a runtime package installer or side-loaded
-Apache module to bypass this image qualification boundary.
+The digest-pinned Keystone image contains the distribution-packaged
+`mod_auth_openidc`; no runtime package installation or side-loaded Apache module
+is used. A periodic, idempotent reconciler owns the Keystone groups, mapping,
+identity provider, and `openid` federation protocol. ZITADEL is the credential
+authority: no Google or other external social identity provider is configured,
+and users may register passkeys directly in ZITADEL.
 
 ## Authority and ownership
 
@@ -188,6 +192,7 @@ The initial browser-facing management endpoints are private-only:
 
 | Service | URL |
 | --- | --- |
+| ZITADEL account and sign-in | `https://auth.cloud.fahrican.com` |
 | OpenStack Skyline | `https://dashboard.cloud.fahrican.com` |
 | Grafana | `https://grafana.cloud.fahrican.com` |
 
@@ -559,11 +564,14 @@ bundle is uploaded daily; recovery still requires supervised access to the
 corresponding reader.
 
 Current off-cluster coverage includes undercloud etcd, Magnum-management etcd,
-MariaDB, and a matched OVN Northbound/Southbound pair. The remaining data-policy
-work is selected tenant-data export outside the Ceph failure domain. RabbitMQ
-message bodies are not a backup payload: users and virtual hosts are recreated
-from Git and authoritative service state comes from MariaDB. Restore evidence,
-not object existence alone, is the readiness condition.
+MariaDB, ZITADEL PostgreSQL, and a matched OVN Northbound/Southbound pair. A
+weekly isolated test restores ZITADEL PostgreSQL, starts the pinned ZITADEL
+binary with the recovered master key, verifies discovery and signing keys, then
+deletes the temporary database and volumes. The remaining data-policy work is
+selected tenant-data export outside the Ceph failure domain. RabbitMQ message
+bodies are not a backup payload: users and virtual hosts are recreated from Git
+and authoritative service state comes from MariaDB. Restore evidence, not
+object existence alone, is the readiness condition.
 
 A full rebuild starts from Git, PiKVM, pinned installation artifacts, the host
 inventory, offline age identities, supervised B2 restore authorization, and

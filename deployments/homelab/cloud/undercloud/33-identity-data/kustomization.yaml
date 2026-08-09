@@ -6,3 +6,4 @@ resources:
   - backup-credentials.sops.yaml
   - backup.yaml
   - postgres.yaml
+  - restore-test.yaml
