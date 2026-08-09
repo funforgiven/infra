@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keystone-apache-modules
+  namespace: openstack
+data:
+  shib.load: ""
+  shib.conf: ""

@@ -42,7 +42,7 @@ spec:
     annotations:
       pod:
         keystone_api:
-          fahrican.com/oidc-config-generation: "1"
+          fahrican.com/oidc-config-generation: "5"
     images:
       tags:
         keystone_api: ghcr.io/rackerlabs/genestack-images/keystone@sha256:82a84b532a906160ae3d5d0ec371de6864a8ddda309e78f98a1b686f13ddfdaf
@@ -96,10 +96,21 @@ spec:
               - name: keystone-oidc
                 secret:
                   secretName: keystone-oidc
+              - name: keystone-apache-modules
+                configMap:
+                  name: keystone-apache-modules
             volumeMounts:
               - name: keystone-oidc
                 mountPath: /etc/apache2/conf-enabled/oidc.conf
                 subPath: oidc.conf
+                readOnly: true
+              - name: keystone-apache-modules
+                mountPath: /etc/apache2/mods-available/shib.load
+                subPath: shib.load
+                readOnly: true
+              - name: keystone-apache-modules
+                mountPath: /etc/apache2/conf-available/shib.conf
+                subPath: shib.conf
                 readOnly: true
     extraObjects:
       - apiVersion: gateway.networking.k8s.io/v1
