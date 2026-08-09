@@ -7,7 +7,7 @@ terraform {
   }
 }
 
-variable "access_token" {
+variable "jwt_profile_json" {
   type      = string
   sensitive = true
 }
@@ -18,9 +18,9 @@ locals {
 }
 
 provider "zitadel" {
-  domain       = "auth.cloud.fahrican.com"
-  port         = "443"
-  access_token = var.access_token
+  domain           = "auth.cloud.fahrican.com"
+  port             = "443"
+  jwt_profile_json = var.jwt_profile_json
 }
 
 resource "zitadel_project" "infrastructure" {

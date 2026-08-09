@@ -25,7 +25,7 @@ spec:
     - kind: Secret
       name: tofu-zitadel-credentials
       varsKeys:
-        - access_token
+        - jwt_profile_json
   writeOutputsToSecret:
     name: zitadel-identity-outputs
   remediation:
