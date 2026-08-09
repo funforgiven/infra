@@ -54,6 +54,10 @@ router-wide setting. Mutation uses the same explicit `apply` tag as the other
 CCR resources and proves the row's unique comment, name, type, target,
 subdomain match, and enabled state afterward.
 
+Syncthing reaches the primary workstation through Git-owned TCP and QUIC
+destination-NAT rules on port `22000`. The target is the workstation's stable
+VLAN-10 reservation `10.21.10.20`; the Syncthing GUI is not exposed.
+
 ## Remote administration
 
 The CCR2004 terminates the split-tunnel `wg-admin` network at

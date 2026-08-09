@@ -254,6 +254,19 @@ all:
               destination: 10.21.90.4/31
               protocol: tcp
               destination_port: "443"
+          routeros_port_forwards:
+            - comment: "infra: Syncthing parmigiano TCP"
+              in_interface_list: INFRA-WAN
+              protocol: tcp
+              destination_port: "22000"
+              to_address: 10.21.10.20
+              to_port: "22000"
+            - comment: "infra: Syncthing parmigiano QUIC"
+              in_interface_list: INFRA-WAN
+              protocol: udp
+              destination_port: "22000"
+              to_address: 10.21.10.20
+              to_port: "22000"
           routeros_static_leases:
             - comment: "infra: primary admin workstation"
               mac_address: 60:CF:84:ED:E9:1E
