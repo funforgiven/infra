@@ -441,6 +441,11 @@
             routeros_access_rules |
             map(attribute='comment') | list | unique | length ==
             routeros_access_rules | length
+          - routeros_port_forwards | length > 0
+          - >-
+            routeros_port_forwards |
+            map(attribute='comment') | list | unique | length ==
+            routeros_port_forwards | length
           - >-
             routeros_static_leases | map(attribute='comment') | list |
             unique | length == routeros_static_leases | length
@@ -468,6 +473,25 @@
           - item.destination_port | string | length > 0
         fail_msg: "Invalid routed access rule: {{ item.comment | default('unnamed') }}"
       loop: "{{ routeros_access_rules }}"
+      loop_control:
+        label: "{{ item.comment | default('unnamed') }}"
+      tags:
+        - always
+        - inventory-contract
+
+    - name: Validate WAN port forwards
+      ansible.builtin.assert:
+        that:
+          - item.comment | length > 0
+          - >-
+            item.in_interface_list ==
+            routeros_provider_network.wan_interface_list
+          - item.protocol in ['tcp', 'udp']
+          - item.destination_port is match('^[0-9]+$')
+          - item.to_address | length > 0
+          - item.to_port is match('^[0-9]+$')
+        fail_msg: "Invalid WAN port forward: {{ item.comment | default('unnamed') }}"
+      loop: "{{ routeros_port_forwards }}"
       loop_control:
         label: "{{ item.comment | default('unnamed') }}"
       tags:
@@ -599,6 +623,7 @@
           - >-
             /ip firewall filter print detail without-paging where
             comment~"{{ routeros_provider_network.name }}"
+          - /ip firewall nat print detail without-paging where comment~"infra:"
           - >-
             /ip dhcp-server print detail without-paging where
             name="{{ routeros_management_dhcp.name }}"
@@ -750,6 +775,48 @@
             comment="{{ item.comment }}"];
             /ip firewall filter move $row destination=$drop
       loop: "{{ routeros_access_rules }}"
+      loop_control:
+        label: "{{ item.comment }}"
+      tags:
+        - never
+        - apply
+
+    - name: Reconcile Git-owned WAN port forwards
+      community.routeros.command:
+        commands:
+          - >-
+            :local row [/ip firewall nat find where
+            comment="{{ item.comment }}"];
+            :local endpoint [/ip firewall nat find where chain=dstnat and
+            in-interface-list="{{ item.in_interface_list }}" and
+            protocol={{ item.protocol }} and
+            dst-port={{ item.destination_port }}];
+            :if ([:len $row] > 1 or [:len $endpoint] > 1) do={
+            :error "duplicate WAN port forward" };
+            :if ([:len $endpoint] = 1 and [:len $row] != 1) do={
+            :error "WAN port-forward endpoint is owned by another row" };
+            :if ([:len $row] = 0) do={
+            /ip firewall nat add action=dst-nat chain=dstnat
+            comment="{{ item.comment }}" disabled=no
+            dst-port={{ item.destination_port }}
+            in-interface-list={{ item.in_interface_list }}
+            protocol={{ item.protocol }}
+            to-addresses={{ item.to_address }} to-ports={{ item.to_port }}
+            } else={
+            /ip firewall nat set $row action=dst-nat chain=dstnat disabled=no
+            dst-port={{ item.destination_port }}
+            in-interface-list={{ item.in_interface_list }}
+            protocol={{ item.protocol }}
+            to-addresses={{ item.to_address }} to-ports={{ item.to_port }} };
+            :if ([:len [/ip firewall nat find where chain=dstnat and
+            action=dst-nat and comment="{{ item.comment }}" and disabled=no and
+            dst-port={{ item.destination_port }} and
+            in-interface-list="{{ item.in_interface_list }}" and
+            protocol={{ item.protocol }} and
+            to-addresses={{ item.to_address }} and
+            to-ports={{ item.to_port }}]] != 1) do={
+            :error "WAN port forward failed: {{ item.comment }}" }
+      loop: "{{ routeros_port_forwards }}"
       loop_control:
         label: "{{ item.comment }}"
       tags:

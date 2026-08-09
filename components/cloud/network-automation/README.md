@@ -23,6 +23,8 @@ resets, adoption, or undeclared controller objects.
   internal CoreDNS VIP `10.21.20.129`; and
 - the CCR2004 `wg-admin` interface and its narrowly scoped management
   firewall rules; and
+- the TCP and QUIC Syncthing WAN forwards to the reserved admin workstation;
+  and
 - the VLAN-40 provider gateway, Omada trunk, WAN NAT membership, and scoped
   trusted/provider forwarding rules.
 
