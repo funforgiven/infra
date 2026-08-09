@@ -73,7 +73,7 @@ spec:
           methods: password,token,openid,application_credential
         federation:
           trusted_dashboard:
-            - https://dashboard.cloud.fahrican.com/auth/websso/
+            - https://dashboard.cloud.fahrican.com/api/openstack/skyline/api/v1/websso
         openid:
           remote_id_attribute: HTTP_OIDC_ISS
     pod:

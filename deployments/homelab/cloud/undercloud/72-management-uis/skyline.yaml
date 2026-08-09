@@ -132,6 +132,7 @@ spec:
         default:
           debug: false
         openstack:
+          keystone_url: https://identity.cloud.fahrican.com/v3
           sso_enabled: true
           sso_protocols:
             - openid
