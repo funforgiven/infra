@@ -39,6 +39,10 @@ spec:
       name: keystone-values
       valuesKey: values.yaml
   values:
+    annotations:
+      pod:
+        keystone_api:
+          fahrican.com/oidc-config-generation: "1"
     images:
       tags:
         keystone_api: ghcr.io/rackerlabs/genestack-images/keystone@sha256:82a84b532a906160ae3d5d0ec371de6864a8ddda309e78f98a1b686f13ddfdaf
