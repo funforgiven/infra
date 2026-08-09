@@ -44,14 +44,6 @@ spec:
           Enabled: false
         Telemetry:
           Enabled: false
-        SystemAPIUsers:
-          tofu-identity-controller:
-            KeyData: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUVKekNDQW8rZ0F3SUJBZ0lVZWM4MUI4WEd2WDJSMWw1QzluRTQxQXBKbllrd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RWhNQjhHQTFVRUF3d1lkRzltZFMxcFpHVnVkR2wwZVMxamIyNTBjbTlzYkdWeU1CNFhEVEkyTURndwpPREl6TWpFeE4xb1hEVE0yTURnd05USXpNakV4TjFvd0l6RWhNQjhHQTFVRUF3d1lkRzltZFMxcFpHVnVkR2wwCmVTMWpiMjUwY205c2JHVnlNSUlCb2pBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVk4QU1JSUJpZ0tDQVlFQXkyYVoKZUtwSWlSM1p1SU1iTjBkbHlzYUNlMHphR0hDN0NNaGZzR2VYVC9wOFMvaUJkZE50ZmlKTUQvaSs5UHV6YVhwbgpySmFoK3oxOHJpbi80TmJWbDMwQUIrWnRsZDUxTWF5bHVTay9WeEV6VlJiSWcveDFUK05iWEhqaVdMK1QwZzhPCkVvK0wwWU9zTDhPVlMwUlpmdDU0MmFRTzFOUGRXK0xFbjVmaTlwOGRqWG0xWW1SR1hpUHBQMUs5VzNrTkVkVVIKdWZGWk1uc1U5R0p5SjJKZTN0N2VvVkdEcDN6LzVvV29TcUxjcklpU21zaXFDaUYwbGhyVHJmSVZuNEo0VVVURwpwNk9QcTRWWUhMM3hPR2lERnlXdWRtWFVaclplUUdRQURLVUdoL0RWNGZRRXhTM0tTRkFpclNxdFFjLzlyRnJqCnFpN1R6cW1WNDhKTW11TjVDcmlTZkVXZ0FrcUxhNWlScVpJUGViajZ2S2YrMlNuRWdjYnJPSjdKYUVmZHBUWjcKV1ZkLzlZajF6V1Fkd1o3amttbllWVmxlbmlFUW9YME5XS2ErYlVIWGgxWHFSMVhTYS82azF3aEd4akY0cWp0TwpFalppenhDTGZoOFIyVk03ZUI5ZXh2TDVEUFhLOUo4N0F6WEdVVnpjNFFTTktTblIwaTZRcjVkSFpkMzlBZ01CCkFBR2pVekJSTUIwR0ExVWREZ1FXQkJURHRSVTM0bG5RaGxjdHRTbHRiQU5FU1cwQ2RUQWZCZ05WSFNNRUdEQVcKZ0JURHRSVTM0bG5RaGxjdHRTbHRiQU5FU1cwQ2RUQVBCZ05WSFJNQkFmOEVCVEFEQVFIL01BMEdDU3FHU0liMwpEUUVCQ3dVQUE0SUJnUUJEbEF4TEswZ1FxLzljcEJ2QVVnWi9SWU42VTh0NWR1dHAxdi9BbmsyVG5SN3Y3SDFWCnVQWUVGS1BnQTJST09janRlS3AvTDdYVnJlYjRRdlR6cjRINDlvbzd2REVRRlhGem4xeW41c0QzVm9KSm1Kb1UKWGM1Y1p3VldCcWVwazhXUEFtNnNKV3dZSW9nTXJrZERWM0ZNR0pBSFZleWhkRVFFb0R5WHN1MVVYaC9rU0U3RgpSTk01UmQ5SzRwM0VyakcxdStXdk1nZ3hLZStnUTVIcThvcjYreU5Ncjl0aS9pOXdiRlgyK1FJeEVIeGY4MlNQCnBtcVJVajZkakJrSERINXVwY1lzaEdMK3FPa2l5SFNFOVZNRVJSQno2LzlaclZlL0dYekJzdmlVYkc4M1BzR1UKOWJ4YTVYUkxrNmxvNFZ6bGNyWmxzM3o3QTBGSTRMWHdzRnZZUHdrQitWSkpaalh0cGYvRFJNejE4L2toZTM5bApuMCswNjVkSktyb1hQN1F2NjJLeGxqcHpUbWFvQS9wMUNnVmE3NHFPb3ZJc0wzL2hpdSs0WTV2aC8zMm1RaENPCjVIOHNsRTF0WElVZVlNNnJKNFg1OUdQYmhsSEhmQmlMNS81TFpWQlM2aXlvd0YvSHBxeUxVZmVOd3RETlZibGYKTXJMNVExUyt1VWZJY3FVPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
-            Memberships:
-              - MemberType: Organization
-                AggregateID: "385431068645343545"
-                Roles:
-                  - ORG_OWNER
         FirstInstance:
           Skip: false
           InstanceName: Fahrican
@@ -66,15 +58,6 @@ spec:
                 Address: iam-breakglass@cloud.fahrican.com
                 Verified: true
               PasswordChangeRequired: false
-            Machine:
-              Machine:
-                Username: iam-bootstrap
-                Name: Initial identity bootstrap
-              MachineKey:
-                ExpirationDate: "2031-08-09T00:00:00Z"
-                Type: 1
-              Pat:
-                ExpirationDate: "2031-08-09T00:00:00Z"
       configSecretName: zitadel-secrets
       configSecretKey: config-yaml
       masterkeySecretName: zitadel-secrets

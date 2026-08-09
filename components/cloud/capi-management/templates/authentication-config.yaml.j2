@@ -1,0 +1,34 @@
+apiVersion: apiserver.config.k8s.io/v1
+kind: AuthenticationConfiguration
+anonymous:
+  enabled: true
+  conditions:
+    - path: /livez
+    - path: /readyz
+    - path: /healthz
+jwt:
+  - issuer:
+      url: {{ zitadel_issuer }}
+      audiences:
+        - "{{ zitadel_kubernetes_client_id }}"
+    claimValidationRules:
+      - expression: >-
+          '{{ zitadel_role_claim }}' in claims &&
+          ('infra-admin' in claims['{{ zitadel_role_claim }}'] ||
+          'infra-viewer' in claims['{{ zitadel_role_claim }}'])
+        message: an Infrastructure role is required
+    claimMappings:
+      username:
+        expression: "'zitadel:' + claims.sub"
+      uid:
+        expression: claims.sub
+      groups:
+        expression: >-
+          'infra-admin' in claims['{{ zitadel_role_claim }}']
+          ? ['fahrican:infra-admin']
+          : ['fahrican:infra-viewer']
+    userValidationRules:
+      - expression: "!user.username.startsWith('system:')"
+        message: usernames in the system namespace are reserved
+      - expression: "user.groups.all(group, !group.startsWith('system:'))"
+        message: groups in the system namespace are reserved

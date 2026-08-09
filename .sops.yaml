@@ -13,6 +13,10 @@ creation_rules:
     key_groups:
       - age:
           - *admin_funforgiven
+  - path_regex: ^secrets/zitadel\.yaml$
+    key_groups:
+      - age:
+          - *admin_funforgiven
   - path_regex: ^deployments/homelab/cloud/undercloud/.*\.sops\.yaml$
     encrypted_regex: '^(data|stringData)$'
     key_groups:

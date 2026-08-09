@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - grafana-admin-credentials.sops.yaml
+  - grafana-oidc.sops.yaml
   - kube-prometheus-stack.yaml
   - loki.yaml
   - fluent-bit.yaml

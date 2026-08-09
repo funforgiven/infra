@@ -49,6 +49,30 @@ separate management plane is recoverable and semantically ready.
 Swift/S3-compatible object service waits for dedicated disks; optional
 services are not installed merely to resemble AWS on day one.
 
+## Identity and access
+
+One three-replica ZITADEL service at `https://auth.cloud.fahrican.com` is the
+root identity provider for the management plane. ZITADEL authenticates people;
+each target remains responsible for authorization. The `Infrastructure`
+project defines `infra-admin` and `infra-viewer`, which map to Grafana roles and
+the `fahrican:infra-admin` and `fahrican:infra-viewer` Kubernetes groups.
+OpenStack projects remain Keystone resource boundaries and are not mirrored as
+ZITADEL organizations.
+
+Grafana uses its own confidential OIDC client. The undercloud and CAPI
+management clusters use separate public clients and native Kubernetes
+`AuthenticationConfiguration` claim mappings. Certificate kubeconfigs, the
+Grafana local administrator, and the ZITADEL `iam-breakglass` human remain
+available when OIDC is unavailable. The permanent OpenTofu controller uses a
+scoped ZITADEL machine key; the IAM-owner PAT in `secrets/zitadel.yaml` is
+admin-only offline recovery material and is never deployed.
+
+Keystone federation is intentionally gated on a Keystone image that contains
+`mod_auth_openidc`. The currently pinned upstream OpenStack-Helm image does not
+contain that Apache module, so the ZITADEL client exists but the federation
+protocol is not enabled. Do not add a runtime package installer or side-loaded
+Apache module to bypass this image qualification boundary.
+
 ## Authority and ownership
 
 Git is the reproducible desired-state authority. The unavoidable host layer is
