@@ -3,5 +3,6 @@ kind: Kustomization
 resources:
   - secrets.sops.yaml
   - oidc.sops.yaml
+  - apache-modules.yaml
   - keystone.yaml
   - federation.yaml
