@@ -108,8 +108,14 @@ data:
       openstack federation protocol set --identity-provider "$identity_provider_id" \
         --mapping "$mapping_id" openid
     else
-      openstack federation protocol create --identity-provider "$identity_provider_id" \
-        --mapping "$mapping_id" openid >/dev/null
+      token="$(openstack token issue -f value -c id)"
+      jq -cn --arg mapping_id "$mapping_id" '{protocol: {mapping_id: $mapping_id}}' | \
+        curl --fail --silent --show-error --output /dev/null \
+          --request PUT \
+          --header "Content-Type: application/json" \
+          --header "X-Auth-Token: $token" \
+          --data-binary @- \
+          "${OS_AUTH_URL%/}/OS-FEDERATION/identity_providers/${identity_provider_id}/protocols/openid"
     fi
 
     openstack federation protocol show --identity-provider "$identity_provider_id" openid >/dev/null
