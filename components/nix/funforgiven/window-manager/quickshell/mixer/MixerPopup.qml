@@ -281,26 +281,14 @@ Scope {
                 anchors.margins: Shell.Theme.spacingLarge
                 spacing: Shell.Theme.spacingMedium
 
-                RowLayout {
-                    id: mixerHeader
+                MicrophonePicker {
+                    id: microphonePicker
 
                     Layout.fillWidth: true
-                    spacing: Shell.Theme.spacingLarge
-
-                    Text {
-                        Layout.fillWidth: true
-                        text: "Audio mixer"
-                        color: Shell.Theme.primaryText
-                        font.family: Shell.Theme.sansFont
-                        font.pixelSize: Shell.Theme.titleFontSize
-                        font.weight: Font.DemiBold
-                    }
-
-                    MicrophonePicker {
-                        Layout.preferredWidth: 460
-                        dropdownHost: root
-                        accent: Shell.Theme.voiceAccent
-                    }
+                    Layout.maximumWidth: 460
+                    Layout.alignment: Qt.AlignLeft
+                    dropdownHost: root
+                    accent: Shell.Theme.voiceAccent
                 }
 
                 Rectangle {
@@ -479,7 +467,7 @@ Scope {
                     return root.dropdownX(width);
                 }
                 y: {
-                    void mixerHeader.height;
+                    void microphonePicker.height;
                     void recentErrorsPanel.height;
                     void unroutedPanel.height;
                     return root.dropdownY(height);
