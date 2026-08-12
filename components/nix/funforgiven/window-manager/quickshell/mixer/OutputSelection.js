@@ -60,8 +60,20 @@ function reconcileSelection(outputs, rememberedKey, currentOutput) {
     return selectionAt(outputs, fallbackIndex(outputs, currentOutput), true);
 }
 
+function contentIndexAtGlobalPosition(view, globalPosition) {
+    if (!view || !globalPosition || typeof view.mapFromGlobal !== "function" || typeof view.indexAt !== "function")
+        return -1;
+
+    var viewportPosition = view.mapFromGlobal(globalPosition.x, globalPosition.y);
+    return view.indexAt(
+        viewportPosition.x + Number(view.contentX || 0),
+        viewportPosition.y + Number(view.contentY || 0)
+    );
+}
+
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
+        contentIndexAtGlobalPosition: contentIndexAtGlobalPosition,
         fallbackIndex: fallbackIndex,
         indexForKey: indexForKey,
         initialSelection: initialSelection,

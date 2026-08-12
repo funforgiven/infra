@@ -395,8 +395,8 @@ Rectangle {
 
                             acceptedButtons: Qt.LeftButton
                             gesturePolicy: TapHandler.DragThreshold
-                            onTapped: (eventPoint, button) => {
-                                var index = deviceList.indexAt(eventPoint.position.x + deviceList.contentX, eventPoint.position.y + deviceList.contentY);
+                            onTapped: eventPoint => {
+                                var index = OutputSelection.contentIndexAtGlobalPosition(deviceList, eventPoint.globalPosition);
                                 if (index < 0 || index >= root.outputCount)
                                     return;
                                 dropdownSurface.highlightOutputAt(index, false);

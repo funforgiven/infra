@@ -493,7 +493,7 @@ rg --quiet --fixed-strings 'gesturePolicy: TapHandler.DragThreshold' \
   "$shell_config/mixer/OutputPicker.qml"
 rg --quiet --fixed-strings 'id: outputListTap' \
   "$shell_config/mixer/OutputPicker.qml"
-rg --quiet --fixed-strings 'deviceList.indexAt(eventPoint.position.x + deviceList.contentX, eventPoint.position.y + deviceList.contentY)' \
+rg --quiet --fixed-strings 'OutputSelection.contentIndexAtGlobalPosition(deviceList, eventPoint.globalPosition)' \
   "$shell_config/mixer/OutputPicker.qml"
 ! rg --quiet --fixed-strings 'id: candidateArea' \
   "$shell_config/mixer/OutputPicker.qml"
@@ -508,7 +508,7 @@ rg --quiet --fixed-strings 'Services.AudioService.selectDefaultInput(input.id, i
   "$microphone_picker"
 rg --quiet --fixed-strings 'id: inputListTap' \
   "$microphone_picker"
-rg --quiet --fixed-strings 'inputList.indexAt(eventPoint.position.x + inputList.contentX, eventPoint.position.y + inputList.contentY)' \
+rg --quiet --fixed-strings 'OutputSelection.contentIndexAtGlobalPosition(inputList, eventPoint.globalPosition)' \
   "$microphone_picker"
 rg --quiet --fixed-strings 'Pipewire.preferredDefaultAudioSource = candidate.node;' \
   "$shell_config/services/AudioService.qml"
