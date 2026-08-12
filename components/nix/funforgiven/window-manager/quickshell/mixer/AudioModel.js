@@ -83,6 +83,10 @@ function outputRecord(node) {
     };
 }
 
+function inputRecord(node) {
+    return outputRecord(node);
+}
+
 function hasRealApplicationIdentity(node) {
     var properties = node && node.properties;
     return present(value(properties, "application.id"))
@@ -279,6 +283,43 @@ function isPhysicalSink(node, audioSinkType, definitions, nodes) {
     return present(serial(node)) && stableNameIsUnique(node, nodes);
 }
 
+function isPhysicalSource(node, audioSourceType, nodes) {
+    if (!node) {
+        return false;
+    }
+
+    var properties = node.properties || {};
+    var classifiedAsSource = node.type === audioSourceType
+        || (node.isSink === false && text(value(properties, "media.class")) === "Audio/Source");
+    if (!classifiedAsSource) {
+        return false;
+    }
+    var name = text(node.name);
+    if (text(value(properties, "media.class")) !== "Audio/Source"
+            || !present(name)
+            || isFinite(Number(name))
+            || canonicalGlobalId(value(properties, "device.id")) === null
+            || propertyIsTrue(value(properties, "node.virtual"))
+            || propertyIsTrue(value(properties, "wireplumber.is-virtual"))
+            || propertyIsTrue(value(properties, "wireplumber.is-fallback"))
+            || propertyIsTrue(value(properties, "bluez5.loopback"))
+            || propertyIsTrue(value(properties, "stream.monitor"))
+            || propertyIsTrue(value(properties, "node.monitor"))) {
+        return false;
+    }
+    if (owns(properties, "node.link-group")
+            || owns(properties, "filter.smart")
+            || owns(properties, "filter.smart.name")
+            || owns(properties, "filter.smart.target")
+            || text(value(properties, "factory.name")) === "support.null-audio-sink") {
+        return false;
+    }
+    if (/(?:^|[._-])monitor(?:$|[._-])/i.test(name)) {
+        return false;
+    }
+    return present(serial(node)) && stableNameIsUnique(node, nodes);
+}
+
 function adjacency(links, channelNodes) {
     var result = Object.create(null);
 
@@ -463,6 +504,8 @@ function snapshotSignature(snapshot) {
             ];
         }),
         physicalOutputs: (snapshot.physicalOutputs || []).map(outputProjection),
+        physicalInputs: (snapshot.physicalInputs || []).map(outputProjection),
+        defaultInput: outputProjection(snapshot.defaultInput),
         unroutedGroups: (snapshot.unroutedGroups || []).map(groupProjection),
         playbackStreams: (snapshot.playbackStreams || []).map(streamProjection),
         observedDefaultChannelId: snapshot.observedDefaultChannelId || null,
@@ -638,7 +681,9 @@ if (typeof module !== "undefined" && module.exports) {
         channelIdsForStream: channelIdsForStream,
         groupStreams: groupStreams,
         hasRealApplicationIdentity: hasRealApplicationIdentity,
+        inputRecord: inputRecord,
         isPhysicalSink: isPhysicalSink,
+        isPhysicalSource: isPhysicalSource,
         isSelectableOutput: isSelectableOutput,
         outputAvailable: outputAvailable,
         outputRecord: outputRecord,

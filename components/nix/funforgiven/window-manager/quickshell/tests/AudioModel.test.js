@@ -5,6 +5,7 @@ const AudioModel = require("../mixer/AudioModel.js");
 
 const AudioOutStream = 21;
 const AudioSink = 17;
+const AudioSource = 18;
 
 const definitions = [
     channel("system", "System", true),
@@ -70,6 +71,22 @@ function physical(id, name) {
             "object.serial": String(id + 2000),
             "device.id": "42",
             "media.class": "Audio/Sink"
+        }
+    };
+}
+
+function physicalInput(id, name) {
+    return {
+        id,
+        name,
+        description: name,
+        type: AudioSource,
+        ready: true,
+        routeAvailable: true,
+        properties: {
+            "object.serial": String(id + 3000),
+            "device.id": "43",
+            "media.class": "Audio/Source"
         }
     };
 }
@@ -278,6 +295,42 @@ test("hardware candidates are device-backed and reject virtual/marked/filter nod
         AudioModel.isPhysicalSink(valid, AudioSink, definitions, [valid, collidingPath]),
         false
     );
+});
+
+test("microphone candidates include physical sources and reject monitor sources", () => {
+    const valid = physicalInput(30, "alsa_input.valid");
+    const qflagsSource = {
+        ...physicalInput(33, "alsa_input.qflags"),
+        type: { flags: ["Audio", "Source"] },
+        isSink: false
+    };
+    const monitor = {
+        ...physicalInput(31, "alsa_output.valid.monitor"),
+        properties: {
+            ...physicalInput(31, "alsa_output.valid.monitor").properties,
+            "node.monitor": true
+        }
+    };
+    const virtual = {
+        ...physicalInput(32, "virtual_microphone"),
+        properties: {
+            ...physicalInput(32, "virtual_microphone").properties,
+            "node.virtual": true
+        }
+    };
+
+    assert.equal(AudioModel.isPhysicalSource(valid, AudioSource, [valid, monitor, virtual]), true);
+    assert.equal(AudioModel.isPhysicalSource(qflagsSource, AudioSource, [qflagsSource]), true);
+    assert.equal(AudioModel.isPhysicalSource(monitor, AudioSource, [valid, monitor, virtual]), false);
+    assert.equal(AudioModel.isPhysicalSource(virtual, AudioSource, [valid, monitor, virtual]), false);
+    assert.deepEqual(AudioModel.inputRecord(valid), {
+        node: null,
+        id: 30,
+        serial: "3030",
+        name: "alsa_input.valid",
+        label: "alsa_input.valid",
+        available: true
+    });
 });
 
 test("cycle proof includes the loopback's implicit sink-to-bridge edge", () => {

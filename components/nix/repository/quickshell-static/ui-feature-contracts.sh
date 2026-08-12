@@ -482,6 +482,27 @@ rg --quiet --fixed-strings 'OutputSelection.reconcileSelection(root.outputs, hig
   "$shell_config/mixer/OutputPicker.qml"
 rg --quiet --fixed-strings 'Accessible.role: Accessible.StaticText' \
   "$shell_config/mixer/OutputPicker.qml"
+rg --quiet --fixed-strings 'HoverHandler {' \
+  "$shell_config/mixer/OutputPicker.qml"
+rg --quiet --fixed-strings 'TapHandler {' \
+  "$shell_config/mixer/OutputPicker.qml"
+rg --quiet --fixed-strings 'gesturePolicy: TapHandler.DragThreshold' \
+  "$shell_config/mixer/OutputPicker.qml"
+! rg --quiet --fixed-strings 'id: candidateArea' \
+  "$shell_config/mixer/OutputPicker.qml"
+
+microphone_picker="$shell_config/mixer/MicrophonePicker.qml"
+test -f "$microphone_picker"
+rg --quiet --fixed-strings 'MicrophonePicker 1.0 MicrophonePicker.qml' \
+  "$shell_config/mixer/qmldir"
+rg --quiet --fixed-strings 'readonly property var inputs: Services.AudioService.physicalInputs' \
+  "$microphone_picker"
+rg --quiet --fixed-strings 'Services.AudioService.selectDefaultInput(input.id, input.serial)' \
+  "$microphone_picker"
+rg --quiet --fixed-strings 'Pipewire.preferredDefaultAudioSource = candidate.node;' \
+  "$shell_config/services/AudioService.qml"
+rg --quiet --fixed-strings 'AudioModel.isPhysicalSource(node, PwNodeType.AudioSource, nodes)' \
+  "$shell_config/services/AudioService.qml"
 
 mixer_popup="$shell_config/mixer/MixerPopup.qml"
 rg --quiet --fixed-strings 'PanelWindow {' "$mixer_popup"
