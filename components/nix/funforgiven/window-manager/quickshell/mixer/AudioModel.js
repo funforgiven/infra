@@ -95,11 +95,12 @@ function hasRealApplicationIdentity(node) {
         || present(value(properties, "client.name"));
 }
 
-function isPlaybackStream(node, playbackType) {
+function isApplicationAudioStream(node, streamType, mediaClass) {
     var properties = node && node.properties;
-    var isOutputAudioStream = text(value(properties, "media.class")) === "Stream/Output/Audio";
-    var classifiedAsStream = node && (node.isStream === true || node.type === playbackType);
-    if (!node || !classifiedAsStream || !isOutputAudioStream || !hasRealApplicationIdentity(node)) {
+    var classifiedAsStream = node && (node.isStream === true || node.type === streamType);
+    if (!node || !classifiedAsStream
+            || text(value(properties, "media.class")) !== mediaClass
+            || !hasRealApplicationIdentity(node)) {
         return false;
     }
 
@@ -115,6 +116,14 @@ function isPlaybackStream(node, playbackType) {
         return false;
     }
     return true;
+}
+
+function isPlaybackStream(node, playbackType) {
+    return isApplicationAudioStream(node, playbackType, "Stream/Output/Audio");
+}
+
+function isCaptureStream(node, captureType) {
+    return isApplicationAudioStream(node, captureType, "Stream/Input/Audio");
 }
 
 function persistentIdentity(node) {
@@ -434,6 +443,69 @@ function groupStreams(streams, totalCounts) {
     });
 }
 
+function inputIdsForCaptureStream(stream, inputs, links) {
+    var matches = [];
+    inputs = Array.isArray(inputs) ? inputs : [];
+    links = usableLinks(Array.isArray(links) ? links : []);
+
+    inputs.forEach(function (input) {
+        var connected = links.some(function (link) {
+            return (sameId(link.sourceId, input.id) && sameId(link.targetId, stream.id))
+                || (sameId(link.targetId, input.id) && sameId(link.sourceId, stream.id));
+        });
+        if (connected && matches.indexOf(String(input.id)) === -1)
+            matches.push(String(input.id));
+    });
+    return matches.sort(compareId);
+}
+
+function buildCaptureSnapshot(nodes, rawLinks, captureType, inputs, defaultInputId,
+                              resolvePresentation) {
+    nodes = Array.isArray(nodes) ? nodes : [];
+    inputs = Array.isArray(inputs) ? inputs : [];
+    var links = usableLinks(Array.isArray(rawLinks) ? rawLinks : []);
+    var captureStreams = nodes.filter(function (node) {
+        return isCaptureStream(node, captureType);
+    }).map(function (node) {
+        var presentation = resolvePresentation ? resolvePresentation(node.ref || node) : null;
+        var memberships = inputIdsForCaptureStream(node, inputs, links);
+        var identity = presentation && text(presentation.canonicalId)
+            ? text(presentation.canonicalId)
+            : persistentIdentity(node);
+        return {
+            node: node.ref || null,
+            id: node.id,
+            serial: serial(node),
+            persistentKey: persistentIdentity(node),
+            canonicalId: identity,
+            displayName: streamLabel(node, presentation),
+            childLabel: childLabel(node),
+            iconPath: presentation && presentation.iconPath ? presentation.iconPath : "",
+            memberships: memberships,
+            channelId: null,
+            inputId: memberships.length === 1 ? memberships[0] : null,
+            routingState: memberships.length === 0 ? "unrouted" :
+                (memberships.length > 1 ? "ambiguous" : "routed")
+        };
+    }).sort(function (left, right) {
+        return compareText(left.persistentKey, right.persistentKey)
+            || compareId(left.serial, right.serial)
+            || compareId(left.id, right.id);
+    });
+
+    var totalStreamCounts = Object.create(null);
+    captureStreams.forEach(function (stream) {
+        totalStreamCounts[stream.persistentKey] = (totalStreamCounts[stream.persistentKey] || 0) + 1;
+    });
+
+    return {
+        captureStreams: captureStreams,
+        captureGroups: groupStreams(captureStreams.filter(function (stream) {
+            return sameId(stream.inputId, defaultInputId);
+        }), totalStreamCounts)
+    };
+}
+
 function streamProjection(stream) {
     return [
         String(stream.id),
@@ -445,6 +517,7 @@ function streamProjection(stream) {
         String(stream.iconPath || ""),
         Array.isArray(stream.memberships) ? stream.memberships.map(String) : [],
         stream.channelId === null || stream.channelId === undefined ? null : String(stream.channelId),
+        stream.inputId === null || stream.inputId === undefined ? null : String(stream.inputId),
         text(stream.routingState)
     ];
 }
@@ -506,6 +579,8 @@ function snapshotSignature(snapshot) {
         physicalOutputs: (snapshot.physicalOutputs || []).map(outputProjection),
         physicalInputs: (snapshot.physicalInputs || []).map(outputProjection),
         defaultInput: outputProjection(snapshot.defaultInput),
+        captureGroups: (snapshot.captureGroups || []).map(groupProjection),
+        captureStreams: (snapshot.captureStreams || []).map(streamProjection),
         unroutedGroups: (snapshot.unroutedGroups || []).map(groupProjection),
         playbackStreams: (snapshot.playbackStreams || []).map(streamProjection),
         observedDefaultChannelId: snapshot.observedDefaultChannelId || null,
@@ -676,12 +751,15 @@ function buildSnapshot(definitions, nodes, rawLinks, playbackType, audioSinkType
 
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
+        buildCaptureSnapshot: buildCaptureSnapshot,
         buildSnapshot: buildSnapshot,
         canonicalGlobalId: canonicalGlobalId,
         channelIdsForStream: channelIdsForStream,
         groupStreams: groupStreams,
         hasRealApplicationIdentity: hasRealApplicationIdentity,
         inputRecord: inputRecord,
+        inputIdsForCaptureStream: inputIdsForCaptureStream,
+        isCaptureStream: isCaptureStream,
         isPhysicalSink: isPhysicalSink,
         isPhysicalSource: isPhysicalSource,
         isSelectableOutput: isSelectableOutput,

@@ -2,6 +2,8 @@ module FunforgivenShell.Mixer
 ChannelCard 1.0 ChannelCard.qml
 ChannelGain 1.0 ChannelGain.qml
 DragSession 1.0 DragSession.qml
+InputCard 1.0 InputCard.qml
+InputGain 1.0 InputGain.qml
 MixerPopup 1.0 MixerPopup.qml
 MicrophonePicker 1.0 MicrophonePicker.qml
 OutputPicker 1.0 OutputPicker.qml

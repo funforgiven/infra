@@ -20,7 +20,7 @@ Scope {
     property var unroutedGroupKeys: []
     readonly property bool visible: mixerWindow.visible
     readonly property int targetWidth: 1480
-    readonly property int targetHeight: 900
+    readonly property int targetHeight: 800
     readonly property int audioRevision: Services.AudioService.revision
 
     function channelForDefinition(definition, revision) {
@@ -278,16 +278,6 @@ Scope {
                 anchors.margins: Shell.Theme.spacingLarge
                 spacing: Shell.Theme.spacingMedium
 
-                MicrophonePicker {
-                    id: microphonePicker
-
-                    Layout.fillWidth: true
-                    Layout.maximumWidth: 460
-                    Layout.alignment: Qt.AlignLeft
-                    dropdownHost: root
-                    accent: Shell.Theme.voiceAccent
-                }
-
                 Rectangle {
                     id: recentErrorsPanel
 
@@ -415,8 +405,18 @@ Scope {
                         RowLayout {
                             id: channelRow
 
+                            readonly property int cardCount: Shell.ShellConfig.audioChannels.length + 1
+                            readonly property real cardWidth: Math.max(270, (channelViewport.width - spacing * (cardCount - 1)) / cardCount)
+
                             height: parent.height
                             spacing: Shell.Theme.spacingMedium
+
+                            InputCard {
+                                Layout.preferredWidth: channelRow.cardWidth
+                                Layout.fillHeight: true
+                                accent: Shell.Theme.voiceAccent
+                                dropdownHost: root
+                            }
 
                             Repeater {
                                 model: Shell.ShellConfig.audioChannels
@@ -424,7 +424,7 @@ Scope {
                                 delegate: ChannelCard {
                                     required property var modelData
 
-                                    Layout.preferredWidth: Math.max(300, (channelViewport.width - Shell.Theme.spacingMedium * 3) / 4)
+                                    Layout.preferredWidth: channelRow.cardWidth
                                     Layout.fillHeight: true
                                     channel: root.channelForDefinition(modelData, root.audioRevision)
                                     accent: root.accentFor(modelData.id)
@@ -464,7 +464,6 @@ Scope {
                     return root.dropdownX(width);
                 }
                 y: {
-                    void microphonePicker.height;
                     void recentErrorsPanel.height;
                     void unroutedPanel.height;
                     return root.dropdownY(height);

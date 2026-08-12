@@ -15,6 +15,7 @@ ColumnLayout {
     required property color accent
     property string sourceChannelId: ""
     property var dragSession: null
+    property bool draggable: true
     property var streamKeys: []
     spacing: Shell.Theme.spacingSmall
 
@@ -71,7 +72,7 @@ ColumnLayout {
             readonly property color statusColor: error ? Shell.Theme.errorText : (pending ? Shell.Theme.warningText : (stream.routingState !== "routed" ? Shell.Theme.errorText : Shell.Theme.secondaryText))
 
             function moveAdjacent(direction) {
-                if (childRow.pending !== null)
+                if (!root.draggable || childRow.pending !== null)
                     return false;
                 var destination = DragModel.adjacentChannelId(Shell.ShellConfig.audioChannels, root.sourceChannelId, direction, function (channelId) {
                     var channel = Services.AudioService.channel(channelId);
@@ -119,11 +120,12 @@ ColumnLayout {
 
                         Layout.preferredWidth: Shell.Theme.controlCompactSize
                         Layout.preferredHeight: Shell.Theme.controlCompactSize
+                        visible: root.draggable
                         radius: Shell.Theme.radiusSmall
                         color: childDrag.active ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, Shell.Theme.pressedOverlayOpacity) : (childGripHover.hovered ? Shell.Theme.hoverSurface : "transparent")
                         opacity: childRow.pending === null ? 1 : Shell.Theme.disabledOpacity
                         activeFocusOnTab: enabled
-                        enabled: childRow.pending === null
+                        enabled: root.draggable && childRow.pending === null
 
                         Accessible.name: "Audio channel for " + childRow.stream.childLabel
                         Accessible.description: "Drag to another channel, or use Left and Right arrow keys"
@@ -171,7 +173,7 @@ ColumnLayout {
                         DragHandler {
                             id: childDrag
 
-                            enabled: root.dragSession !== null && childRow.pending === null && (!root.dragSession.active || root.dragSession.sourceKey === childRow.activeDragKey)
+                            enabled: root.draggable && root.dragSession !== null && childRow.pending === null && (!root.dragSession.active || root.dragSession.sourceKey === childRow.activeDragKey)
                             target: null
                             margin: Shell.Theme.spacingXSmall
                             dragThreshold: 4

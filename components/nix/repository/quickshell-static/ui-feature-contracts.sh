@@ -429,8 +429,15 @@ rg --quiet --fixed-strings 'snapshotSignature: snapshotSignature' \
   "$shell_config/mixer/AudioModel.js"
 rg --quiet --fixed-strings 'group.totalCount = totalCounts' \
   "$shell_config/mixer/AudioModel.js"
+rg --quiet --fixed-strings 'function buildCaptureSnapshot(' \
+  "$shell_config/mixer/AudioModel.js"
+rg --quiet --fixed-strings 'function isCaptureStream(' \
+  "$shell_config/mixer/AudioModel.js"
 rg --quiet --fixed-strings 'visible: root.group.totalCount > 1 || root.unrouted' \
   "$shell_config/mixer/StreamCard.qml"
+rg --quiet --fixed-strings 'property bool draggable: true' \
+  "$shell_config/mixer/StreamCard.qml" \
+  "$shell_config/mixer/StreamChildren.qml"
 rg --quiet --fixed-strings 'Services.AudioActions.movePayload(payload, root.channel.id)' \
   "$shell_config/mixer/ChannelCard.qml"
 rg --quiet --fixed-strings 'playbackStreams: playbackStreams' \
@@ -518,10 +525,28 @@ rg --quiet --fixed-strings 'Pipewire.preferredDefaultAudioSource = candidate.nod
   "$shell_config/services/AudioService.qml"
 rg --quiet --fixed-strings 'AudioModel.isPhysicalSource(node, PwNodeType.AudioSource, nodes)' \
   "$shell_config/services/AudioService.qml"
+rg --quiet --fixed-strings 'AudioModel.buildCaptureSnapshot(nodes, links, PwNodeType.AudioInStream' \
+  "$shell_config/services/AudioService.qml"
+
+input_card="$shell_config/mixer/InputCard.qml"
+test -f "$input_card"
+test -f "$shell_config/mixer/InputGain.qml"
+rg --quiet --fixed-strings 'InputCard 1.0 InputCard.qml' \
+  "$shell_config/mixer/qmldir"
+rg --quiet --fixed-strings 'InputGain 1.0 InputGain.qml' \
+  "$shell_config/mixer/qmldir"
+rg --quiet --fixed-strings 'readonly property var groups: Services.AudioService.captureGroups' \
+  "$input_card"
+rg --quiet --fixed-strings 'MicrophonePicker {' "$input_card"
+rg --quiet --fixed-strings 'draggable: false' "$input_card"
+rg --quiet --fixed-strings 'Services.AudioActions.setInputMuted(' "$input_card"
+rg --quiet --fixed-strings 'Services.AudioActions.setInputVolume(' \
+  "$shell_config/mixer/InputGain.qml"
 
 mixer_popup="$shell_config/mixer/MixerPopup.qml"
 rg --quiet --fixed-strings 'PanelWindow {' "$mixer_popup"
-rg --quiet --fixed-strings 'Layout.alignment: Qt.AlignLeft' "$mixer_popup"
+rg --quiet --fixed-strings 'InputCard {' "$mixer_popup"
+! rg --quiet --fixed-strings 'id: microphonePicker' "$mixer_popup"
 ! rg --quiet --fixed-strings 'text: "Audio mixer"' "$mixer_popup"
 rg --quiet --fixed-strings 'exclusionMode: ExclusionMode.Ignore' "$mixer_popup"
 rg --quiet --fixed-strings 'WlrLayershell.layer: WlrLayer.Overlay' "$mixer_popup"
