@@ -19,6 +19,7 @@ _: {
           dpkg,
           autoPatchelfHook,
           addDriverRunpath,
+          asar,
           makeWrapper,
           alsa-lib,
           at-spi2-core,
@@ -99,6 +100,7 @@ _: {
 
           nativeBuildInputs = [
             autoPatchelfHook
+            asar
             dpkg
             makeWrapper
           ];
@@ -117,6 +119,13 @@ _: {
             mkdir -p "$out/bin" "$out/opt/Hayase" "$out/share"
             cp -r opt/Hayase/* "$out/opt/Hayase/"
             cp -r usr/share/applications usr/share/icons "$out/share/"
+
+            asar extract "$out/opt/Hayase/resources/app.asar" hayase-app
+            substituteInPlace hayase-app/out/main/index.js \
+              --replace-fail \
+                'require("./bytecode-loader.cjs");' \
+                'const { app } = require("electron"); app.on("browser-window-created", (_event, window) => { if (window.getTitle() === "Hayase") window.show(); }); require("./bytecode-loader.cjs");'
+            asar pack hayase-app "$out/opt/Hayase/resources/app.asar"
 
             substituteInPlace "$out/share/applications/hayase.desktop" \
               --replace-fail "/opt/Hayase/hayase" "$out/bin/hayase"
