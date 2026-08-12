@@ -239,16 +239,13 @@ Scope {
         WlrLayershell.keyboardFocus: root.opened ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
         mask: Region {
-            item: belowBarInput
+            item: outsideClickArea
         }
 
         Item {
-            id: belowBarInput
+            id: outsideClickArea
 
-            x: 0
-            y: Math.min(mixerWindow.height, root.topInset)
-            width: mixerWindow.width
-            height: Math.max(0, mixerWindow.height - y)
+            anchors.fill: parent
 
             MouseArea {
                 anchors.fill: parent
