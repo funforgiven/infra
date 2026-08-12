@@ -471,6 +471,23 @@ QtObject {
         return true;
     }
 
+    function setInputVolume(inputId, inputSerial, requestedVolume) {
+        var input = AudioService.input(inputId, inputSerial);
+        var volume = Math.max(0, Math.min(1, Number(requestedVolume)));
+        if (!input || !input.node || !input.node.audio || !isFinite(volume))
+            return false;
+        input.node.audio.volume = volume;
+        return true;
+    }
+
+    function setInputMuted(inputId, inputSerial, muted) {
+        var input = AudioService.input(inputId, inputSerial);
+        if (!input || !input.node || !input.node.audio)
+            return false;
+        input.node.audio.muted = muted === true;
+        return true;
+    }
+
     property Connections _audioServiceConnections: Connections {
         target: AudioService
 

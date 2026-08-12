@@ -23,11 +23,17 @@ rg --multiline --multiline-dotall --quiet \
   "$audio_actions"
 rg --quiet --fixed-strings 'AudioRouting.resolveSelection(normalized, AudioService.playbackStreams)' "$audio_actions"
 rg --quiet --fixed-strings '_preflightError(operation, message)' "$audio_actions"
+rg --quiet --fixed-strings 'function setInputVolume(inputId, inputSerial, requestedVolume)' "$audio_actions"
+rg --quiet --fixed-strings 'input.node.audio.volume = volume;' "$audio_actions"
+rg --quiet --fixed-strings 'function setInputMuted(inputId, inputSerial, muted)' "$audio_actions"
+rg --quiet --fixed-strings 'input.node.audio.muted = muted === true;' "$audio_actions"
 
 rg --quiet --fixed-strings 'isStream: node.isStream' "$audio_service"
 rg --quiet --fixed-strings 'var signature = AudioModel.snapshotSignature(snapshot);' "$audio_service"
 rg --quiet --fixed-strings 'interval: root.graphSettleMs' "$audio_service"
 rg --quiet --fixed-strings '_resolvePresentation, Pipewire.ready);' "$audio_service"
+rg --quiet --fixed-strings 'property var captureGroups: []' "$audio_service"
+rg --quiet --fixed-strings 'property var captureStreams: []' "$audio_service"
 rg --quiet --fixed-strings 'return AudioModel.isSelectableOutput(output, outputId, outputSerial, channelId);' "$audio_service"
 
 rg --quiet --fixed-strings 'process.command = root._launchCommand(entry);' "$app_service"

@@ -14,6 +14,7 @@ Rectangle {
     required property color accent
     property string sourceChannelId: ""
     property var dragSession: null
+    property bool draggable: true
     property bool unrouted: false
     property bool dragCanceled: false
     property int activeDragToken: 0
@@ -21,10 +22,10 @@ Rectangle {
     readonly property string dragKey: "group:" + String(group.key)
     readonly property bool dragging: dragSession !== null && dragSession.active && activeDragToken > 0 && dragSession.currentToken === activeDragToken
     readonly property var dragPayload: DragModel.groupPayload(root.group, root.sourceChannelId)
-    readonly property int pendingCount: group.streams.filter(function (stream) {
+    readonly property int pendingCount: !draggable ? 0 : group.streams.filter(function (stream) {
         return Services.AudioActions.pendingStreams[String(stream.id) + ":" + String(stream.serial)];
     }).length
-    readonly property var errors: group.streams.map(function (stream) {
+    readonly property var errors: !draggable ? [] : group.streams.map(function (stream) {
         return Services.AudioActions.streamErrors[String(stream.id) + ":" + String(stream.serial)] || "";
     }).filter(function (message) {
         return message !== "";
@@ -41,7 +42,7 @@ Rectangle {
     readonly property color statusColor: errors.length > 0 ? Shell.Theme.errorText : (pendingCount > 0 || unrouted ? Shell.Theme.warningText : Shell.Theme.secondaryText)
 
     function moveAdjacent(direction) {
-        if (root.pendingCount > 0)
+        if (!root.draggable || root.pendingCount > 0)
             return false;
         var destination = DragModel.adjacentChannelId(Shell.ShellConfig.audioChannels, root.sourceChannelId, direction, function (channelId) {
             var channel = Services.AudioService.channel(channelId);
@@ -128,11 +129,12 @@ Rectangle {
 
                 Layout.preferredWidth: Shell.Theme.controlCompactSize
                 Layout.preferredHeight: Shell.Theme.controlCompactSize
+                visible: root.draggable
                 radius: Shell.Theme.radiusSmall
                 color: groupDrag.active ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, Shell.Theme.pressedOverlayOpacity) : (groupGripHover.hovered ? Shell.Theme.hoverSurface : "transparent")
                 opacity: root.pendingCount === 0 ? 1 : Shell.Theme.disabledOpacity
                 activeFocusOnTab: enabled
-                enabled: root.pendingCount === 0
+                enabled: root.draggable && root.pendingCount === 0
 
                 Accessible.name: "Audio channel for " + root.group.displayName
                 Accessible.description: "Drag to another channel, or use Left and Right arrow keys"
@@ -180,7 +182,7 @@ Rectangle {
                 DragHandler {
                     id: groupDrag
 
-                    enabled: root.dragSession !== null && root.pendingCount === 0 && (!root.dragSession.active || root.dragSession.sourceKey === root.activeDragKey)
+                    enabled: root.draggable && root.dragSession !== null && root.pendingCount === 0 && (!root.dragSession.active || root.dragSession.sourceKey === root.activeDragKey)
                     target: null
                     margin: Shell.Theme.spacingXSmall
                     dragThreshold: 4
@@ -226,6 +228,7 @@ Rectangle {
             accent: root.accent
             sourceChannelId: root.sourceChannelId
             dragSession: root.dragSession
+            draggable: root.draggable
         }
     }
 }

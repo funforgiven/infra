@@ -15,6 +15,8 @@ QtObject {
     property var physicalOutputs: []
     property var physicalInputs: []
     property var defaultInput: null
+    property var captureGroups: []
+    property var captureStreams: []
     property var unroutedGroups: []
     property var playbackStreams: []
     property string observedDefaultChannelId: ""
@@ -100,6 +102,9 @@ QtObject {
                 break;
             }
         }
+        var captureSnapshot = AudioModel.buildCaptureSnapshot(nodes, links, PwNodeType.AudioInStream, snapshot.physicalInputs, defaultSourceId, _resolvePresentation);
+        snapshot.captureGroups = captureSnapshot.captureGroups;
+        snapshot.captureStreams = captureSnapshot.captureStreams;
         var signature = AudioModel.snapshotSignature(snapshot);
         if (signature === _snapshotSignature)
             return;
@@ -109,6 +114,8 @@ QtObject {
         physicalOutputs = snapshot.physicalOutputs;
         physicalInputs = snapshot.physicalInputs;
         defaultInput = snapshot.defaultInput;
+        captureGroups = snapshot.captureGroups;
+        captureStreams = snapshot.captureStreams;
         unroutedGroups = snapshot.unroutedGroups;
         playbackStreams = snapshot.playbackStreams;
         observedDefaultChannelId = snapshot.observedDefaultChannelId || "";

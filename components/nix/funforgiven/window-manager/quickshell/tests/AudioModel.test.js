@@ -4,6 +4,7 @@ const test = require("node:test");
 const AudioModel = require("../mixer/AudioModel.js");
 
 const AudioOutStream = 21;
+const AudioInStream = 22;
 const AudioSink = 17;
 const AudioSource = 18;
 
@@ -55,6 +56,18 @@ function application(id, serial, applicationId, mediaName) {
             "application.id": applicationId,
             "application.name": applicationId,
             "media.name": mediaName
+        }
+    };
+}
+
+function captureApplication(id, serial, applicationId, mediaName) {
+    const stream = application(id, serial, applicationId, mediaName);
+    return {
+        ...stream,
+        type: AudioInStream,
+        properties: {
+            ...stream.properties,
+            "media.class": "Stream/Input/Audio"
         }
     };
 }
@@ -133,6 +146,71 @@ test("strictly includes playback streams and excludes marked/internal lookalikes
     assert.equal(AudioModel.isPlaybackStream(bridge, AudioOutStream), false);
     assert.equal(AudioModel.isPlaybackStream(identityless, AudioOutStream), false);
     assert.equal(AudioModel.isPlaybackStream(monitor, AudioOutStream), false);
+});
+
+test("strictly includes application capture streams and excludes playback and monitor nodes", () => {
+    const valid = captureApplication(1, 100, "org.example.Recorder", "Voice recording");
+    const playback = application(2, 101, "org.example.Player", "Playback");
+    const identityless = {
+        ...valid,
+        id: 3,
+        properties: {
+            "object.serial": "103",
+            "media.class": "Stream/Input/Audio",
+            "media.name": "Filter endpoint"
+        }
+    };
+    const monitor = {
+        ...valid,
+        id: 4,
+        name: "alsa_input.monitor"
+    };
+
+    assert.equal(AudioModel.isCaptureStream(valid, AudioInStream), true);
+    assert.equal(AudioModel.isCaptureStream(playback, AudioInStream), false);
+    assert.equal(AudioModel.isCaptureStream(identityless, AudioInStream), false);
+    assert.equal(AudioModel.isCaptureStream(monitor, AudioInStream), false);
+});
+
+test("capture groups follow the selected physical microphone and retain cross-input stream identity", () => {
+    const deskMic = physicalInput(30, "alsa_input.desk");
+    const headsetMic = physicalInput(31, "alsa_input.headset");
+    const first = captureApplication(80, 8000, "org.example.Browser", "Meeting tab");
+    const second = captureApplication(81, 8001, "org.example.Browser", "Recorder tab");
+    const inputs = [deskMic, headsetMic].map(AudioModel.inputRecord);
+    const links = [
+        { sourceId: deskMic.id, targetId: first.id, usable: true },
+        { sourceId: second.id, targetId: headsetMic.id, usable: true }
+    ];
+    const presentation = () => ({ canonicalId: "browser", displayName: "Browser", iconPath: "browser-icon" });
+
+    const deskSnapshot = AudioModel.buildCaptureSnapshot(
+        [deskMic, headsetMic, first, second],
+        links,
+        AudioInStream,
+        inputs,
+        deskMic.id,
+        presentation
+    );
+    const headsetSnapshot = AudioModel.buildCaptureSnapshot(
+        [deskMic, headsetMic, first, second],
+        links,
+        AudioInStream,
+        inputs,
+        headsetMic.id,
+        presentation
+    );
+
+    assert.equal(deskSnapshot.captureStreams.length, 2);
+    assert.equal(deskSnapshot.captureGroups.length, 1);
+    assert.equal(deskSnapshot.captureGroups[0].count, 1);
+    assert.equal(deskSnapshot.captureGroups[0].totalCount, 2);
+    assert.equal(deskSnapshot.captureGroups[0].streams[0].childLabel, "Meeting tab");
+    assert.equal(headsetSnapshot.captureGroups[0].streams[0].childLabel, "Recorder tab");
+    assert.notEqual(
+        AudioModel.snapshotSignature(deskSnapshot),
+        AudioModel.snapshotSignature(headsetSnapshot)
+    );
 });
 
 test("recognizes a live Quickshell QFlags ALSA playback node via its stable stream flag", () => {
