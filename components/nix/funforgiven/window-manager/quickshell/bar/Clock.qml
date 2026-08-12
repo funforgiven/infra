@@ -12,7 +12,7 @@ Item {
     SystemClock {
         id: clock
 
-        precision: SystemClock.Minutes
+        precision: SystemClock.Seconds
     }
 
     Text {
@@ -20,7 +20,7 @@ Item {
 
         anchors.centerIn: parent
         color: Shell.Theme.primaryText
-        text: Qt.formatDateTime(clock.date, "ddd d MMM · HH:mm")
+        text: Qt.formatDateTime(clock.date, "ddd d MMM · HH:mm:ss")
         font.family: Shell.Theme.sansFont
         font.pixelSize: Shell.Theme.labelFontSize
         font.weight: Font.DemiBold
@@ -36,6 +36,6 @@ Item {
 
     Components.Tooltip {
         visible: clockPointer.containsMouse
-        text: Qt.formatDateTime(clock.date, "dddd, d MMMM yyyy · HH:mm")
+        text: Qt.formatDateTime(clock.date, "dddd, d MMMM yyyy · HH:mm:ss")
     }
 }
