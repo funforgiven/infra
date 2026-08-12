@@ -493,6 +493,8 @@ rg --quiet --fixed-strings 'gesturePolicy: TapHandler.DragThreshold' \
   "$shell_config/mixer/OutputPicker.qml"
 rg --quiet --fixed-strings 'id: outputListTap' \
   "$shell_config/mixer/OutputPicker.qml"
+rg --quiet --fixed-strings 'deviceList.cancelFlick();' \
+  "$shell_config/mixer/OutputPicker.qml"
 rg --quiet --fixed-strings 'OutputSelection.contentIndexAtGlobalPosition(deviceList, eventPoint.globalPosition)' \
   "$shell_config/mixer/OutputPicker.qml"
 ! rg --quiet --fixed-strings 'id: candidateArea' \
@@ -507,6 +509,8 @@ rg --quiet --fixed-strings 'readonly property var inputs: Services.AudioService.
 rg --quiet --fixed-strings 'Services.AudioService.selectDefaultInput(input.id, input.serial)' \
   "$microphone_picker"
 rg --quiet --fixed-strings 'id: inputListTap' \
+  "$microphone_picker"
+rg --quiet --fixed-strings 'inputList.cancelFlick();' \
   "$microphone_picker"
 rg --quiet --fixed-strings 'OutputSelection.contentIndexAtGlobalPosition(inputList, eventPoint.globalPosition)' \
   "$microphone_picker"
