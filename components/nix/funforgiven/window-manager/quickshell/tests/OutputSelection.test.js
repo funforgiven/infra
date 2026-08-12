@@ -53,3 +53,25 @@ test("requires both id and serial for stable identity", () => {
     assert.equal(OutputSelection.outputKey({ id: 10 }), "");
     assert.notEqual(OutputSelection.outputKey(output(10, 100)), OutputSelection.outputKey(output(10, 101)));
 });
+
+test("converts a global tap to scrolled list content coordinates exactly once", () => {
+    const calls = [];
+    const view = {
+        contentX: 0,
+        contentY: 112,
+        mapFromGlobal(x, y) {
+            calls.push(["map", x, y]);
+            return { x: x - 600, y: y - 200 };
+        },
+        indexAt(x, y) {
+            calls.push(["index", x, y]);
+            return y === 212 ? 5 : -1;
+        }
+    };
+
+    assert.equal(OutputSelection.contentIndexAtGlobalPosition(view, { x: 640, y: 300 }), 5);
+    assert.deepEqual(calls, [
+        ["map", 640, 300],
+        ["index", 40, 212]
+    ]);
+});
