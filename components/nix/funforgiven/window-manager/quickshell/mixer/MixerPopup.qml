@@ -20,7 +20,7 @@ Scope {
     property var unroutedGroupKeys: []
     readonly property bool visible: mixerWindow.visible
     readonly property int targetWidth: 1480
-    readonly property int targetHeight: 800
+    readonly property int targetHeight: 900
     readonly property int audioRevision: Services.AudioService.revision
 
     function channelForDefinition(definition, revision) {
@@ -281,6 +281,28 @@ Scope {
                 anchors.margins: Shell.Theme.spacingLarge
                 spacing: Shell.Theme.spacingMedium
 
+                RowLayout {
+                    id: mixerHeader
+
+                    Layout.fillWidth: true
+                    spacing: Shell.Theme.spacingLarge
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: "Audio mixer"
+                        color: Shell.Theme.primaryText
+                        font.family: Shell.Theme.sansFont
+                        font.pixelSize: Shell.Theme.titleFontSize
+                        font.weight: Font.DemiBold
+                    }
+
+                    MicrophonePicker {
+                        Layout.preferredWidth: 460
+                        dropdownHost: root
+                        accent: Shell.Theme.voiceAccent
+                    }
+                }
+
                 Rectangle {
                     id: recentErrorsPanel
 
@@ -457,6 +479,7 @@ Scope {
                     return root.dropdownX(width);
                 }
                 y: {
+                    void mixerHeader.height;
                     void recentErrorsPanel.height;
                     void unroutedPanel.height;
                     return root.dropdownY(height);

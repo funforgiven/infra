@@ -13,6 +13,8 @@ QtObject {
 
     property var channels: []
     property var physicalOutputs: []
+    property var physicalInputs: []
+    property var defaultInput: null
     property var unroutedGroups: []
     property var playbackStreams: []
     property string observedDefaultChannelId: ""
@@ -79,6 +81,25 @@ QtObject {
         });
         var defaultId = Pipewire.defaultAudioSink ? Pipewire.defaultAudioSink.id : null;
         var snapshot = AudioModel.buildSnapshot(Shell.ShellConfig.audioChannels, nodes, links, PwNodeType.AudioOutStream, PwNodeType.AudioSink, defaultId, _resolvePresentation, Pipewire.ready);
+        snapshot.physicalInputs = nodes.filter(function (node) {
+            return AudioModel.isPhysicalSource(node, PwNodeType.AudioSource, nodes);
+        }).map(AudioModel.inputRecord).sort(function (left, right) {
+            var leftLabel = String(left.label || "").toLocaleLowerCase();
+            var rightLabel = String(right.label || "").toLocaleLowerCase();
+            if (leftLabel < rightLabel)
+                return -1;
+            if (leftLabel > rightLabel)
+                return 1;
+            return Number(left.id) - Number(right.id);
+        });
+        var defaultSourceId = Pipewire.defaultAudioSource ? Pipewire.defaultAudioSource.id : null;
+        snapshot.defaultInput = null;
+        for (var inputIndex = 0; inputIndex < snapshot.physicalInputs.length; inputIndex += 1) {
+            if (defaultSourceId !== null && String(snapshot.physicalInputs[inputIndex].id) === String(defaultSourceId)) {
+                snapshot.defaultInput = snapshot.physicalInputs[inputIndex];
+                break;
+            }
+        }
         var signature = AudioModel.snapshotSignature(snapshot);
         if (signature === _snapshotSignature)
             return;
@@ -86,6 +107,8 @@ QtObject {
         _snapshotSignature = signature;
         channels = snapshot.channels;
         physicalOutputs = snapshot.physicalOutputs;
+        physicalInputs = snapshot.physicalInputs;
+        defaultInput = snapshot.defaultInput;
         unroutedGroups = snapshot.unroutedGroups;
         playbackStreams = snapshot.playbackStreams;
         observedDefaultChannelId = snapshot.observedDefaultChannelId || "";
@@ -142,6 +165,24 @@ QtObject {
         });
     }
 
+    function input(inputId, inputSerial) {
+        for (var index = 0; index < physicalInputs.length; index += 1) {
+            var candidate = physicalInputs[index];
+            if (String(candidate.id) === String(inputId) && String(candidate.serial) === String(inputSerial))
+                return candidate;
+        }
+        return null;
+    }
+
+    function selectDefaultInput(inputId, inputSerial) {
+        var candidate = input(inputId, inputSerial);
+        if (!candidate || candidate.available !== true || !candidate.node)
+            return false;
+        Pipewire.preferredDefaultAudioSource = candidate.node;
+        scheduleRebuild();
+        return true;
+    }
+
     Component.onCompleted: scheduleRebuild()
 
     property Timer _rebuildTimer: Timer {
@@ -175,6 +216,14 @@ QtObject {
         target: Pipewire
 
         function onDefaultAudioSinkChanged() {
+            root.scheduleRebuild();
+        }
+
+        function onDefaultAudioSourceChanged() {
+            root.scheduleRebuild();
+        }
+
+        function onDefaultConfiguredAudioSourceChanged() {
             root.scheduleRebuild();
         }
 
