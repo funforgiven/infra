@@ -88,6 +88,9 @@ rg --quiet --fixed-strings 'Services.NiriService.focusWindow(windowDelegate.wind
 test ! -e "$shell_config/bar/WindowStrip.qml"
 rg --quiet --fixed-strings 'Services.AudioService.channel("system")' \
   "$shell_config/bar/MixerButton.qml"
+rg --quiet --fixed-strings 'precision: SystemClock.Seconds' \
+  "$shell_config/bar/Clock.qml"
+test "$(rg --count --fixed-strings 'HH:mm:ss' "$shell_config/bar/Clock.qml")" -eq 2
 session_controls="$shell_config/bar/SessionControls.qml"
 test -f "$session_controls"
 rg --quiet --fixed-strings 'SessionControls 1.0 SessionControls.qml' \
