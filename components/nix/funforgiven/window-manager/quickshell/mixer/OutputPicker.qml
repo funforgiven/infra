@@ -390,6 +390,20 @@ Rectangle {
                         Accessible.name: "Hardware outputs"
                         Accessible.role: Accessible.List
 
+                        TapHandler {
+                            id: outputListTap
+
+                            acceptedButtons: Qt.LeftButton
+                            gesturePolicy: TapHandler.DragThreshold
+                            onTapped: (eventPoint, button) => {
+                                var index = deviceList.indexAt(eventPoint.position.x + deviceList.contentX, eventPoint.position.y + deviceList.contentY);
+                                if (index < 0 || index >= root.outputCount)
+                                    return;
+                                dropdownSurface.highlightOutputAt(index, false);
+                                root.activateOutput(root.outputs[index]);
+                            }
+                        }
+
                         Keys.onPressed: event => {
                             if (event.key === Qt.Key_Escape) {
                                 root.closePopup(true);
@@ -470,7 +484,7 @@ Rectangle {
                                     anchors.fill: parent
                                     interactive: true
                                     hovered: candidateHover.hovered || outputRow.keyboardSelected
-                                    pressed: candidateTap.pressed
+                                    pressed: outputListTap.pressed && deviceList.currentIndex === outputRow.index
                                     selected: outputRow.selected
                                     accent: root.accent
                                     radius: Shell.Theme.radiusSmall
@@ -524,15 +538,6 @@ Rectangle {
                                         if (hovered)
                                             dropdownSurface.highlightOutputAt(outputRow.index, false);
                                     }
-                                }
-
-                                TapHandler {
-                                    id: candidateTap
-
-                                    enabled: outputRow.canActivate
-                                    acceptedButtons: Qt.LeftButton
-                                    gesturePolicy: TapHandler.DragThreshold
-                                    onTapped: outputRow.activate()
                                 }
                             }
                         }

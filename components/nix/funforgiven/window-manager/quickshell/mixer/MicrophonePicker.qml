@@ -318,6 +318,20 @@ Rectangle {
                     Accessible.name: "Microphones"
                     Accessible.role: Accessible.List
 
+                    TapHandler {
+                        id: inputListTap
+
+                        acceptedButtons: Qt.LeftButton
+                        gesturePolicy: TapHandler.DragThreshold
+                        onTapped: (eventPoint, button) => {
+                            var index = inputList.indexAt(eventPoint.position.x + inputList.contentX, eventPoint.position.y + inputList.contentY);
+                            if (index < 0 || index >= root.inputCount)
+                                return;
+                            dropdownSurface.highlightInputAt(index, false);
+                            root.activateInput(root.inputs[index]);
+                        }
+                    }
+
                     Keys.onPressed: event => {
                         if (event.key === Qt.Key_Escape) {
                             root.closePopup(true);
@@ -380,7 +394,7 @@ Rectangle {
                                 anchors.fill: parent
                                 interactive: true
                                 hovered: inputHover.hovered || inputRow.keyboardSelected
-                                pressed: inputTap.pressed
+                                pressed: inputListTap.pressed && inputList.currentIndex === inputRow.index
                                 selected: inputRow.selected
                                 accent: root.accent
                                 radius: Shell.Theme.radiusSmall
@@ -434,15 +448,6 @@ Rectangle {
                                     if (hovered)
                                         dropdownSurface.highlightInputAt(inputRow.index, false);
                                 }
-                            }
-
-                            TapHandler {
-                                id: inputTap
-
-                                enabled: inputRow.canActivate
-                                acceptedButtons: Qt.LeftButton
-                                gesturePolicy: TapHandler.DragThreshold
-                                onTapped: inputRow.activate()
                             }
                         }
                     }
