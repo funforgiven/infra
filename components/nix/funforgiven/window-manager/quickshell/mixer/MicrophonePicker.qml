@@ -323,6 +323,10 @@ Rectangle {
 
                         acceptedButtons: Qt.LeftButton
                         gesturePolicy: TapHandler.DragThreshold
+                        onPressedChanged: {
+                            if (pressed)
+                                inputList.cancelFlick();
+                        }
                         onTapped: eventPoint => {
                             var index = OutputSelection.contentIndexAtGlobalPosition(inputList, eventPoint.globalPosition);
                             if (index < 0 || index >= root.inputCount)
