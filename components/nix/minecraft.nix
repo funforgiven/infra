@@ -1,10 +1,8 @@
-{ inputs, ... }:
-{
+_: {
   home.gui =
     { lib, pkgs, ... }:
     let
-      system = pkgs.stdenv.hostPlatform.system;
-      prismLauncher = inputs.nixpkgs-prism.legacyPackages.${system}.prismlauncher;
+      prismLauncher = pkgs.prismlauncher;
     in
     {
       assertions = [

@@ -14,7 +14,7 @@
         awsRegion = "eu-central-1";
         python = pkgs.python312;
         system = pkgs.stdenv.hostPlatform.system;
-        codexPackage = inputs.nixpkgs-codex.legacyPackages.${system}.codex;
+        codexPackage = pkgs.codex;
         mcpNixos = inputs.mcp-nixos.packages.${system}.mcp-nixos;
         terraformMcpServer = pkgs.terraform-mcp-server;
         uvx = lib.getExe' pkgs.uv "uvx";

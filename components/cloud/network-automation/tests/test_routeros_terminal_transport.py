@@ -197,7 +197,7 @@ class RouterOSTerminalTransportTests(unittest.TestCase):
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             actual[collection_name] = manifest["collection_info"]["version"]
 
-        self.assertEqual("2.21.0", ansible_release.__version__)
+        self.assertEqual("2.21.2", ansible_release.__version__)
         self.assertEqual(declared, actual)
 
 

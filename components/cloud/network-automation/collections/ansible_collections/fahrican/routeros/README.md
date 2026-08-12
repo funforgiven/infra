@@ -1,8 +1,8 @@
 # fahrican.routeros
 
 This source-local collection layers the repository's narrowly scoped terminal
-compatibility on top of `ansible.netcommon` 8.5.2 and `community.routeros`
-3.20.0 from the flake-locked Ansible runtime. It is not an independent
+compatibility on top of `ansible.netcommon` 8.6.0 and `community.routeros`
+3.21.0 from the flake-locked Ansible runtime. It is not an independent
 RouterOS module collection.
 
 RouterOS 7.21.5 can issue the ECMA-48 cursor-position query `ESC[6n` while an

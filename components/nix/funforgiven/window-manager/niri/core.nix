@@ -2,7 +2,7 @@
 let
   niriPackage =
     pkgs:
-    pkgs.niri-unstable.overrideAttrs (previous: {
+    pkgs.niri.overrideAttrs (previous: {
       patches = (previous.patches or [ ]) ++ [ ./patches/niri-focus-window-no-pointer-warp.patch ];
     });
 in
