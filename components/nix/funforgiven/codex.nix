@@ -54,7 +54,7 @@
             approvals_reviewer = "auto_review";
             sandbox_mode = "workspace-write";
 
-            model_reasoning_effort = "ultra";
+            model_reasoning_effort = "xhigh";
             model_verbosity = "medium";
 
             projects."${config.home.homeDirectory}/dev/anwa" = {
@@ -62,6 +62,10 @@
             };
 
             projects."${config.home.homeDirectory}/dev/infra" = {
+              trust_level = "trusted";
+            };
+
+            projects."${config.home.homeDirectory}/dev/yoseru" = {
               trust_level = "trusted";
             };
 
