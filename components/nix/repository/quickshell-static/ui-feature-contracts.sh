@@ -509,6 +509,8 @@ rg --quiet --fixed-strings 'AudioModel.isPhysicalSource(node, PwNodeType.AudioSo
 
 mixer_popup="$shell_config/mixer/MixerPopup.qml"
 rg --quiet --fixed-strings 'PanelWindow {' "$mixer_popup"
+rg --quiet --fixed-strings 'Layout.alignment: Qt.AlignLeft' "$mixer_popup"
+! rg --quiet --fixed-strings 'text: "Audio mixer"' "$mixer_popup"
 rg --quiet --fixed-strings 'exclusionMode: ExclusionMode.Ignore' "$mixer_popup"
 rg --quiet --fixed-strings 'WlrLayershell.layer: WlrLayer.Overlay' "$mixer_popup"
 rg --quiet --fixed-strings 'WlrLayershell.keyboardFocus: root.opened ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None' "$mixer_popup"
