@@ -424,6 +424,10 @@ rg --quiet --fixed-strings 'payload.sourceChannelId !== text(targetChannelId)' \
   "$shell_config/mixer/DragModel.js"
 rg --quiet --fixed-strings 'snapshotSignature: snapshotSignature' \
   "$shell_config/mixer/AudioModel.js"
+rg --quiet --fixed-strings 'group.totalCount = totalCounts' \
+  "$shell_config/mixer/AudioModel.js"
+rg --quiet --fixed-strings 'visible: root.group.totalCount > 1 || root.unrouted' \
+  "$shell_config/mixer/StreamCard.qml"
 rg --quiet --fixed-strings 'Services.AudioActions.movePayload(payload, root.channel.id)' \
   "$shell_config/mixer/ChannelCard.qml"
 rg --quiet --fixed-strings 'playbackStreams: playbackStreams' \
@@ -491,6 +495,7 @@ rg --quiet --fixed-strings 'id: outputDropdownLoader' "$mixer_popup"
 rg --quiet --fixed-strings 'active: root.activeOutputPicker !== null' "$mixer_popup"
 rg --quiet --fixed-strings 'sourceComponent: root.activeOutputPicker ? root.activeOutputPicker.dropdownComponent : null' "$mixer_popup"
 rg --quiet --fixed-strings 'dropdownHost: root' "$mixer_popup"
+rg --quiet --fixed-strings 'onPressed: root.dismiss()' "$mixer_popup"
 ! rg --quiet --fixed-strings 'PopupWindow {' "$mixer_popup"
 ! rg --quiet --fixed-strings 'grabFocus: true' "$mixer_popup"
 

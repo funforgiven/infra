@@ -170,12 +170,38 @@ test("membership comes only from live link endpoints in either orientation", () 
     assert.deepEqual(snapshot.channels.map(item => item.id), ["system", "game", "voice", "music"]);
     assert.equal(snapshot.channels[3].groups.length, 1);
     assert.equal(snapshot.channels[3].groups[0].count, 2);
+    assert.equal(snapshot.channels[3].groups[0].totalCount, 2);
     assert.deepEqual(snapshot.channels[3].groups[0].streams.map(stream => stream.id), [70, 71]);
     assert.equal(snapshot.channels[0].output.isCycleSafe, true);
     assert.equal(snapshot.channels[0].status.state, "connected");
     assert.equal(snapshot.unroutedGroups.length, 0);
     assert.equal(snapshot.observedDefaultChannelId, "system");
     assert.equal(snapshot.defaultWarning, false);
+});
+
+test("duplicate application streams stay identifiable when routed to different channels", () => {
+    const fixture = graphFixture();
+    fixture.links = fixture.links.map(link => link.sourceId === 70 && link.targetId === 13
+        ? { ...link, targetId: 10 }
+        : link);
+
+    const snapshot = AudioModel.buildSnapshot(
+        definitions,
+        fixture.nodes,
+        fixture.links,
+        AudioOutStream,
+        AudioSink,
+        10,
+        () => ({ canonicalId: "player", displayName: "Player", iconPath: "icon" })
+    );
+    const systemGroup = snapshot.channels[0].groups[0];
+    const musicGroup = snapshot.channels[3].groups[0];
+
+    assert.equal(systemGroup.count, 1);
+    assert.equal(musicGroup.count, 1);
+    assert.equal(systemGroup.totalCount, 2);
+    assert.equal(musicGroup.totalCount, 2);
+    assert.notEqual(systemGroup.streams[0].childLabel, musicGroup.streams[0].childLabel);
 });
 
 test("ambiguous and absent links stay graph-authoritative and appear unrouted", () => {
