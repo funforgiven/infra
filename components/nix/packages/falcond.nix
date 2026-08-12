@@ -14,32 +14,62 @@ _: {
           lib,
           stdenv,
           fetchFromGitHub,
+          runCommand,
           zig_0_16,
         }:
 
-        stdenv.mkDerivation (finalAttrs: {
+        let
           pname = "falcond";
-          version = "2.0.12";
-
+          version = "2.0.14";
           src = fetchFromGitHub {
             owner = "PikaOS-Linux";
             repo = "falcond";
-            rev = "504c8cda6c670c74d76893230559176a12d6e7c8";
-            hash = "sha256-BMIJJusOjSe5WuHfVq+YM9Hz8RY2pEfwCfesfkEFI/E=";
+            rev = "09639985ffd781b34f540074b04292abb24f4d32";
+            hash = "sha256-EQrJSfP+kAmgtXILYTW+jZl4jOudSmEj39uDB5ycrew=";
           };
+          zigDeps =
+            runCommand "${pname}-${version}-zig-deps"
+              {
+                src = "${src}/falcond";
+                nativeBuildInputs = [ zig_0_16 ];
+                outputHashAlgo = null;
+                outputHashMode = "recursive";
+                outputHash = "sha256-ghj+f4AOB8YEhBXkXmCq2JnIjEKT91Cr5Qar7qeIU5Q=";
+              }
+              ''
+                export ZIG_GLOBAL_CACHE_DIR="$(mktemp -d)"
+                mkdir -p "$ZIG_GLOBAL_CACHE_DIR/tmp"
 
-          sourceRoot = "${finalAttrs.src.name}/falcond";
+                runHook unpackPhase
+                cd "$sourceRoot"
 
-          zigDeps = zig_0_16.fetchDeps {
-            inherit (finalAttrs) pname version;
-            src = "${finalAttrs.src}/falcond";
-            hash = "sha256-ghj+f4AOB8YEhBXkXmCq2JnIjEKT91Cr5Qar7qeIU5Q=";
-          };
+                pipewire_manifest="$PWD/zig-pkg/otter_desktop-0.11.25-nwUfzR_gMAAgl_0gKsnjpPiOOkEfVxTP8eL4_3kow8uQ/vendor/pipewire/build.zig.zon"
+                if ! zig build --fetch; then
+                  test -f "$pipewire_manifest"
+                fi
+                substituteInPlace "$pipewire_manifest" \
+                  --replace-fail \
+                  "https://github.com/allyourcodebase/valgrind.h/archive/refs/tags/3.23.0.tar.gz" \
+                  "https://codeload.github.com/allyourcodebase/valgrind.h/tar.gz/refs/tags/3.23.0"
+                zig build --fetch
+
+                mv "$ZIG_GLOBAL_CACHE_DIR/p" "$out"
+              '';
+        in
+        stdenv.mkDerivation rec {
+          inherit
+            pname
+            version
+            src
+            zigDeps
+            ;
+
+          sourceRoot = "${src.name}/falcond";
 
           nativeBuildInputs = [ zig_0_16.hook ];
 
           postConfigure = ''
-            ln -s ${finalAttrs.zigDeps} "$ZIG_GLOBAL_CACHE_DIR/p"
+            ln -s ${zigDeps} "$ZIG_GLOBAL_CACHE_DIR/p"
           '';
 
           zigBuildFlags = [
@@ -49,7 +79,7 @@ _: {
             "-Dsystem-conf-path=/var/empty/falcond-system.conf"
           ];
 
-          zigCheckFlags = finalAttrs.zigBuildFlags;
+          zigCheckFlags = zigBuildFlags;
 
           doCheck = true;
 
@@ -60,7 +90,7 @@ _: {
             mainProgram = "falcond";
             platforms = lib.platforms.linux;
           };
-        })
+        }
       ) { };
     })
   ];

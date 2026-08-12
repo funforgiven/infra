@@ -54,7 +54,7 @@ _: {
         }:
 
         let
-          version = "6.4.79";
+          version = "6.4.86";
           runtimeLibs = [
             alsa-lib
             at-spi2-core
@@ -94,7 +94,7 @@ _: {
 
           src = fetchurl {
             url = "https://api.hayase.watch/files/linux-hayase-${version}-linux.deb";
-            hash = "sha256-c9pkzi0nryUSrTyMXLd+e/ZNKdM7pbW/VEWLYb2TLHo=";
+            hash = "sha256-95/PQcGsAZ5txJj0rsvjmvPZuK7zRoIZ9QGLfZZi8Co=";
           };
 
           nativeBuildInputs = [
