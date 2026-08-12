@@ -522,6 +522,10 @@ rg --quiet --fixed-strings 'active: root.activeOutputPicker !== null' "$mixer_po
 rg --quiet --fixed-strings 'sourceComponent: root.activeOutputPicker ? root.activeOutputPicker.dropdownComponent : null' "$mixer_popup"
 rg --quiet --fixed-strings 'dropdownHost: root' "$mixer_popup"
 rg --quiet --fixed-strings 'onPressed: root.dismiss()' "$mixer_popup"
+rg --quiet --fixed-strings 'item: outsideClickArea' "$mixer_popup"
+rg --quiet --fixed-strings 'id: outsideClickArea' "$mixer_popup"
+rg --quiet --fixed-strings 'anchors.fill: parent' "$mixer_popup"
+! rg --quiet --fixed-strings 'id: belowBarInput' "$mixer_popup"
 ! rg --quiet --fixed-strings 'PopupWindow {' "$mixer_popup"
 ! rg --quiet --fixed-strings 'grabFocus: true' "$mixer_popup"
 
