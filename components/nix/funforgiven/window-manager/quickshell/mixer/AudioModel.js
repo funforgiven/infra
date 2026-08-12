@@ -360,7 +360,7 @@ function linkedPeer(node, links, nodes) {
     return { node: null, count: 1 };
 }
 
-function groupStreams(streams) {
+function groupStreams(streams, totalCounts) {
     var groups = Object.create(null);
 
     streams.forEach(function (stream) {
@@ -384,6 +384,9 @@ function groupStreams(streams) {
                 || compareId(left.id, right.id);
         });
         group.count = group.streams.length;
+        group.totalCount = totalCounts && totalCounts[key] !== undefined
+            ? totalCounts[key]
+            : group.count;
         return group;
     }).sort(function (left, right) {
         return compareText(left.key, right.key);
@@ -411,6 +414,7 @@ function groupProjection(group) {
         text(group.canonicalId),
         text(group.displayName),
         String(group.iconPath || ""),
+        Number(group.totalCount || group.count || 0),
         Array.isArray(group.streams) ? group.streams.map(streamProjection) : []
     ];
 }
@@ -557,6 +561,11 @@ function buildSnapshot(definitions, nodes, rawLinks, playbackType, audioSinkType
             || compareId(left.id, right.id);
     });
 
+    var totalStreamCounts = Object.create(null);
+    playbackStreams.forEach(function (stream) {
+        totalStreamCounts[stream.persistentKey] = (totalStreamCounts[stream.persistentKey] || 0) + 1;
+    });
+
     var channels = channelNodes.map(function (channelNodeModel) {
         var definition = channelNodeModel.definition;
         var bridgePeer = linkedPeer(channelNodeModel.bridge, links, nodes);
@@ -595,7 +604,7 @@ function buildSnapshot(definitions, nodes, rawLinks, playbackType, audioSinkType
             muted: bridge && bridge.audio ? bridge.audio.muted : false,
             output: output,
             status: channelStatus(channelNodeModel, bridgePeer, output, graphReady),
-            groups: groupStreams(streams)
+            groups: groupStreams(streams, totalStreamCounts)
         };
     });
 
@@ -611,7 +620,7 @@ function buildSnapshot(definitions, nodes, rawLinks, playbackType, audioSinkType
         physicalOutputs: outputs,
         unroutedGroups: groupStreams(playbackStreams.filter(function (stream) {
             return stream.channelId === null;
-        })),
+        }), totalStreamCounts),
         playbackStreams: playbackStreams,
         observedDefaultChannelId: observedDefault,
         defaultWarning: observedDefault !== definitions.filter(function (definition) {

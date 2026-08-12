@@ -36,7 +36,7 @@ Rectangle {
             return pendingCount === group.count ? "Moving…" : pendingCount + " of " + group.count + " moving";
         if (unrouted)
             return "Unrouted";
-        return group.count > 1 ? group.count + " streams" : "";
+        return group.totalCount > 1 ? group.totalCount + " streams" : "";
     }
     readonly property color statusColor: errors.length > 0 ? Shell.Theme.errorText : (pendingCount > 0 || unrouted ? Shell.Theme.warningText : Shell.Theme.secondaryText)
 
@@ -221,7 +221,7 @@ Rectangle {
 
         StreamChildren {
             Layout.fillWidth: true
-            visible: root.group.count > 1 || root.unrouted
+            visible: root.group.totalCount > 1 || root.unrouted
             streams: root.group.streams
             accent: root.accent
             sourceChannelId: root.sourceChannelId

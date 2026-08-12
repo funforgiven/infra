@@ -469,8 +469,8 @@ Rectangle {
                                 Components.Surface {
                                     anchors.fill: parent
                                     interactive: true
-                                    hovered: candidateArea.containsMouse || outputRow.keyboardSelected
-                                    pressed: candidateArea.pressed
+                                    hovered: candidateHover.hovered || outputRow.keyboardSelected
+                                    pressed: candidateTap.pressed
                                     selected: outputRow.selected
                                     accent: root.accent
                                     radius: Shell.Theme.radiusSmall
@@ -516,14 +516,23 @@ Rectangle {
                                     ringRadius: Shell.Theme.radiusSmall
                                 }
 
-                                MouseArea {
-                                    id: candidateArea
+                                HoverHandler {
+                                    id: candidateHover
 
-                                    anchors.fill: parent
-                                    hoverEnabled: true
                                     cursorShape: outputRow.canActivate ? Qt.PointingHandCursor : Qt.ArrowCursor
-                                    onEntered: dropdownSurface.highlightOutputAt(outputRow.index, false)
-                                    onClicked: outputRow.activate()
+                                    onHoveredChanged: {
+                                        if (hovered)
+                                            dropdownSurface.highlightOutputAt(outputRow.index, false);
+                                    }
+                                }
+
+                                TapHandler {
+                                    id: candidateTap
+
+                                    enabled: outputRow.canActivate
+                                    acceptedButtons: Qt.LeftButton
+                                    gesturePolicy: TapHandler.DragThreshold
+                                    onTapped: outputRow.activate()
                                 }
                             }
                         }

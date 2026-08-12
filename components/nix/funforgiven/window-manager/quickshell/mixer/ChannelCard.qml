@@ -45,7 +45,8 @@ Rectangle {
             iconPath: "",
             streams: [],
             streamRefs: [],
-            count: 0
+            count: 0,
+            totalCount: 0
         };
     }
 

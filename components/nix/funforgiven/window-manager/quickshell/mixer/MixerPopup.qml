@@ -82,7 +82,8 @@ Scope {
             iconPath: "",
             streams: [],
             streamRefs: [],
-            count: 0
+            count: 0,
+            totalCount: 0
         };
     }
 
@@ -252,7 +253,7 @@ Scope {
             MouseArea {
                 anchors.fill: parent
                 acceptedButtons: Qt.AllButtons
-                onClicked: root.dismiss()
+                onPressed: root.dismiss()
             }
         }
 
