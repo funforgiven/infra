@@ -1,0 +1,41 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: services-http-endpoints
+  namespace: services-observability
+spec:
+  interval: 60s
+  scrapeTimeout: 20s
+  jobName: services-http
+  module: http_2xx
+  prober:
+    url: blackbox-exporter.services-observability.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+        - https://home.fahrican.com
+        - https://inbox.fahrican.com/web/client/
+        - https://keep.fahrican.com
+        - https://mail.fahrican.com
+        - https://music.fahrican.com/ping
+        - https://search.fahrican.com
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: mail-tcp-endpoints
+  namespace: services-observability
+spec:
+  interval: 60s
+  scrapeTimeout: 15s
+  jobName: mail-tcp
+  module: tcp_connect
+  prober:
+    url: blackbox-exporter.services-observability.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+        - mail.fahrican.com:25
+        - mail.fahrican.com:465
+        - mail.fahrican.com:587
+        - mail.fahrican.com:993

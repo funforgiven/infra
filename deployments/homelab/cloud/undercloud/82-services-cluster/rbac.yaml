@@ -61,3 +61,95 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: services-cloudflare-token-reader
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: services-provisioning-output-reader
+  namespace: openstack
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    resourceNames:
+      - mail-edge-outputs
+      - services-backup-storage-outputs
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: resend-domain-output-writer
+  namespace: openstack
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    resourceNames:
+      - resend-domain-outputs
+    verbs:
+      - get
+      - patch
+      - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: resend-domain-output-writer
+  namespace: openstack
+subjects:
+  - kind: ServiceAccount
+    name: services-cluster-reconcile
+    namespace: openstack
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: resend-domain-output-writer
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: services-provisioning-output-reader
+  namespace: openstack
+subjects:
+  - kind: ServiceAccount
+    name: services-cluster-reconcile
+    namespace: openstack
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: services-provisioning-output-reader
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: service-dns-input-writer
+  namespace: cert-manager
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    resourceNames:
+      - service-dns-inputs
+    verbs:
+      - get
+      - patch
+      - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: service-dns-input-writer
+  namespace: cert-manager
+subjects:
+  - kind: ServiceAccount
+    name: services-cluster-reconcile
+    namespace: openstack
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: service-dns-input-writer

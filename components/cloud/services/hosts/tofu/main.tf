@@ -98,6 +98,16 @@ resource "openstack_networking_secgroup_rule_v2" "service_icmp" {
   security_group_id = openstack_networking_secgroup_v2.service_ssh.id
 }
 
+resource "openstack_networking_secgroup_rule_v2" "service_node_exporter" {
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 9100
+  port_range_max    = 9100
+  remote_ip_prefix  = "192.168.80.0/24"
+  security_group_id = openstack_networking_secgroup_v2.service_ssh.id
+}
+
 resource "openstack_networking_secgroup_v2" "home_assistant_private" {
   name        = "home-assistant-private"
   description = "Home Assistant ingress from services workloads"

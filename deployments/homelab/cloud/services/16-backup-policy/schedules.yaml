@@ -4,7 +4,7 @@ metadata:
   name: services-daily
   namespace: velero
 spec:
-  paused: true
+  paused: false
   skipImmediately: true
   schedule: "30 2 * * *"
   useOwnerReferencesInBackup: false
@@ -25,7 +25,7 @@ metadata:
   name: services-weekly
   namespace: velero
 spec:
-  paused: true
+  paused: false
   skipImmediately: true
   schedule: "15 3 * * 0"
   useOwnerReferencesInBackup: false

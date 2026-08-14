@@ -28,21 +28,8 @@ usage demonstrates that a separate layer is justified.
 
 ## Activation gates
 
-Both undercloud waves are committed with `spec.suspend: true`. Before resuming
-them, all of the following must be true:
-
-1. `services-flux-bootstrap` is valid SOPS ciphertext and decrypts only for the
-   undercloud Flux identity and the offline administrator.
-2. The foundation OpenTofu plan contains only the reviewed project, quota,
-   flavor, and networking resources.
-3. The Magnum template image and Kubernetes checksum still match
-   `versions.yaml`.
-4. The services workload root builds locally and its encrypted secrets can be
-   decrypted by the dedicated services Flux identity.
-5. Backups and restore qualifications are present before stateful applications
-   accept production data.
-
-Resume `wave81-services-foundation` first. Resume
-`wave82-services-cluster` only after the Terraform resource is Ready. The
-cluster reconciler keeps its kubeconfig on a memory-backed volume and bootstraps
-Flux from signed commits.
+All mutation waves remain suspended until credentials and immutable artifacts
+pass the machine-checked contract. Follow [ACTIVATION.md](ACTIVATION.md); the
+cluster reconciler keeps its kubeconfig and rendered credentials on
+memory-backed volumes, discovers provider identifiers from controller outputs,
+and bootstraps Flux only from signed `main` commits.

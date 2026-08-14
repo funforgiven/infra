@@ -141,6 +141,9 @@
               deployments/homelab/cloud/services/40-media \
               >/dev/null
             kustomize build \
+              deployments/homelab/cloud/services/50-synthetic-monitoring \
+              >/dev/null
+            kustomize build \
               deployments/homelab/cloud/undercloud/81-services-foundation \
               >/dev/null
             kustomize build \
@@ -155,6 +158,104 @@
             kustomize build \
               deployments/homelab/cloud/undercloud/85-service-dns \
               >/dev/null
+            python - <<'PY'
+            import pathlib
+            import re
+
+            import yaml
+
+            root = pathlib.Path("deployments/homelab/cloud")
+            contract_document = yaml.safe_load(
+                (root / "undercloud/82-services-cluster/runtime-contract.yaml").read_text()
+            )
+            contract = yaml.safe_load(contract_document["data"]["required-keys.yaml"])
+            credentials = {
+                key
+                for group in contract["credentials"].values()
+                for key in group
+            }
+            post_deployment_credentials = {
+                key
+                for group in contract["postDeploymentCredentials"].values()
+                for key in group
+            }
+            post_foundation_credentials = {
+                key
+                for group in contract["postFoundationCredentials"].values()
+                for key in group
+            }
+            reconcile_document = yaml.safe_load_all(
+                (root / "undercloud/82-services-cluster/reconcile.yaml").read_text()
+            )
+            reconcile_config = next(
+                document
+                for document in reconcile_document
+                if document["kind"] == "ConfigMap"
+            )
+            reconcile_script = reconcile_config["data"]["reconcile.sh"]
+            compile(
+                reconcile_config["data"]["reconcile-resend.py"],
+                "reconcile-resend.py",
+                "exec",
+            )
+            validated = set(
+                re.findall(r"^\s*require_file ([A-Z0-9_]+) ", reconcile_script, re.M)
+            )
+            expected_validated = (
+                credentials
+                | post_foundation_credentials
+                | post_deployment_credentials
+            )
+            if expected_validated != validated:
+                raise SystemExit(
+                    f"runtime credential contract {sorted(expected_validated)} != "
+                    f"reconciler validation {sorted(validated)}"
+                )
+
+            runtime = yaml.safe_load(
+                (root / "undercloud/81-services-foundation/runtime.sops.yaml").read_text()
+            )
+            generated = set(contract["generatedApplicationSecrets"])
+            if not generated.issubset(runtime["data"]):
+                raise SystemExit("generated application secrets are missing from SOPS")
+            if any(
+                not str(value).startswith("ENC[")
+                for value in runtime["data"].values()
+            ):
+                raise SystemExit("runtime Secret contains a non-SOPS data value")
+
+            sentinel_files = [
+                root / "services/40-media/importer.yaml",
+                root / "services/40-media/release-watcher.yaml",
+                root / "versions.yaml",
+            ]
+            sentinel_count = 0
+            for path in sentinel_files:
+                text = path.read_text()
+                pins = re.findall(
+                    r"ghcr\.io/funforgiven/media-importer:[^@\s]+@sha256:[0-9a-f]{64}",
+                    text,
+                )
+                if len(pins) != 1:
+                    raise SystemExit(f"{path} must contain exactly one pinned media image")
+                sentinel_count += pins[0].endswith("sha256:" + "0" * 64)
+            if sentinel_count not in (0, len(sentinel_files)):
+                raise SystemExit("media image promotion is only partially represented")
+            waves = (root / "services/waves.yaml").read_text()
+            if sentinel_count and not re.search(
+                r"name: services-media.*?spec:\n  suspend: true", waves, re.S
+            ):
+                raise SystemExit("media promotion sentinel requires a suspended media wave")
+
+            observability = (root / "services/12-observability/kube-prometheus-stack.yaml").read_text()
+            velero = (root / "services/15-backup-controller/velero.yaml").read_text()
+            for name, text in (("observability", observability), ("velero", velero)):
+                if "suspend: true" in text:
+                    raise SystemExit(f"{name} retains an inner suspension")
+            forbidden = ("backup.invalid", "replace-before-activation", "chat_id: 0")
+            if any(value in observability + velero for value in forbidden):
+                raise SystemExit("a runtime placeholder remains in a Helm release")
+            PY
             for bootstrap_phase in components sync; do
               kustomize build --load-restrictor LoadRestrictionsNone \
                 "deployments/homelab/cloud/management/bootstrap/$bootstrap_phase" \

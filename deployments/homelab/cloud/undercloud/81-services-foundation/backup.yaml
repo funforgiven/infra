@@ -1,15 +1,14 @@
 apiVersion: infra.contrib.fluxcd.io/v1alpha2
 kind: Terraform
 metadata:
-  name: mail-edge
+  name: services-backup-storage
   namespace: openstack
 spec:
-  suspend: true
   interval: 10m
   retryInterval: 1m
   approvePlan: auto
   destroyResourcesOnDeletion: false
-  path: ./components/cloud/services/mail-edge/tofu
+  path: ./components/cloud/services/backup/tofu
   sourceRef:
     kind: GitRepository
     name: services-tofu-source
@@ -17,20 +16,17 @@ spec:
     spec:
       alwaysCleanupRunnerPod: true
       env:
-        - name: HCLOUD_TOKEN
+        - name: CLOUDFLARE_API_TOKEN
           valueFrom:
             secretKeyRef:
               name: services-runtime-bootstrap
-              key: HCLOUD_TOKEN
-        - name: TF_VAR_management_cidrs
-          valueFrom:
-            secretKeyRef:
-              name: services-runtime-bootstrap
-              key: MAIL_MANAGEMENT_CIDRS_JSON
+              key: CLOUDFLARE_R2_API_TOKEN
   writeOutputsToSecret:
-    name: mail-edge-outputs
+    name: services-backup-storage-outputs
     outputs:
-      - ipv4_address
-      - server_id
+      - bucket_name
+      - endpoint
+      - host_bucket_names
+      - region
   remediation:
     retries: 3

@@ -16,8 +16,11 @@ variable "management_cidrs" {
   type        = list(string)
 
   validation {
-    condition     = length(var.management_cidrs) > 0
-    error_message = "At least one explicit management CIDR is required."
+    condition = length(var.management_cidrs) > 0 && alltrue([
+      for cidr in var.management_cidrs :
+      can(cidrhost(cidr, 0)) && cidr != "203.0.113.255/32"
+    ])
+    error_message = "Every management entry must be an explicit valid CIDR, not a documentation sentinel."
   }
 }
 

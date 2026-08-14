@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: services-runtime-contract-v1
+  namespace: openstack
+data:
+  required-keys.yaml: |
+    schemaVersion: 1
+    secret: services-runtime-bootstrap
+    credentials:
+      infrastructure:
+        - INFRA_TELEGRAM_BOT_TOKEN
+        - INFRA_TELEGRAM_CHAT_ID
+      backupProvisioning:
+        - CLOUDFLARE_R2_API_TOKEN
+      media:
+        - MEDIA_TELEGRAM_BOT_TOKEN
+        - MEDIA_TELEGRAM_CHAT_ID
+        - ND_LASTFM_APIKEY
+        - ND_LASTFM_SECRET
+        - ND_PASSWORDENCRYPTIONKEY
+        - SFTPGO_ADMIN_PASSWORD
+        - SFTPGO_USER_PASSWORD
+      mailProvisioning:
+        - HCLOUD_TOKEN
+        - MAIL_MANAGEMENT_CIDRS_JSON
+        - RESEND_ADMIN_API_KEY
+    postFoundationCredentials:
+      backupRuntime:
+        - R2_ACCESS_KEY_ID
+        - R2_SECRET_ACCESS_KEY
+    postDeploymentCredentials:
+      media:
+        - RELEASE_WATCHER_KARAKEEP_API_KEY
+    generatedApplicationSecrets:
+      - MEILI_MASTER_KEY
+      - NEXTAUTH_SECRET
+      - SEARXNG_SECRET
+    policy:
+      semanticRetrieval: deferred
+      initialRetrieval: karakeep-full-text
+      secretTransport: sops-ciphertext-and-memory-backed-reconciliation

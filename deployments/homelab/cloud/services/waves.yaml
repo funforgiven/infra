@@ -44,6 +44,10 @@ spec:
       kind: HelmRelease
       name: kube-prometheus-stack
       namespace: services-observability
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: blackbox-exporter
+      namespace: services-observability
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -148,6 +152,26 @@ spec:
       kind: Deployment
       name: searxng
       namespace: knowledge
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: services-synthetic-monitoring
+  namespace: flux-system
+spec:
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  path: ./deployments/homelab/cloud/services/50-synthetic-monitoring
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: services-home-automation
+    - name: services-knowledge
+    - name: services-media
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization

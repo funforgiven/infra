@@ -6,6 +6,92 @@ metadata:
 data:
   signing-key.pub: |
     ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL1nHHxNA1YUl+89HhieA+YOyOLYJaSRBmutEOVxVQeB github-funforgiven-2026-07-18
+  reconcile-resend.py: |
+    #!/usr/bin/env python3
+    import json
+    import pathlib
+    import re
+    import sys
+    import urllib.error
+    import urllib.request
+
+    api_base = "https://api.resend.com"
+    domain_name = "fahrican.com"
+    token = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8").strip()
+    output_path = pathlib.Path(sys.argv[2])
+    records_path = pathlib.Path(sys.argv[3])
+    if not re.fullmatch(r"re_[A-Za-z0-9_-]{20,}", token):
+        raise SystemExit("Resend administration key does not match the required format")
+
+    def request(method, path, payload=None):
+        body = None if payload is None else json.dumps(payload).encode()
+        api_request = urllib.request.Request(
+            api_base + path,
+            data=body,
+            method=method,
+            headers={
+                "Authorization": "Bearer " + token,
+                "Content-Type": "application/json",
+                "User-Agent": "fahrican-infra-resend-reconciler/1.0",
+            },
+        )
+        try:
+            with urllib.request.urlopen(api_request, timeout=30) as response:
+                return json.load(response)
+        except urllib.error.HTTPError as error:
+            raise SystemExit(
+                f"Resend API {method} {path} returned HTTP {error.code}"
+            ) from None
+
+    domains = request("GET", "/domains")
+    matches = [item for item in domains.get("data", []) if item.get("name") == domain_name]
+    if len(matches) > 1:
+        raise SystemExit("More than one Resend domain matches fahrican.com")
+    if matches:
+        domain_id = matches[0]["id"]
+    else:
+        created = request(
+            "POST",
+            "/domains",
+            {
+                "name": domain_name,
+                "region": "eu-west-1",
+                "tls": "enforced",
+                "capabilities": {"sending": "enabled", "receiving": "disabled"},
+            },
+        )
+        domain_id = created["id"]
+
+    if not re.fullmatch(r"[0-9a-f-]{36}", domain_id):
+        raise SystemExit("Resend returned an invalid domain identifier")
+    request(
+        "PATCH",
+        f"/domains/{domain_id}",
+        {"open_tracking": False, "click_tracking": False, "tls": "enforced"},
+    )
+    request("POST", f"/domains/{domain_id}/verify")
+    domain = request("GET", f"/domains/{domain_id}")
+    if domain.get("name") != domain_name:
+        raise SystemExit("Resend returned an unexpected domain")
+
+    records = domain.get("records")
+    if not isinstance(records, list) or not records:
+        raise SystemExit("Resend returned no DNS verification records")
+    for record in records:
+        if record.get("type") not in {"CNAME", "MX", "TXT"}:
+            raise SystemExit("Resend returned an unsupported DNS record type")
+        if not all(isinstance(record.get(key), str) and record[key] for key in ("name", "value")):
+            raise SystemExit("Resend returned an incomplete DNS record")
+
+    public_output = {
+        "domain_id": domain_id,
+        "name": domain_name,
+        "region": domain.get("region"),
+        "status": domain.get("status"),
+        "records": records,
+    }
+    output_path.write_text(json.dumps(public_output, sort_keys=True), encoding="utf-8")
+    records_path.write_text(json.dumps(records, sort_keys=True), encoding="utf-8")
   sync.yaml: |
     apiVersion: source.toolkit.fluxcd.io/v1
     kind: GitRepository
@@ -50,6 +136,35 @@ data:
     kubeconfig=/tmp/kube/config
     kubectl=/tmp/bin/kubectl
     flux=/tmp/bin/flux
+
+    require_file() {
+      path="/runtime-bootstrap/$1"
+      pattern="$2"
+      minimum="$3"
+      maximum="$4"
+
+      test -r "$path"
+      length="$(wc -c < "$path" | tr -d ' ')"
+      test "$length" -ge "$minimum"
+      test "$length" -le "$maximum"
+      LC_ALL=C grep -Eq "$pattern" "$path"
+    }
+
+    require_file INFRA_TELEGRAM_BOT_TOKEN '^[0-9]+:[A-Za-z0-9_-]+$' 32 256
+    require_file INFRA_TELEGRAM_CHAT_ID '^-?[0-9]+$' 1 32
+    require_file CLOUDFLARE_R2_API_TOKEN '^[A-Za-z0-9._-]+$' 32 512
+    require_file R2_ACCESS_KEY_ID '^[A-Za-z0-9_-]+$' 16 256
+    require_file R2_SECRET_ACCESS_KEY '^[A-Za-z0-9/+_-]+={0,2}$' 32 512
+    require_file MEDIA_TELEGRAM_BOT_TOKEN '^[0-9]+:[A-Za-z0-9_-]+$' 32 256
+    require_file MEDIA_TELEGRAM_CHAT_ID '^-?[0-9]+$' 1 32
+    require_file ND_LASTFM_APIKEY '^[A-Za-z0-9_-]+$' 16 256
+    require_file ND_LASTFM_SECRET '^[A-Za-z0-9_-]+$' 16 256
+    require_file ND_PASSWORDENCRYPTIONKEY '^[A-Za-z0-9_-]+$' 32 256
+    require_file SFTPGO_ADMIN_PASSWORD '^[A-Za-z0-9_-]+$' 32 256
+    require_file SFTPGO_USER_PASSWORD '^[A-Za-z0-9_-]+$' 32 256
+    require_file HCLOUD_TOKEN '^[A-Za-z0-9._-]+$' 32 512
+    require_file MAIL_MANAGEMENT_CIDRS_JSON '^\[[^]]+\]$' 9 1024
+    require_file RESEND_ADMIN_API_KEY '^re_[A-Za-z0-9_-]+$' 23 512
 
     export OS_PROJECT_NAME=services
     export OS_PROJECT_DOMAIN_NAME=Default
@@ -158,6 +273,48 @@ data:
       "$kubectl" -n cert-manager get secret cloudflare-dns01 \
       -o jsonpath='{.data.api-token}' | \
       base64 -d > /tmp/cloudflare-api-token
+    for key in bucket_name endpoint region; do
+      KUBECONFIG="$undercloud_kubeconfig" \
+        "$kubectl" -n openstack get secret services-backup-storage-outputs \
+        -o "jsonpath={.data.$key}" | base64 -d > "/tmp/$key"
+    done
+
+    grep -Eq '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$' /tmp/bucket_name
+    grep -Eq '^https://[0-9a-f]{32}\.r2\.cloudflarestorage\.com$' /tmp/endpoint
+    grep -Fx auto /tmp/region >/dev/null
+
+    /config/reconcile-resend.py \
+      /runtime-bootstrap/RESEND_ADMIN_API_KEY \
+      /tmp/resend-domain.json \
+      /tmp/resend-records.json
+    KUBECONFIG="$undercloud_kubeconfig" \
+      "$kubectl" -n openstack create secret generic resend-domain-outputs \
+      --from-file=domain.json=/tmp/resend-domain.json \
+      --dry-run=client -o yaml | \
+      KUBECONFIG="$undercloud_kubeconfig" \
+        "$kubectl" -n openstack apply -f -
+
+    if KUBECONFIG="$undercloud_kubeconfig" \
+      "$kubectl" -n openstack get secret mail-edge-outputs >/dev/null 2>&1; then
+      KUBECONFIG="$undercloud_kubeconfig" \
+        "$kubectl" -n openstack get secret mail-edge-outputs \
+        -o jsonpath='{.data.ipv4_address}' | base64 -d > /tmp/mail_ipv4_address
+      grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}$' /tmp/mail_ipv4_address
+      KUBECONFIG="$undercloud_kubeconfig" \
+        "$kubectl" -n cert-manager create secret generic service-dns-inputs \
+        --from-file=mail_ipv4_address=/tmp/mail_ipv4_address \
+        --from-file=resend_records_json=/tmp/resend-records.json \
+        --dry-run=client -o yaml | \
+        KUBECONFIG="$undercloud_kubeconfig" \
+          "$kubectl" -n cert-manager apply -f -
+    else
+      KUBECONFIG="$undercloud_kubeconfig" \
+        "$kubectl" -n cert-manager create secret generic service-dns-inputs \
+        --from-file=resend_records_json=/tmp/resend-records.json \
+        --dry-run=client -o yaml | \
+        KUBECONFIG="$undercloud_kubeconfig" \
+          "$kubectl" -n cert-manager apply -f -
+    fi
 
     openstack coe cluster config "$cluster" --dir /tmp/kube --force
     export KUBECONFIG="$kubeconfig"
@@ -187,6 +344,12 @@ data:
       --dry-run=client -o yaml | "$kubectl" apply -f -
     "$kubectl" create namespace knowledge \
       --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" create namespace media \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" create namespace services-observability \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" create namespace velero \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
     "$kubectl" -n knowledge create secret generic karakeep-runtime \
       --from-file=NEXTAUTH_SECRET=/runtime-bootstrap/NEXTAUTH_SECRET \
       --from-file=MEILI_MASTER_KEY=/runtime-bootstrap/MEILI_MASTER_KEY \
@@ -196,6 +359,102 @@ data:
     "$kubectl" -n knowledge create secret generic searxng-runtime \
       --from-file=SEARXNG_SECRET=/runtime-bootstrap/SEARXNG_SECRET \
       --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" -n services-observability create secret generic infrastructure-telegram \
+      --from-file=bot-token=/runtime-bootstrap/INFRA_TELEGRAM_BOT_TOKEN \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
+    infra_chat_id="$(cat /runtime-bootstrap/INFRA_TELEGRAM_CHAT_ID)"
+    {
+      printf '%s\n' \
+        'alertmanager:' \
+        '  config:' \
+        '    global:' \
+        '      resolve_timeout: 5m' \
+        '    route:' \
+        '      receiver: infrastructure-telegram' \
+        '      group_by: [alertname, namespace, severity]' \
+        '      group_wait: 30s' \
+        '      group_interval: 5m' \
+        '      repeat_interval: 6h' \
+        '      routes:' \
+        '        - receiver: "null"' \
+        '          matchers:' \
+        '            - alertname = "Watchdog"' \
+        '    receivers:' \
+        '      - name: "null"' \
+        '      - name: infrastructure-telegram' \
+        '        telegram_configs:' \
+        '          - bot_token_file: /etc/alertmanager/secrets/infrastructure-telegram/bot-token'
+      printf '            chat_id: %s\n' "$infra_chat_id"
+      printf '%s\n' \
+        '            send_resolved: true' \
+        '            parse_mode: HTML'
+    } > /tmp/alertmanager-values.yaml
+    unset infra_chat_id
+    "$kubectl" -n services-observability create secret generic alertmanager-runtime-values \
+      --from-file=values.yaml=/tmp/alertmanager-values.yaml \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
+
+    r2_access_key_id="$(cat /runtime-bootstrap/R2_ACCESS_KEY_ID)"
+    r2_secret_access_key="$(cat /runtime-bootstrap/R2_SECRET_ACCESS_KEY)"
+    {
+      printf '%s\n' '[default]'
+      printf 'aws_access_key_id=%s\n' "$r2_access_key_id"
+      printf 'aws_secret_access_key=%s\n' "$r2_secret_access_key"
+    } > /tmp/velero-cloud
+    chmod 0600 /tmp/velero-cloud
+    unset r2_access_key_id r2_secret_access_key
+    "$kubectl" -n velero create secret generic velero-object-storage \
+      --from-file=cloud=/tmp/velero-cloud \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
+    bucket_name="$(cat /tmp/bucket_name)"
+    endpoint="$(cat /tmp/endpoint)"
+    {
+      printf '%s\n' \
+        'configuration:' \
+        '  backupStorageLocation:' \
+        '    - name: default' \
+        '      provider: aws'
+      printf '      bucket: %s\n' "$bucket_name"
+      printf '%s\n' \
+        '      prefix: services-v1' \
+        '      default: true' \
+        '      accessMode: ReadWrite' \
+        '      credential:' \
+        '        name: velero-object-storage' \
+        '        key: cloud' \
+        '      config:' \
+        '        region: auto' \
+        '        s3ForcePathStyle: "true"'
+      printf '        s3Url: %s\n' "$endpoint"
+    } > /tmp/velero-values.yaml
+    unset bucket_name endpoint
+    "$kubectl" -n velero create configmap velero-runtime-values \
+      --from-file=values.yaml=/tmp/velero-values.yaml \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
+
+    if test -r /runtime-bootstrap/RELEASE_WATCHER_KARAKEEP_API_KEY; then
+      require_file RELEASE_WATCHER_KARAKEEP_API_KEY '^[A-Za-z0-9._-]+$' 32 512
+      "$kubectl" -n media create secret generic media-runtime \
+        --from-file=TELEGRAM_BOT_TOKEN=/runtime-bootstrap/MEDIA_TELEGRAM_BOT_TOKEN \
+        --from-file=TELEGRAM_CHAT_ID=/runtime-bootstrap/MEDIA_TELEGRAM_CHAT_ID \
+        --from-file=ND_LASTFM_APIKEY=/runtime-bootstrap/ND_LASTFM_APIKEY \
+        --from-file=ND_LASTFM_SECRET=/runtime-bootstrap/ND_LASTFM_SECRET \
+        --from-file=ND_PASSWORDENCRYPTIONKEY=/runtime-bootstrap/ND_PASSWORDENCRYPTIONKEY \
+        --from-file=RELEASE_WATCHER_KARAKEEP_API_KEY=/runtime-bootstrap/RELEASE_WATCHER_KARAKEEP_API_KEY \
+        --from-file=SFTPGO_ADMIN_PASSWORD=/runtime-bootstrap/SFTPGO_ADMIN_PASSWORD \
+        --from-file=SFTPGO_USER_PASSWORD=/runtime-bootstrap/SFTPGO_USER_PASSWORD \
+        --dry-run=client -o yaml | "$kubectl" apply -f -
+    else
+      "$kubectl" -n media create secret generic media-runtime \
+        --from-file=TELEGRAM_BOT_TOKEN=/runtime-bootstrap/MEDIA_TELEGRAM_BOT_TOKEN \
+        --from-file=TELEGRAM_CHAT_ID=/runtime-bootstrap/MEDIA_TELEGRAM_CHAT_ID \
+        --from-file=ND_LASTFM_APIKEY=/runtime-bootstrap/ND_LASTFM_APIKEY \
+        --from-file=ND_LASTFM_SECRET=/runtime-bootstrap/ND_LASTFM_SECRET \
+        --from-file=ND_PASSWORDENCRYPTIONKEY=/runtime-bootstrap/ND_PASSWORDENCRYPTIONKEY \
+        --from-file=SFTPGO_ADMIN_PASSWORD=/runtime-bootstrap/SFTPGO_ADMIN_PASSWORD \
+        --from-file=SFTPGO_USER_PASSWORD=/runtime-bootstrap/SFTPGO_USER_PASSWORD \
+        --dry-run=client -o yaml | "$kubectl" apply -f -
+    fi
     "$kubectl" apply -f /config/sync.yaml
     "$flux" reconcile source git flux-system --timeout=5m
     "$flux" reconcile kustomization flux-system --with-source --timeout=20m

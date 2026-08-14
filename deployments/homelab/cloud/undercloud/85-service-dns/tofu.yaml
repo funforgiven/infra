@@ -28,13 +28,12 @@ spec:
   sourceRef:
     kind: GitRepository
     name: service-dns-tofu-source
-  vars:
-    # These values are deliberately invalid until the dependent resources have
-    # been created and their exact identifiers reviewed.
-    - name: zone_id
-      value: "00000000000000000000000000000000"
-    - name: mail_ipv4_address
-      value: 192.0.2.255
+  varsFrom:
+    - kind: Secret
+      name: service-dns-inputs
+      varsKeys:
+        - mail_ipv4_address
+        - resend_records_json
   runnerPodTemplate:
     spec:
       alwaysCleanupRunnerPod: true

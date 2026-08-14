@@ -13,7 +13,6 @@ metadata:
   name: velero
   namespace: velero
 spec:
-  suspend: true
   interval: 30m
   timeout: 15m
   releaseName: velero
@@ -24,6 +23,10 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: velero
+  valuesFrom:
+    - kind: ConfigMap
+      name: velero-runtime-values
+      valuesKey: values.yaml
   driftDetection:
     mode: enabled
   install:
@@ -52,20 +55,6 @@ spec:
           - name: plugins
             mountPath: /target
     configuration:
-      backupStorageLocation:
-        - name: default
-          provider: aws
-          bucket: replace-before-activation
-          prefix: services-v1
-          default: true
-          accessMode: ReadWrite
-          credential:
-            name: velero-object-storage
-            key: cloud
-          config:
-            region: auto
-            s3ForcePathStyle: "true"
-            s3Url: https://backup.invalid
       defaultBackupStorageLocation: default
       defaultVolumesToFsBackup: true
       defaultRepoMaintainFrequency: 24h
