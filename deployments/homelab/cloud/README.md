@@ -34,6 +34,8 @@ The small set of current documents is intentional:
 | [`backup-destination.yaml`](backup-destination.yaml) | Public B2 bucket and least-privilege writer contract; contains no credential value or application-key ID |
 | [`network-inventory.yaml`](network-inventory.yaml) | Live Ansible inventory consumed by RouterOS automation; includes qualified physical link facts |
 | [`omada-network.yaml`](omada-network.yaml) | Omada desired state and qualification boundary |
+| [`declarative-ownership.yaml`](declarative-ownership.yaml) | Single-controller ownership map for cloud, service, identity, DNS, monitoring, and backup state |
+| [`manual-exceptions.yaml`](manual-exceptions.yaml) | Validated register for unavoidable UI/bootstrap state, its backup, drift probe, and exit criterion |
 | [`hosts/`](hosts/) | Ubuntu inventory and replacement-tolerant physical slot contracts |
 | [`kubernetes/`](kubernetes/) | Pinned Kubespray bootstrap and semantic acceptance contract |
 | [`undercloud/`](undercloud/) | Flux root for the real undercloud cluster |
@@ -90,6 +92,19 @@ kept small and has one owner:
 - Flux for Kubernetes resources after the API and CNI are healthy;
 - sops-nix with age on the NixOS operator host, and Flux SOPS decryption with a
   separate per-cluster age identity inside Kubernetes.
+
+OpenTofu owns OpenStack, external-cloud, DNS, ZITADEL, and provider-supported
+external-service resources. NixOS owns standalone hosts and system services.
+Pinned API reconcilers are used only where a provider is unavailable but a
+stable API exists. A remote resource must have exactly one owner; an existing
+resource is imported before it is reconciled.
+
+Manual or UI configuration is permitted only when no practical declarative
+interface exists. Every such case must be present in `manual-exceptions.yaml`,
+include an encrypted backup or regeneration procedure, have a non-secret drift
+probe, and define the condition under which the exception is removed. An
+emergency remote change is investigated before reconciliation and either
+backported to Git immediately or reverted through its declared owner.
 
 No ordinary convergence run may repartition a disk, initialize an OSD, flash
 firmware, update RouterOS, reset Kubernetes, or bootstrap Flux merely because a

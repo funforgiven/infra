@@ -1,0 +1,35 @@
+version: 1
+resources:
+  - resource: openstack-projects-networks-compute-storage
+    owner: opentofu
+    state: OpenTofu state and reviewed configuration in Git
+  - resource: hetzner-smtp-edge-and-public-address
+    owner: opentofu
+    state: OpenTofu state and reviewed configuration in Git
+  - resource: public-and-private-dns
+    owner: opentofu
+    state: OpenTofu state and reviewed DNS records in Git
+  - resource: zitadel-projects-applications-and-roles
+    owner: opentofu
+    state: OpenTofu state and reviewed identity configuration in Git
+  - resource: openai-projects-service-accounts-and-controls
+    owner: opentofu
+    state: OpenTofu state; API key values are deliberately excluded
+  - resource: resend-domain-and-verification
+    owner: pinned-api-reconciler
+    state: Desired domain policy and non-secret identifiers in Git
+  - resource: kubernetes-resources
+    owner: flux
+    state: Flux Kustomizations and SOPS ciphertext in Git
+  - resource: nixos-hosts-and-system-services
+    owner: nixos
+    state: NixOS closures built from the repository flake
+  - resource: application-api-configuration
+    owner: pinned-api-reconciler
+    state: Desired application configuration and comparison tests in Git
+  - resource: runtime-secrets
+    owner: sops
+    state: SOPS ciphertext in Git and mode-0400 runtime materialization
+  - resource: monitoring-alerting-and-backups
+    owner: flux
+    state: Flux resources for Kubernetes and NixOS modules for standalone hosts

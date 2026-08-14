@@ -1,0 +1,52 @@
+version: 1
+exceptions:
+  - id: telegram-botfather-bootstrap
+    resource: Telegram bots for infrastructure, Hermes, and Home Assistant
+    owner: funforgiven
+    rationale: Telegram exposes bot creation and token rotation only through BotFather.
+    procedure: Create three distinct bots, record only their public usernames, and ingest each token with the no-echo SOPS bootstrap command.
+    secret_handling: Bot tokens go directly to workload-specific SOPS documents and are never printed, passed as arguments, or shared between bots.
+    backup: SOPS ciphertext is in Git; BotFather remains the recovery and revocation authority.
+    drift_probe: Verify bot usernames and numeric allowlists monthly without retrieving or displaying tokens.
+    review_interval: monthly
+    exit_criterion: Replace this exception when Telegram provides a supported declarative bot-management API.
+  - id: openai-api-key-issuance
+    resource: OpenAI workload and administration API keys
+    owner: funforgiven
+    rationale: OpenAI service-account identities and permissions are declarative, but API key values are returned only at issuance and must not enter OpenTofu state.
+    procedure: Issue the least-privilege key through the Administration API and stream the one-time response directly into SOPS ciphertext.
+    secret_handling: The value is never written to OpenTofu configuration, variables, outputs, plans, logs, or persistent plaintext files.
+    backup: Workload keys are recoverable by rotation; SOPS ciphertext preserves the deployed value and offline administration credentials remain admin-only.
+    drift_probe: Compare service-account IDs, roles, key metadata, model controls, rate limits, and spend alerts through the declarative provider.
+    review_interval: monthly
+    exit_criterion: Remove when the provider can issue a key directly into an approved secret store without exposing it through state.
+  - id: resend-api-key-issuance
+    resource: Resend administration and Stalwart SMTP credentials
+    owner: funforgiven
+    rationale: Resend returns API key material only once even though domain and key metadata are API-managed.
+    procedure: Reconcile the sending domain through the pinned API client, issue a domain-scoped sending key, and stream the token directly into SOPS.
+    secret_handling: The Stalwart workload receives only the sending-access key; the administration key remains confined to the management reconciler.
+    backup: SOPS ciphertext preserves the active workload key; either key can be revoked and regenerated from the Resend account.
+    drift_probe: Compare domain settings, verification status, DNS records, and non-secret key metadata through the API.
+    review_interval: monthly
+    exit_criterion: Remove when an approved provider can issue keys directly into the secret store without state exposure.
+  - id: music-store-accounts-and-purchases
+    resource: Bandcamp and OTOTOY accounts, payment, and checkout
+    owner: funforgiven
+    rationale: Storefront purchase and payment flows are human transactions without an appropriate unattended declarative interface.
+    procedure: Use the discovery card to choose a store, complete checkout manually, and transfer the purchased files through the declared inbox.
+    secret_handling: Passwords and payment data remain in the personal password manager and are never supplied to Hermes or the media workloads.
+    backup: Purchase metadata is retained in Karakeep; audio recovery relies on local copies and store redownload in version one.
+    drift_probe: Review unresolved purchase cards and storefront availability without authenticating an automated service.
+    review_interval: monthly
+    exit_criterion: Reassess only if a store publishes a supported purchase API with explicit unattended-use terms.
+  - id: home-assistant-runtime-registry
+    resource: Home Assistant integrations that are stored only in the runtime registry
+    owner: funforgiven
+    rationale: Some integrations do not expose a stable YAML or API representation and must be enrolled through the Home Assistant UI.
+    procedure: Prefer Git-managed YAML; document each UI-only enrollment and run an encrypted backup immediately after an accepted change.
+    secret_handling: Integration credentials remain in Home Assistant state and encrypted backups, not documentation or Git plaintext.
+    backup: Daily encrypted Home Assistant state export plus a pre-change export for every UI-only modification.
+    drift_probe: Compare the documented integration inventory with the redacted Home Assistant diagnostics export.
+    review_interval: monthly
+    exit_criterion: Migrate an integration to Git as soon as Home Assistant offers a supported declarative representation.

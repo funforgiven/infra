@@ -44,6 +44,10 @@
             python -m unittest discover \
               -s components/cloud/network-automation/tests -p 'test_*.py'
 
+            python components/cloud/policy/validate_management_policy.py \
+              deployments/homelab/cloud/declarative-ownership.yaml \
+              deployments/homelab/cloud/manual-exceptions.yaml
+
             (
               cd components/cloud/host-automation
               ansible-inventory --graph >/dev/null
