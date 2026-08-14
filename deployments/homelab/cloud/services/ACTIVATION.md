@@ -83,19 +83,19 @@ push it directly to `main`.
 ## 4. Standalone hosts
 
 Activate stage `hosts`. Use `enroll-service-host-secrets` for each host's
-root-only Restic and monitoring profiles and for the Hermes runtime profile.
-Rebuild Hermes once so its managed environment is reseeded, then run
-`sudo -H -u hermes hermes auth add openai-codex` from an interactive SSH
-session. Start services only after their condition paths exist. The
-infrastructure Telegram bot is reused for host failure alerts; Hermes and media
-retain their separate bots and chats.
+root-only Restic and monitoring profiles. Leave Hermes condition-gated until
+Karakeep is live, because its independently revocable API key cannot be issued
+earlier. The infrastructure Telegram bot is reused for host failure alerts;
+Hermes and media retain their separate bots and chats.
 
 Activate stage `mail`, confirm its retained address and reverse DNS, then
 perform the explicitly destructive nixos-anywhere install against that exact
-server. Use the host enrollment app for its `mail-runtime`, `mail-edge-backup`,
-and `monitoring` profiles before starting
-mail. Activate stage `dns` only after the cluster reconciler has copied
-the mail-edge output into `service-dns-inputs`.
+server. Enroll only its `mail-edge-backup` and `monitoring` profiles initially;
+the absent mail runtime keeps Stalwart stopped while DNS and ACME are pending.
+Activate stage `dns` after the cluster reconciler has copied the mail-edge
+output into `service-dns-inputs`. Once the A and Resend verification records
+are live, issue the domain-scoped Resend sending key, enroll `mail-runtime`,
+and start Stalwart after its certificate is ready.
 
 ## 5. Application and recovery gates
 
@@ -107,11 +107,15 @@ next stage:
 3. `backup-policy`
 4. `knowledge`
 
-After Karakeep is live, create the independently revocable release-watcher API
-key in its UI. Enroll `RELEASE_WATCHER_KARAKEEP_API_KEY`, create and push a
-signed credential commit, wait for `wave81-services-foundation`, and run the
-services-cluster reconciler so `media-runtime` gains that key. This is the one
-post-deployment credential in the machine-readable contract; it breaks the
+After Karakeep is live, create two independently revocable API keys in its UI:
+one for Hermes and one for the release watcher. Enroll the Hermes runtime with
+the host app, rebuild Hermes so its managed environment is reseeded, then run
+`sudo -H -u hermes hermes auth add openai-codex` from an interactive SSH
+session. Enroll `RELEASE_WATCHER_KARAKEEP_API_KEY` in SOPS, create and push a
+signed credential commit, wait for `wave81-services-foundation`, and wait for
+or operationally trigger the already-declared services-cluster CronJob so
+`media-runtime` gains that key. The central key is the one post-deployment
+credential in the machine-readable contract; this ordering breaks the
 otherwise impossible dependency on a not-yet-running Karakeep instance.
 
 Run the final repository gate:
