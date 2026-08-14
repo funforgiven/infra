@@ -1,0 +1,53 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: service-dns-tofu-source
+  namespace: cert-manager
+spec:
+  interval: 10m
+  url: https://github.com/funforgiven/infra.git
+  ref:
+    branch: main
+  verify:
+    mode: HEAD
+    secretRef:
+      name: service-dns-signing-key
+---
+apiVersion: infra.contrib.fluxcd.io/v1alpha2
+kind: Terraform
+metadata:
+  name: service-dns
+  namespace: cert-manager
+spec:
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  approvePlan: auto
+  destroyResourcesOnDeletion: false
+  path: ./components/cloud/services/dns/tofu
+  sourceRef:
+    kind: GitRepository
+    name: service-dns-tofu-source
+  vars:
+    # These values are deliberately invalid until the dependent resources have
+    # been created and their exact identifiers reviewed.
+    - name: zone_id
+      value: "00000000000000000000000000000000"
+    - name: mail_ipv4_address
+      value: 192.0.2.255
+  runnerPodTemplate:
+    spec:
+      alwaysCleanupRunnerPod: true
+      env:
+        - name: CLOUDFLARE_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: cloudflare-dns01
+              key: api-token
+  writeOutputsToSecret:
+    name: service-dns-outputs
+    outputs:
+      - services_gateway_address
+      - mail_ipv4_address
+  remediation:
+    retries: 3

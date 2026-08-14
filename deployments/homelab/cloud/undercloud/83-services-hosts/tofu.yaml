@@ -1,0 +1,35 @@
+apiVersion: infra.contrib.fluxcd.io/v1alpha2
+kind: Terraform
+metadata:
+  name: services-hosts
+  namespace: openstack
+spec:
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  approvePlan: auto
+  destroyResourcesOnDeletion: false
+  path: ./components/cloud/services/hosts/tofu
+  sourceRef:
+    kind: GitRepository
+    name: services-tofu-source
+  vars:
+    # Activation requires an exact signed revision whose images have already
+    # passed the promotion gate. This sentinel is intentionally undeployable.
+    - name: image_revision
+      value: "0000000000000000000000000000000000000000"
+  runnerPodTemplate:
+    spec:
+      alwaysCleanupRunnerPod: true
+      envFrom:
+        - secretRef:
+            name: magnum-keystone-admin
+  writeOutputsToSecret:
+    name: services-hosts-outputs
+    outputs:
+      - hermes_private_address
+      - hermes_provider_address
+      - home_assistant_private_address
+      - home_assistant_provider_address
+  remediation:
+    retries: 3

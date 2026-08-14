@@ -126,10 +126,34 @@
             kustomize build deployments/homelab/cloud/management >/dev/null
             kustomize build deployments/homelab/cloud/services >/dev/null
             kustomize build \
+              deployments/homelab/cloud/services/12-observability \
+              >/dev/null
+            kustomize build \
+              deployments/homelab/cloud/services/15-backup-controller \
+              >/dev/null
+            kustomize build \
+              deployments/homelab/cloud/services/16-backup-policy \
+              >/dev/null
+            kustomize build \
+              deployments/homelab/cloud/services/25-home-automation \
+              >/dev/null
+            kustomize build \
+              deployments/homelab/cloud/services/40-media \
+              >/dev/null
+            kustomize build \
               deployments/homelab/cloud/undercloud/81-services-foundation \
               >/dev/null
             kustomize build \
               deployments/homelab/cloud/undercloud/82-services-cluster \
+              >/dev/null
+            kustomize build \
+              deployments/homelab/cloud/undercloud/83-services-hosts \
+              >/dev/null
+            kustomize build \
+              deployments/homelab/cloud/undercloud/84-mail-edge \
+              >/dev/null
+            kustomize build \
+              deployments/homelab/cloud/undercloud/85-service-dns \
               >/dev/null
             for bootstrap_phase in components sync; do
               kustomize build --load-restrictor LoadRestrictionsNone \

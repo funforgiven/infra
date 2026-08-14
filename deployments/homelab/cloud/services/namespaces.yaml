@@ -1,6 +1,14 @@
 apiVersion: v1
 kind: Namespace
 metadata:
+  name: backup-qualification
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.35
+---
+apiVersion: v1
+kind: Namespace
+metadata:
   name: cert-manager
   labels:
     pod-security.kubernetes.io/enforce: restricted
@@ -17,6 +25,16 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
+  name: velero
+  labels:
+    # The filesystem-backup node agent requires hostPath access to kubelet
+    # volumes. Keep this privilege isolated from application namespaces.
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/enforce-version: v1.35
+---
+apiVersion: v1
+kind: Namespace
+metadata:
   name: knowledge
   labels:
     gateway.fahrican.com/services: allowed
@@ -27,6 +45,8 @@ metadata:
   name: media
   labels:
     gateway.fahrican.com/services: allowed
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.35
 ---
 apiVersion: v1
 kind: Namespace
@@ -39,6 +59,9 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: services-observability
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/enforce-version: v1.35
 ---
 apiVersion: v1
 kind: Namespace

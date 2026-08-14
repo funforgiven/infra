@@ -1,0 +1,129 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: velero
+  namespace: velero
+spec:
+  interval: 24h
+  url: https://vmware-tanzu.github.io/helm-charts
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: velero
+  namespace: velero
+spec:
+  suspend: true
+  interval: 30m
+  timeout: 15m
+  releaseName: velero
+  chart:
+    spec:
+      chart: velero
+      version: 12.1.0
+      sourceRef:
+        kind: HelmRepository
+        name: velero
+  driftDetection:
+    mode: enabled
+  install:
+    crds: Create
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  values:
+    image:
+      repository: docker.io/velero/velero
+      tag: v1.18.2
+      digest: sha256:37396519f399536e5f01427d723565ae69294ec3fb5625cf1c87c09eaa9de16b
+    initContainers:
+      - name: velero-plugin-for-aws
+        image: docker.io/velero/velero-plugin-for-aws:v1.14.2@sha256:0751144c1c8e52d52c48717fbd13ad5a3061e612ae4d7ad744a946cd5b139d1a
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+        volumeMounts:
+          - name: plugins
+            mountPath: /target
+    configuration:
+      backupStorageLocation:
+        - name: default
+          provider: aws
+          bucket: replace-before-activation
+          prefix: services-v1
+          default: true
+          accessMode: ReadWrite
+          credential:
+            name: velero-object-storage
+            key: cloud
+          config:
+            region: auto
+            s3ForcePathStyle: "true"
+            s3Url: https://backup.invalid
+      defaultBackupStorageLocation: default
+      defaultVolumesToFsBackup: true
+      defaultRepoMaintainFrequency: 24h
+    credentials:
+      useSecret: true
+      existingSecret: velero-object-storage
+    backupsEnabled: true
+    snapshotsEnabled: false
+    deployNodeAgent: true
+    uploaderType: kopia
+    upgradeCRDs: false
+    cleanUpCRDs: false
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+    nodeAgent:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: "2"
+          memory: 2Gi
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
+        additionalLabels:
+          release: kube-prometheus-stack
+      nodeAgentPodMonitor:
+        enabled: true
+        additionalLabels:
+          release: kube-prometheus-stack
+      prometheusRule:
+        enabled: true
+        additionalLabels:
+          release: kube-prometheus-stack
+        spec:
+          - alert: VeleroBackupFailed
+            annotations:
+              summary: A services-cluster backup has failed.
+            expr: velero_backup_last_status{schedule!=""} != 1
+            for: 15m
+            labels:
+              severity: critical
+          - alert: VeleroNoRecentBackup
+            annotations:
+              summary: No successful daily services-cluster backup exists within 26 hours.
+            expr: >-
+              ((time() - velero_backup_last_successful_timestamp{
+              schedule="services-daily"})
+              > bool (26 * 3600))
+              or absent(velero_backup_last_successful_timestamp{
+              schedule="services-daily"})
+            for: 1h
+            labels:
+              severity: critical

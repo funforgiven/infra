@@ -2,6 +2,7 @@ apiVersion: v1
 data:
     MEILI_MASTER_KEY: ENC[AES256_GCM,data:3eorx4xLmt6dS2mzngPT7KwqCoaJP7l1iZb3mzncRNOfVzmpBNyJ3Epaga/9rxpaJpAk1sYMCu4lXZArj9vhDf0CYLjxu2gP1vU6PZ1qYrtkIXJo5cjZaw==,iv:MbKP8f1dMMoY3AztXSDr9qa1uDfWmbGvdlfzMpO+UVs=,tag:SjLvrAIa3qiqPU0TlrUj1g==,type:str]
     NEXTAUTH_SECRET: ENC[AES256_GCM,data:Tl70Ihxgu9EtLQR0SakLiQ9BsKQTxRlHcLTfqkWy7FfDYyl5ntfiUpT+2HGrdHdiBl4Ec336TdyLcsbnXvazadwaIRXapaieFgOQ8ps9GRxc36C4G+Jmnw==,iv:9dNEKuQBKg2jsoCh3/D5N86tJWkm0WFV5trXq2l+E5U=,tag:h05r3Ry9nWYz0LfWoMD57A==,type:str]
+    SEARXNG_SECRET: ENC[AES256_GCM,data:cutYi9IlfcOte1DTBl5hLmrwgl+KNkc8ju7q8XD6y6UloGVYWRDmEOKdv07EQPpND23AMRL56UGVElg2PDPrCQ==,iv:5sJVDhIjbsOZR7mQOCyX2wRnpJsze6JULCA1dpyxNeM=,tag:fg/biLYEe++LSpFJluWRBA==,type:str]
 kind: Secret
 metadata:
     name: services-runtime-bootstrap
@@ -27,6 +28,6 @@ sops:
             -----END AGE ENCRYPTED FILE-----
           recipient: age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-08-14T20:17:06Z"
-    mac: ENC[AES256_GCM,data:4AK0IB8EJoKEfzd4I1M+BPiBhG2kepIlx28tGlMirl0F+0whxYxxnSMKsXki1W9xFJgTFUKeYq/qWrrR3bxE0xmcwjx979JtSh1NU89TGwGgLBN2tUq8c901OAq2jDQ+vKN6UdlPULpvIamwZSsho+o3GYohdP2YmB3CVRvm6yc=,iv:y/l6RoqZRwoXa120r2Byu4N/jyp1nmz8ndE6ifw4ZwY=,tag:RmEscwN/ReTDY3Su5wr7Cw==,type:str]
+    lastmodified: "2026-08-14T21:35:22Z"
+    mac: ENC[AES256_GCM,data:Qo3YeGXMHwxFVvZ6X5fVFQ8YF5/f1nG517kaQAX1dUgFpnlS6mYnaxgYziyU05WKMuQbrOkZbrTgjAC2IVGYrnaB1CzTiSc4GJaW4ZfOuYCeL4OJX2hKIbb0Q9RNa8SRsvy59kcz1jY1YZYgfv/M5JQ+6q/4YLVr7gUJcZBhJ5U=,iv:cbedYiQWd2PWjOS6OTwBZCqcoLNUKklWhknHbiDMOZo=,tag:5KYVUnL3QK75RrIFUcQouA==,type:str]
     version: 3.13.3
