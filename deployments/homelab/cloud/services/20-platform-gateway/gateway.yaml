@@ -1,0 +1,105 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: services
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 2
+        container:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+      envoyService:
+        type: LoadBalancer
+        externalTrafficPolicy: Cluster
+      envoyPDB:
+        minAvailable: 1
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: services-envoy
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: services
+    namespace: envoy-gateway-system
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: services
+  namespace: services-network
+spec:
+  secretName: services-tls
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt-cloudflare
+  dnsNames:
+    - keep.fahrican.com
+    - search.fahrican.com
+    - music.fahrican.com
+    - home.fahrican.com
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: services
+  namespace: services-network
+spec:
+  gatewayClassName: services-envoy
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              gateway.fahrican.com/services: allowed
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: services-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              gateway.fahrican.com/services: allowed
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: services-https-redirect
+  namespace: services-network
+spec:
+  parentRefs:
+    - name: services
+      sectionName: http
+  hostnames:
+    - keep.fahrican.com
+    - search.fahrican.com
+    - music.fahrican.com
+    - home.fahrican.com
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301

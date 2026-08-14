@@ -1212,3 +1212,48 @@ spec:
       kind: Job
       name: magnum-workload-storage-v12
       namespace: openstack
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave81-services-foundation
+  namespace: flux-system
+spec:
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./deployments/homelab/cloud/undercloud/81-services-foundation
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: wave80-magnum-workload
+  healthChecks:
+    - apiVersion: infra.contrib.fluxcd.io/v1alpha2
+      kind: Terraform
+      name: services-foundation
+      namespace: openstack
+    - apiVersion: infra.contrib.fluxcd.io/v1alpha2
+      kind: Terraform
+      name: services-identity
+      namespace: tofu-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave82-services-cluster
+  namespace: flux-system
+spec:
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./deployments/homelab/cloud/undercloud/82-services-cluster
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: wave81-services-foundation

@@ -1,6 +1,27 @@
 schemaVersion: 1
 document: homelab-cloud-version-selection
-lastReviewed: "2026-08-09"
+lastReviewed: "2026-08-14"
+
+selfHosted:
+  infrastructure:
+    openTofuDevelopment: 1.12.5
+    openTofuControllerRunner: 1.12.1
+    openStackProvider: 3.4.0
+  hermes:
+    version: 0.20.1
+    tag: v2026.8.13
+    commit: f80f453ae0679347e38abc917c7f94f717bf96c5
+    deployment: dedicated-nixos-vm
+  retrieval:
+    initial: karakeep-full-text
+    semantic: deferred
+  knowledge:
+    karakeep:
+      version: 0.32.0
+      image: ghcr.io/karakeep-app/karakeep:0.32.0@sha256:64d6a9bbf2d37b5c808cf06b5d87f1f1c7846fdd3844724145a9741aeb06fd31
+    meilisearch:
+      version: 1.41.0
+      image: docker.io/getmeili/meilisearch:v1.41.0@sha256:860fa4baed04ae1c235de870edab0c8006227546dea1bbb6411fbfc5e27cf1db
 
 host:
   ubuntu:

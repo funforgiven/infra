@@ -40,6 +40,9 @@ The small set of current documents is intentional:
 | [`kubernetes/`](kubernetes/) | Pinned Kubespray bootstrap and semantic acceptance contract |
 | [`undercloud/`](undercloud/) | Flux root for the real undercloud cluster |
 | [`undercloud/38-service-api-foundation/`](undercloud/38-service-api-foundation/) | Private Gateway, certificate, and mutually exclusive L2 fallback operation |
+| [`undercloud/81-services-foundation/`](undercloud/81-services-foundation/) | Suspended OpenTofu reconciliation for the self-hosted services project, network, flavors, and quotas |
+| [`undercloud/82-services-cluster/`](undercloud/82-services-cluster/) | Suspended Magnum and signed-Flux bootstrap reconciler with ephemeral kubeconfig handling |
+| [`services/`](services/) | Independent Flux root for self-hosted applications; initially Karakeep full-text retrieval only |
 
 Future platform resources are added only when their installation wave is
 reached. A proposed service is recorded here as desired architecture, not as a

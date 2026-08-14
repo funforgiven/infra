@@ -17,6 +17,7 @@
             nativeBuildInputs = [
               python
               pkgs.kustomize
+              pkgs.opentofu
               pkgs.ripgrep
               pkgs.shellcheck
               pkgs.yamllint
@@ -120,8 +121,16 @@
             )
 
             yamllint -d relaxed components/cloud deployments/homelab/cloud
+            tofu fmt -check -recursive components/cloud
             kustomize build deployments/homelab/cloud/undercloud >/dev/null
             kustomize build deployments/homelab/cloud/management >/dev/null
+            kustomize build deployments/homelab/cloud/services >/dev/null
+            kustomize build \
+              deployments/homelab/cloud/undercloud/81-services-foundation \
+              >/dev/null
+            kustomize build \
+              deployments/homelab/cloud/undercloud/82-services-cluster \
+              >/dev/null
             for bootstrap_phase in components sync; do
               kustomize build --load-restrictor LoadRestrictionsNone \
                 "deployments/homelab/cloud/management/bootstrap/$bootstrap_phase" \
