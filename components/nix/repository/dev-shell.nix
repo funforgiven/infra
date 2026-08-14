@@ -23,6 +23,7 @@ _: {
             pkgs.kubectl
             pkgs.kustomize
             pkgs.nixd
+            pkgs.opentofu
             (pkgs.python3.withPackages (pythonPackages: [
               pythonPackages.ansible
               pythonPackages.ansible-core
@@ -31,6 +32,8 @@ _: {
             ]))
             pkgs.ripgrep
             pkgs.shellcheck
+            pkgs.skopeo
+            pkgs.sops
             pkgs.xorriso
             pkgs.yamllint
           ];

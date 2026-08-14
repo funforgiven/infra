@@ -1,7 +1,12 @@
 *.backup
 *.py[cod]
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
 .env
 .env.*
+**/.terraform/
 /.codex-doc-cache/
 /.direnv/
 /.envrc

@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-manager
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.35
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: envoy-gateway-system
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.35
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: knowledge
+  labels:
+    gateway.fahrican.com/services: allowed
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: media
+  labels:
+    gateway.fahrican.com/services: allowed
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: home-automation
+  labels:
+    gateway.fahrican.com/services: allowed
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: services-observability
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: services-databases
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: services-network

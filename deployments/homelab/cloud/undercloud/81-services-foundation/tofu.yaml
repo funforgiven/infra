@@ -1,0 +1,43 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: services-tofu-source
+  namespace: openstack
+spec:
+  interval: 10m
+  url: https://github.com/funforgiven/infra.git
+  ref:
+    branch: main
+  verify:
+    mode: HEAD
+    secretRef:
+      name: flux-system-signing-key
+---
+apiVersion: infra.contrib.fluxcd.io/v1alpha2
+kind: Terraform
+metadata:
+  name: services-foundation
+  namespace: openstack
+spec:
+  interval: 10m
+  retryInterval: 1m
+  approvePlan: auto
+  destroyResourcesOnDeletion: false
+  path: ./components/cloud/services/foundation/tofu
+  sourceRef:
+    kind: GitRepository
+    name: services-tofu-source
+  runnerPodTemplate:
+    spec:
+      alwaysCleanupRunnerPod: true
+      envFrom:
+        - secretRef:
+            name: magnum-keystone-admin
+  writeOutputsToSecret:
+    name: services-foundation-outputs
+    outputs:
+      - project_id
+      - network_id
+      - subnet_id
+  remediation:
+    retries: 3

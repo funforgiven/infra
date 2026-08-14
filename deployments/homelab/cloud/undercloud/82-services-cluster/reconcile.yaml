@@ -1,0 +1,288 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: services-cluster-reconcile-v1
+  namespace: openstack
+data:
+  signing-key.pub: |
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL1nHHxNA1YUl+89HhieA+YOyOLYJaSRBmutEOVxVQeB github-funforgiven-2026-07-18
+  sync.yaml: |
+    apiVersion: source.toolkit.fluxcd.io/v1
+    kind: GitRepository
+    metadata:
+      name: flux-system
+      namespace: flux-system
+    spec:
+      interval: 5m
+      url: https://github.com/funforgiven/infra.git
+      ref:
+        branch: main
+      verify:
+        mode: HEAD
+        secretRef:
+          name: flux-system-signing-key
+    ---
+    apiVersion: kustomize.toolkit.fluxcd.io/v1
+    kind: Kustomization
+    metadata:
+      name: flux-system
+      namespace: flux-system
+    spec:
+      interval: 10m
+      retryInterval: 1m
+      timeout: 20m
+      path: ./deployments/homelab/cloud/services
+      prune: true
+      sourceRef:
+        kind: GitRepository
+        name: flux-system
+      decryption:
+        provider: sops
+        secretRef:
+          name: sops-age
+  reconcile.sh: |
+    #!/bin/sh
+    set -eu
+
+    cluster=services-v1
+    template=services-kubernetes-v1.36.2-v1
+    undercloud_kubeconfig=/tmp/undercloud-kubeconfig
+    kubeconfig=/tmp/kube/config
+    kubectl=/tmp/bin/kubectl
+    flux=/tmp/bin/flux
+
+    export OS_PROJECT_NAME=services
+    export OS_PROJECT_DOMAIN_NAME=Default
+    unset OS_PROJECT_ID OS_TENANT_ID OS_TENANT_NAME || true
+
+    project_id="$(openstack project show services -f value -c id)"
+    openstack token issue -f value -c project_id | grep -Fx "$project_id" >/dev/null
+
+    if ! openstack coe cluster template show "$template" >/dev/null 2>&1; then
+      openstack coe cluster template create "$template" \
+        --coe kubernetes \
+        --image ubuntu-jammy-kube-v1.36.2-260705-1940 \
+        --external-network public \
+        --fixed-network services \
+        --fixed-subnet services-v4 \
+        --network-driver calico \
+        --volume-driver cinder \
+        --flavor services.worker \
+        --master-flavor services.master \
+        --dns-nameserver 10.21.40.1 \
+        --master-lb-enabled \
+        --floating-ip-enabled \
+        --labels capi_helm_chart_version=0.27.0
+    fi
+
+    if ! openstack coe cluster show "$cluster" >/dev/null 2>&1; then
+      openstack coe cluster create "$cluster" \
+        --cluster-template "$template" \
+        --master-count 3 \
+        --node-count 2 \
+        --timeout 90
+    fi
+
+    for attempt in $(seq 1 720); do
+      status="$(openstack coe cluster show "$cluster" -f value -c status)"
+      case "$status" in
+        CREATE_COMPLETE|UPDATE_COMPLETE) break ;;
+        *_FAILED)
+          echo "$cluster entered terminal status $status" >&2
+          exit 1
+          ;;
+      esac
+      test "$attempt" -lt 720
+      sleep 10
+    done
+
+    test "$(openstack coe cluster show "$cluster" -f value -c master_count)" -eq 3
+    node_count="$(openstack coe cluster show "$cluster" -f value -c node_count)"
+    if test "$node_count" -lt 2; then
+      openstack coe cluster resize "$cluster" 2
+    elif test "$node_count" -gt 2; then
+      echo "$cluster has $node_count workers; refusing a destructive scale-down" >&2
+      exit 1
+    fi
+
+    mkdir -p /tmp/bin /tmp/kube
+    curl -fsSL -o "$kubectl" \
+      https://dl.k8s.io/release/v1.36.2/bin/linux/amd64/kubectl
+    printf '%s  %s\n' \
+      1e9045ec32bea85da43de85f0065358529ea7c7a152eca78154fba5b58c27d82 \
+      "$kubectl" | sha256sum -c -
+    chmod 0500 "$kubectl"
+
+    curl -fsSL -o /tmp/flux.tar.gz \
+      https://github.com/fluxcd/flux2/releases/download/v2.9.3/flux_2.9.3_linux_amd64.tar.gz
+    printf '%s  %s\n' \
+      eae4e8608c0ade2bf4e8dec1669dbb6b0c28b5822b252d97feccfb4fb1181fd2 \
+      /tmp/flux.tar.gz | sha256sum -c -
+    tar -xzf /tmp/flux.tar.gz -C /tmp/bin flux
+    chmod 0500 "$flux"
+
+    service_account=/var/run/secrets/kubernetes.io/serviceaccount
+    service_account_token="$(cat "$service_account/token")"
+    {
+      printf '%s\n' \
+        'apiVersion: v1' \
+        'kind: Config' \
+        'clusters:' \
+        '- name: undercloud' \
+        '  cluster:' \
+        "    certificate-authority: $service_account/ca.crt" \
+        "    server: https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT_HTTPS" \
+        'contexts:' \
+        '- name: undercloud' \
+        '  context:' \
+        '    cluster: undercloud' \
+        '    user: services-cluster-reconcile' \
+        'current-context: undercloud' \
+        'users:' \
+        '- name: services-cluster-reconcile' \
+        '  user:'
+      printf '    token: %s\n' "$service_account_token"
+    } > "$undercloud_kubeconfig"
+    chmod 0600 "$undercloud_kubeconfig"
+    unset service_account_token
+
+    KUBECONFIG="$undercloud_kubeconfig" \
+      "$kubectl" -n tofu-system get secret services-identity-outputs \
+      -o jsonpath='{.data.OAUTH_CLIENT_ID}' | \
+      base64 -d > /tmp/OAUTH_CLIENT_ID
+    KUBECONFIG="$undercloud_kubeconfig" \
+      "$kubectl" -n tofu-system get secret services-identity-outputs \
+      -o jsonpath='{.data.OAUTH_CLIENT_SECRET}' | \
+      base64 -d > /tmp/OAUTH_CLIENT_SECRET
+    KUBECONFIG="$undercloud_kubeconfig" \
+      "$kubectl" -n cert-manager get secret cloudflare-dns01 \
+      -o jsonpath='{.data.api-token}' | \
+      base64 -d > /tmp/cloudflare-api-token
+
+    openstack coe cluster config "$cluster" --dir /tmp/kube --force
+    export KUBECONFIG="$kubeconfig"
+
+    for attempt in $(seq 1 240); do
+      nodes="$($kubectl get nodes --no-headers 2>/dev/null || true)"
+      total="$(printf '%s\n' "$nodes" | awk 'NF { count++ } END { print count + 0 }')"
+      ready="$(printf '%s\n' "$nodes" | awk '$2 == "Ready" { count++ } END { print count + 0 }')"
+      if test "$total" -eq 5 && test "$ready" -eq 5; then
+        break
+      fi
+      test "$attempt" -lt 240
+      sleep 5
+    done
+
+    "$flux" install --namespace=flux-system
+    "$kubectl" -n flux-system create secret generic sops-age \
+      --from-file=age.agekey=/bootstrap/age.agekey \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" -n flux-system create secret generic flux-system-signing-key \
+      --from-file=trusted-signing-key.sshpub=/config/signing-key.pub \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" create namespace cert-manager \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" -n cert-manager create secret generic cloudflare-dns01 \
+      --from-file=api-token=/tmp/cloudflare-api-token \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" create namespace knowledge \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" -n knowledge create secret generic karakeep-runtime \
+      --from-file=NEXTAUTH_SECRET=/runtime-bootstrap/NEXTAUTH_SECRET \
+      --from-file=MEILI_MASTER_KEY=/runtime-bootstrap/MEILI_MASTER_KEY \
+      --from-file=OAUTH_CLIENT_ID=/tmp/OAUTH_CLIENT_ID \
+      --from-file=OAUTH_CLIENT_SECRET=/tmp/OAUTH_CLIENT_SECRET \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" apply -f /config/sync.yaml
+    "$flux" reconcile source git flux-system --timeout=5m
+    "$flux" reconcile kustomization flux-system --with-source --timeout=20m
+
+    test "$($kubectl get nodes --no-headers | wc -l)" -eq 5
+    echo "$cluster is ready and reconciled from signed Git"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: services-cluster-reconcile-v1
+  namespace: openstack
+spec:
+  schedule: "17 */2 * * *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 9000
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: services-cluster-reconcile
+            app.kubernetes.io/part-of: self-hosted-platform
+        spec:
+          automountServiceAccountToken: true
+          serviceAccountName: services-cluster-reconcile
+          restartPolicy: Never
+          nodeSelector:
+            openstack-control-plane: enabled
+          securityContext:
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: reconcile
+              image: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+              command:
+                - /config/reconcile.sh
+              envFrom:
+                - secretRef:
+                    name: magnum-keystone-admin
+              env:
+                - name: HOME
+                  value: /tmp
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  cpu: "1"
+                  memory: 768Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+                readOnlyRootFilesystem: true
+              volumeMounts:
+                - name: bootstrap
+                  mountPath: /bootstrap
+                  readOnly: true
+                - name: config
+                  mountPath: /config
+                  readOnly: true
+                - name: runtime-bootstrap
+                  mountPath: /runtime-bootstrap
+                  readOnly: true
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: bootstrap
+              secret:
+                secretName: services-flux-bootstrap
+                defaultMode: 0400
+            - name: config
+              configMap:
+                name: services-cluster-reconcile-v1
+                defaultMode: 0555
+            - name: runtime-bootstrap
+              secret:
+                secretName: services-runtime-bootstrap
+                defaultMode: 0400
+            - name: tmp
+              emptyDir:
+                medium: Memory
+                sizeLimit: 512Mi
