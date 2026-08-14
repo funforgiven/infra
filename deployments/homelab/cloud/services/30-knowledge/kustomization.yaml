@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - karakeep.yaml
   - network-policy.yaml
+  - searxng.yaml

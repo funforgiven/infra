@@ -1,0 +1,178 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: kube-prometheus-stack-chart
+  namespace: services-observability
+spec:
+  interval: 24h
+  url: oci://ghcr.io/prometheus-community/charts/kube-prometheus-stack
+  ref:
+    digest: sha256:db4805aa51d6566e6b628d71a6445be8a81ecd49701b99928c1a4cffc4132c1a
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kube-prometheus-stack
+  namespace: services-observability
+spec:
+  suspend: true
+  interval: 30m
+  timeout: 15m
+  releaseName: kube-prometheus-stack
+  chartRef:
+    kind: OCIRepository
+    name: kube-prometheus-stack-chart
+  driftDetection:
+    mode: enabled
+    ignore:
+      - paths:
+          - /webhooks/0/clientConfig/caBundle
+        target:
+          group: admissionregistration.k8s.io
+          version: v1
+          kind: MutatingWebhookConfiguration
+          name: kube-prometheus-stack-admission
+      - paths:
+          - /webhooks/0/clientConfig/caBundle
+          - /webhooks/1/clientConfig/caBundle
+        target:
+          group: admissionregistration.k8s.io
+          version: v1
+          kind: ValidatingWebhookConfiguration
+          name: kube-prometheus-stack-admission
+  install:
+    crds: Create
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  values:
+    prometheus-node-exporter:
+      image:
+        digest: sha256:8c9bac11973b94b59be88d6e11fee4429aa743c8846cdc75d65b18db33f6a106
+
+    kube-state-metrics:
+      image:
+        sha: sha256:85108987d044b18a098126732f98602df408888c0f7d456241f5abefb9744bc1
+
+    crds:
+      enabled: true
+      upgradeJob:
+        enabled: false
+
+    kubeControllerManager:
+      enabled: false
+    kubeEtcd:
+      enabled: false
+    kubeProxy:
+      enabled: false
+    kubeScheduler:
+      enabled: false
+
+    prometheusOperator:
+      image:
+        sha: a001ed10a3823bbf2410ea347796d0e35ff8decd24fb98acbe7ab9e98d431c39
+      prometheusConfigReloader:
+        image:
+          sha: 0ccb22ca9f3f6fd9f76ce95585d18bd2e363d421c534dde710be4bd13caa551d
+      admissionWebhooks:
+        enabled: true
+        failurePolicy: Fail
+        certManager:
+          enabled: false
+        patch:
+          enabled: true
+          image:
+            sha: d0e80b2f62fe43bb5e1b96adc692132fb4522e802f4cf673c09b1f94722b8cb6
+
+    prometheus:
+      prometheusSpec:
+        replicas: 1
+        retention: 15d
+        retentionSize: 18GiB
+        image:
+          sha: 64f71bb84e03c855948418b0fc5dea53e9543d8e3fc9931598f583805507f05e
+        externalLabels:
+          cluster: services-v1
+        persistentVolumeClaimRetentionPolicy:
+          whenDeleted: Retain
+          whenScaled: Retain
+        podMonitorSelectorNilUsesHelmValues: false
+        podMonitorSelector: {}
+        podMonitorNamespaceSelector: {}
+        ruleSelectorNilUsesHelmValues: false
+        ruleSelector: {}
+        ruleNamespaceSelector: {}
+        serviceMonitorSelectorNilUsesHelmValues: false
+        serviceMonitorSelector: {}
+        serviceMonitorNamespaceSelector: {}
+        resources:
+          requests:
+            cpu: 250m
+            memory: 1Gi
+          limits:
+            memory: 4Gi
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: rbd1
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 20Gi
+
+    alertmanager:
+      config:
+        global:
+          resolve_timeout: 5m
+        route:
+          receiver: infrastructure-telegram
+          group_by:
+            - alertname
+            - namespace
+            - severity
+          group_wait: 30s
+          group_interval: 5m
+          repeat_interval: 6h
+          routes:
+            - receiver: "null"
+              matchers:
+                - alertname = "Watchdog"
+        receivers:
+          - name: "null"
+          - name: infrastructure-telegram
+            telegram_configs:
+              - bot_token_file: /etc/alertmanager/secrets/infrastructure-telegram/bot-token
+                chat_id: 0
+                send_resolved: true
+                parse_mode: HTML
+      alertmanagerSpec:
+        replicas: 1
+        image:
+          sha: 9e082985f56f4c8c9f724e18f2288c6708f472e56a5286b8863d080434ea065d
+        secrets:
+          - infrastructure-telegram
+        persistentVolumeClaimRetentionPolicy:
+          whenDeleted: Retain
+          whenScaled: Retain
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            memory: 512Mi
+        storage:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: rbd1
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 2Gi
+
+    grafana:
+      enabled: false

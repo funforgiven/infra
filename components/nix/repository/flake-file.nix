@@ -48,6 +48,11 @@ in
         inputs.nixpkgs.follows = "nixpkgs";
       };
 
+      hermes-agent = {
+        url = "git+https://github.com/NousResearch/hermes-agent.git?rev=f80f453ae0679347e38abc917c7f94f717bf96c5&shallow=1";
+        inputs.nixpkgs.follows = "nixpkgs";
+      };
+
       niri = {
         url = "github:sodiboo/niri-flake";
         inputs.nixpkgs.follows = "nixpkgs";
@@ -65,6 +70,12 @@ in
 
       disko = {
         url = "github:nix-community/disko";
+        inputs.nixpkgs.follows = "nixpkgs";
+      };
+
+      nixos-anywhere = {
+        url = "git+https://github.com/nix-community/nixos-anywhere.git?rev=bad98b0685cf47eaeadcaf6787da8b51cf025693&shallow=1";
+        inputs.disko.follows = "disko";
         inputs.nixpkgs.follows = "nixpkgs";
       };
 

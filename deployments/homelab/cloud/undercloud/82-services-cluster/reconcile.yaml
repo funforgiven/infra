@@ -193,6 +193,9 @@ data:
       --from-file=OAUTH_CLIENT_ID=/tmp/OAUTH_CLIENT_ID \
       --from-file=OAUTH_CLIENT_SECRET=/tmp/OAUTH_CLIENT_SECRET \
       --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" -n knowledge create secret generic searxng-runtime \
+      --from-file=SEARXNG_SECRET=/runtime-bootstrap/SEARXNG_SECRET \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
     "$kubectl" apply -f /config/sync.yaml
     "$flux" reconcile source git flux-system --timeout=5m
     "$flux" reconcile kustomization flux-system --with-source --timeout=20m

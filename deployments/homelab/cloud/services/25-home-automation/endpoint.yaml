@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: home-assistant
+  namespace: home-automation
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8123
+      targetPort: 8123
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: home-assistant-vm
+  namespace: home-automation
+  labels:
+    kubernetes.io/service-name: home-assistant
+addressType: IPv4
+ports:
+  - name: http
+    protocol: TCP
+    port: 8123
+endpoints:
+  - addresses:
+      - 192.168.80.10
+    conditions:
+      ready: true
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: home-assistant
+  namespace: home-automation
+spec:
+  parentRefs:
+    - name: services
+      namespace: services-network
+      sectionName: https
+  hostnames:
+    - home.fahrican.com
+  rules:
+    - backendRefs:
+        - name: home-assistant
+          port: 8123

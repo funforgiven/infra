@@ -25,6 +25,75 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
+  name: services-observability
+  namespace: flux-system
+spec:
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./deployments/homelab/cloud/services/12-observability
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: services-platform-controllers
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: kube-prometheus-stack
+      namespace: services-observability
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: services-backup-controller
+  namespace: flux-system
+spec:
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./deployments/homelab/cloud/services/15-backup-controller
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: services-observability
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: velero
+      namespace: velero
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: services-backup-policy
+  namespace: flux-system
+spec:
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  path: ./deployments/homelab/cloud/services/16-backup-policy
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: services-backup-controller
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: backup-canary
+      namespace: backup-qualification
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
   name: services-platform-gateway
   namespace: flux-system
 spec:
@@ -65,6 +134,7 @@ spec:
     name: flux-system
   dependsOn:
     - name: services-platform-gateway
+    - name: services-backup-policy
   healthChecks:
     - apiVersion: apps/v1
       kind: StatefulSet
@@ -74,3 +144,54 @@ spec:
       kind: StatefulSet
       name: meilisearch
       namespace: knowledge
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: searxng
+      namespace: knowledge
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: services-media
+  namespace: flux-system
+spec:
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./deployments/homelab/cloud/services/40-media
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: services-platform-gateway
+    - name: services-backup-policy
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: StatefulSet
+      name: navidrome
+      namespace: media
+    - apiVersion: apps/v1
+      kind: StatefulSet
+      name: sftpgo
+      namespace: media
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: services-home-automation
+  namespace: flux-system
+spec:
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  path: ./deployments/homelab/cloud/services/25-home-automation
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: services-platform-gateway
+    - name: services-backup-policy

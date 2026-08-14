@@ -1,10 +1,10 @@
 version: 1
 exceptions:
   - id: telegram-botfather-bootstrap
-    resource: Telegram bots for infrastructure, Hermes, and Home Assistant
+    resource: Telegram bots for infrastructure, Hermes, and media acquisition
     owner: funforgiven
     rationale: Telegram exposes bot creation and token rotation only through BotFather.
-    procedure: Create three distinct bots, record only their public usernames, and ingest each token with the no-echo SOPS bootstrap command.
+    procedure: Create three distinct bots for infrastructure alerts, Hermes conversation, and media acquisition; record only their public usernames, and ingest each token with the no-echo SOPS bootstrap command.
     secret_handling: Bot tokens go directly to workload-specific SOPS documents and are never printed, passed as arguments, or shared between bots.
     backup: SOPS ciphertext is in Git; BotFather remains the recovery and revocation authority.
     drift_probe: Verify bot usernames and numeric allowlists monthly without retrieving or displaying tokens.
@@ -20,6 +20,26 @@ exceptions:
     drift_probe: Compare service-account IDs, roles, key metadata, model controls, rate limits, and spend alerts through the declarative provider.
     review_interval: monthly
     exit_criterion: Remove when the provider can issue a key directly into an approved secret store without exposing it through state.
+  - id: hermes-openai-oauth-enrollment
+    resource: Hermes ChatGPT/Codex subscription authentication
+    owner: funforgiven
+    rationale: The OpenAI Codex provider uses an interactive device-code OAuth grant and stores renewable user tokens outside Hermes configuration.
+    procedure: Enroll once from a trusted terminal with the Hermes openai-codex authentication command, then start the condition-gated service.
+    secret_handling: OAuth tokens remain mode-0600 under the Hermes service state directory and are never copied into Nix, Git, shell history, command arguments, or OpenTofu state.
+    backup: Include the Hermes authentication file only in the host's encrypted application-state backup; rotation remains available by repeating enrollment.
+    drift_probe: Run the non-secret Hermes authentication-status check monthly and alert on expiry or provider mismatch without displaying token material.
+    review_interval: monthly
+    exit_criterion: Replace this exception if OpenAI and Hermes provide a supported non-interactive workload identity flow for subscription-backed Codex access.
+  - id: karakeep-api-key-issuance
+    resource: Karakeep API key used by the Hermes integration
+    owner: funforgiven
+    rationale: Karakeep currently issues personal API keys only through its authenticated user interface.
+    procedure: Create a dedicated integration key after SSO enrollment and ingest it directly into the workload-specific SOPS document.
+    secret_handling: The key is never displayed in documentation, passed as a command argument, or stored in OpenTofu state; Hermes receives it through a mode-0400 runtime file.
+    backup: SOPS ciphertext preserves the active key, and Karakeep remains the revocation and rotation authority.
+    drift_probe: Verify the key record, integration health, and last-used metadata monthly without retrieving the key value.
+    review_interval: monthly
+    exit_criterion: Replace this exception when Karakeep exposes supported declarative API-key lifecycle management.
   - id: resend-api-key-issuance
     resource: Resend administration and Stalwart SMTP credentials
     owner: funforgiven
@@ -30,6 +50,36 @@ exceptions:
     drift_probe: Compare domain settings, verification status, DNS records, and non-secret key metadata through the API.
     review_interval: monthly
     exit_criterion: Remove when an approved provider can issue keys directly into the secret store without state exposure.
+  - id: stalwart-directory-bootstrap
+    resource: Stalwart mail domain, initial mailbox, aliases, and application passwords
+    owner: funforgiven
+    rationale: The pinned NixOS-compatible Stalwart 0.15 release lacks the safe declarative apply interface available in Stalwart 0.16, while destructive reconciliation through its legacy principal API can orphan existing mail state.
+    procedure: After the encrypted backup has passed an isolated restore, create the domain and initial account through the private management interface; record the non-secret desired directory inventory beside the operational runbook, make additive changes only, and take an immediate encrypted backup after every accepted change.
+    secret_handling: Passwords and application-password values go directly from the password manager into Stalwart and never enter Nix, Git, shell history, command arguments, OpenTofu state, screenshots, or documentation.
+    backup: The encrypted Stalwart state backup is the authoritative recovery copy; retain a verified pre-change snapshot before any rename or deletion.
+    drift_probe: Compare the redacted domain, account, alias, and application-password metadata with the documented desired inventory monthly without retrieving hashes or secret values.
+    review_interval: monthly
+    exit_criterion: Migrate to the supported Stalwart declarative apply workflow when a compatible NixOS module is available, then remove this exception after a restore-tested migration.
+  - id: hcloud-api-token-issuance
+    resource: Hetzner Cloud token used by the mail-edge OpenTofu controller
+    owner: funforgiven
+    rationale: Hetzner Cloud API tokens must be issued through project account controls before the declarative provider can authenticate.
+    procedure: Issue a dedicated read-write token in the mail-edge project and ingest it directly as HCLOUD_TOKEN in the controller's SOPS-managed runtime Secret.
+    secret_handling: The token is never entered as an OpenTofu variable, committed as plaintext, printed, or placed in command arguments.
+    backup: SOPS ciphertext preserves the active token; the Hetzner project remains the revocation and rotation authority.
+    drift_probe: Verify the dedicated token inventory and last rotation date monthly without retrieving or displaying its value.
+    review_interval: monthly
+    exit_criterion: Remove when Hetzner supports a workload identity flow that the controller can use without a long-lived token.
+  - id: offsite-backup-credential-issuance
+    resource: Object-store writer credentials and Restic repository enrollment for service workloads
+    owner: funforgiven
+    rationale: The storage provider returns application-key secrets only at issuance, while new NixOS guests do not have stable SOPS recipients until their host identities exist.
+    procedure: Issue one append-only or prefix-scoped writer per trust boundary, stream it through no-echo SOPS enrollment after the host identity is recorded, and perform an isolated restore before service activation.
+    secret_handling: Credentials and repository passwords never enter Nix, OpenTofu variables, state, plans, logs, shell history, or command arguments; only SOPS ciphertext and root-only runtime files are retained.
+    backup: Offline recovery readers and the personal age identity remain separate from workload writers; lost workload credentials are recovered by rotation, not retrieval.
+    drift_probe: Compare non-secret key inventory, prefix scope, lifecycle policy, last successful backup, and restore evidence monthly without retrieving any credential value.
+    review_interval: monthly
+    exit_criterion: Replace enrollment with a supported workload identity or secret-store delivery flow that exposes no key material to Git or state.
   - id: music-store-accounts-and-purchases
     resource: Bandcamp and OTOTOY accounts, payment, and checkout
     owner: funforgiven
@@ -40,6 +90,26 @@ exceptions:
     drift_probe: Review unresolved purchase cards and storefront availability without authenticating an automated service.
     review_interval: monthly
     exit_criterion: Reassess only if a store publishes a supported purchase API with explicit unattended-use terms.
+  - id: music-account-linking
+    resource: Navidrome first administrator plus per-user Last.fm and ListenBrainz authorization
+    owner: funforgiven
+    rationale: Navidrome creates its first administrator through a one-time setup page, while Last.fm and ListenBrainz require each human user to approve an upstream account grant.
+    procedure: Create the first admin from the routed-LAN endpoint after backups are qualified, then link each scrobbling account from that user's Navidrome profile without sharing credentials with Hermes.
+    secret_handling: Navidrome passwords and upstream tokens remain in the encrypted Navidrome database and its backups; Last.fm application keys are delivered only through the media-runtime SOPS Secret.
+    backup: Navidrome native database exports are included in Velero backups, and an isolated restore must prove that account and scrobble state survive.
+    drift_probe: Compare the redacted user/link inventory and last successful scrobble monthly without retrieving tokens or passwords.
+    review_interval: monthly
+    exit_criterion: Remove the first-admin portion when Navidrome exposes a supported declarative bootstrap; retain per-user consent while the upstream services require interactive grants.
+  - id: ghcr-media-publisher-credential
+    resource: GitHub Container Registry writer used to publish the Nix-built media importer
+    owner: funforgiven
+    rationale: GHCR requires an externally issued publisher credential before a locally built OCI archive can be uploaded.
+    procedure: Issue the narrowest packages-write credential, store it only in a mode-0400 or mode-0600 containers auth file, and run the signed-commit promotion app.
+    secret_handling: The credential never enters Nix, Git, an image, a command argument, an OpenTofu value, or a log; the promotion app receives only the auth-file path.
+    backup: The image is reproducible from the signed source revision; recover by rotating the publisher credential and rebuilding rather than preserving the token.
+    drift_probe: Compare non-secret package, version, revision tag, and digest metadata to versions.yaml and the deployed manifest.
+    review_interval: monthly
+    exit_criterion: Replace with repository workload identity when an approved CI publisher is introduced.
   - id: home-assistant-runtime-registry
     resource: Home Assistant integrations that are stored only in the runtime registry
     owner: funforgiven

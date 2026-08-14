@@ -22,6 +22,19 @@ selfHosted:
     meilisearch:
       version: 1.41.0
       image: docker.io/getmeili/meilisearch:v1.41.0@sha256:860fa4baed04ae1c235de870edab0c8006227546dea1bbb6411fbfc5e27cf1db
+    searxng:
+      version: 2026.7.28-c01178d03
+      image: ghcr.io/searxng/searxng:2026.7.28-c01178d03@sha256:80622959f0f3512e6623d6bdbcea9f13c8d22c8d9715c498d0ae2be1c8535930
+  media:
+    navidrome:
+      version: 0.61.2
+      image: docker.io/deluan/navidrome:0.61.2@sha256:9fa40b3d8dec43ceb2213d1fa551da3dcfef6ac6d19c2e534efb92527c2bafd2
+    sftpgo:
+      version: 2.7.5
+      image: docker.io/drakkan/sftpgo:v2.7.5-slim@sha256:021e23c5336ebf0a12b663dcb773081f7537e0ef330cbd1534f446ce26c77faa
+    beets:
+      version: 2.13.1
+      deployment: nix-built-oci
 
 host:
   ubuntu:

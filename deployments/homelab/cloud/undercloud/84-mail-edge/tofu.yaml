@@ -1,0 +1,34 @@
+apiVersion: infra.contrib.fluxcd.io/v1alpha2
+kind: Terraform
+metadata:
+  name: mail-edge
+  namespace: openstack
+spec:
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  approvePlan: auto
+  destroyResourcesOnDeletion: false
+  path: ./components/cloud/services/mail-edge/tofu
+  sourceRef:
+    kind: GitRepository
+    name: services-tofu-source
+  vars:
+    # RFC 5737 documentation space is intentionally unreachable. Replace it
+    # with the operator's explicit public CIDR before activation.
+    - name: management_cidrs
+      value:
+        - 203.0.113.255/32
+  runnerPodTemplate:
+    spec:
+      alwaysCleanupRunnerPod: true
+      envFrom:
+        - secretRef:
+            name: hcloud-credentials
+  writeOutputsToSecret:
+    name: mail-edge-outputs
+    outputs:
+      - ipv4_address
+      - server_id
+  remediation:
+    retries: 3

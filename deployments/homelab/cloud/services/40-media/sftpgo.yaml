@@ -1,0 +1,183 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sftpgo-bootstrap
+  namespace: media
+data:
+  render.sh: |
+    #!/bin/sh
+    set -eu
+    umask 077
+
+    IFS= read -r admin_password < /run/source/sftpgo-admin-password
+    IFS= read -r user_password < /run/source/sftpgo-user-password
+
+    case "$admin_password" in
+      *[!A-Za-z0-9_-]*|"") exit 1 ;;
+    esac
+    case "$user_password" in
+      *[!A-Za-z0-9_-]*|"") exit 1 ;;
+    esac
+    test "${#admin_password}" -ge 32
+    test "${#user_password}" -ge 32
+
+    mkdir -p \
+      /srv/sftpgo/data/media/inbox \
+      /srv/sftpgo/data/media/processing \
+      /srv/sftpgo/data/media/quarantine \
+      /srv/sftpgo/data/media/library
+
+    {
+      printf '{"users":[{'
+      printf '"status":1,"username":"music-ingest",'
+      printf '"password":"%s",' "$user_password"
+      printf '"home_dir":"/srv/sftpgo/data/media/inbox",'
+      printf '"uid":1000,"gid":1000,'
+      printf '"permissions":{"/":["*"]}'
+      printf '}],"admins":[{'
+      printf '"status":1,"username":"admin",'
+      printf '"password":"%s",' "$admin_password"
+      printf '"permissions":["*"]'
+      printf '}]}\n'
+    } > /run/rendered/initial-data.json
+    unset admin_password user_password
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sftpgo
+  namespace: media
+spec:
+  selector:
+    app.kubernetes.io/name: sftpgo
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: sftpgo
+  namespace: media
+spec:
+  serviceName: sftpgo
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sftpgo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sftpgo
+        app.kubernetes.io/part-of: media
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: render-initial-data
+          image: docker.io/library/busybox:1.38.0@sha256:dc2d74b28e4cf8984fa52af1f39bc7c3d9c73760b41a74d629f5d11b1ab28616
+          command:
+            - /bin/sh
+            - /bootstrap/render.sh
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsGroup: 1000
+            runAsNonRoot: true
+            runAsUser: 1000
+          volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+            - name: bootstrap-source
+              mountPath: /run/source
+              readOnly: true
+            - name: bootstrap-rendered
+              mountPath: /run/rendered
+            - name: media
+              mountPath: /srv/sftpgo/data/media
+      containers:
+        - name: sftpgo
+          image: docker.io/drakkan/sftpgo:v2.7.5-slim@sha256:021e23c5336ebf0a12b663dcb773081f7537e0ef330cbd1534f446ce26c77faa
+          env:
+            - name: SFTPGO_DATA_PROVIDER__DRIVER
+              value: sqlite
+            - name: SFTPGO_DATA_PROVIDER__NAME
+              value: /var/lib/sftpgo/sftpgo.db
+            - name: SFTPGO_HTTPD__BINDINGS__0__PORT
+              value: "8080"
+            - name: SFTPGO_LOADDATA_CLEAN
+              value: "true"
+            - name: SFTPGO_LOADDATA_FROM
+              value: /run/rendered/initial-data.json
+            - name: SFTPGO_LOADDATA_MODE
+              value: "0"
+            - name: SFTPGO_LOG_FILE_PATH
+              value: ""
+            - name: SFTPGO_SFTPD__BINDINGS__0__PORT
+              value: "0"
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsGroup: 1000
+            runAsNonRoot: true
+            runAsUser: 1000
+          volumeMounts:
+            - name: bootstrap-rendered
+              mountPath: /run/rendered
+            - name: data
+              mountPath: /var/lib/sftpgo
+            - name: media
+              mountPath: /srv/sftpgo/data/media
+      volumes:
+        - name: bootstrap
+          configMap:
+            name: sftpgo-bootstrap
+            defaultMode: 0555
+        - name: bootstrap-source
+          secret:
+            secretName: media-runtime
+            defaultMode: 0440
+            items:
+              - key: SFTPGO_ADMIN_PASSWORD
+                path: sftpgo-admin-password
+              - key: SFTPGO_USER_PASSWORD
+                path: sftpgo-user-password
+        - name: bootstrap-rendered
+          emptyDir:
+            medium: Memory
+        - name: data
+          persistentVolumeClaim:
+            claimName: sftpgo-data
+        - name: media
+          persistentVolumeClaim:
+            claimName: media-library

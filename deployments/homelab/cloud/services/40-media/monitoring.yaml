@@ -1,0 +1,45 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: navidrome
+  namespace: media
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: navidrome
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: media
+  namespace: media
+spec:
+  groups:
+    - name: media
+      rules:
+        - alert: MediaImportFailed
+          expr: >-
+            max by (namespace) (
+              kube_job_status_failed{
+                namespace="media",
+                job_name=~"media-import-.*"
+              }
+            ) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: The purchased-music import job failed
+            description: Inspect the media-import Job without printing mounted secret data.
+        - alert: NavidromeUnavailable
+          expr: up{namespace="media",service="navidrome"} == 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Navidrome metrics are unavailable
+            description: Navidrome has not been scrapeable for ten minutes.
