@@ -31,10 +31,10 @@ exceptions:
     review_interval: monthly
     exit_criterion: Replace this exception if OpenAI and Hermes provide a supported non-interactive workload identity flow for subscription-backed Codex access.
   - id: karakeep-api-key-issuance
-    resource: Karakeep API key used by the Hermes integration
+    resource: Dedicated Karakeep API keys used by Hermes and the music release watcher
     owner: funforgiven
     rationale: Karakeep currently issues personal API keys only through its authenticated user interface.
-    procedure: Create a dedicated integration key after SSO enrollment and ingest it directly into the workload-specific SOPS document.
+    procedure: Create one independently revocable key per integration after SSO enrollment and ingest each directly into its workload-specific SOPS or root-only runtime boundary.
     secret_handling: The key is never displayed in documentation, passed as a command argument, or stored in OpenTofu state; Hermes receives it through a mode-0400 runtime file.
     backup: SOPS ciphertext preserves the active key, and Karakeep remains the revocation and rotation authority.
     drift_probe: Verify the key record, integration health, and last-used metadata monthly without retrieving the key value.
@@ -74,10 +74,10 @@ exceptions:
     resource: Object-store writer credentials and Restic repository enrollment for service workloads
     owner: funforgiven
     rationale: The storage provider returns application-key secrets only at issuance, while new NixOS guests do not have stable SOPS recipients until their host identities exist.
-    procedure: Issue one append-only or prefix-scoped writer per trust boundary, stream it through no-echo SOPS enrollment after the host identity is recorded, and perform an isolated restore before service activation.
+    procedure: Let OpenTofu create the retained R2 bucket, issue the narrowest bucket-scoped object writer supported for each trust boundary without persisting it in state, stream it through no-echo SOPS enrollment after the host identity is recorded, and perform an isolated restore before service activation.
     secret_handling: Credentials and repository passwords never enter Nix, OpenTofu variables, state, plans, logs, shell history, or command arguments; only SOPS ciphertext and root-only runtime files are retained.
     backup: Offline recovery readers and the personal age identity remain separate from workload writers; lost workload credentials are recovered by rotation, not retrieval.
-    drift_probe: Compare non-secret key inventory, prefix scope, lifecycle policy, last successful backup, and restore evidence monthly without retrieving any credential value.
+    drift_probe: Compare non-secret key inventory, bucket scope, lifecycle policy, last successful backup, and restore evidence monthly without retrieving any credential value.
     review_interval: monthly
     exit_criterion: Replace enrollment with a supported workload identity or secret-store delivery flow that exposes no key material to Git or state.
   - id: music-store-accounts-and-purchases

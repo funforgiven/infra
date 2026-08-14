@@ -36,3 +36,6 @@ resources:
   - resource: monitoring-alerting-and-backups
     owner: flux
     state: Flux resources for Kubernetes and NixOS modules for standalone hosts
+  - resource: services-and-host-offsite-r2-buckets
+    owner: opentofu
+    state: Retained per-trust-boundary buckets and reviewed policy in state and Git; one-time S3 key values are excluded from state

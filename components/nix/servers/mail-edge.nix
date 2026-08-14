@@ -114,6 +114,12 @@ _: {
         tag = "mail-edge-state";
       };
 
+      servicesPlatform.alerting.units = [
+        "acme-mail.fahrican.com"
+        "restic-backups-service-state"
+        "stalwart"
+      ];
+
       networking.firewall.allowedTCPPorts = [
         25
         80

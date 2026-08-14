@@ -11,6 +11,7 @@
           pkgs.findutils
           pkgs.gitMinimal
           pkgs.gnugrep
+          pkgs.gnused
           pkgs.jq
           pkgs.nix
           pkgs.openstackclient
@@ -112,6 +113,18 @@
               --format value \
               --column id
           done
+
+          activation_manifest=deployments/homelab/cloud/undercloud/83-services-hosts/tofu.yaml
+          if [[ "$(grep -Ec 'value: "[0-9a-f]{40}"' "$activation_manifest")" -ne 1 ]]; then
+            echo "$activation_manifest must contain exactly one image revision." >&2
+            exit 1
+          fi
+          sed -Ei \
+            "s/value: \"[0-9a-f]{40}\"/value: \"$revision\"/" \
+            "$activation_manifest"
+          printf '%s\n' \
+            "Promoted images for $revision and updated $activation_manifest." \
+            'Review and create a signed promotion commit before resuming the host wave.'
         '';
       };
     in

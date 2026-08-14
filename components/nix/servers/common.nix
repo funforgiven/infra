@@ -8,7 +8,12 @@ let
 in
 {
   nixos.modules.services-host-backup =
-    { config, lib, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     let
       backup = config.servicesPlatform.backup;
     in
@@ -62,11 +67,118 @@ in
             ];
             RequiresMountsFor = backup.paths;
           };
-          serviceConfig.UMask = "0077";
+          serviceConfig = {
+            UMask = "0077";
+            ExecStartPost = [
+              (pkgs.writeShellScript "record-restic-success" ''
+                set -eu
+                target=/var/lib/node-exporter-textfile/services-restic.prom
+                temporary="$target.$$"
+                printf 'services_restic_last_success_unixtime{host="%s"} %s\n' \
+                  ${lib.escapeShellArg config.networking.hostName} \
+                  "$(${pkgs.coreutils}/bin/date +%s)" > "$temporary"
+                chmod 0644 "$temporary"
+                mv -f "$temporary" "$target"
+              '')
+            ];
+          };
         };
 
         systemd.tmpfiles.rules = [
           "d /var/lib/backup-bootstrap 0700 root root - -"
+        ];
+      };
+    };
+
+  nixos.modules.services-host-monitoring =
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
+    let
+      alerting = config.servicesPlatform.alerting;
+      notifier = pkgs.writeShellApplication {
+        name = "notify-telegram-unit-failure";
+        runtimeInputs = [
+          pkgs.curl
+          pkgs.jq
+        ];
+        text = ''
+          set -euo pipefail
+
+          readonly unit="$1"
+          readonly token_file=/var/lib/monitoring-bootstrap/bot-token
+          readonly chat_file=/var/lib/monitoring-bootstrap/chat-id
+
+          IFS= read -r token < "$token_file"
+          [[ "$token" =~ ^[0-9]+:[A-Za-z0-9_-]+$ ]]
+          grep -Eq '^-?[0-9]+$' "$chat_file"
+
+          message="Critical unit failed on ${config.networking.hostName}: $unit"
+          jq --null-input --compact-output \
+            --rawfile chat_id "$chat_file" \
+            --arg text "$message" \
+            '{chat_id: ($chat_id | rtrimstr("\n")), text: $text}' | \
+          curl \
+            --silent \
+            --show-error \
+            --fail \
+            --output /dev/null \
+            --config <(
+            printf 'url = "https://api.telegram.org/bot%s/sendMessage"\n' "$token"
+            ) \
+            --request POST \
+            --header 'Content-Type: application/json' \
+            --data-binary @-
+          unset token
+        '';
+      };
+    in
+    {
+      options.servicesPlatform.alerting.units = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = "Critical systemd units that notify the infrastructure Telegram chat on failure.";
+      };
+
+      config = {
+        services.prometheus.exporters.node = {
+          enable = true;
+          enabledCollectors = [ "systemd" ];
+          extraFlags = [
+            "--collector.textfile.directory=/var/lib/node-exporter-textfile"
+          ];
+          listenAddress = "0.0.0.0";
+          openFirewall = false;
+        };
+
+        networking.firewall.extraInputRules = ''
+          ip saddr 192.168.80.0/24 tcp dport 9100 accept
+        '';
+
+        systemd.services = {
+          "telegram-unit-failure@" = {
+            description = "Notify the infrastructure Telegram chat about %i";
+            unitConfig.ConditionPathExists = [
+              "/var/lib/monitoring-bootstrap/bot-token"
+              "/var/lib/monitoring-bootstrap/chat-id"
+            ];
+            serviceConfig = {
+              Type = "oneshot";
+              ExecStart = "${notifier}/bin/notify-telegram-unit-failure %i";
+              UMask = "0077";
+            };
+          };
+        }
+        // lib.genAttrs alerting.units (_: {
+          unitConfig.OnFailure = [ "telegram-unit-failure@%n.service" ];
+        });
+
+        systemd.tmpfiles.rules = [
+          "d /var/lib/monitoring-bootstrap 0700 root root - -"
+          "d /var/lib/node-exporter-textfile 0755 root root - -"
         ];
       };
     };
@@ -114,7 +226,12 @@ in
         registry.nixpkgs.flake = inputs.nixpkgs;
       };
 
-      security.sudo-rs.enable = true;
+      security.sudo-rs = {
+        enable = true;
+        # Service hosts have no password authentication. The pinned operator
+        # SSH key is consequently the sole interactive elevation boundary.
+        wheelNeedsPassword = false;
+      };
 
       services = {
         openssh = {

@@ -125,6 +125,11 @@ in
         tag = "hermes-state";
       };
 
+      servicesPlatform.alerting.units = [
+        "hermes-agent"
+        "restic-backups-service-state"
+      ];
+
       networking.firewall.allowedTCPPorts = [ ];
 
       assertions = [

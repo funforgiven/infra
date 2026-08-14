@@ -3,9 +3,11 @@
 The initial music workflow deliberately separates discovery, payment, import,
 and playback:
 
-1. Save Bandcamp, OTOTOY, label, and artist release pages in Karakeep with the
-   music/wanted tag. Hermes can summarize the queue and send reminders through
-   the dedicated conversation bot, but cannot purchase anything.
+1. The daily release watcher queries ListenBrainz's public fresh-release feed,
+   filters the explicit MusicBrainz-ID watchlist, saves a tagged purchase-review
+   card in Karakeep, and notifies the dedicated media chat. Ado is the initial
+   watchlist entry. Hermes can summarize the queue, but cannot purchase
+   anything.
 2. Complete every checkout manually. Payment credentials stay in the personal
    password manager and are never provided to Hermes or a workload.
 3. Upload one album directory at a time through the SFTPGo WebClient at
@@ -23,12 +25,13 @@ per Navidrome user through their upstream interactive authorization flows.
 
 ## Activation gates
 
-- Create media-runtime as SOPS ciphertext with independent high-entropy
-  SFTPGo admin/user passwords, a Navidrome password-encryption key, Last.fm API
-  key/secret, and the dedicated media Telegram bot token/chat ID.
+- Enroll the media contract into the central services bootstrap SOPS Secret;
+  the reconciler derives media-runtime without persisting plaintext. Enroll
+  the release-watcher Karakeep key only after the knowledge wave is live, then
+  reconcile it before resuming media.
 - Build and publish media-importer only from a clean signed commit using
-  nix run .#promote-media-importer. Replace the all-zero digest with the
-  registry-returned digest in a second signed commit.
+  nix run .#promote-media-importer. The command updates both CronJobs and
+  versions.yaml with the registry-returned digest for a second signed commit.
 - Confirm the Manila RWX and Cinder RWO qualification, Velero object-store
   location, daily and weekly schedules, and an isolated restore of all four
   PVCs.

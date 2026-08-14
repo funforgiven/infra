@@ -47,6 +47,11 @@ _: {
       tag = "home-assistant-state";
     };
 
+    servicesPlatform.alerting.units = [
+      "home-assistant"
+      "restic-backups-service-state"
+    ];
+
     networking.firewall.allowedTCPPorts = [ 8123 ];
   };
 }

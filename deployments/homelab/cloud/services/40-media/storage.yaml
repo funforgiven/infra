@@ -49,3 +49,16 @@ spec:
   resources:
     requests:
       storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: music-release-watcher-state
+  namespace: media
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: rbd1
+  resources:
+    requests:
+      storage: 1Gi

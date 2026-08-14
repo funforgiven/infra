@@ -13,18 +13,20 @@ spec:
   sourceRef:
     kind: GitRepository
     name: services-tofu-source
-  vars:
-    # RFC 5737 documentation space is intentionally unreachable. Replace it
-    # with the operator's explicit public CIDR before activation.
-    - name: management_cidrs
-      value:
-        - 203.0.113.255/32
   runnerPodTemplate:
     spec:
       alwaysCleanupRunnerPod: true
-      envFrom:
-        - secretRef:
-            name: hcloud-credentials
+      env:
+        - name: HCLOUD_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: services-runtime-bootstrap
+              key: HCLOUD_TOKEN
+        - name: TF_VAR_management_cidrs
+          valueFrom:
+            secretKeyRef:
+              name: services-runtime-bootstrap
+              key: MAIL_MANAGEMENT_CIDRS_JSON
   writeOutputsToSecret:
     name: mail-edge-outputs
     outputs:

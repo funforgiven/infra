@@ -8,6 +8,7 @@ let
     features = [
       "services-server-common"
       "services-host-backup"
+      "services-host-monitoring"
       cloudFeature
       serviceFeature
     ];
