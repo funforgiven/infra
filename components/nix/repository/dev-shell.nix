@@ -19,6 +19,7 @@ _: {
             config.treefmt.build.wrapper
             pkgs.age
             pkgs.gitMinimal
+            pkgs.gitleaks
             pkgs.kubectl
             pkgs.kustomize
             pkgs.nixd

@@ -234,7 +234,12 @@ in
           ```sh
           nix fmt --accept-flake-config
           nix flake check --no-build --accept-flake-config
+          nix run .#repository-secret-scan --accept-flake-config
           ```
+
+          The secret scan redacts findings and examines both the working tree and Git
+          history. Run it before every push. Commit secret values only as SOPS
+          ciphertext and never print decrypted values during validation.
 
           Apply the host configuration with:
 

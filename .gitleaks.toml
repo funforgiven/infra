@@ -1,0 +1,8 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "ZITADEL password lifetime is a non-secret duration policy"
+paths = ['''components/cloud/identity/tofu/main\.tf''']
+regexTarget = "line"
+regexes = ['''password_check_lifetime\s*=\s*"[0-9]+h[0-9]+m[0-9]+s"''']
