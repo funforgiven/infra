@@ -9,14 +9,14 @@ from runtime_contract import CONTRACT_PATH, ContractError, RuntimeContract
 
 CLUSTER_FILE = Path("cluster-runtime.sops.yaml")
 HERMES_FILE = Path("hermes-runtime.sops.yaml")
+GENERATED_FILE = Path("generated-runtime.sops.yaml")
 
 
 def contract_document() -> dict:
     return {
-        "schemaVersion": 2,
+        "schemaVersion": 3,
         "secretFile": str(CLUSTER_FILE),
         "credentials": {"initial": ["CLUSTER_KEY"]},
-        "postFoundationCredentials": {"backup": ["BACKUP_KEY"]},
         "postDeploymentCredentials": {"media": ["MEDIA_KEY"]},
         "hostCredentials": {
             "hermes": {
@@ -24,7 +24,12 @@ def contract_document() -> dict:
                 "keys": ["OPENAI_API_KEY"],
             }
         },
-        "generatedApplicationSecrets": ["GENERATED_KEY"],
+        "generatedSecrets": {
+            "application": {
+                "secretFile": str(GENERATED_FILE),
+                "keys": ["GENERATED_KEY"],
+            }
+        },
     }
 
 
@@ -55,6 +60,16 @@ class RuntimeContractTest(unittest.TestCase):
         self.assertEqual(contract.credential("CLUSTER_KEY").secret_file, CLUSTER_FILE)
         self.assertEqual(contract.credential("OPENAI_API_KEY").secret_file, HERMES_FILE)
         self.assertEqual(contract.credential("OPENAI_API_KEY").consumer, "hermes")
+        self.assertEqual(
+            contract.generated_credential("GENERATED_KEY").secret_file,
+            GENERATED_FILE,
+        )
+        self.assertTrue(contract.managed_credential("GENERATED_KEY").generated)
+
+    def test_generated_keys_are_not_externally_enrollable(self) -> None:
+        contract = RuntimeContract.load(self.root)
+        with self.assertRaisesRegex(ContractError, "unknown services credential"):
+            contract.credential("GENERATED_KEY")
 
     def test_rejects_duplicate_keys(self) -> None:
         payload = contract_document()
@@ -67,13 +82,24 @@ class RuntimeContractTest(unittest.TestCase):
         contract = RuntimeContract.load(self.root)
         self.write_secret(
             CLUSTER_FILE,
-            ["CLUSTER_KEY", "BACKUP_KEY", "MEDIA_KEY", "GENERATED_KEY"],
+            ["CLUSTER_KEY", "MEDIA_KEY"],
         )
         self.write_secret(HERMES_FILE, [])
+        self.write_secret(GENERATED_FILE, ["GENERATED_KEY"])
         with self.assertRaisesRegex(ContractError, "OPENAI_API_KEY"):
             contract.verify_ciphertext()
         self.write_secret(HERMES_FILE, ["OPENAI_API_KEY"])
         contract.verify_ciphertext()
+
+    def test_post_deployment_credentials_are_optional(self) -> None:
+        payload = contract_document()
+        del payload["postDeploymentCredentials"]
+        self.write_contract(payload)
+        contract = RuntimeContract.load(self.root)
+        self.assertEqual(
+            {credential.name for credential in contract.credentials},
+            {"CLUSTER_KEY", "OPENAI_API_KEY"},
+        )
 
     def test_rejects_paths_outside_repository(self) -> None:
         payload = contract_document()

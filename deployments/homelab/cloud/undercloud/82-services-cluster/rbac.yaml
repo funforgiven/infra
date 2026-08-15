@@ -74,7 +74,14 @@ rules:
       - secrets
     resourceNames:
       - mail-edge-outputs
-      - services-backup-storage-outputs
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    resourceNames:
+      - services-backup-destination
     verbs:
       - get
 ---

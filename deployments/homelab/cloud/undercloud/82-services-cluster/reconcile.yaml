@@ -152,11 +152,13 @@ data:
 
     require_file INFRA_TELEGRAM_BOT_TOKEN '^[0-9]+:[A-Za-z0-9_-]+$' 32 256
     require_file INFRA_TELEGRAM_CHAT_ID '^-?[0-9]+$' 1 32
-    require_file CLOUDFLARE_R2_API_TOKEN '^[A-Za-z0-9._-]+$' 32 512
-    require_file R2_ACCESS_KEY_ID '^[A-Za-z0-9_-]+$' 16 256
-    require_file R2_SECRET_ACCESS_KEY '^[A-Za-z0-9/+_-]+={0,2}$' 32 512
+    require_file B2_APPLICATION_KEY_ID '^[A-Za-z0-9]+$' 12 64
+    require_file B2_APPLICATION_KEY '^[A-Za-z0-9]+$' 20 128
     require_file MEDIA_TELEGRAM_BOT_TOKEN '^[0-9]+:[A-Za-z0-9_-]+$' 32 256
     require_file MEDIA_TELEGRAM_CHAT_ID '^-?[0-9]+$' 1 32
+    require_file MEILI_MASTER_KEY '^[A-Za-z0-9/+_-]+={0,2}$' 32 256
+    require_file NEXTAUTH_SECRET '^[A-Za-z0-9/+_-]+={0,2}$' 32 256
+    require_file SEARXNG_SECRET '^[A-Za-z0-9/+_-]+={0,2}$' 32 256
     require_file ND_LASTFM_APIKEY '^[A-Za-z0-9_-]+$' 16 256
     require_file ND_LASTFM_SECRET '^[A-Za-z0-9_-]+$' 16 256
     require_file ND_PASSWORDENCRYPTIONKEY '^[A-Za-z0-9_-]+$' 32 256
@@ -273,15 +275,16 @@ data:
       "$kubectl" -n cert-manager get secret cloudflare-dns01 \
       -o jsonpath='{.data.api-token}' | \
       base64 -d > /tmp/cloudflare-api-token
-    for key in bucket_name endpoint region; do
+    for key in bucket_name endpoint region prefix; do
       KUBECONFIG="$undercloud_kubeconfig" \
-        "$kubectl" -n openstack get secret services-backup-storage-outputs \
-        -o "jsonpath={.data.$key}" | base64 -d > "/tmp/$key"
+        "$kubectl" -n openstack get configmap services-backup-destination \
+        -o "jsonpath={.data.$key}" > "/tmp/$key"
     done
 
-    grep -Eq '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$' /tmp/bucket_name
-    grep -Eq '^https://[0-9a-f]{32}\.r2\.cloudflarestorage\.com$' /tmp/endpoint
-    grep -Fx auto /tmp/region >/dev/null
+    grep -Fx fahrican-cloud-recovery /tmp/bucket_name >/dev/null
+    grep -Fx https://s3.us-west-004.backblazeb2.com /tmp/endpoint >/dev/null
+    grep -Fx us-west-004 /tmp/region >/dev/null
+    grep -Fx services/kubernetes /tmp/prefix >/dev/null
 
     /config/reconcile-resend.py \
       /runtime-bootstrap/RESEND_ADMIN_API_KEY \
@@ -394,20 +397,22 @@ data:
       --from-file=values.yaml=/tmp/alertmanager-values.yaml \
       --dry-run=client -o yaml | "$kubectl" apply -f -
 
-    r2_access_key_id="$(cat /runtime-bootstrap/R2_ACCESS_KEY_ID)"
-    r2_secret_access_key="$(cat /runtime-bootstrap/R2_SECRET_ACCESS_KEY)"
+    b2_application_key_id="$(cat /runtime-bootstrap/B2_APPLICATION_KEY_ID)"
+    b2_application_key="$(cat /runtime-bootstrap/B2_APPLICATION_KEY)"
     {
       printf '%s\n' '[default]'
-      printf 'aws_access_key_id=%s\n' "$r2_access_key_id"
-      printf 'aws_secret_access_key=%s\n' "$r2_secret_access_key"
+      printf 'aws_access_key_id=%s\n' "$b2_application_key_id"
+      printf 'aws_secret_access_key=%s\n' "$b2_application_key"
     } > /tmp/velero-cloud
     chmod 0600 /tmp/velero-cloud
-    unset r2_access_key_id r2_secret_access_key
+    unset b2_application_key_id b2_application_key
     "$kubectl" -n velero create secret generic velero-object-storage \
       --from-file=cloud=/tmp/velero-cloud \
       --dry-run=client -o yaml | "$kubectl" apply -f -
     bucket_name="$(cat /tmp/bucket_name)"
     endpoint="$(cat /tmp/endpoint)"
+    region="$(cat /tmp/region)"
+    prefix="$(cat /tmp/prefix)"
     {
       printf '%s\n' \
         'configuration:' \
@@ -415,19 +420,20 @@ data:
         '    - name: default' \
         '      provider: aws'
       printf '      bucket: %s\n' "$bucket_name"
+      printf '      prefix: %s\n' "$prefix"
       printf '%s\n' \
-        '      prefix: services-v1' \
         '      default: true' \
         '      accessMode: ReadWrite' \
         '      credential:' \
         '        name: velero-object-storage' \
         '        key: cloud' \
-        '      config:' \
-        '        region: auto' \
+        '      config:'
+      printf '        region: %s\n' "$region"
+      printf '%s\n' \
         '        s3ForcePathStyle: "true"'
       printf '        s3Url: %s\n' "$endpoint"
     } > /tmp/velero-values.yaml
-    unset bucket_name endpoint
+    unset bucket_name endpoint region prefix
     "$kubectl" -n velero create configmap velero-runtime-values \
       --from-file=values.yaml=/tmp/velero-values.yaml \
       --dry-run=client -o yaml | "$kubectl" apply -f -

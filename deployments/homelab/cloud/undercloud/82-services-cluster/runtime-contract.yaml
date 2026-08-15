@@ -5,31 +5,25 @@ metadata:
   namespace: openstack
 data:
   required-keys.yaml: |
-    schemaVersion: 2
+    schemaVersion: 3
     secret: services-runtime-bootstrap
     secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
     credentials:
       infrastructure:
         - INFRA_TELEGRAM_BOT_TOKEN
         - INFRA_TELEGRAM_CHAT_ID
-      backupProvisioning:
-        - CLOUDFLARE_R2_API_TOKEN
+      backupRuntime:
+        - B2_APPLICATION_KEY_ID
+        - B2_APPLICATION_KEY
       media:
         - MEDIA_TELEGRAM_BOT_TOKEN
         - MEDIA_TELEGRAM_CHAT_ID
         - ND_LASTFM_APIKEY
         - ND_LASTFM_SECRET
-        - ND_PASSWORDENCRYPTIONKEY
-        - SFTPGO_ADMIN_PASSWORD
-        - SFTPGO_USER_PASSWORD
       mailProvisioning:
         - HCLOUD_TOKEN
         - MAIL_MANAGEMENT_CIDRS_JSON
         - RESEND_ADMIN_API_KEY
-    postFoundationCredentials:
-      backupRuntime:
-        - R2_ACCESS_KEY_ID
-        - R2_SECRET_ACCESS_KEY
     postDeploymentCredentials:
       media:
         - RELEASE_WATCHER_KARAKEEP_API_KEY
@@ -38,10 +32,40 @@ data:
         secretFile: deployments/homelab/cloud/host-runtime/hermes.sops.yaml
         keys:
           - OPENAI_API_KEY
-    generatedApplicationSecrets:
-      - MEILI_MASTER_KEY
-      - NEXTAUTH_SECRET
-      - SEARXNG_SECRET
+          - HERMES_TELEGRAM_BOT_TOKEN
+          - HERMES_TELEGRAM_ALLOWED_USERS
+          - HERMES_TELEGRAM_HOME_CHANNEL
+          - HERMES_KARAKEEP_API_KEY
+      mail-edge:
+        secretFile: deployments/homelab/cloud/host-runtime/mail-edge.sops.yaml
+        keys:
+          - STALWART_RESEND_API_KEY
+      host-backups:
+        secretFile: deployments/homelab/cloud/host-runtime/backups.sops.yaml
+        keys:
+          - HERMES_BACKUP_B2_APPLICATION_KEY_ID
+          - HERMES_BACKUP_B2_APPLICATION_KEY
+          - HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID
+          - HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY
+          - MAIL_EDGE_BACKUP_B2_APPLICATION_KEY_ID
+          - MAIL_EDGE_BACKUP_B2_APPLICATION_KEY
+    generatedSecrets:
+      services-cluster:
+        secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
+        keys:
+          - MEILI_MASTER_KEY
+          - NEXTAUTH_SECRET
+          - SEARXNG_SECRET
+          - ND_PASSWORDENCRYPTIONKEY
+          - SFTPGO_ADMIN_PASSWORD
+          - SFTPGO_USER_PASSWORD
+      service-hosts:
+        secretFile: deployments/homelab/cloud/host-runtime/generated.sops.yaml
+        keys:
+          - STALWART_ADMIN_SECRET
+          - HERMES_BACKUP_RESTIC_PASSWORD
+          - HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD
+          - MAIL_EDGE_BACKUP_RESTIC_PASSWORD
     policy:
       semanticRetrieval: deferred
       initialRetrieval: karakeep-full-text

@@ -30,6 +30,19 @@
         ];
         text = builtins.readFile ./activation/enroll-services-credential.sh;
       };
+      generateServicesCredential = pkgs.writeShellApplication {
+        name = "generate-services-credential";
+        runtimeInputs = [
+          pkgs.coreutils
+          pkgs.gitMinimal
+          pkgs.jq
+          pkgs.openssl
+          pkgs.ripgrep
+          pkgs.sops
+          runtimeContract
+        ];
+        text = builtins.readFile ./activation/generate-services-credential.sh;
+      };
       servicesActivationPreflight = pkgs.writeShellApplication {
         name = "services-activation-preflight";
         runtimeInputs = [
@@ -76,6 +89,11 @@
         meta.description = "Stream a validated root-only credential profile to a service host";
       };
 
+      apps.generate-services-credential = {
+        program = "${generateServicesCredential}/bin/generate-services-credential";
+        meta.description = "Generate one contract-defined secret directly into SOPS ciphertext";
+      };
+
       apps.services-activation-preflight = {
         program = "${servicesActivationPreflight}/bin/services-activation-preflight";
         meta.description = "Verify credential ciphertext, promotions, and signed clean state before activation";
@@ -85,6 +103,7 @@
         advance-services-activation = advanceServicesActivation;
         enroll-service-host-secrets = enrollServiceHostSecrets;
         enroll-services-credential = enrollServicesCredential;
+        generate-services-credential = generateServicesCredential;
         services-activation-preflight = servicesActivationPreflight;
       };
 
@@ -108,6 +127,7 @@
               ${./activation/advance-services-activation.sh} \
               ${./activation/enroll-service-host-secrets.sh} \
               ${./activation/enroll-services-credential.sh} \
+              ${./activation/generate-services-credential.sh} \
               ${./activation/services-activation-preflight.sh}
             runtime-contract --repository-root ${inputs.self} schema >/dev/null
             rg --fixed-strings --quiet 'provider = "openai-api";' \
@@ -120,6 +140,19 @@
               ${inputs.self}/deployments/homelab/cloud/services/ACTIVATION.md \
               ${inputs.self}/deployments/homelab/cloud/manual-exceptions.yaml; then
               echo 'Obsolete Hermes OAuth configuration remains.' >&2
+              exit 1
+            fi
+            rg --fixed-strings --quiet 'generated-key-file "$key"' \
+              ${./activation/generate-services-credential.sh}
+            rg --fixed-strings --quiet 'managed-key-file "$key"' \
+              ${./activation/enroll-service-host-secrets.sh}
+            rg --fixed-strings --quiet 'secrets/$key.key' \
+              ${./activation/enroll-services-credential.sh}
+            if rg --quiet 'prompt_value|R2_ENDPOINT|cloudflarestorage' \
+              ${./activation/enroll-service-host-secrets.sh} \
+              ${./README.md} \
+              ${inputs.self}/deployments/homelab/cloud/services/ACTIVATION.md; then
+              echo 'Obsolete interactive or Cloudflare R2 host enrollment remains.' >&2
               exit 1
             fi
             touch "$out"

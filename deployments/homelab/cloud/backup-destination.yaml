@@ -1,6 +1,6 @@
 schemaVersion: 1
 document: homelab-cloud-backup-destination
-lastReviewed: "2026-08-09"
+lastReviewed: "2026-08-15"
 
 provider: backblaze-b2
 
@@ -24,6 +24,22 @@ bucket:
       daysFromHidingToDeleting: 30
       daysFromStartingToCancelingUnfinishedLargeFiles: null
     - fileNamePrefix: undercloud/zitadel/
+      daysFromUploadingToHiding: null
+      daysFromHidingToDeleting: 30
+      daysFromStartingToCancelingUnfinishedLargeFiles: null
+    - fileNamePrefix: services/kubernetes/
+      daysFromUploadingToHiding: null
+      daysFromHidingToDeleting: 30
+      daysFromStartingToCancelingUnfinishedLargeFiles: null
+    - fileNamePrefix: services/hosts/hermes/
+      daysFromUploadingToHiding: null
+      daysFromHidingToDeleting: 30
+      daysFromStartingToCancelingUnfinishedLargeFiles: null
+    - fileNamePrefix: services/hosts/home-assistant/
+      daysFromUploadingToHiding: null
+      daysFromHidingToDeleting: 30
+      daysFromStartingToCancelingUnfinishedLargeFiles: null
+    - fileNamePrefix: services/hosts/mail-edge/
       daysFromUploadingToHiding: null
       daysFromHidingToDeleting: 30
       daysFromStartingToCancelingUnfinishedLargeFiles: null
@@ -118,3 +134,28 @@ zitadel:
       - listFiles
       - readFiles
       - writeFiles
+
+services:
+  kubernetes:
+    keyName: infra-services-velero-writer
+    namePrefix: services/kubernetes/
+    capabilities:
+      - deleteFiles
+      - listFiles
+      - readFiles
+      - writeFiles
+  hosts:
+    - host: hermes
+      keyName: infra-services-hermes-backup-writer
+      namePrefix: services/hosts/hermes/
+    - host: home-assistant
+      keyName: infra-services-home-assistant-backup-writer
+      namePrefix: services/hosts/home-assistant/
+    - host: mail-edge
+      keyName: infra-services-mail-edge-backup-writer
+      namePrefix: services/hosts/mail-edge/
+  hostCapabilities:
+    - deleteFiles
+    - listFiles
+    - readFiles
+    - writeFiles

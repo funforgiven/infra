@@ -17,11 +17,7 @@ import yaml
 CONTRACT_PATH = Path(
     "deployments/homelab/cloud/undercloud/82-services-cluster/runtime-contract.yaml"
 )
-CLUSTER_SECTIONS = (
-    "credentials",
-    "postFoundationCredentials",
-    "postDeploymentCredentials",
-)
+CLUSTER_SECTIONS = ("credentials", "postDeploymentCredentials")
 KEY_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]+$")
 
 
@@ -34,6 +30,7 @@ class Credential:
     name: str
     secret_file: Path
     consumer: str
+    generated: bool = False
 
 
 class RuntimeContract:
@@ -41,7 +38,7 @@ class RuntimeContract:
         self.repository_root = repository_root.resolve()
         self.document = document
         self.credentials = self._credentials()
-        self.generated = self._generated_secrets()
+        self.generated = self._generated_credentials()
         self._validate()
 
     @classmethod
@@ -68,7 +65,11 @@ class RuntimeContract:
         return path
 
     @staticmethod
-    def _grouped_keys(groups: object, label: str) -> Iterable[str]:
+    def _grouped_keys(
+        groups: object, label: str, *, required: bool = True
+    ) -> Iterable[str]:
+        if groups is None and not required:
+            return
         if not isinstance(groups, dict) or not groups:
             raise ContractError(f"{label} must be a non-empty mapping")
         for group, keys in groups.items():
@@ -85,7 +86,11 @@ class RuntimeContract:
         )
         credentials: list[Credential] = []
         for section in CLUSTER_SECTIONS:
-            for key in self._grouped_keys(self.document.get(section), section):
+            for key in self._grouped_keys(
+                self.document.get(section),
+                section,
+                required=section == "credentials",
+            ):
                 credentials.append(Credential(key, cluster_file, "services-cluster"))
 
         host_credentials = self.document.get("hostCredentials")
@@ -109,19 +114,36 @@ class RuntimeContract:
                 credentials.append(Credential(key, secret_file, consumer))
         return tuple(credentials)
 
-    def _generated_secrets(self) -> tuple[str, ...]:
-        values = self.document.get("generatedApplicationSecrets")
-        if not isinstance(values, list) or not values:
-            raise ContractError("generatedApplicationSecrets must be a non-empty list")
-        if any(not isinstance(value, str) for value in values):
-            raise ContractError("generatedApplicationSecrets contains a non-string key")
-        return tuple(values)
+    def _generated_credentials(self) -> tuple[Credential, ...]:
+        definitions = self.document.get("generatedSecrets")
+        if not isinstance(definitions, dict) or not definitions:
+            raise ContractError("generatedSecrets must be a non-empty mapping")
+        credentials: list[Credential] = []
+        for consumer, definition in definitions.items():
+            if not isinstance(consumer, str) or not isinstance(definition, dict):
+                raise ContractError("generatedSecrets contains an invalid consumer")
+            secret_file = self._credential_file(
+                definition.get("secretFile"),
+                f"generatedSecrets.{consumer}.secretFile",
+            )
+            keys = definition.get("keys")
+            if not isinstance(keys, list) or not keys:
+                raise ContractError(f"generatedSecrets.{consumer}.keys must be a list")
+            for key in keys:
+                if not isinstance(key, str):
+                    raise ContractError(
+                        f"generatedSecrets.{consumer}.keys contains a non-string key"
+                    )
+                credentials.append(
+                    Credential(key, secret_file, consumer, generated=True)
+                )
+        return tuple(credentials)
 
     def _validate(self) -> None:
-        if self.document.get("schemaVersion") != 2:
-            raise ContractError("runtime contract schemaVersion must be 2")
+        if self.document.get("schemaVersion") != 3:
+            raise ContractError("runtime contract schemaVersion must be 3")
         names = [credential.name for credential in self.credentials]
-        names.extend(self.generated)
+        names.extend(credential.name for credential in self.generated)
         invalid = sorted(name for name in names if not KEY_PATTERN.fullmatch(name))
         if invalid:
             raise ContractError(f"invalid credential names: {invalid}")
@@ -135,19 +157,36 @@ class RuntimeContract:
             raise ContractError(f"unknown services credential key: {name}")
         return matches[0]
 
+    def generated_credential(self, name: str) -> Credential:
+        matches = [item for item in self.generated if item.name == name]
+        if len(matches) != 1:
+            raise ContractError(f"unknown generated services credential key: {name}")
+        return matches[0]
+
+    def managed_credential(self, name: str) -> Credential:
+        matches = [
+            item for item in (*self.credentials, *self.generated) if item.name == name
+        ]
+        if len(matches) != 1:
+            raise ContractError(f"unknown managed services credential key: {name}")
+        return matches[0]
+
     def secret_files(self) -> tuple[Path, ...]:
-        return tuple(sorted({item.secret_file for item in self.credentials}))
+        return tuple(
+            sorted(
+                {
+                    item.secret_file
+                    for item in (*self.credentials, *self.generated)
+                }
+            )
+        )
 
     def verify_ciphertext(self) -> None:
         expected: dict[Path, set[str]] = {
             path: set() for path in self.secret_files()
         }
-        for credential in self.credentials:
+        for credential in (*self.credentials, *self.generated):
             expected[credential.secret_file].add(credential.name)
-        cluster_file = self._credential_file(
-            self.document.get("secretFile"), "secretFile"
-        )
-        expected[cluster_file].update(self.generated)
 
         for relative_path, keys in expected.items():
             path = self.repository_root / relative_path
@@ -189,10 +228,19 @@ def parser() -> argparse.ArgumentParser:
     subparsers = result.add_subparsers(dest="command", required=True)
     subparsers.add_parser("schema", help="validate the contract schema")
     subparsers.add_parser("keys", help="list enrollable credential keys")
+    subparsers.add_parser("generated-keys", help="list locally generated secret keys")
     key_file = subparsers.add_parser(
         "key-file", help="print the SOPS document for one credential"
     )
     key_file.add_argument("key")
+    generated_key_file = subparsers.add_parser(
+        "generated-key-file", help="print the SOPS document for one generated key"
+    )
+    generated_key_file.add_argument("key")
+    managed_key_file = subparsers.add_parser(
+        "managed-key-file", help="print the SOPS document for any managed key"
+    )
+    managed_key_file.add_argument("key")
     subparsers.add_parser("secret-files", help="list contract-managed SOPS documents")
     subparsers.add_parser(
         "verify-ciphertext", help="require every declared key as SOPS ciphertext"
@@ -205,12 +253,23 @@ def main() -> int:
     try:
         contract = RuntimeContract.load(repository_root(arguments.repository_root))
         if arguments.command == "schema":
-            print(f"runtime credential contract is valid ({len(contract.credentials)} keys)")
+            print(
+                "runtime credential contract is valid "
+                f"({len(contract.credentials)} external, "
+                f"{len(contract.generated)} generated)"
+            )
         elif arguments.command == "keys":
             for credential in sorted(contract.credentials, key=lambda item: item.name):
                 print(credential.name)
         elif arguments.command == "key-file":
             print(contract.credential(arguments.key).secret_file)
+        elif arguments.command == "generated-keys":
+            for credential in sorted(contract.generated, key=lambda item: item.name):
+                print(credential.name)
+        elif arguments.command == "generated-key-file":
+            print(contract.generated_credential(arguments.key).secret_file)
+        elif arguments.command == "managed-key-file":
+            print(contract.managed_credential(arguments.key).secret_file)
         elif arguments.command == "secret-files":
             for path in contract.secret_files():
                 print(path)

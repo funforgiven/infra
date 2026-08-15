@@ -9,12 +9,13 @@ passwordless sudo because service hosts intentionally have no login password.
 Use the no-echo enrollment app for every declared host profile:
 
 ```console
-nix run .#enroll-service-host-secrets -- SSH_TARGET PROFILE [R2_ENDPOINT]
+nix run .#enroll-service-host-secrets -- SSH_TARGET PROFILE
 ```
 
-It validates values in memory and streams root-only mode-0400 files through
-SSH standard input. It does not put a credential in an argument, local file,
-Nix store path, or repository.
+It decrypts only the contract keys for the selected profile in memory and
+streams root-only mode-0400 files through SSH standard input. Provider-issued
+values are enrolled into workload-specific, admin-recipient-only SOPS
+documents first; locally owned passwords are generated directly as ciphertext.
 
 ## Hermes enrollment
 
@@ -25,7 +26,8 @@ model. Enroll the independently revocable `OPENAI_API_KEY` with
 `hermes-openai` host profile decrypts that one value in memory and streams a
 root-only `/var/lib/hermes-bootstrap/openai.env` file over SSH standard input.
 
-The separate `hermes-integrations` profile creates
+The separate `hermes-integrations` profile reads its independently routed SOPS
+document and creates
 `/var/lib/hermes-bootstrap/integrations.env` with `TELEGRAM_BOT_TOKEN`,
 `TELEGRAM_ALLOWED_USERS`, `TELEGRAM_HOME_CHANNEL`, and `KARAKEEP_API_KEY`.
 This split permits OpenAI and Karakeep rotation without re-enrolling the other
@@ -49,15 +51,17 @@ backup unit remains condition-gated until three root-only files exist:
 - /var/lib/backup-bootstrap/environment: systemd EnvironmentFile entries for
   the least-privilege object-store writer credential
 
-OpenTofu creates `fahrican-hermes-backup`,
-`fahrican-home-assistant-backup`, and `fahrican-mail-edge-backup`. Use the
-account endpoint exported by `services-backup-storage` and the matching bucket
-only; issue an independent Object Read & Write R2 S3 key for each host so
-Restic can back up, restore, and prune without crossing a host boundary.
+All repositories use the existing `fahrican-cloud-recovery` Backblaze B2
+bucket. Hermes, Home Assistant, and mail-edge are confined respectively to
+`services/hosts/hermes/`, `services/hosts/home-assistant/`, and
+`services/hosts/mail-edge/`. Issue an independent B2 application key restricted
+to each prefix so Restic can back up, restore, and prune without crossing a
+host boundary. The repository password is locally generated directly into the
+admin-only SOPS document.
 
-Provision these files with the no-echo host enrollment app after the host is
-reachable through its pinned SSH identity. Never pass values as command arguments
-or write plaintext into the repository. The operator must initialize an empty
+Materialize these files with the host enrollment app after the host is
+reachable through its pinned SSH identity. Never pass values as command
+arguments or write plaintext into the repository. The operator must initialize an empty
 repository explicitly, run the first backup, and perform a restore into an
 isolated temporary host before enabling a production service.
 
@@ -75,13 +79,15 @@ exporter is unavailable or its last success is older than 26 hours. The
 Internet-facing mail edge is instead covered by public protocol probes and its
 local failure notifier; its exporter is not exposed across the Internet.
 
-Critical units also use a local systemd `OnFailure` notifier. Enroll the
-dedicated infrastructure bot token and chat identifier as mode-0400 files at
+Critical units also use a local systemd `OnFailure` notifier. Its profile reads
+the dedicated infrastructure bot token and chat identifier from the central
+SOPS contract and writes mode-0400 files at
 `/var/lib/monitoring-bootstrap/bot-token` and
-`/var/lib/monitoring-bootstrap/chat-id`. Stream them from the password manager
-through the encrypted SSH transport; do not put either value in an SSH command,
-Nix option, shell history, or temporary file. The notifier supplies the token
-to curl through standard input, so it is absent from the process list.
+`/var/lib/monitoring-bootstrap/chat-id`. Enroll them once into the central SOPS
+document, then materialize the profile through encrypted SSH standard input;
+do not put either value in an SSH command, Nix option, shell history, or
+temporary file. The notifier supplies the token to curl through standard input,
+so it is absent from the process list.
 
 Hermes additionally needs its separate OpenAI and conversation/Karakeep
 runtime files. Mail needs Stalwart/Resend bootstrap files. Those service-specific

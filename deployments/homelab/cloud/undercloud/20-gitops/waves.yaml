@@ -1243,10 +1243,6 @@ spec:
       kind: Terraform
       name: services-identity
       namespace: tofu-system
-    - apiVersion: infra.contrib.fluxcd.io/v1alpha2
-      kind: Terraform
-      name: services-backup-storage
-      namespace: openstack
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
