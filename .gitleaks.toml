@@ -6,3 +6,10 @@ description = "ZITADEL password lifetime is a non-secret duration policy"
 paths = ['''components/cloud/identity/tofu/main\.tf''']
 regexTarget = "line"
 regexes = ['''password_check_lifetime\s*=\s*"[0-9]+h[0-9]+m[0-9]+s"''']
+
+[[rules]]
+id = "openai-api-key-assignment"
+description = "OpenAI API key assigned as plaintext"
+regex = '''(?i)OPENAI_API_KEY\s*[:=]\s*["']?([A-Za-z0-9._-]{20,})'''
+secretGroup = 1
+keywords = ["openai_api_key"]

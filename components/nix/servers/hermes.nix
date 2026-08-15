@@ -73,7 +73,10 @@ in
         restart = "on-failure";
         restartSec = 15;
         environment.SEARXNG_URL = "https://search.fahrican.com";
-        environmentFiles = [ "/var/lib/hermes-bootstrap/runtime.env" ];
+        environmentFiles = [
+          "/var/lib/hermes-bootstrap/openai.env"
+          "/var/lib/hermes-bootstrap/integrations.env"
+        ];
         mcpServers.karakeep = {
           command = "${karakeepMcp}/bin/karakeep-mcp";
           env = {
@@ -85,7 +88,7 @@ in
         };
         settings = {
           model = {
-            provider = "openai-codex";
+            provider = "openai-api";
             default = "gpt-5.6-luna";
           };
           memory = {
@@ -107,13 +110,12 @@ in
           /var/lib/hermes/.hermes/SOUL.md
       '';
 
-      # OAuth credentials are deliberately enrolled on the host with the
-      # device-code flow. Telegram and Karakeep credentials are copied from a
-      # root-only enrollment file during activation. The gateway stays dormant
-      # until both exceptional bootstrap operations have been completed.
+      # The independently revocable OpenAI key and integration credentials are
+      # enrolled from separate sources into separate root-only files. The
+      # gateway remains dormant until both boundaries have been populated.
       systemd.services.hermes-agent.unitConfig.ConditionPathExists = [
-        "/var/lib/hermes/.hermes/auth.json"
-        "/var/lib/hermes-bootstrap/runtime.env"
+        "/var/lib/hermes-bootstrap/openai.env"
+        "/var/lib/hermes-bootstrap/integrations.env"
       ];
 
       systemd.tmpfiles.rules = [
@@ -121,7 +123,10 @@ in
       ];
 
       servicesPlatform.backup = {
-        paths = [ "/var/lib/hermes" ];
+        paths = [
+          "/var/lib/hermes"
+          "/var/lib/hermes-bootstrap"
+        ];
         tag = "hermes-state";
       };
 
@@ -133,6 +138,14 @@ in
       networking.firewall.allowedTCPPorts = [ ];
 
       assertions = [
+        {
+          assertion = config.services.hermes-agent.settings.model.provider == "openai-api";
+          message = "Hermes must use the independently revocable direct OpenAI API provider.";
+        }
+        {
+          assertion = config.services.hermes-agent.settings.model.default == "gpt-5.6-luna";
+          message = "Hermes must retain gpt-5.6-luna as its default model.";
+        }
         {
           assertion = config.services.hermes-agent.settings.memory.memory_enabled == false;
           message = "Semantic or autonomous Hermes memory must remain disabled during the Karakeep full-text phase.";

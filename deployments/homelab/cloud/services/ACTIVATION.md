@@ -23,9 +23,10 @@ Flux Kustomizations are authoritative, and a live-only change would be drift.
 Create three distinct Telegram bots: infrastructure alerts, Hermes
 conversation, and media acquisition. Issue a Cloudflare token limited to zone
 read plus R2 bucket edit, a Hetzner token for the mail-edge project, Last.fm
-application keys, and a Resend administration key. Keep the GHCR publishing
-credential in a mode-0400 or mode-0600 containers auth file outside the
-repository.
+application keys, a Resend administration key, and a dedicated OpenAI project
+API key for Hermes with the narrowest practical project permissions, model
+access, rate limit, and spend limit. Keep the GHCR publishing credential in a
+mode-0400 or mode-0600 containers auth file outside the repository.
 
 Enroll each services-cluster/controller value with the no-echo app:
 
@@ -34,9 +35,12 @@ nix run .#enroll-services-credential -- KEY
 ```
 
 Run it once for every key in the initial `credentials` section of
-`undercloud/82-services-cluster/runtime-contract.yaml`. The app reads twice
-from the terminal, base64-encodes in memory, and uses `sops set --value-stdin`;
-the value is never a command argument or plaintext repository file. Enter
+`undercloud/82-services-cluster/runtime-contract.yaml`, and once for
+`OPENAI_API_KEY` in `hostCredentials.hermes`. The contract routes cluster
+values to the cluster bootstrap and the OpenAI value to the separate,
+admin-recipient-only Hermes SOPS document. The app reads twice from the
+terminal, base64-encodes in memory, and uses `sops set --value-stdin`; the value
+is never a command argument or plaintext repository file. Enter
 `MAIL_MANAGEMENT_CIDRS_JSON` as a JSON list such as `["198.51.100.10/32"]`,
 using the real trusted public CIDR rather than the documentation example.
 
@@ -83,10 +87,12 @@ push it directly to `main`.
 ## 4. Standalone hosts
 
 Activate stage `hosts`. Use `enroll-service-host-secrets` for each host's
-root-only Restic and monitoring profiles. Leave Hermes condition-gated until
-Karakeep is live, because its independently revocable API key cannot be issued
-earlier. The infrastructure Telegram bot is reused for host failure alerts;
-Hermes and media retain their separate bots and chats.
+root-only Restic and monitoring profiles. Enroll the `hermes-openai` profile;
+it decrypts only `OPENAI_API_KEY` in memory and streams it into the dedicated
+root-only OpenAI environment file. Leave Hermes condition-gated until Karakeep
+is live, because its independently revocable API key cannot be issued earlier.
+The infrastructure Telegram bot is reused for host failure alerts; Hermes and
+media retain their separate bots and chats.
 
 Activate stage `mail`, confirm its retained address and reverse DNS, then
 perform the explicitly destructive nixos-anywhere install against that exact
@@ -108,15 +114,16 @@ next stage:
 4. `knowledge`
 
 After Karakeep is live, create two independently revocable API keys in its UI:
-one for Hermes and one for the release watcher. Enroll the Hermes runtime with
-the host app, rebuild Hermes so its managed environment is reseeded, then run
-`sudo -H -u hermes hermes auth add openai-codex` from an interactive SSH
-session. Enroll `RELEASE_WATCHER_KARAKEEP_API_KEY` in SOPS, create and push a
+one for Hermes and one for the release watcher. Enroll the
+`hermes-integrations` profile with the host app and rebuild Hermes so its
+managed environment is reseeded from the separate OpenAI and integration
+files. Enroll `RELEASE_WATCHER_KARAKEEP_API_KEY` in SOPS, create and push a
 signed credential commit, wait for `wave81-services-foundation`, and wait for
 or operationally trigger the already-declared services-cluster CronJob so
-`media-runtime` gains that key. The central key is the one post-deployment
-credential in the machine-readable contract; this ordering breaks the
-otherwise impossible dependency on a not-yet-running Karakeep instance.
+`media-runtime` gains that key. The central Karakeep key is the one
+post-deployment credential in the services-cluster contract; this ordering
+breaks the otherwise impossible dependency on a not-yet-running Karakeep
+instance. Hermes then starts directly with its API and integration credentials.
 
 Run the final repository gate:
 

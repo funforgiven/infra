@@ -18,14 +18,20 @@ Nix store path, or repository.
 
 ## Hermes enrollment
 
-Hermes remains condition-gated until OpenAI device-code enrollment creates
-/var/lib/hermes/.hermes/auth.json and a root-only
-/var/lib/hermes-bootstrap/runtime.env has been enrolled. The runtime file must
-contain TELEGRAM_BOT_TOKEN, TELEGRAM_ALLOWED_USERS, TELEGRAM_HOME_CHANNEL, and
-KARAKEEP_API_KEY as systemd-style environment assignments. Apply the NixOS
-closure again after enrolling the file so the Hermes module copies it into the
-service-owned .env. Then enroll the ChatGPT/Codex subscription interactively
-as the service user with `sudo -H -u hermes hermes auth add openai-codex`.
+Hermes uses the direct `openai-api` provider with `gpt-5.6-luna` as its default
+model. Enroll the independently revocable `OPENAI_API_KEY` with
+`enroll-services-credential`; it is stored only in the admin-recipient
+`deployments/homelab/cloud/host-runtime/hermes.sops.yaml` document. The
+`hermes-openai` host profile decrypts that one value in memory and streams a
+root-only `/var/lib/hermes-bootstrap/openai.env` file over SSH standard input.
+
+The separate `hermes-integrations` profile creates
+`/var/lib/hermes-bootstrap/integrations.env` with `TELEGRAM_BOT_TOKEN`,
+`TELEGRAM_ALLOWED_USERS`, `TELEGRAM_HOME_CHANNEL`, and `KARAKEEP_API_KEY`.
+This split permits OpenAI and Karakeep rotation without re-enrolling the other
+credential. Hermes remains condition-gated until both files exist. Apply the
+NixOS closure again after enrollment so the Hermes module reseeds its
+service-owned `.env`; no interactive provider authentication is required.
 
 The Telegram bot is polling-only and defaults to deny; never enable the global
 allow-all setting. Karakeep runs as a pinned, Nix-extracted MCP program and
@@ -77,8 +83,8 @@ through the encrypted SSH transport; do not put either value in an SSH command,
 Nix option, shell history, or temporary file. The notifier supplies the token
 to curl through standard input, so it is absent from the process list.
 
-Hermes additionally needs its conversation bot runtime environment and OAuth
-state. Mail needs Stalwart/Resend bootstrap files. Those service-specific
+Hermes additionally needs its separate OpenAI and conversation/Karakeep
+runtime files. Mail needs Stalwart/Resend bootstrap files. Those service-specific
 credentials must not reuse the infrastructure or media bots.
 
 ## Stalwart directory enrollment

@@ -169,6 +169,8 @@
                 (root / "undercloud/82-services-cluster/runtime-contract.yaml").read_text()
             )
             contract = yaml.safe_load(contract_document["data"]["required-keys.yaml"])
+            if contract["schemaVersion"] != 2:
+                raise SystemExit("services runtime contract must use schema version 2")
             credentials = {
                 key
                 for group in contract["credentials"].values()
@@ -184,6 +186,13 @@
                 for group in contract["postFoundationCredentials"].values()
                 for key in group
             }
+            host_credentials = {
+                key
+                for definition in contract["hostCredentials"].values()
+                for key in definition["keys"]
+            }
+            if host_credentials != {"OPENAI_API_KEY"}:
+                raise SystemExit("Hermes must have one independently routed OpenAI key")
             reconcile_document = yaml.safe_load_all(
                 (root / "undercloud/82-services-cluster/reconcile.yaml").read_text()
             )
@@ -211,6 +220,8 @@
                     f"runtime credential contract {sorted(expected_validated)} != "
                     f"reconciler validation {sorted(validated)}"
                 )
+            if "OPENAI_API_KEY" in reconcile_script:
+                raise SystemExit("Hermes OpenAI key must not enter cluster reconciliation")
 
             runtime = yaml.safe_load(
                 (root / "undercloud/81-services-foundation/runtime.sops.yaml").read_text()
@@ -223,6 +234,28 @@
                 for value in runtime["data"].values()
             ):
                 raise SystemExit("runtime Secret contains a non-SOPS data value")
+
+            hermes_runtime_path = root / "host-runtime/hermes.sops.yaml"
+            hermes_runtime = yaml.safe_load(hermes_runtime_path.read_text())
+            if hermes_runtime.get("schemaVersion") != 1:
+                raise SystemExit("Hermes host runtime document has the wrong schema")
+            if any(
+                not str(value).startswith("ENC[")
+                for value in hermes_runtime["data"].values()
+            ):
+                raise SystemExit("Hermes host runtime contains a non-SOPS data value")
+            recipients = {
+                entry["recipient"] for entry in hermes_runtime["sops"]["age"]
+            }
+            if recipients != {
+                "age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea"
+            }:
+                raise SystemExit("Hermes host runtime must remain admin-recipient-only")
+
+            exceptions = yaml.safe_load((root / "manual-exceptions.yaml").read_text())
+            exception_ids = {entry["id"] for entry in exceptions["exceptions"]}
+            if "hermes-openai-oauth-enrollment" in exception_ids:
+                raise SystemExit("obsolete Hermes OAuth exception remains declared")
 
             sentinel_files = [
                 root / "services/40-media/importer.yaml",
