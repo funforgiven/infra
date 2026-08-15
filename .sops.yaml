@@ -36,6 +36,11 @@ creation_rules:
       - age:
           - *admin_funforgiven
           - *services_flux
+  - path_regex: ^deployments/homelab/cloud/host-runtime/.*\.sops\.yaml$
+    encrypted_regex: '^(data|stringData)$'
+    key_groups:
+      - age:
+          - *admin_funforgiven
   - path_regex: ^secrets/[^/]+\.(yaml|json|sops)$
     key_groups:
       - age:

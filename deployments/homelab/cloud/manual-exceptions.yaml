@@ -11,25 +11,15 @@ exceptions:
     review_interval: monthly
     exit_criterion: Replace this exception when Telegram provides a supported declarative bot-management API.
   - id: openai-api-key-issuance
-    resource: OpenAI workload and administration API keys
+    resource: Independently revocable OpenAI API key for Hermes
     owner: funforgiven
-    rationale: OpenAI service-account identities and permissions are declarative, but API key values are returned only at issuance and must not enter OpenTofu state.
-    procedure: Issue the least-privilege key through the Administration API and stream the one-time response directly into SOPS ciphertext.
-    secret_handling: The value is never written to OpenTofu configuration, variables, outputs, plans, logs, or persistent plaintext files.
-    backup: Workload keys are recoverable by rotation; SOPS ciphertext preserves the deployed value and offline administration credentials remain admin-only.
-    drift_probe: Compare service-account IDs, roles, key metadata, model controls, rate limits, and spend alerts through the declarative provider.
+    rationale: OpenAI service-account identities and permissions are declarative, but an API key value is returned only at issuance and must not enter OpenTofu state.
+    procedure: Issue one least-privilege Hermes project key through the Administration API and enroll OPENAI_API_KEY with the no-echo contract tool into the admin-only Hermes SOPS document.
+    secret_handling: Enrollment uses standard input; host materialization decrypts only this key in memory and streams a separate mode-0400 OpenAI environment file over SSH. The value never enters arguments, logs, OpenTofu state, or persistent plaintext on the operator host.
+    backup: The key is recoverable by independent rotation; SOPS ciphertext and the encrypted Hermes host backup preserve the deployed value.
+    drift_probe: Compare the Hermes service-account ID, role, key metadata, model controls, rate limit, spend limit, and last-used timestamp without retrieving the key value.
     review_interval: monthly
     exit_criterion: Remove when the provider can issue a key directly into an approved secret store without exposing it through state.
-  - id: hermes-openai-oauth-enrollment
-    resource: Hermes ChatGPT/Codex subscription authentication
-    owner: funforgiven
-    rationale: The OpenAI Codex provider uses an interactive device-code OAuth grant and stores renewable user tokens outside Hermes configuration.
-    procedure: Enroll once from a trusted terminal with the Hermes openai-codex authentication command, then start the condition-gated service.
-    secret_handling: OAuth tokens remain mode-0600 under the Hermes service state directory and are never copied into Nix, Git, shell history, command arguments, or OpenTofu state.
-    backup: Include the Hermes authentication file only in the host's encrypted application-state backup; rotation remains available by repeating enrollment.
-    drift_probe: Run the non-secret Hermes authentication-status check monthly and alert on expiry or provider mismatch without displaying token material.
-    review_interval: monthly
-    exit_criterion: Replace this exception if OpenAI and Hermes provide a supported non-interactive workload identity flow for subscription-backed Codex access.
   - id: karakeep-api-key-issuance
     resource: Dedicated Karakeep API keys used by Hermes and the music release watcher
     owner: funforgiven

@@ -5,8 +5,9 @@ metadata:
   namespace: openstack
 data:
   required-keys.yaml: |
-    schemaVersion: 1
+    schemaVersion: 2
     secret: services-runtime-bootstrap
+    secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
     credentials:
       infrastructure:
         - INFRA_TELEGRAM_BOT_TOKEN
@@ -32,6 +33,11 @@ data:
     postDeploymentCredentials:
       media:
         - RELEASE_WATCHER_KARAKEEP_API_KEY
+    hostCredentials:
+      hermes:
+        secretFile: deployments/homelab/cloud/host-runtime/hermes.sops.yaml
+        keys:
+          - OPENAI_API_KEY
     generatedApplicationSecrets:
       - MEILI_MASTER_KEY
       - NEXTAUTH_SECRET
@@ -39,4 +45,4 @@ data:
     policy:
       semanticRetrieval: deferred
       initialRetrieval: karakeep-full-text
-      secretTransport: sops-ciphertext-and-memory-backed-reconciliation
+      secretTransport: isolated-sops-ciphertext-and-memory-backed-reconciliation

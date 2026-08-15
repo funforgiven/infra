@@ -11,7 +11,7 @@ and media jobs cannot consume control-plane capacity.
 | --- | --- | --- |
 | OpenStack control plane | Existing undercloud | Keystone, Magnum, Cinder, Manila, Octavia, Flux controllers |
 | Services Kubernetes | Magnum, three 2-vCPU/4-GiB masters and two 4-vCPU/12-GiB workers | Karakeep, SearXNG, databases, Navidrome, acquisition workflow, monitoring |
-| Agent VM | Dedicated NixOS VM in the `services` project | Hermes Agent, Telegram conversation bot, Codex OAuth state |
+| Agent VM | Dedicated NixOS VM in the `services` project | Hermes Agent, Telegram conversation bot, direct OpenAI API runtime |
 | Home automation VM | Dedicated NixOS VM in the `services` project | Home Assistant and hardware/LAN integrations |
 | Mail edge | Dedicated Hetzner NixOS VM | Stalwart ingress and Resend-backed outbound delivery |
 
