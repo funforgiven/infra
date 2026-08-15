@@ -21,28 +21,40 @@ Flux Kustomizations are authoritative, and a live-only change would be drift.
 ## 1. Issue credentials without broadening trust
 
 Create three distinct Telegram bots: infrastructure alerts, Hermes
-conversation, and media acquisition. Issue a Cloudflare token limited to zone
-read plus R2 bucket edit, a Hetzner token for the mail-edge project, Last.fm
-application keys, a Resend administration key, and a dedicated OpenAI project
-API key for Hermes with the narrowest practical project permissions, model
-access, rate limit, and spend limit. Keep the GHCR publishing credential in a
+conversation, and media acquisition. Issue a Hetzner token for the mail-edge
+project, Last.fm application keys, a Resend administration key, a dedicated
+OpenAI project API key for Hermes, and four Backblaze B2 application keys: one
+for Velero and one for each standalone host prefix. Give each key only the
+declared prefix and capabilities. Keep the GHCR publishing credential in a
 mode-0400 or mode-0600 containers auth file outside the repository.
 
 Enroll each services-cluster/controller value with the no-echo app:
 
 ```console
 nix run .#enroll-services-credential -- KEY
+# Or, after filling the ignored mode-0600 intake file:
+nix run .#enroll-services-credential -- --from-file KEY
 ```
 
-Run it once for every key in the initial `credentials` section of
-`undercloud/82-services-cluster/runtime-contract.yaml`, and once for
-`OPENAI_API_KEY` in `hostCredentials.hermes`. The contract routes cluster
-values to the cluster bootstrap and the OpenAI value to the separate,
-admin-recipient-only Hermes SOPS document. The app reads twice from the
-terminal, base64-encodes in memory, and uses `sops set --value-stdin`; the value
-is never a command argument or plaintext repository file. Enter
+Run it once for every available upstream value in `credentials`,
+`postDeploymentCredentials`, and `hostCredentials`. The contract routes
+cluster, Hermes, mail, and host-backup values to separate SOPS documents. The
+interactive mode reads twice from the terminal; `--from-file` reads only the
+predictable ignored `secrets/KEY.key` intake file after verifying it is a
+non-symlink mode-0600 file. Both paths base64-encode in memory and use
+`sops set --value-stdin`; the value is never a command argument or plaintext
+tracked file. After successful `--from-file` enrollment, the ignored intake
+file is returned to zero length. Enter
 `MAIL_MANAGEMENT_CIDRS_JSON` as a JSON list such as `["198.51.100.10/32"]`,
 using the real trusted public CIDR rather than the documentation example.
+
+Locally owned high-entropy values are declared under `generatedSecrets` and
+generated directly into their target SOPS document. The initial values are
+already committed as ciphertext; rotate one explicitly with:
+
+```console
+nix run .#generate-services-credential -- --rotate KEY
+```
 
 Review only the ciphertext structure and diff statistics. Never run a command
 that prints the decrypted document. Run the repository checks, create a signed
@@ -50,19 +62,18 @@ Conventional Commit, and push it directly to `main` with a fast-forward push.
 
 ## 2. Create the credential-backed foundation
 
-Activate stage `foundation`. Its three OpenTofu resources create the
-OpenStack services boundary, ZITADEL clients, and retained R2 bucket. The R2
-provisioning token remains in the undercloud only. Once the bucket exists,
-issue an R2 Object Read & Write S3 key restricted to that bucket, enroll the two
-keys under `postFoundationCredentials`, and push a signed credential commit.
-Wait for wave 81 to reconcile the updated SOPS Secret, then activate stage
-`cluster`. The reconciler validates every runtime value,
+Activate stage `foundation`. Its controllers create the OpenStack services
+boundary and ZITADEL clients, while Flux publishes the non-secret Backblaze B2
+destination contract for the existing retained `fahrican-cloud-recovery`
+bucket. Enroll the Velero application key under `credentials.backupRuntime`
+before activating stage `cluster`. Restrict it to `services/kubernetes/` with
+only the declared capabilities. The reconciler validates every runtime value,
 creates derived Secrets and Helm value ConfigMaps through memory-backed
 storage, and bootstraps signed Flux reconciliation.
 
-Wave 81 also creates separate retained buckets for Hermes, Home Assistant, and
-the mail edge. Issue one bucket-scoped key for each when enrolling the host
-Restic files; never reuse the Velero key or a key between hosts.
+Issue one separate B2 application key for each standalone host prefix under
+`services/hosts/`; never reuse the Velero key or a key between hosts. Their
+Restic passwords are independently generated in SOPS.
 
 ## 3. Promote immutable images
 
@@ -86,8 +97,9 @@ push it directly to `main`.
 
 ## 4. Standalone hosts
 
-Activate stage `hosts`. Use `enroll-service-host-secrets` for each host's
-root-only Restic and monitoring profiles. Enroll the `hermes-openai` profile;
+Activate stage `hosts`. After enrolling provider-issued values into SOPS, use
+`enroll-service-host-secrets` for each host's root-only Restic and monitoring
+profiles. Enroll the `hermes-openai` profile;
 it decrypts only `OPENAI_API_KEY` in memory and streams it into the dedicated
 root-only OpenAI environment file. Leave Hermes condition-gated until Karakeep
 is live, because its independently revocable API key cannot be issued earlier.
@@ -100,8 +112,10 @@ server. Enroll only its `mail-edge-backup` and `monitoring` profiles initially;
 the absent mail runtime keeps Stalwart stopped while DNS and ACME are pending.
 Activate stage `dns` after the cluster reconciler has copied the mail-edge
 output into `service-dns-inputs`. Once the A and Resend verification records
-are live, issue the domain-scoped Resend sending key, enroll `mail-runtime`,
-and start Stalwart after its certificate is ready.
+are live, issue the domain-scoped Resend sending key, enroll it as
+`STALWART_RESEND_API_KEY`, materialize `mail-runtime`, and start Stalwart after
+its certificate is ready. The fallback administrator secret is generated, not
+manually supplied.
 
 ## 5. Application and recovery gates
 
@@ -114,8 +128,9 @@ next stage:
 4. `knowledge`
 
 After Karakeep is live, create two independently revocable API keys in its UI:
-one for Hermes and one for the release watcher. Enroll the
-`hermes-integrations` profile with the host app and rebuild Hermes so its
+one for Hermes and one for the release watcher. Enroll
+`HERMES_KARAKEEP_API_KEY` into SOPS, materialize the `hermes-integrations`
+profile with the host app, and rebuild Hermes so its
 managed environment is reseeded from the separate OpenAI and integration
 files. Enroll `RELEASE_WATCHER_KARAKEEP_API_KEY` in SOPS, create and push a
 signed credential commit, wait for `wave81-services-foundation`, and wait for

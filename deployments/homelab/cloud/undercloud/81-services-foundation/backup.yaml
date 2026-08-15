@@ -1,32 +1,10 @@
-apiVersion: infra.contrib.fluxcd.io/v1alpha2
-kind: Terraform
+apiVersion: v1
+kind: ConfigMap
 metadata:
-  name: services-backup-storage
+  name: services-backup-destination
   namespace: openstack
-spec:
-  interval: 10m
-  retryInterval: 1m
-  approvePlan: auto
-  destroyResourcesOnDeletion: false
-  path: ./components/cloud/services/backup/tofu
-  sourceRef:
-    kind: GitRepository
-    name: services-tofu-source
-  runnerPodTemplate:
-    spec:
-      alwaysCleanupRunnerPod: true
-      env:
-        - name: CLOUDFLARE_API_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: services-runtime-bootstrap
-              key: CLOUDFLARE_R2_API_TOKEN
-  writeOutputsToSecret:
-    name: services-backup-storage-outputs
-    outputs:
-      - bucket_name
-      - endpoint
-      - host_bucket_names
-      - region
-  remediation:
-    retries: 3
+data:
+  bucket_name: fahrican-cloud-recovery
+  endpoint: https://s3.us-west-004.backblazeb2.com
+  region: us-west-004
+  prefix: services/kubernetes

@@ -61,11 +61,11 @@ exceptions:
     review_interval: monthly
     exit_criterion: Remove when Hetzner supports a workload identity flow that the controller can use without a long-lived token.
   - id: offsite-backup-credential-issuance
-    resource: Object-store writer credentials and Restic repository enrollment for service workloads
+    resource: Backblaze B2 application-key issuance for service backup writers
     owner: funforgiven
-    rationale: The storage provider returns application-key secrets only at issuance, while new NixOS guests do not have stable SOPS recipients until their host identities exist.
-    procedure: Let OpenTofu create the retained R2 bucket, issue the narrowest bucket-scoped object writer supported for each trust boundary without persisting it in state, stream it through no-echo SOPS enrollment after the host identity is recorded, and perform an isolated restore before service activation.
-    secret_handling: Credentials and repository passwords never enter Nix, OpenTofu variables, state, plans, logs, shell history, or command arguments; only SOPS ciphertext and root-only runtime files are retained.
+    rationale: Backblaze returns each application-key secret only at issuance and does not provide a state-free workload-identity path for these consumers.
+    procedure: Keep the existing retained fahrican-cloud-recovery bucket, apply its reviewed lifecycle policy, issue one key restricted to each declared services prefix, enroll each value through the contract tool, and perform an isolated restore before service activation.
+    secret_handling: Provider credentials never enter Nix, OpenTofu variables, state, plans, logs, shell history, or command arguments. Restic repository passwords are generated directly into SOPS; only ciphertext and root-only runtime files are retained.
     backup: Offline recovery readers and the personal age identity remain separate from workload writers; lost workload credentials are recovered by rotation, not retrieval.
     drift_probe: Compare non-secret key inventory, bucket scope, lifecycle policy, last successful backup, and restore evidence monthly without retrieving any credential value.
     review_interval: monthly

@@ -169,8 +169,8 @@
                 (root / "undercloud/82-services-cluster/runtime-contract.yaml").read_text()
             )
             contract = yaml.safe_load(contract_document["data"]["required-keys.yaml"])
-            if contract["schemaVersion"] != 2:
-                raise SystemExit("services runtime contract must use schema version 2")
+            if contract["schemaVersion"] != 3:
+                raise SystemExit("services runtime contract must use schema version 3")
             credentials = {
                 key
                 for group in contract["credentials"].values()
@@ -181,18 +181,37 @@
                 for group in contract["postDeploymentCredentials"].values()
                 for key in group
             }
-            post_foundation_credentials = {
-                key
-                for group in contract["postFoundationCredentials"].values()
-                for key in group
+            expected_host_credentials = {
+                "hermes": {
+                    "OPENAI_API_KEY",
+                    "HERMES_TELEGRAM_BOT_TOKEN",
+                    "HERMES_TELEGRAM_ALLOWED_USERS",
+                    "HERMES_TELEGRAM_HOME_CHANNEL",
+                    "HERMES_KARAKEEP_API_KEY",
+                },
+                "mail-edge": {"STALWART_RESEND_API_KEY"},
+                "host-backups": {
+                    "HERMES_BACKUP_B2_APPLICATION_KEY_ID",
+                    "HERMES_BACKUP_B2_APPLICATION_KEY",
+                    "HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID",
+                    "HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY",
+                    "MAIL_EDGE_BACKUP_B2_APPLICATION_KEY_ID",
+                    "MAIL_EDGE_BACKUP_B2_APPLICATION_KEY",
+                },
             }
             host_credentials = {
+                consumer: set(definition["keys"])
+                for consumer, definition in contract["hostCredentials"].items()
+            }
+            if host_credentials != expected_host_credentials:
+                raise SystemExit("host credentials are not independently routed")
+            generated_definitions = contract["generatedSecrets"]
+            cluster_generated = {
                 key
-                for definition in contract["hostCredentials"].values()
+                for definition in generated_definitions.values()
+                if definition["secretFile"] == contract["secretFile"]
                 for key in definition["keys"]
             }
-            if host_credentials != {"OPENAI_API_KEY"}:
-                raise SystemExit("Hermes must have one independently routed OpenAI key")
             reconcile_document = yaml.safe_load_all(
                 (root / "undercloud/82-services-cluster/reconcile.yaml").read_text()
             )
@@ -212,8 +231,8 @@
             )
             expected_validated = (
                 credentials
-                | post_foundation_credentials
                 | post_deployment_credentials
+                | cluster_generated
             )
             if expected_validated != validated:
                 raise SystemExit(
@@ -226,31 +245,72 @@
             runtime = yaml.safe_load(
                 (root / "undercloud/81-services-foundation/runtime.sops.yaml").read_text()
             )
-            generated = set(contract["generatedApplicationSecrets"])
-            if not generated.issubset(runtime["data"]):
-                raise SystemExit("generated application secrets are missing from SOPS")
+            if not cluster_generated.issubset(runtime["data"]):
+                raise SystemExit("generated cluster secrets are missing from SOPS")
             if any(
                 not str(value).startswith("ENC[")
                 for value in runtime["data"].values()
             ):
                 raise SystemExit("runtime Secret contains a non-SOPS data value")
 
-            hermes_runtime_path = root / "host-runtime/hermes.sops.yaml"
-            hermes_runtime = yaml.safe_load(hermes_runtime_path.read_text())
-            if hermes_runtime.get("schemaVersion") != 1:
-                raise SystemExit("Hermes host runtime document has the wrong schema")
-            if any(
-                not str(value).startswith("ENC[")
-                for value in hermes_runtime["data"].values()
-            ):
-                raise SystemExit("Hermes host runtime contains a non-SOPS data value")
-            recipients = {
-                entry["recipient"] for entry in hermes_runtime["sops"]["age"]
+            host_secret_files = {
+                definition["secretFile"]
+                for definition in contract["hostCredentials"].values()
+            } | {
+                definition["secretFile"]
+                for definition in generated_definitions.values()
+                if definition["secretFile"].startswith(
+                    "deployments/homelab/cloud/host-runtime/"
+                )
             }
-            if recipients != {
-                "age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea"
+            generated_by_file = {
+                definition["secretFile"]: set(definition["keys"])
+                for definition in generated_definitions.values()
+            }
+            for relative_path in host_secret_files:
+                host_runtime = yaml.safe_load(
+                    (pathlib.Path(relative_path)).read_text()
+                )
+                if host_runtime.get("schemaVersion") != 1:
+                    raise SystemExit(
+                        f"{relative_path} host runtime document has the wrong schema"
+                    )
+                if not generated_by_file.get(relative_path, set()).issubset(
+                    host_runtime["data"]
+                ):
+                    raise SystemExit(
+                        f"{relative_path} is missing generated host secrets"
+                    )
+                if any(
+                    not str(value).startswith("ENC[")
+                    for value in host_runtime["data"].values()
+                ):
+                    raise SystemExit(
+                        f"{relative_path} contains a non-SOPS data value"
+                    )
+                recipients = {
+                    entry["recipient"] for entry in host_runtime["sops"]["age"]
+                }
+                if recipients != {
+                    "age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea"
+                }:
+                    raise SystemExit(
+                        f"{relative_path} must remain admin-recipient-only"
+                    )
+
+            backup_destination = yaml.safe_load(
+                (root / "backup-destination.yaml").read_text()
+            )
+            services_backup = yaml.safe_load(
+                (root / "undercloud/81-services-foundation/backup.yaml").read_text()
+            )
+            if services_backup["data"] != {
+                "bucket_name": backup_destination["bucket"]["name"],
+                "endpoint": backup_destination["bucket"]["s3Endpoint"],
+                "region": "us-west-004",
+                "prefix": "services/kubernetes",
             }:
-                raise SystemExit("Hermes host runtime must remain admin-recipient-only")
+                raise SystemExit("services backup destination diverges from Backblaze B2")
 
             exceptions = yaml.safe_load((root / "manual-exceptions.yaml").read_text())
             exception_ids = {entry["id"] for entry in exceptions["exceptions"]}

@@ -13,3 +13,17 @@ description = "OpenAI API key assigned as plaintext"
 regex = '''(?i)OPENAI_API_KEY\s*[:=]\s*["']?([A-Za-z0-9._-]{20,})'''
 secretGroup = 1
 keywords = ["openai_api_key"]
+
+[[rules]]
+id = "backblaze-application-key-assignment"
+description = "Backblaze B2 application key assigned as plaintext"
+regex = '''(?i)(?:B2_APPLICATION_KEY|AWS_SECRET_ACCESS_KEY)\s*[:=]\s*["']?([A-Za-z0-9]{20,})'''
+secretGroup = 1
+keywords = ["b2_application_key", "aws_secret_access_key"]
+
+[[rules]]
+id = "generated-service-secret-assignment"
+description = "Locally generated service secret assigned as plaintext"
+regex = '''(?i)(?:STALWART_ADMIN_SECRET|ND_PASSWORDENCRYPTIONKEY|SFTPGO_(?:ADMIN|USER)_PASSWORD|BACKUP_RESTIC_PASSWORD)\s*[:=]\s*["']?([A-Za-z0-9]{32,})'''
+secretGroup = 1
+keywords = ["stalwart_admin_secret", "passwordencryptionkey", "backup_restic_password"]
