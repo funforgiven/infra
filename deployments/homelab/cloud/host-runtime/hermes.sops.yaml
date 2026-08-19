@@ -3,6 +3,7 @@ data:
     HERMES_TELEGRAM_BOT_TOKEN: ENC[AES256_GCM,data:y3XA5BJExhRvD5iyxMuQWal67Ur9pakbui+ie6T3zEG/jCOep1CgUpbZZJ218/oJ+CWo3c5QOKIU649p7scpxw==,iv:qGdPsSISNwoB1d7bLcfZUebfsdIiFFzQro2MxBocP34=,tag:UwgZ8UoU9c2ilI+0OH0xUg==,type:str]
     HERMES_TELEGRAM_HOME_CHANNEL: ENC[AES256_GCM,data:+8TFRcJdikDT4WxL,iv:/9IQsCm0M7QWKuGzn5M9gD2a1iBMa7kQKKAtF5efzbo=,tag:1qsPjAnjnAsM/kcHoJum0Q==,type:str]
     HERMES_TELEGRAM_ALLOWED_USERS: ENC[AES256_GCM,data:lf5/CLEPuv8nZvsF,iv:Ij6YSTswNrm+yUxQhzFRgty5cIqJoEFGxR/tWFqLWWY=,tag:0EyV4dmyQan6Nd6EyvltMg==,type:str]
+    OPENAI_API_KEY: ENC[AES256_GCM,data:SOaImpi7Hu3E1zv86PR5N+uYW2+TeLJW/p6lU7V/HZd/N7u1s1yB//vZrnlU7DLZicYpRIUyQIrLETjQ/Jlp9khX3vgsZRnNoLo6p3Set43x38P5DcPuqPSYbz7d56NNh9mEAPJm/KZovAUBnIsf354YcqDq48J6FrJUpesG2RtVshsaI3LDaCZ8H8Z7o4eLKxlJn2KyyLHCEZTxVtPfgVlbUx6/QjNHhSDw9xYGmey4rmjbEJWcQYV23DkkL3w1J9+yypcDYJl1aH6IabRC5RPx+fS8a33LBEcSmw==,iv:R3D2x/6lnkoOmx0ZLWvSlFLOAleOZsYc7TQ0Hd/7mas=,tag:uZGNQvvmG98pPC7SfuzHWg==,type:str]
 sops:
     age:
         - enc: |
@@ -15,6 +16,6 @@ sops:
             -----END AGE ENCRYPTED FILE-----
           recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-08-19T21:04:18Z"
-    mac: ENC[AES256_GCM,data:iUmim5tzs5CHQhN+xZ8vAVOm0snFxF2j82hY8O4KA11gSO2dHHkiL9kFwyvLCn8DhcpOPzumrcbj+MI6kMdzUBbBxiSIgwxm6n4Ynf3ozVLsjIzncvnlGZLVMzqjGPUEqpvphdQB1pzRakofzEYJIpqq1ib/C93dcYIN3HaMnf0=,iv:Q7PEK419iLAn5Y7tB4e6a3kQcOyQM5TyHBai/davQ4Q=,tag:W4pcl3oJ8XaL8F6qlnWTKg==,type:str]
+    lastmodified: "2026-08-19T21:30:10Z"
+    mac: ENC[AES256_GCM,data:sQYLkMWARQUqoyaR/gugb6NikFImAh2HYm9LbewAD9feD1QHHFJdWtwRjK9EkTqAwTmL/4EWOH2EM87qZfdeoffWTsUgixS+ReZz92kfGtSSwK+q6rS2kiUbTrfbYaY1wzWDL7KxbsDhv4AjoeReZm+bZmndB/yabo/3rVDoMFg=,iv:XI6UD6IOQzFrRe7StYH4PhrMm4F9sASXmGK2Jp8fkHk=,tag:pcFn7c57oyhecH7i7CzI8Q==,type:str]
     version: 3.13.3

@@ -23,12 +23,12 @@ Flux Kustomizations are authoritative, and a live-only change would be drift.
 Supply only the ten externally issued values listed in
 `secrets/README.md`: the Backblaze master pair, dedicated Hetzner token, three
 Telegram bot tokens, Last.fm pair, Resend administration key, and dedicated
-OpenAI organization Admin key. Keep the GHCR publishing credential in a mode-0400
+Hermes OpenAI API key. Keep the GHCR publishing credential in a mode-0400
 or mode-0600 containers auth file outside the repository. Do not issue or
 prepare placeholders for derived application keys, numeric Telegram targets,
 the operator CIDR, or locally generated passwords.
 
-Enroll each services-cluster/controller value with the no-echo app:
+Enroll each external runtime value with the no-echo app:
 
 ```console
 nix run .#enroll-services-credential -- KEY
@@ -37,8 +37,7 @@ nix run .#enroll-services-credential -- \
   --from-file --intake-directory /absolute/path/to/secrets KEY
 ```
 
-Run it only for contract values in `credentials`, `hostCredentials`, and
-`controllerCredentials`. Values
+Run it only for contract values in `credentials` and `hostCredentials`. Values
 under `generatedSecrets` and `provisionedSecrets` reject external enrollment.
 The contract routes cluster, Hermes, and mail values to separate SOPS
 documents. The interactive mode reads twice from the terminal; `--from-file`
@@ -70,53 +69,22 @@ CIDR. Telegram derives chat and user IDs from exact declared updates. Resend
 creates a `sending_access` key scoped only to `fahrican.com` and never exposes
 the administration key to Stalwart.
 
-OpenAI has an earlier, separately gated control-plane stage because its
-service-account identity must exist before its derived runtime key can be
-issued. Create the initial organization Admin key in OpenAI's Admin keys page
-with the exact name `fahrican-infra-openai-control-plane`, place it only in the
-ignored mode-0600 `secrets/OPENAI_ADMIN_KEY.key` intake file, and enroll it:
+Create the independently revocable Hermes key in the OpenAI dashboard and keep
+its project permissions and hard spend limit under operator control. Put only
+that runtime value in the ignored mode-0600 `secrets/OPENAI_API_KEY.key` intake
+file and enroll it through the same generic path as every other external key:
 
 ```console
 nix run .#enroll-services-credential -- \
-  --from-file --intake-directory /absolute/path/to/secrets OPENAI_ADMIN_KEY
+  --from-file --intake-directory /absolute/path/to/secrets OPENAI_API_KEY
 ```
 
-Review only ciphertext, run the repository checks, and push a signed credential
-commit. Then activate stage `openai` in a separate signed commit and wait for
-`tofu-system/openai-hermes` to become Ready. The official provider creates the
-dedicated project, no-default-role service account, custom
-`api.responses.write` role, group assignment, Luna-only allowlist, and USD 50
-monthly hard limit. It also disables every OpenAI hosted tool. Before the first
-apply, inspect the organization policy for web search, file search, image
-generation, remote MCP, and Code Interpreter: a tool already set to deny-all or
-selected-projects needs no change; an allow-all tool must be changed to
-selected-projects without selecting Hermes because OpenAI does not permit a
-project-level `false` under allow-all. This conditional UI prerequisite is in
-`manual-exceptions.yaml`. Issue the runtime key only after the apply succeeds:
-
-```console
-nix run .#reconcile-services-openai -- apply
-```
-
-The one-time value goes directly into the admin-only Hermes SOPS document and
-never enters OpenTofu state, an intake file, or command output. After the
-OpenTofu resource is Ready, retire the organization-wide bootstrap capability:
-
-```console
-nix run .#reconcile-services-openai -- retire-admin
-```
-
-Retirement is refused unless the scoped runtime key exists both remotely and as
-SOPS ciphertext, the Luna allowlist is exact, all five hosted tools are denied,
-and the USD 50 monthly hard limit is current. The command then revokes the
-uniquely named Admin key through OpenAI's Administration API and removes its
-local ciphertext. Suspend the OpenAI Terraform resource, remove the Admin
-Secret and controller credential from the declarative contract, run the full
-checks, and push the runtime ciphertext plus retirement state in a signed
-commit. A future control-plane change requires a new temporary Admin key and an
-explicit maintenance activation. If runtime-key reconciliation reports partial
-or unrecoverable state, replace the service account declaratively; OpenAI does
-not permit deleting its keys through the project-key delete endpoint.
+The command encrypts the value directly into the admin-recipient-only Hermes
+SOPS document and truncates the intake file only after success. No OpenAI Admin
+key, project identifier, policy, budget, or Terraform state is required by the
+repository. Hermes still selects `gpt-5.6-luna` in its declarative application
+configuration because API requests—not API keys—select a model. Change that
+default in the Hermes NixOS module if the desired model changes.
 
 Locally owned high-entropy values are declared under `generatedSecrets` and
 generated directly into their target SOPS document. The initial values are

@@ -95,11 +95,11 @@ class RuntimeContract:
         for key in self._grouped_keys(self.document.get("credentials"), "credentials"):
             credentials.append(Credential(key, cluster_file, "services-cluster"))
 
-        credentials.extend(self._isolated_credentials("hostCredentials"))
-        credentials.extend(self._isolated_credentials("controllerCredentials"))
+        credentials.extend(self._host_credentials())
         return tuple(credentials)
 
-    def _isolated_credentials(self, section: str) -> tuple[Credential, ...]:
+    def _host_credentials(self) -> tuple[Credential, ...]:
+        section = "hostCredentials"
         definitions = self.document.get(section)
         if not isinstance(definitions, dict) or not definitions:
             raise ContractError(f"{section} must be a non-empty mapping")
@@ -171,8 +171,8 @@ class RuntimeContract:
         return (*self.credentials, *self.generated, *self.provisioned)
 
     def _validate(self) -> None:
-        if self.document.get("schemaVersion") != 5:
-            raise ContractError("runtime contract schemaVersion must be 5")
+        if self.document.get("schemaVersion") != 6:
+            raise ContractError("runtime contract schemaVersion must be 6")
         names = [credential.name for credential in self.managed]
         invalid = sorted(name for name in names if not KEY_PATTERN.fullmatch(name))
         if invalid:
