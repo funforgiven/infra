@@ -15,7 +15,6 @@ spec:
     name: services-tofu-source
   runnerPodTemplate:
     spec:
-      alwaysCleanupRunnerPod: true
       env:
         - name: HCLOUD_TOKEN
           valueFrom:

@@ -20,7 +20,6 @@ spec:
       value: "0000000000000000000000000000000000000000"
   runnerPodTemplate:
     spec:
-      alwaysCleanupRunnerPod: true
       envFrom:
         - secretRef:
             name: magnum-keystone-admin

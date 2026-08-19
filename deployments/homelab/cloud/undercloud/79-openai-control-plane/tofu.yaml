@@ -29,7 +29,6 @@ spec:
     name: openai-tofu-source
   runnerPodTemplate:
     spec:
-      alwaysCleanupRunnerPod: true
       envFrom:
         - secretRef:
             name: openai-admin

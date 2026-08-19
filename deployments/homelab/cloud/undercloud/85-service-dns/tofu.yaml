@@ -36,7 +36,6 @@ spec:
         - resend_records_json
   runnerPodTemplate:
     spec:
-      alwaysCleanupRunnerPod: true
       env:
         - name: CLOUDFLARE_API_TOKEN
           valueFrom:
