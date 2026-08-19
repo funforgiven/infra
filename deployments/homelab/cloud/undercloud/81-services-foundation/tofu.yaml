@@ -29,7 +29,6 @@ spec:
     name: services-tofu-source
   runnerPodTemplate:
     spec:
-      alwaysCleanupRunnerPod: true
       envFrom:
         - secretRef:
             name: magnum-keystone-admin
