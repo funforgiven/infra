@@ -441,6 +441,29 @@
             openai_tofu = pathlib.Path(
                 "components/cloud/services/openai/tofu/main.tf"
             ).read_text()
+            openai_contract = yaml.safe_load(
+                (root / "openai-hermes.yaml").read_text()
+            )
+            if openai_contract.get("administrationKeyName") != (
+                "fahrican-infra-openai-control-plane"
+            ):
+                raise SystemExit("OpenAI Admin-key retirement target drifted")
+            if openai_contract.get("policy") != {
+                "modelIds": ["gpt-5.6-luna"],
+                "hostedTools": [
+                    "code_interpreter",
+                    "file_search",
+                    "image_generation",
+                    "mcp",
+                    "web_search",
+                ],
+                "hardSpendLimit": {
+                    "thresholdAmount": 5000,
+                    "currency": "USD",
+                    "interval": "month",
+                },
+            }:
+                raise SystemExit("Hermes OpenAI retirement policy drifted")
             required_openai_declarations = (
                 'source  = "openai/openai"',
                 'version = "= 1.1.0"',

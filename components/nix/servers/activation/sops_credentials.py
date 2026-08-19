@@ -93,3 +93,9 @@ class SopsCredentialStore:
                 else:
                     self._set(path, credential, old_value)
             raise
+
+    def remove(self, secret_file: Path, credential: str) -> None:
+        path = self._path(secret_file)
+        if self.read(secret_file, credential) is None:
+            return
+        self._unset(path, credential)
