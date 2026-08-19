@@ -80,7 +80,7 @@ only these ten externally issued keys:
 | `MEDIA_TELEGRAM_BOT_TOKEN.key` | Media-watch bot token |
 | `ND_LASTFM_APIKEY.key` | Navidrome Last.fm application key |
 | `ND_LASTFM_SECRET.key` | Navidrome Last.fm application secret |
-| `OPENAI_API_KEY.key` | Independently revocable Hermes OpenAI project key |
+| `OPENAI_ADMIN_KEY.key` | OpenAI organization Admin key for the declarative control plane |
 | `RESEND_ADMIN_API_KEY.key` | Resend administration key used by the pinned reconcilers |
 
 The enrollment and provider reconcilers clear an intake file only after its
@@ -89,11 +89,15 @@ creates four prefix-restricted application keys and is then cleared. Resend's
 admin key later creates the domain-scoped Stalwart sending key. Telegram chat
 and user IDs are discovered from exact `/activate` updates. The operator mail
 CIDR is independently discovered. Stalwart and backup passwords are generated
-locally. Karakeep's two integration keys are created by the operator after the
+locally. The OpenAI Admin key authenticates only OpenTofu and the pinned key
+reconciler; OpenTofu creates the Hermes project and nonhuman identity, then the
+reconciler writes `OPENAI_API_KEY` directly into the admin-only Hermes SOPS
+document without an intake file or Terraform-state value. Karakeep's two
+integration keys are created by the operator after the
 service is live because Karakeep currently exposes that lifecycle only in its
 UI. None of those derived values has or needs a hand-filled intake file.
 
-Enroll an external runtime key from an intake directory without echoing it:
+Enroll an external contract key from an intake directory without echoing it:
 
 ```sh
 nix run .#enroll-services-credential -- \

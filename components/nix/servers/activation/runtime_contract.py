@@ -95,23 +95,29 @@ class RuntimeContract:
         for key in self._grouped_keys(self.document.get("credentials"), "credentials"):
             credentials.append(Credential(key, cluster_file, "services-cluster"))
 
-        host_credentials = self.document.get("hostCredentials")
-        if not isinstance(host_credentials, dict) or not host_credentials:
-            raise ContractError("hostCredentials must be a non-empty mapping")
-        for consumer, definition in host_credentials.items():
+        credentials.extend(self._isolated_credentials("hostCredentials"))
+        credentials.extend(self._isolated_credentials("controllerCredentials"))
+        return tuple(credentials)
+
+    def _isolated_credentials(self, section: str) -> tuple[Credential, ...]:
+        definitions = self.document.get(section)
+        if not isinstance(definitions, dict) or not definitions:
+            raise ContractError(f"{section} must be a non-empty mapping")
+        credentials: list[Credential] = []
+        for consumer, definition in definitions.items():
             if not isinstance(consumer, str) or not isinstance(definition, dict):
-                raise ContractError("hostCredentials contains an invalid consumer")
+                raise ContractError(f"{section} contains an invalid consumer")
             secret_file = self._credential_file(
                 definition.get("secretFile"),
-                f"hostCredentials.{consumer}.secretFile",
+                f"{section}.{consumer}.secretFile",
             )
             keys = definition.get("keys")
             if not isinstance(keys, list) or not keys:
-                raise ContractError(f"hostCredentials.{consumer}.keys must be a list")
+                raise ContractError(f"{section}.{consumer}.keys must be a list")
             for key in keys:
                 if not isinstance(key, str):
                     raise ContractError(
-                        f"hostCredentials.{consumer}.keys contains a non-string key"
+                        f"{section}.{consumer}.keys contains a non-string key"
                     )
                 credentials.append(Credential(key, secret_file, consumer))
         return tuple(credentials)
@@ -165,8 +171,8 @@ class RuntimeContract:
         return (*self.credentials, *self.generated, *self.provisioned)
 
     def _validate(self) -> None:
-        if self.document.get("schemaVersion") != 4:
-            raise ContractError("runtime contract schemaVersion must be 4")
+        if self.document.get("schemaVersion") != 5:
+            raise ContractError("runtime contract schemaVersion must be 5")
         names = [credential.name for credential in self.managed]
         invalid = sorted(name for name in names if not KEY_PATTERN.fullmatch(name))
         if invalid:

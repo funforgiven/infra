@@ -5,7 +5,7 @@ metadata:
   namespace: openstack
 data:
   required-keys.yaml: |
-    schemaVersion: 4
+    schemaVersion: 5
     secret: services-runtime-bootstrap
     secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
     credentials:
@@ -22,8 +22,12 @@ data:
       hermes:
         secretFile: deployments/homelab/cloud/host-runtime/hermes.sops.yaml
         keys:
-          - OPENAI_API_KEY
           - HERMES_TELEGRAM_BOT_TOKEN
+    controllerCredentials:
+      openai-control-plane:
+        secretFile: deployments/homelab/cloud/undercloud/79-openai-control-plane/admin.sops.yaml
+        keys:
+          - OPENAI_ADMIN_KEY
     generatedSecrets:
       services-cluster:
         secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
@@ -42,6 +46,11 @@ data:
           - HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD
           - MAIL_EDGE_BACKUP_RESTIC_PASSWORD
     provisionedSecrets:
+      openai-hermes:
+        provisioner: reconcile-services-openai
+        secretFile: deployments/homelab/cloud/host-runtime/hermes.sops.yaml
+        keys:
+          - OPENAI_API_KEY
       backblaze-services:
         provisioner: reconcile-services-backblaze
         secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
