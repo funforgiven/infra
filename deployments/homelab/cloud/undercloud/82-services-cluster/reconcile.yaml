@@ -496,6 +496,8 @@ spec:
           nodeSelector:
             openstack-control-plane: enabled
           securityContext:
+            fsGroup: 65532
+            fsGroupChangePolicy: OnRootMismatch
             runAsGroup: 65532
             runAsNonRoot: true
             runAsUser: 65532
@@ -541,7 +543,7 @@ spec:
             - name: bootstrap
               secret:
                 secretName: services-flux-bootstrap
-                defaultMode: 0400
+                defaultMode: 0440
             - name: config
               configMap:
                 name: services-cluster-reconcile-v1
@@ -549,7 +551,7 @@ spec:
             - name: runtime-bootstrap
               secret:
                 secretName: services-runtime-bootstrap
-                defaultMode: 0400
+                defaultMode: 0440
             - name: tmp
               emptyDir:
                 medium: Memory
