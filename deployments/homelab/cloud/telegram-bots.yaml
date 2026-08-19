@@ -1,0 +1,41 @@
+schemaVersion: 1
+document: homelab-cloud-telegram-bots
+lastReviewed: "2026-08-19"
+
+bots:
+  infrastructure:
+    name: Fahrican Infra Alerts
+    username: fahrican_infra_alerts_bot
+    description: Private infrastructure, backup, and service-health alerts for fahrican.com.
+    shortDescription: Private infrastructure and backup alerts.
+    tokenCredential: INFRA_TELEGRAM_BOT_TOKEN
+    activation:
+      command: /activate
+      chatType: group
+      chatTitle: Fahrican Infra Alerts
+    outputs:
+      chatCredential: INFRA_TELEGRAM_CHAT_ID
+  hermes:
+    name: Fahrican Hermes
+    username: fahrican_hermes_bot
+    description: Private conversational access to the Fahrican Hermes assistant and Karakeep knowledge workflow.
+    shortDescription: Private Hermes assistant access.
+    tokenCredential: HERMES_TELEGRAM_BOT_TOKEN
+    activation:
+      command: /activate
+      chatType: private
+    outputs:
+      chatCredential: HERMES_TELEGRAM_HOME_CHANNEL
+      allowedUsersCredential: HERMES_TELEGRAM_ALLOWED_USERS
+  media:
+    name: Fahrican Media Watch
+    username: fahrican_media_watch_bot
+    description: Private Bandcamp, OTOTOY, J-pop, and anison release, purchase, and media-import notifications.
+    shortDescription: Private J-pop and anison release alerts.
+    tokenCredential: MEDIA_TELEGRAM_BOT_TOKEN
+    activation:
+      command: /activate
+      chatType: group
+      chatTitle: Fahrican Media Watch
+    outputs:
+      chatCredential: MEDIA_TELEGRAM_CHAT_ID

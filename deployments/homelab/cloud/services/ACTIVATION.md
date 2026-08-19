@@ -20,33 +20,54 @@ Flux Kustomizations are authoritative, and a live-only change would be drift.
 
 ## 1. Issue credentials without broadening trust
 
-Create three distinct Telegram bots: infrastructure alerts, Hermes
-conversation, and media acquisition. Issue a Hetzner token for the mail-edge
-project, Last.fm application keys, a Resend administration key, a dedicated
-OpenAI project API key for Hermes, and four Backblaze B2 application keys: one
-for Velero and one for each standalone host prefix. Give each key only the
-declared prefix and capabilities. Keep the GHCR publishing credential in a
-mode-0400 or mode-0600 containers auth file outside the repository.
+Supply only the ten externally issued values listed in
+`secrets/README.md`: the Backblaze master pair, dedicated Hetzner token, three
+Telegram bot tokens, Last.fm pair, Resend administration key, and dedicated
+Hermes OpenAI project key. Keep the GHCR publishing credential in a mode-0400
+or mode-0600 containers auth file outside the repository. Do not issue or
+prepare placeholders for derived application keys, numeric Telegram targets,
+the operator CIDR, or locally generated passwords.
 
 Enroll each services-cluster/controller value with the no-echo app:
 
 ```console
 nix run .#enroll-services-credential -- KEY
 # Or, after filling the ignored mode-0600 intake file:
-nix run .#enroll-services-credential -- --from-file KEY
+nix run .#enroll-services-credential -- \
+  --from-file --intake-directory /absolute/path/to/secrets KEY
 ```
 
-Run it once for every available upstream value in `credentials`,
-`postDeploymentCredentials`, and `hostCredentials`. The contract routes
-cluster, Hermes, mail, and host-backup values to separate SOPS documents. The
-interactive mode reads twice from the terminal; `--from-file` reads only the
-predictable ignored `secrets/KEY.key` intake file after verifying it is a
-non-symlink mode-0600 file. Both paths base64-encode in memory and use
+Run it only for contract values in `credentials` and `hostCredentials`. Values
+under `generatedSecrets` and `provisionedSecrets` reject external enrollment.
+The contract routes cluster, Hermes, and mail values to separate SOPS
+documents. The interactive mode reads twice from the terminal; `--from-file`
+reads only the predictable ignored `KEY.key` below the selected intake
+directory after verifying it is a non-symlink mode-0600 file. Both paths
+base64-encode in memory and use
 `sops set --value-stdin`; the value is never a command argument or plaintext
 tracked file. After successful `--from-file` enrollment, the ignored intake
-file is returned to zero length. Enter
-`MAIL_MANAGEMENT_CIDRS_JSON` as a JSON list such as `["198.51.100.10/32"]`,
-using the real trusted public CIDR rather than the documentation example.
+file is returned to zero length.
+
+The pinned provider reconcilers own all derived values:
+
+```console
+nix run .#reconcile-services-backblaze -- apply \
+  --bootstrap-directory /absolute/path/to/secrets
+nix run .#reconcile-services-operator-network -- apply
+# After BotFather creation, token enrollment, and one /activate per bot:
+nix run .#reconcile-services-telegram -- apply
+# After the Resend domain reports verified:
+nix run .#reconcile-services-resend -- apply
+```
+
+The Backblaze reconciler consumes the master pair, applies the private SSE-B2
+lifecycle declaration, creates four independently scoped S3-compatible
+writers, encrypts each returned ID/key pair directly into its routed SOPS
+document, and clears both master files only after full success. The network
+reconciler agrees two public-address sources and encrypts the resulting host
+CIDR. Telegram derives chat and user IDs from exact declared updates. Resend
+creates a `sending_access` key scoped only to `fahrican.com` and never exposes
+the administration key to Stalwart.
 
 Locally owned high-entropy values are declared under `generatedSecrets` and
 generated directly into their target SOPS document. The initial values are
@@ -65,15 +86,11 @@ Conventional Commit, and push it directly to `main` with a fast-forward push.
 Activate stage `foundation`. Its controllers create the OpenStack services
 boundary and ZITADEL clients, while Flux publishes the non-secret Backblaze B2
 destination contract for the existing retained `fahrican-cloud-recovery`
-bucket. Enroll the Velero application key under `credentials.backupRuntime`
-before activating stage `cluster`. Restrict it to `services/kubernetes/` with
-only the declared capabilities. The reconciler validates every runtime value,
-creates derived Secrets and Helm value ConfigMaps through memory-backed
-storage, and bootstraps signed Flux reconciliation.
-
-Issue one separate B2 application key for each standalone host prefix under
-`services/hosts/`; never reuse the Velero key or a key between hosts. Their
-Restic passwords are independently generated in SOPS.
+bucket. The provider reconciler must already have populated the provisioned
+Velero and host writer ciphertext. The cluster reconciler validates every
+runtime value, creates derived Secrets and Helm value ConfigMaps through
+memory-backed storage, and bootstraps signed Flux reconciliation. Restic
+passwords remain independently generated in SOPS.
 
 ## 3. Promote immutable images
 
@@ -112,10 +129,10 @@ server. Enroll only its `mail-edge-backup` and `monitoring` profiles initially;
 the absent mail runtime keeps Stalwart stopped while DNS and ACME are pending.
 Activate stage `dns` after the cluster reconciler has copied the mail-edge
 output into `service-dns-inputs`. Once the A and Resend verification records
-are live, issue the domain-scoped Resend sending key, enroll it as
-`STALWART_RESEND_API_KEY`, materialize `mail-runtime`, and start Stalwart after
-its certificate is ready. The fallback administrator secret is generated, not
-manually supplied.
+are live and the domain is verified, run `reconcile-services-resend apply`.
+It creates and encrypts `STALWART_RESEND_API_KEY`; then materialize
+`mail-runtime` and start Stalwart after its certificate is ready. The fallback
+administrator secret is generated, not manually supplied.
 
 ## 5. Application and recovery gates
 
@@ -127,18 +144,18 @@ next stage:
 3. `backup-policy`
 4. `knowledge`
 
-After Karakeep is live, create two independently revocable API keys in its UI:
-one for Hermes and one for the release watcher. Enroll
-`HERMES_KARAKEEP_API_KEY` into SOPS, materialize the `hermes-integrations`
-profile with the host app, and rebuild Hermes so its
+After Karakeep is live, the operator creates two independently revocable API
+keys in its UI, one for Hermes and one for the release watcher, and writes each
+directly into its declared `provisionedSecrets` SOPS target without creating
+an ignored intake placeholder. Materialize the `hermes-integrations` profile
+with the host app, and rebuild Hermes so its
 managed environment is reseeded from the separate OpenAI and integration
-files. Enroll `RELEASE_WATCHER_KARAKEEP_API_KEY` in SOPS, create and push a
-signed credential commit, wait for `wave81-services-foundation`, and wait for
-or operationally trigger the already-declared services-cluster CronJob so
-`media-runtime` gains that key. The central Karakeep key is the one
-post-deployment credential in the services-cluster contract; this ordering
-breaks the otherwise impossible dependency on a not-yet-running Karakeep
-instance. Hermes then starts directly with its API and integration credentials.
+files. Create and push a signed credential commit, wait for
+`wave81-services-foundation`, and wait for or operationally trigger the
+already-declared services-cluster CronJob so `media-runtime` gains its key.
+This provider-provisioned ordering breaks the otherwise impossible dependency
+on a not-yet-running Karakeep instance. Hermes then starts directly with its
+API and integration credentials.
 
 Run the final repository gate:
 

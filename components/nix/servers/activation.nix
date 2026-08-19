@@ -43,6 +43,46 @@
         ];
         text = builtins.readFile ./activation/generate-services-credential.sh;
       };
+      reconcileServicesBackblaze = pkgs.writeShellApplication {
+        name = "reconcile-services-backblaze";
+        runtimeInputs = [
+          pkgs.gitMinimal
+          pkgs.sops
+        ];
+        text = ''
+          exec ${python}/bin/python ${./activation/reconcile_services_backblaze.py} "$@"
+        '';
+      };
+      reconcileServicesTelegram = pkgs.writeShellApplication {
+        name = "reconcile-services-telegram";
+        runtimeInputs = [
+          pkgs.gitMinimal
+          pkgs.sops
+        ];
+        text = ''
+          exec ${python}/bin/python ${./activation/reconcile_services_telegram.py} "$@"
+        '';
+      };
+      reconcileServicesResend = pkgs.writeShellApplication {
+        name = "reconcile-services-resend";
+        runtimeInputs = [
+          pkgs.gitMinimal
+          pkgs.sops
+        ];
+        text = ''
+          exec ${python}/bin/python ${./activation/reconcile_services_resend.py} "$@"
+        '';
+      };
+      reconcileServicesOperatorNetwork = pkgs.writeShellApplication {
+        name = "reconcile-services-operator-network";
+        runtimeInputs = [
+          pkgs.gitMinimal
+          pkgs.sops
+        ];
+        text = ''
+          exec ${python}/bin/python ${./activation/reconcile_services_operator_network.py} "$@"
+        '';
+      };
       servicesActivationPreflight = pkgs.writeShellApplication {
         name = "services-activation-preflight";
         runtimeInputs = [
@@ -94,6 +134,26 @@
         meta.description = "Generate one contract-defined secret directly into SOPS ciphertext";
       };
 
+      apps.reconcile-services-backblaze = {
+        program = "${reconcileServicesBackblaze}/bin/reconcile-services-backblaze";
+        meta.description = "Reconcile scoped Backblaze backup keys directly into SOPS";
+      };
+
+      apps.reconcile-services-telegram = {
+        program = "${reconcileServicesTelegram}/bin/reconcile-services-telegram";
+        meta.description = "Reconcile Telegram metadata and discover private chat targets into SOPS";
+      };
+
+      apps.reconcile-services-resend = {
+        program = "${reconcileServicesResend}/bin/reconcile-services-resend";
+        meta.description = "Create or rotate the domain-scoped Stalwart Resend key into SOPS";
+      };
+
+      apps.reconcile-services-operator-network = {
+        program = "${reconcileServicesOperatorNetwork}/bin/reconcile-services-operator-network";
+        meta.description = "Discover and encrypt the operator mail-management host CIDR";
+      };
+
       apps.services-activation-preflight = {
         program = "${servicesActivationPreflight}/bin/services-activation-preflight";
         meta.description = "Verify credential ciphertext, promotions, and signed clean state before activation";
@@ -104,6 +164,10 @@
         enroll-service-host-secrets = enrollServiceHostSecrets;
         enroll-services-credential = enrollServicesCredential;
         generate-services-credential = generateServicesCredential;
+        reconcile-services-backblaze = reconcileServicesBackblaze;
+        reconcile-services-telegram = reconcileServicesTelegram;
+        reconcile-services-resend = reconcileServicesResend;
+        reconcile-services-operator-network = reconcileServicesOperatorNetwork;
         services-activation-preflight = servicesActivationPreflight;
       };
 
@@ -123,6 +187,11 @@
             python -m unittest discover \
               -s ${./activation/tests} -p 'test_*.py'
             python -m py_compile ${./activation/advance_services_activation.py}
+            python -m py_compile ${./activation/reconcile_services_backblaze.py}
+            python -m py_compile ${./activation/reconcile_services_telegram.py}
+            python -m py_compile ${./activation/reconcile_services_resend.py}
+            python -m py_compile ${./activation/reconcile_services_operator_network.py}
+            python -m py_compile ${./activation/sops_credentials.py}
             shellcheck \
               ${./activation/advance-services-activation.sh} \
               ${./activation/enroll-service-host-secrets.sh} \
@@ -146,8 +215,12 @@
               ${./activation/generate-services-credential.sh}
             rg --fixed-strings --quiet 'managed-key-file "$key"' \
               ${./activation/enroll-service-host-secrets.sh}
-            rg --fixed-strings --quiet 'secrets/$key.key' \
+            rg --fixed-strings --quiet 'source_file="$intake_directory/$key.key"' \
               ${./activation/enroll-services-credential.sh}
+            rg --fixed-strings --quiet 'provisioned-key-file' \
+              ${./activation/runtime_contract.py}
+            rg --fixed-strings --quiet 'keyName' \
+              ${./activation/reconcile_services_backblaze.py}
             if rg --quiet 'prompt_value|R2_ENDPOINT|cloudflarestorage' \
               ${./activation/enroll-service-host-secrets.sh} \
               ${./README.md} \
