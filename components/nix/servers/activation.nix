@@ -133,7 +133,7 @@
 
       apps.services-activation-preflight = {
         program = "${servicesActivationPreflight}/bin/services-activation-preflight";
-        meta.description = "Verify credential ciphertext, promotions, and signed clean state before activation";
+        meta.description = "Verify phase-appropriate credentials, promotions, and signed clean state before activation";
       };
 
       packages = {

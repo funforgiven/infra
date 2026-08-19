@@ -100,9 +100,17 @@ Conventional Commit, and push it directly to `main` with a fast-forward push.
 
 ## 2. Create the credential-backed foundation
 
-After the OpenAI runtime key and every other required credential is ciphertext,
-run `services-activation-preflight`. Then activate stage `foundation`. Its
-controllers create the OpenStack services
+After the OpenAI runtime key and every credential that can exist before service
+deployment is ciphertext, run the foundation preflight:
+
+```console
+nix run .#services-activation-preflight -- foundation
+```
+
+This phase deliberately defers only the provider-owned Karakeep and scoped
+Resend sending keys, because their providers are not live yet. It also does
+not require image promotion, which depends on the foundation. Then activate
+stage `foundation`. Its controllers create the OpenStack services
 boundary and ZITADEL clients, while Flux publishes the non-secret Backblaze B2
 destination contract for the existing retained `fahrican-cloud-recovery`
 bucket. The provider reconciler must already have populated the provisioned
@@ -110,6 +118,10 @@ Velero and host writer ciphertext. The cluster reconciler validates every
 runtime value, creates derived Secrets and Helm value ConfigMaps through
 memory-backed storage, and bootstraps signed Flux reconciliation. Restic
 passwords remain independently generated in SOPS.
+
+Wait for `wave81-services-foundation` to become Ready, then activate stage
+`cluster`. Wait for `wave82-services-cluster` to become Ready before promoting
+images or enabling standalone hosts.
 
 ## 3. Promote immutable images
 
@@ -130,6 +142,15 @@ The commands verify the source commit, publish immutable artifacts, and update
 the host revision plus all media image digest pins. Review those non-secret
 changes, run the full checks, create a second signed Conventional Commit, and
 push it directly to `main`.
+
+Run the promoted-host preflight before advancing the host wave:
+
+```console
+nix run .#services-activation-preflight -- hosts
+```
+
+It retains the same two provider deferrals as the foundation phase and also
+requires both immutable image promotions.
 
 ## 4. Standalone hosts
 
@@ -180,7 +201,7 @@ API and integration credentials.
 Run the final repository gate:
 
 ```console
-nix run .#services-activation-preflight
+nix run .#services-activation-preflight -- final
 ```
 
 Then activate the remaining stages:
