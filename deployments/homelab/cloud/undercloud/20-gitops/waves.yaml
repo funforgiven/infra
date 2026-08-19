@@ -1197,7 +1197,7 @@ metadata:
   name: wave79-openai-control-plane
   namespace: flux-system
 spec:
-  suspend: true
+  suspend: false
   interval: 10m
   retryInterval: 1m
   timeout: 20m
