@@ -153,7 +153,7 @@ data:
     require_file INFRA_TELEGRAM_BOT_TOKEN '^[0-9]+:[A-Za-z0-9_-]+$' 32 256
     require_file INFRA_TELEGRAM_CHAT_ID '^-?[0-9]+$' 1 32
     require_file B2_APPLICATION_KEY_ID '^[A-Za-z0-9]+$' 12 64
-    require_file B2_APPLICATION_KEY '^[A-Za-z0-9]+$' 20 128
+    require_file B2_APPLICATION_KEY '^[A-Za-z0-9/+_-]+={0,2}$' 20 128
     require_file MEDIA_TELEGRAM_BOT_TOKEN '^[0-9]+:[A-Za-z0-9_-]+$' 32 256
     require_file MEDIA_TELEGRAM_CHAT_ID '^-?[0-9]+$' 1 32
     require_file MEILI_MASTER_KEY '^[A-Za-z0-9/+_-]+={0,2}$' 32 256

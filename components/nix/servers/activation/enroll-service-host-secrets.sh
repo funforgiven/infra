@@ -132,7 +132,8 @@ enroll_backup() {
 
   read_sops_value restic_password "$password_key" '^[A-Za-z0-9]+$' 64 64
   read_sops_value application_key_id "$key_id_key" '^[A-Za-z0-9]+$' 12 64
-  read_sops_value application_key "$application_key_key" '^[A-Za-z0-9]+$' 20 128
+  read_sops_value application_key "$application_key_key" \
+    '^[A-Za-z0-9/+_-]+={0,2}$' 20 128
   prepare_directory /var/lib/backup-bootstrap
   printf 's3:https://s3.us-west-004.backblazeb2.com/fahrican-cloud-recovery/%s' \
     "$prefix" | install_stream /var/lib/backup-bootstrap/repository
