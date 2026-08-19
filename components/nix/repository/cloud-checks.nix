@@ -264,6 +264,35 @@
                 for document in reconcile_document
                 if document["kind"] == "ConfigMap"
             )
+            reconcile_cronjob = next(
+                document
+                for document in yaml.safe_load_all(
+                    (root / "undercloud/82-services-cluster/reconcile.yaml").read_text()
+                )
+                if document["kind"] == "CronJob"
+            )
+            reconcile_pod = reconcile_cronjob["spec"]["jobTemplate"]["spec"][
+                "template"
+            ]["spec"]
+            pod_security = reconcile_pod["securityContext"]
+            if pod_security.get("runAsUser") != 65532 or not pod_security.get(
+                "runAsNonRoot"
+            ):
+                raise SystemExit("services reconciler must remain non-root")
+            if pod_security.get("fsGroup") != 65532:
+                raise SystemExit(
+                    "services reconciler needs an explicit filesystem group"
+                )
+            secret_volumes = {
+                volume["name"]: volume["secret"]
+                for volume in reconcile_pod["volumes"]
+                if "secret" in volume
+            }
+            for volume_name in ("bootstrap", "runtime-bootstrap"):
+                if secret_volumes[volume_name].get("defaultMode") != 0o440:
+                    raise SystemExit(
+                        f"{volume_name} must be group-readable by the non-root reconciler"
+                    )
             reconcile_script = reconcile_config["data"]["reconcile.sh"]
             compile(
                 reconcile_config["data"]["reconcile-resend.py"],
