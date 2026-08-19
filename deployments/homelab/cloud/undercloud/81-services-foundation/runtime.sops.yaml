@@ -14,7 +14,9 @@ data:
     MEDIA_TELEGRAM_BOT_TOKEN: ENC[AES256_GCM,data:kVrwK7gKF/XPArafhoW9gtPwIdzbFbWyKtGL73DAfGRUzFS32gEXL1y1T9+Ii0Egt4lt1De2cMFITm0J6sEdFA==,iv:6G07mMra++Dd/Aqg16tPvRVbj+KFkGW6afCgpC8WFdc=,tag:ZxEcYsvfzFVnVK0CmXnzlg==,type:str]
     ND_LASTFM_APIKEY: ENC[AES256_GCM,data:DT2gxNxGgn3DIOAI3/CDDcptDUYZ8ALNNjIlQ6b93kaFdomwHxiifS4ZKek=,iv:XDkzzHAv05cf5Q8XWPWLQl/eaWHQ/Ee/4I0qVXpuspc=,tag:8Ay3MV2B6/OtgjMDHsRIsA==,type:str]
     ND_LASTFM_SECRET: ENC[AES256_GCM,data:okSf1EvJud0arP9DAr9IgwWy7vNvZ9B5oucYnI/CGaxYu0XmwFWjWvaIpPs=,iv:eEsIpA+TDkT0iLLzLtvSHLMQFDQzgbA6ZQDmXUip0oE=,tag:ph0MGiSlXepbDFTn1y/zcw==,type:str]
-    RESEND_ADMIN_API_KEY: ENC[AES256_GCM,data:0RE7nFx8hjEMPfCQEQWY7CmDcokxxrkMtlKN7wgM0F4fkwwKtzHb9HHuSvR/GvsS,iv:AxPtu8UaPE3JD8D79l6AOiCzXjT6TmLnG1bmv6Jeycs=,tag:3NSc9M6NnXPwivCRfW7YdA==,type:str]
+    RESEND_ADMIN_API_KEY: ENC[AES256_GCM,data:QKoLdViqlYqmlttZmobLiSUMM1EM98WOzSe63ryfHj+BxVIIowtwMHgpZRDjY1MK,iv:jen7NaTE9nnz4ja89gRbthcQoldUJ9BksPh72FSUTdk=,tag:XbocqjKRcEjbggWEo0N9CQ==,type:str]
+    INFRA_TELEGRAM_CHAT_ID: ENC[AES256_GCM,data:ufFK9BvSURhArLic8yMnIw==,iv:o46rtCSHUrINgtOOYUbpoQK2rjQQkNkgWuKvLax1Tm8=,tag:fV5t3vy4fWHWcjkHH8nHXQ==,type:str]
+    MEDIA_TELEGRAM_CHAT_ID: ENC[AES256_GCM,data:akfz/dcR3lOwbxEL4Hvmag==,iv:MmAHuWQ+9YRtcMNpeC+kanDO27iRXgdggY1RA2Z3pcQ=,tag:j9KB7fpjoH/cxFmh/qKdvQ==,type:str]
 kind: Secret
 metadata:
     name: services-runtime-bootstrap
@@ -40,6 +42,6 @@ sops:
             -----END AGE ENCRYPTED FILE-----
           recipient: age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-08-19T20:32:05Z"
-    mac: ENC[AES256_GCM,data:JyFgD819C8/uT/KJqGtIUUZAWD4yd+Dk3hhHo6NRpPkuxUtMwK9Jkn+q93ibOdYOGRxHf7DGrxbtnZFlCJuw27n8bQiBJpfF9IsPoaqRbhVqkmxglu6oMDObfP5+gfiPCKDhFRNsKILiwLGCTAioHPq+9KCneZ36pUYdUi1fTzA=,iv:v9Eu+T6EgeLz2x9sOgLlMdlGh16BH/SjWyMHfFBzJ9k=,tag:qpzxWYOlewfDXZH+rq4PyA==,type:str]
+    lastmodified: "2026-08-19T21:04:19Z"
+    mac: ENC[AES256_GCM,data:iS371bSIjEe26zXbbzysWKkSAd2amShw3KwpCfyPYXKEYKTxWV3DEMYynmRwvGUfNLmPtnh7SoGzVcEbhNzkx/v8BmeGj5SCaPweHLPKhRfl5lEUZeFQ2aTI1qG4My+rIbRlH0QbVR+QkQPEYyWY3+AfGF+2JzO5X5p1iQKsqSg=,iv:9IPli/TTh1FiMGV833gGvlhgO/xpBm24ALips2UkGcI=,tag:B2y2tL6Da1wJm/ymDMHTow==,type:str]
     version: 3.13.3
