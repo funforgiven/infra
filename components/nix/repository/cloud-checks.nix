@@ -472,6 +472,28 @@
                     f"{sorted(terraform_namespaces)}"
                 )
 
+            for path in (root / "undercloud").rglob("*.yaml"):
+                for document in yaml.safe_load_all(path.read_text()):
+                    if not isinstance(document, dict) or document.get("kind") != "Kustomization":
+                        continue
+                    spec = document.get("spec", {})
+                    source_path = spec.get("path")
+                    if not isinstance(source_path, str) or not source_path.startswith("./"):
+                        continue
+                    managed_path = pathlib.Path(source_path.removeprefix("./"))
+                    if not managed_path.is_dir() or not any(
+                        managed_path.rglob("*.sops.yaml")
+                    ):
+                        continue
+                    if spec.get("decryption") != {
+                        "provider": "sops",
+                        "secretRef": {"name": "sops-age"},
+                    }:
+                        name = document.get("metadata", {}).get("name", "<unknown>")
+                        raise SystemExit(
+                            f"Flux Kustomization {name} owns SOPS resources without decryption"
+                        )
+
             sentinel_files = [
                 root / "services/40-media/importer.yaml",
                 root / "services/40-media/release-watcher.yaml",
