@@ -1,0 +1,11 @@
+schemaVersion: 1
+project:
+  name: fahrican-hermes-production
+serviceAccount:
+  name: fahrican-hermes-production-service-account
+apiKey:
+  name: fahrican-hermes-production-runtime
+  scopes:
+    - api.responses.write
+administrationCredential: OPENAI_ADMIN_KEY
+outputCredential: OPENAI_API_KEY

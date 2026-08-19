@@ -34,6 +34,7 @@ The small set of current documents is intentional:
 | [`backup-destination.yaml`](backup-destination.yaml) | Public B2 bucket and least-privilege writer contract; contains no credential value or application-key ID |
 | [`telegram-bots.yaml`](telegram-bots.yaml) | Public bot identities, metadata, and private target-selection contract; contains no token or numeric target |
 | [`resend-sending-keys.yaml`](resend-sending-keys.yaml) | Domain-scoped sending-key contract; contains no administration or sending token |
+| [`openai-hermes.yaml`](openai-hermes.yaml) | Dedicated Hermes project/service-account key issuance contract; contains no key value |
 | [`network-inventory.yaml`](network-inventory.yaml) | Live Ansible inventory consumed by RouterOS automation; includes qualified physical link facts |
 | [`omada-network.yaml`](omada-network.yaml) | Omada desired state and qualification boundary |
 | [`declarative-ownership.yaml`](declarative-ownership.yaml) | Single-controller ownership map for cloud, service, identity, DNS, monitoring, and backup state |
@@ -42,6 +43,7 @@ The small set of current documents is intentional:
 | [`kubernetes/`](kubernetes/) | Pinned Kubespray bootstrap and semantic acceptance contract |
 | [`undercloud/`](undercloud/) | Flux root for the real undercloud cluster |
 | [`undercloud/38-service-api-foundation/`](undercloud/38-service-api-foundation/) | Private Gateway, certificate, and mutually exclusive L2 fallback operation |
+| [`undercloud/79-openai-control-plane/`](undercloud/79-openai-control-plane/) | Suspended official-provider OpenTofu reconciliation for the Hermes OpenAI boundary |
 | [`undercloud/81-services-foundation/`](undercloud/81-services-foundation/) | Suspended OpenTofu reconciliation for the self-hosted services project, network, flavors, and quotas |
 | [`undercloud/82-services-cluster/`](undercloud/82-services-cluster/) | Suspended Magnum and signed-Flux bootstrap reconciler with ephemeral kubeconfig handling |
 | [`services/`](services/) | Independent Flux root for self-hosted applications; initially Karakeep full-text retrieval only |

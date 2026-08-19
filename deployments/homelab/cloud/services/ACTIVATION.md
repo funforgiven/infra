@@ -23,7 +23,7 @@ Flux Kustomizations are authoritative, and a live-only change would be drift.
 Supply only the ten externally issued values listed in
 `secrets/README.md`: the Backblaze master pair, dedicated Hetzner token, three
 Telegram bot tokens, Last.fm pair, Resend administration key, and dedicated
-Hermes OpenAI project key. Keep the GHCR publishing credential in a mode-0400
+OpenAI organization Admin key. Keep the GHCR publishing credential in a mode-0400
 or mode-0600 containers auth file outside the repository. Do not issue or
 prepare placeholders for derived application keys, numeric Telegram targets,
 the operator CIDR, or locally generated passwords.
@@ -37,7 +37,8 @@ nix run .#enroll-services-credential -- \
   --from-file --intake-directory /absolute/path/to/secrets KEY
 ```
 
-Run it only for contract values in `credentials` and `hostCredentials`. Values
+Run it only for contract values in `credentials`, `hostCredentials`, and
+`controllerCredentials`. Values
 under `generatedSecrets` and `provisionedSecrets` reject external enrollment.
 The contract routes cluster, Hermes, and mail values to separate SOPS
 documents. The interactive mode reads twice from the terminal; `--from-file`
@@ -69,6 +70,41 @@ CIDR. Telegram derives chat and user IDs from exact declared updates. Resend
 creates a `sending_access` key scoped only to `fahrican.com` and never exposes
 the administration key to Stalwart.
 
+OpenAI has an earlier, separately gated control-plane stage because its
+service-account identity must exist before its derived runtime key can be
+issued. Create the initial organization Admin key in OpenAI's Admin keys page
+with the exact name `fahrican-infra-openai-control-plane`, place it only in the
+ignored mode-0600 `secrets/OPENAI_ADMIN_KEY.key` intake file, and enroll it:
+
+```console
+nix run .#enroll-services-credential -- \
+  --from-file --intake-directory /absolute/path/to/secrets OPENAI_ADMIN_KEY
+```
+
+Review only ciphertext, run the repository checks, and push a signed credential
+commit. Then activate stage `openai` in a separate signed commit and wait for
+`tofu-system/openai-hermes` to become Ready. The official provider creates the
+dedicated project, no-default-role service account, custom
+`api.responses.write` role, group assignment, Luna-only allowlist, and USD 10
+monthly hard limit. It also disables every OpenAI hosted tool. Before the first
+apply, inspect the organization policy for web search, file search, image
+generation, remote MCP, and Code Interpreter: a tool already set to deny-all or
+selected-projects needs no change; an allow-all tool must be changed to
+selected-projects without selecting Hermes because OpenAI does not permit a
+project-level `false` under allow-all. This conditional UI prerequisite is in
+`manual-exceptions.yaml`. Issue the runtime key only after the apply succeeds:
+
+```console
+nix run .#reconcile-services-openai -- apply
+```
+
+The one-time value goes directly into the admin-only Hermes SOPS document and
+never enters OpenTofu state, an intake file, or command output. Commit and push
+that ciphertext before running the full services preflight. If the reconciler
+reports partial or unrecoverable state, replace the service account
+declaratively; OpenAI does not permit deleting its keys through the project-key
+delete endpoint.
+
 Locally owned high-entropy values are declared under `generatedSecrets` and
 generated directly into their target SOPS document. The initial values are
 already committed as ciphertext; rotate one explicitly with:
@@ -83,7 +119,9 @@ Conventional Commit, and push it directly to `main` with a fast-forward push.
 
 ## 2. Create the credential-backed foundation
 
-Activate stage `foundation`. Its controllers create the OpenStack services
+After the OpenAI runtime key and every other required credential is ciphertext,
+run `services-activation-preflight`. Then activate stage `foundation`. Its
+controllers create the OpenStack services
 boundary and ZITADEL clients, while Flux publishes the non-secret Backblaze B2
 destination contract for the existing retained `fahrican-cloud-recovery`
 bucket. The provider reconciler must already have populated the provisioned
@@ -114,7 +152,8 @@ push it directly to `main`.
 
 ## 4. Standalone hosts
 
-Activate stage `hosts`. After enrolling provider-issued values into SOPS, use
+Activate stage `hosts`. After provider reconcilers have written derived values
+into SOPS, use
 `enroll-service-host-secrets` for each host's root-only Restic and monitoring
 profiles. Enroll the `hermes-openai` profile;
 it decrypts only `OPENAI_API_KEY` in memory and streams it into the dedicated

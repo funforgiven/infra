@@ -17,7 +17,10 @@ resources:
     state: OpenTofu state and reviewed identity configuration in Git
   - resource: openai-projects-service-accounts-and-controls
     owner: opentofu
-    state: OpenTofu state; API key values are deliberately excluded
+    state: Official-provider OpenTofu state; API key values are deliberately excluded
+  - resource: openai-hermes-runtime-key
+    owner: pinned-api-reconciler
+    state: Scoped issuance policy in Git and key value only as admin-recipient SOPS ciphertext
   - resource: resend-domain-and-verification
     owner: pinned-api-reconciler
     state: Desired domain policy and non-secret identifiers in Git
