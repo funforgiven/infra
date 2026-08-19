@@ -420,6 +420,58 @@
             if any(value in repository_text for value in obsolete_openai_control_plane):
                 raise SystemExit("obsolete OpenAI administration machinery remains")
 
+            primary_controller_documents = yaml.safe_load_all(
+                (
+                    root
+                    / "undercloud/32-identity-controllers/tofu-controller.yaml"
+                ).read_text()
+            )
+            primary_controller = next(
+                document
+                for document in primary_controller_documents
+                if document.get("kind") == "HelmRelease"
+                and document.get("metadata", {}).get("name") == "tofu-controller"
+            )
+            primary_values = primary_controller["spec"]["values"]
+            tenant_controller = yaml.safe_load(
+                pathlib.Path(
+                    "components/cloud/tofu-controller-tenant/controller.yaml"
+                ).read_text()
+            )
+            tenant_values = tenant_controller["spec"]["values"]
+            if primary_values["watchAllNamespaces"] or tenant_values["watchAllNamespaces"]:
+                raise SystemExit("tofu-controller instances must remain namespace scoped")
+            if tenant_values["rbac"]["create"]:
+                raise SystemExit("tenant tofu-controller must use explicit namespaced RBAC")
+            tenant_rbac = list(
+                yaml.safe_load_all(
+                    pathlib.Path(
+                        "components/cloud/tofu-controller-tenant/rbac.yaml"
+                    ).read_text()
+                )
+            )
+            if {document["kind"] for document in tenant_rbac} - {"Role", "RoleBinding"}:
+                raise SystemExit("tenant tofu-controller RBAC must not be cluster scoped")
+
+            terraform_namespaces = set()
+            for path in (root / "undercloud").rglob("*.yaml"):
+                for document in yaml.safe_load_all(path.read_text()):
+                    if isinstance(document, dict) and document.get("kind") == "Terraform":
+                        terraform_namespaces.add(document["metadata"]["namespace"])
+            tenant_overlays = {
+                yaml.safe_load(path.read_text())["namespace"]
+                for path in (root / "undercloud").glob(
+                    "*/tofu-controller/kustomization.yaml"
+                )
+            }
+            controller_namespaces = {"tofu-system"} | tenant_overlays
+            if controller_namespaces != terraform_namespaces:
+                raise SystemExit(
+                    "namespace-scoped tofu-controller coverage "
+                    f"{sorted(controller_namespaces)} != Terraform namespaces "
+                    f"{sorted(terraform_namespaces)}"
+                )
+
             sentinel_files = [
                 root / "services/40-media/importer.yaml",
                 root / "services/40-media/release-watcher.yaml",

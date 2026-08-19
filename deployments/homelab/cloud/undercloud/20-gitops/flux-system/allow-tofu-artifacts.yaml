@@ -12,8 +12,13 @@ spec:
   ingress:
     - from:
         - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: tofu-system
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values:
+                  - tofu-system
+                  - openstack
+                  - cert-manager
           podSelector:
             matchLabels:
               app.kubernetes.io/name: tofu-controller

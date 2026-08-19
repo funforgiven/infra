@@ -1,0 +1,9 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: tenant-tofu-controller
+spec:
+  interval: 24h
+  url: https://github.com/flux-iac/tofu-controller.git
+  ref:
+    commit: 4cb9876f84af6e2bffc611f946371e5bc5c94ff9
