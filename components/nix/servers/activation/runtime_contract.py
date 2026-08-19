@@ -215,11 +215,26 @@ class RuntimeContract:
             )
         )
 
-    def verify_ciphertext(self) -> None:
+    def verify_ciphertext(
+        self, excluded_provisioners: frozenset[str] = frozenset()
+    ) -> None:
+        known_provisioners = {
+            credential.provisioner
+            for credential in self.provisioned
+            if credential.provisioner is not None
+        }
+        unknown_provisioners = sorted(excluded_provisioners - known_provisioners)
+        if unknown_provisioners:
+            raise ContractError(
+                f"unknown provisioners excluded from verification: {unknown_provisioners}"
+            )
+
         expected: dict[Path, set[str]] = {
             path: set() for path in self.secret_files()
         }
         for credential in self.managed:
+            if credential.provisioner in excluded_provisioners:
+                continue
             expected[credential.secret_file].add(credential.name)
 
         for relative_path, keys in expected.items():
@@ -284,8 +299,14 @@ def parser() -> argparse.ArgumentParser:
     )
     managed_key_file.add_argument("key")
     subparsers.add_parser("secret-files", help="list contract-managed SOPS documents")
-    subparsers.add_parser(
+    verify_ciphertext = subparsers.add_parser(
         "verify-ciphertext", help="require every declared key as SOPS ciphertext"
+    )
+    verify_ciphertext.add_argument(
+        "--exclude-provisioner",
+        action="append",
+        default=[],
+        help="defer keys owned by this provisioner (repeatable)",
     )
     return result
 
@@ -322,7 +343,8 @@ def main() -> int:
             for path in contract.secret_files():
                 print(path)
         elif arguments.command == "verify-ciphertext":
-            contract.verify_ciphertext()
+            excluded_provisioners = frozenset(arguments.exclude_provisioner)
+            contract.verify_ciphertext(excluded_provisioners)
             print("all runtime credentials are present as SOPS ciphertext")
         else:  # pragma: no cover - argparse enforces the command set.
             raise AssertionError(arguments.command)

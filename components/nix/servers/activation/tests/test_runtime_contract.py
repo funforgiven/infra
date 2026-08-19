@@ -118,6 +118,24 @@ class RuntimeContractTest(unittest.TestCase):
         )
         contract.verify_ciphertext()
 
+    def test_can_defer_one_provider_without_weakening_other_checks(self) -> None:
+        contract = RuntimeContract.load(self.root)
+        self.write_secret(CLUSTER_FILE, ["CLUSTER_KEY"])
+        self.write_secret(
+            HERMES_FILE,
+            ["HERMES_TELEGRAM_BOT_TOKEN", "OPENAI_API_KEY"],
+        )
+        self.write_secret(GENERATED_FILE, ["GENERATED_KEY"])
+        self.write_secret(PROVISIONED_FILE, [])
+        contract.verify_ciphertext(frozenset({"test-provider"}))
+        with self.assertRaisesRegex(ContractError, "PROVISIONED_KEY"):
+            contract.verify_ciphertext()
+
+    def test_rejects_unknown_deferred_provider(self) -> None:
+        contract = RuntimeContract.load(self.root)
+        with self.assertRaisesRegex(ContractError, "unknown provisioners"):
+            contract.verify_ciphertext(frozenset({"typo-provider"}))
+
     def test_rejects_paths_outside_repository(self) -> None:
         payload = contract_document()
         payload["hostCredentials"]["hermes"]["secretFile"] = "../secret.yaml"
