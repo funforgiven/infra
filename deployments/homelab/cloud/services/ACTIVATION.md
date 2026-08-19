@@ -120,8 +120,20 @@ memory-backed storage, and bootstraps signed Flux reconciliation. Restic
 passwords remain independently generated in SOPS.
 
 Wait for `wave81-services-foundation` to become Ready, then activate stage
-`cluster`. Wait for `wave82-services-cluster` to become Ready before promoting
-images or enabling standalone hosts.
+`cluster`. Once `wave82-services-cluster` has applied the declared CronJob,
+trigger one revision-named execution instead of waiting for its next two-hour
+schedule:
+
+```console
+kubectl -n openstack create job \
+  --from=cronjob/services-cluster-reconcile-v1 \
+  services-cluster-bootstrap-SIGNED_REVISION_SHORT
+```
+
+Wait for that Job to become Complete and independently confirm that all five
+services-cluster nodes are Ready. `wave82-services-cluster` readiness alone
+means the reconciler manifest was accepted; it is not cluster qualification.
+Do not promote images or enable standalone hosts before both checks pass.
 
 ## 3. Promote immutable images
 
