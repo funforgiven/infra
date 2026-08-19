@@ -1250,7 +1250,7 @@ metadata:
   name: wave82-services-cluster
   namespace: flux-system
 spec:
-  suspend: true
+  suspend: false
   interval: 10m
   retryInterval: 1m
   timeout: 20m
