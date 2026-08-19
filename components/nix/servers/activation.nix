@@ -43,56 +43,24 @@
         ];
         text = builtins.readFile ./activation/generate-services-credential.sh;
       };
-      reconcileServicesBackblaze = pkgs.writeShellApplication {
-        name = "reconcile-services-backblaze";
-        runtimeInputs = [
-          pkgs.gitMinimal
-          pkgs.sops
-        ];
-        text = ''
-          exec ${python}/bin/python ${./activation/reconcile_services_backblaze.py} "$@"
-        '';
-      };
-      reconcileServicesTelegram = pkgs.writeShellApplication {
-        name = "reconcile-services-telegram";
-        runtimeInputs = [
-          pkgs.gitMinimal
-          pkgs.sops
-        ];
-        text = ''
-          exec ${python}/bin/python ${./activation/reconcile_services_telegram.py} "$@"
-        '';
-      };
-      reconcileServicesResend = pkgs.writeShellApplication {
-        name = "reconcile-services-resend";
-        runtimeInputs = [
-          pkgs.gitMinimal
-          pkgs.sops
-        ];
-        text = ''
-          exec ${python}/bin/python ${./activation/reconcile_services_resend.py} "$@"
-        '';
-      };
-      reconcileServicesOpenAI = pkgs.writeShellApplication {
-        name = "reconcile-services-openai";
-        runtimeInputs = [
-          pkgs.gitMinimal
-          pkgs.sops
-        ];
-        text = ''
-          exec ${python}/bin/python ${./activation/reconcile_services_openai.py} "$@"
-        '';
-      };
-      reconcileServicesOperatorNetwork = pkgs.writeShellApplication {
-        name = "reconcile-services-operator-network";
-        runtimeInputs = [
-          pkgs.gitMinimal
-          pkgs.sops
-        ];
-        text = ''
-          exec ${python}/bin/python ${./activation/reconcile_services_operator_network.py} "$@"
-        '';
-      };
+      reconcilerApplication =
+        name: script:
+        pkgs.writeShellApplication {
+          inherit name;
+          runtimeInputs = [
+            pkgs.gitMinimal
+            pkgs.sops
+          ];
+          text = ''
+            export PYTHONPATH=${./activation}
+            exec ${python}/bin/python ${script} "$@"
+          '';
+        };
+      reconcileServicesBackblaze = reconcilerApplication "reconcile-services-backblaze" ./activation/reconcile_services_backblaze.py;
+      reconcileServicesTelegram = reconcilerApplication "reconcile-services-telegram" ./activation/reconcile_services_telegram.py;
+      reconcileServicesResend = reconcilerApplication "reconcile-services-resend" ./activation/reconcile_services_resend.py;
+      reconcileServicesOpenAI = reconcilerApplication "reconcile-services-openai" ./activation/reconcile_services_openai.py;
+      reconcileServicesOperatorNetwork = reconcilerApplication "reconcile-services-operator-network" ./activation/reconcile_services_operator_network.py;
       servicesActivationPreflight = pkgs.writeShellApplication {
         name = "services-activation-preflight";
         runtimeInputs = [
