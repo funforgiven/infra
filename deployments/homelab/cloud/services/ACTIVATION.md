@@ -85,7 +85,7 @@ Review only ciphertext, run the repository checks, and push a signed credential
 commit. Then activate stage `openai` in a separate signed commit and wait for
 `tofu-system/openai-hermes` to become Ready. The official provider creates the
 dedicated project, no-default-role service account, custom
-`api.responses.write` role, group assignment, Luna-only allowlist, and USD 10
+`api.responses.write` role, group assignment, Luna-only allowlist, and USD 50
 monthly hard limit. It also disables every OpenAI hosted tool. Before the first
 apply, inspect the organization policy for web search, file search, image
 generation, remote MCP, and Code Interpreter: a tool already set to deny-all or

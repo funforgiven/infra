@@ -2,7 +2,7 @@
 
 This OpenTofu root owns the dedicated Hermes production project, nonhuman
 service account, custom role, group-based role assignment, Luna-only model
-allowlist, all-disabled hosted-tool policy, and USD 10 monthly hard spend
+allowlist, all-disabled hosted-tool policy, and USD 50 monthly hard spend
 limit. It uses the official
 `openai/openai` provider pinned by version and lock file.
 

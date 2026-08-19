@@ -66,7 +66,7 @@ resource "openai_project_hosted_tool_permissions" "hermes" {
 
 resource "openai_project_spend_limit" "hermes" {
   project_id       = openai_project.hermes.project_id
-  threshold_amount = 1000
+  threshold_amount = 5000
   currency         = "USD"
   interval         = "month"
 }
