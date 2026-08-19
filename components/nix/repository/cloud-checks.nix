@@ -447,7 +447,7 @@
                 'permissions = local.runtime_permissions',
                 'runtime_permissions  = ["api.responses.write"]',
                 'model_ids  = ["gpt-5.6-luna"]',
-                'threshold_amount = 1000',
+                'threshold_amount = 5000',
                 'resource "openai_project_hosted_tool_permissions" "hermes"',
                 'file_search_enabled      = false',
                 'web_search_enabled       = false',
