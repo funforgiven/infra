@@ -5,50 +5,25 @@ metadata:
   namespace: openstack
 data:
   required-keys.yaml: |
-    schemaVersion: 3
+    schemaVersion: 4
     secret: services-runtime-bootstrap
     secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
     credentials:
       infrastructure:
         - INFRA_TELEGRAM_BOT_TOKEN
-        - INFRA_TELEGRAM_CHAT_ID
-      backupRuntime:
-        - B2_APPLICATION_KEY_ID
-        - B2_APPLICATION_KEY
       media:
         - MEDIA_TELEGRAM_BOT_TOKEN
-        - MEDIA_TELEGRAM_CHAT_ID
         - ND_LASTFM_APIKEY
         - ND_LASTFM_SECRET
       mailProvisioning:
         - HCLOUD_TOKEN
-        - MAIL_MANAGEMENT_CIDRS_JSON
         - RESEND_ADMIN_API_KEY
-    postDeploymentCredentials:
-      media:
-        - RELEASE_WATCHER_KARAKEEP_API_KEY
     hostCredentials:
       hermes:
         secretFile: deployments/homelab/cloud/host-runtime/hermes.sops.yaml
         keys:
           - OPENAI_API_KEY
           - HERMES_TELEGRAM_BOT_TOKEN
-          - HERMES_TELEGRAM_ALLOWED_USERS
-          - HERMES_TELEGRAM_HOME_CHANNEL
-          - HERMES_KARAKEEP_API_KEY
-      mail-edge:
-        secretFile: deployments/homelab/cloud/host-runtime/mail-edge.sops.yaml
-        keys:
-          - STALWART_RESEND_API_KEY
-      host-backups:
-        secretFile: deployments/homelab/cloud/host-runtime/backups.sops.yaml
-        keys:
-          - HERMES_BACKUP_B2_APPLICATION_KEY_ID
-          - HERMES_BACKUP_B2_APPLICATION_KEY
-          - HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID
-          - HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY
-          - MAIL_EDGE_BACKUP_B2_APPLICATION_KEY_ID
-          - MAIL_EDGE_BACKUP_B2_APPLICATION_KEY
     generatedSecrets:
       services-cluster:
         secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
@@ -66,6 +41,59 @@ data:
           - HERMES_BACKUP_RESTIC_PASSWORD
           - HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD
           - MAIL_EDGE_BACKUP_RESTIC_PASSWORD
+    provisionedSecrets:
+      backblaze-services:
+        provisioner: reconcile-services-backblaze
+        secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
+        keys:
+          - B2_APPLICATION_KEY_ID
+          - B2_APPLICATION_KEY
+      backblaze-hosts:
+        provisioner: reconcile-services-backblaze
+        secretFile: deployments/homelab/cloud/host-runtime/backups.sops.yaml
+        keys:
+          - HERMES_BACKUP_B2_APPLICATION_KEY_ID
+          - HERMES_BACKUP_B2_APPLICATION_KEY
+          - HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID
+          - HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY
+          - MAIL_EDGE_BACKUP_B2_APPLICATION_KEY_ID
+          - MAIL_EDGE_BACKUP_B2_APPLICATION_KEY
+      telegram-infrastructure:
+        provisioner: reconcile-services-telegram
+        secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
+        keys:
+          - INFRA_TELEGRAM_CHAT_ID
+      telegram-media:
+        provisioner: reconcile-services-telegram
+        secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
+        keys:
+          - MEDIA_TELEGRAM_CHAT_ID
+      telegram-hermes:
+        provisioner: reconcile-services-telegram
+        secretFile: deployments/homelab/cloud/host-runtime/hermes.sops.yaml
+        keys:
+          - HERMES_TELEGRAM_ALLOWED_USERS
+          - HERMES_TELEGRAM_HOME_CHANNEL
+      operator-network:
+        provisioner: reconcile-services-operator-network
+        secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
+        keys:
+          - MAIL_MANAGEMENT_CIDRS_JSON
+      resend-mail-edge:
+        provisioner: reconcile-services-resend
+        secretFile: deployments/homelab/cloud/host-runtime/mail-edge.sops.yaml
+        keys:
+          - STALWART_RESEND_API_KEY
+      karakeep-hermes:
+        provisioner: karakeep-ui
+        secretFile: deployments/homelab/cloud/host-runtime/hermes.sops.yaml
+        keys:
+          - HERMES_KARAKEEP_API_KEY
+      karakeep-media:
+        provisioner: karakeep-ui
+        secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
+        keys:
+          - RELEASE_WATCHER_KARAKEEP_API_KEY
     policy:
       semanticRetrieval: deferred
       initialRetrieval: karakeep-full-text

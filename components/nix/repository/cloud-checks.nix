@@ -169,34 +169,17 @@
                 (root / "undercloud/82-services-cluster/runtime-contract.yaml").read_text()
             )
             contract = yaml.safe_load(contract_document["data"]["required-keys.yaml"])
-            if contract["schemaVersion"] != 3:
-                raise SystemExit("services runtime contract must use schema version 3")
+            if contract["schemaVersion"] != 4:
+                raise SystemExit("services runtime contract must use schema version 4")
             credentials = {
                 key
                 for group in contract["credentials"].values()
-                for key in group
-            }
-            post_deployment_credentials = {
-                key
-                for group in contract["postDeploymentCredentials"].values()
                 for key in group
             }
             expected_host_credentials = {
                 "hermes": {
                     "OPENAI_API_KEY",
                     "HERMES_TELEGRAM_BOT_TOKEN",
-                    "HERMES_TELEGRAM_ALLOWED_USERS",
-                    "HERMES_TELEGRAM_HOME_CHANNEL",
-                    "HERMES_KARAKEEP_API_KEY",
-                },
-                "mail-edge": {"STALWART_RESEND_API_KEY"},
-                "host-backups": {
-                    "HERMES_BACKUP_B2_APPLICATION_KEY_ID",
-                    "HERMES_BACKUP_B2_APPLICATION_KEY",
-                    "HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID",
-                    "HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY",
-                    "MAIL_EDGE_BACKUP_B2_APPLICATION_KEY_ID",
-                    "MAIL_EDGE_BACKUP_B2_APPLICATION_KEY",
                 },
             }
             host_credentials = {
@@ -206,9 +189,70 @@
             if host_credentials != expected_host_credentials:
                 raise SystemExit("host credentials are not independently routed")
             generated_definitions = contract["generatedSecrets"]
+            provisioned_definitions = contract["provisionedSecrets"]
+            expected_provisioned = {
+                "backblaze-services": (
+                    "reconcile-services-backblaze",
+                    {"B2_APPLICATION_KEY_ID", "B2_APPLICATION_KEY"},
+                ),
+                "backblaze-hosts": (
+                    "reconcile-services-backblaze",
+                    {
+                        "HERMES_BACKUP_B2_APPLICATION_KEY_ID",
+                        "HERMES_BACKUP_B2_APPLICATION_KEY",
+                        "HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID",
+                        "HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY",
+                        "MAIL_EDGE_BACKUP_B2_APPLICATION_KEY_ID",
+                        "MAIL_EDGE_BACKUP_B2_APPLICATION_KEY",
+                    },
+                ),
+                "telegram-infrastructure": (
+                    "reconcile-services-telegram",
+                    {"INFRA_TELEGRAM_CHAT_ID"},
+                ),
+                "telegram-media": (
+                    "reconcile-services-telegram",
+                    {"MEDIA_TELEGRAM_CHAT_ID"},
+                ),
+                "telegram-hermes": (
+                    "reconcile-services-telegram",
+                    {
+                        "HERMES_TELEGRAM_ALLOWED_USERS",
+                        "HERMES_TELEGRAM_HOME_CHANNEL",
+                    },
+                ),
+                "operator-network": (
+                    "reconcile-services-operator-network",
+                    {"MAIL_MANAGEMENT_CIDRS_JSON"},
+                ),
+                "resend-mail-edge": (
+                    "reconcile-services-resend",
+                    {"STALWART_RESEND_API_KEY"},
+                ),
+                "karakeep-hermes": (
+                    "karakeep-ui",
+                    {"HERMES_KARAKEEP_API_KEY"},
+                ),
+                "karakeep-media": (
+                    "karakeep-ui",
+                    {"RELEASE_WATCHER_KARAKEEP_API_KEY"},
+                ),
+            }
+            actual_provisioned = {
+                consumer: (definition["provisioner"], set(definition["keys"]))
+                for consumer, definition in provisioned_definitions.items()
+            }
+            if actual_provisioned != expected_provisioned:
+                raise SystemExit("provider-provisioned credentials are not independently routed")
             cluster_generated = {
                 key
                 for definition in generated_definitions.values()
+                if definition["secretFile"] == contract["secretFile"]
+                for key in definition["keys"]
+            }
+            cluster_provisioned = {
+                key
+                for definition in provisioned_definitions.values()
                 if definition["secretFile"] == contract["secretFile"]
                 for key in definition["keys"]
             }
@@ -231,8 +275,8 @@
             )
             expected_validated = (
                 credentials
-                | post_deployment_credentials
                 | cluster_generated
+                | cluster_provisioned
             )
             if expected_validated != validated:
                 raise SystemExit(
@@ -259,6 +303,12 @@
             } | {
                 definition["secretFile"]
                 for definition in generated_definitions.values()
+                if definition["secretFile"].startswith(
+                    "deployments/homelab/cloud/host-runtime/"
+                )
+            } | {
+                definition["secretFile"]
+                for definition in provisioned_definitions.values()
                 if definition["secretFile"].startswith(
                     "deployments/homelab/cloud/host-runtime/"
                 )
@@ -311,6 +361,35 @@
                 "prefix": "services/kubernetes",
             }:
                 raise SystemExit("services backup destination diverges from Backblaze B2")
+            required_b2_capabilities = {
+                "deleteFiles",
+                "listAllBucketNames",
+                "listFiles",
+                "readFiles",
+                "writeFiles",
+            }
+            b2_services = backup_destination["services"]
+            if set(b2_services["kubernetes"]["capabilities"]) != required_b2_capabilities:
+                raise SystemExit("Velero B2 key capabilities are not least privilege")
+            if set(b2_services["hostCapabilities"]) != required_b2_capabilities:
+                raise SystemExit("host B2 key capabilities are not least privilege")
+            if backup_destination["bucket"]["operatorBootstrap"] != {
+                "applicationKeyIdFile": "secrets/B2_MASTER_APPLICATION_KEY_ID.key",
+                "applicationKeyFile": "secrets/B2_MASTER_APPLICATION_KEY.key",
+                "clearAfterSuccess": True,
+            }:
+                raise SystemExit("Backblaze master bootstrap is not ephemeral")
+
+            telegram = yaml.safe_load((root / "telegram-bots.yaml").read_text())
+            if {
+                definition["username"]
+                for definition in telegram["bots"].values()
+            } != {
+                "fahrican_infra_alerts_bot",
+                "fahrican_hermes_bot",
+                "fahrican_media_watch_bot",
+            }:
+                raise SystemExit("Telegram bot identity contract drifted")
 
             exceptions = yaml.safe_load((root / "manual-exceptions.yaml").read_text())
             exception_ids = {entry["id"] for entry in exceptions["exceptions"]}

@@ -32,6 +32,8 @@ The small set of current documents is intentional:
 | --- | --- |
 | [`versions.yaml`](versions.yaml) | Exact selected versions, commits, images, and digests; selections are not installation claims |
 | [`backup-destination.yaml`](backup-destination.yaml) | Public B2 bucket and least-privilege writer contract; contains no credential value or application-key ID |
+| [`telegram-bots.yaml`](telegram-bots.yaml) | Public bot identities, metadata, and private target-selection contract; contains no token or numeric target |
+| [`resend-sending-keys.yaml`](resend-sending-keys.yaml) | Domain-scoped sending-key contract; contains no administration or sending token |
 | [`network-inventory.yaml`](network-inventory.yaml) | Live Ansible inventory consumed by RouterOS automation; includes qualified physical link facts |
 | [`omada-network.yaml`](omada-network.yaml) | Omada desired state and qualification boundary |
 | [`declarative-ownership.yaml`](declarative-ownership.yaml) | Single-controller ownership map for cloud, service, identity, DNS, monitoring, and backup state |

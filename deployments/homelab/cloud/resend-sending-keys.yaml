@@ -1,0 +1,11 @@
+schemaVersion: 1
+document: homelab-cloud-resend-sending-keys
+lastReviewed: "2026-08-19"
+
+keys:
+  stalwart:
+    name: fahrican-stalwart-smtp
+    permission: sending_access
+    domain: fahrican.com
+    administrationCredential: RESEND_ADMIN_API_KEY
+    outputCredential: STALWART_RESEND_API_KEY

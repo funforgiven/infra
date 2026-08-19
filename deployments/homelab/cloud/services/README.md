@@ -30,6 +30,7 @@ usage demonstrates that a separate layer is justified.
 
 All mutation waves remain suspended until credentials and immutable artifacts
 pass the machine-checked contract. Follow [ACTIVATION.md](ACTIVATION.md); the
+BotFather-specific identity steps are in [TELEGRAM.md](TELEGRAM.md). The
 cluster reconciler keeps its kubeconfig and rendered credentials on
 memory-backed volumes, discovers provider identifiers from controller outputs,
 and bootstraps Flux only from signed `main` commits.

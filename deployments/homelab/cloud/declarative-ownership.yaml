@@ -37,5 +37,8 @@ resources:
     owner: flux
     state: Flux resources for Kubernetes and NixOS modules for standalone hosts
   - resource: services-and-host-offsite-b2-prefixes
-    owner: flux
-    state: Existing retained Backblaze B2 bucket, Git-managed prefix policy, and one independently scoped SOPS credential per writer
+    owner: pinned-api-reconciler
+    state: Existing retained Backblaze B2 bucket, Git-managed lifecycle and prefix policy, ephemeral master bootstrap, and one independently scoped SOPS credential per writer
+  - resource: telegram-bot-metadata-and-private-targets
+    owner: pinned-api-reconciler
+    state: Public bot metadata and target-selection rules in Git; bot tokens and discovered numeric IDs are independently routed SOPS ciphertext

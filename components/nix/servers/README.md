@@ -35,6 +35,11 @@ credential. Hermes remains condition-gated until both files exist. Apply the
 NixOS closure again after enrollment so the Hermes module reseeds its
 service-owned `.env`; no interactive provider authentication is required.
 
+Only the Hermes bot token is externally enrolled. The pinned Telegram
+reconciler derives the allowlisted user and home-channel identifiers from the
+single declared private `/activate` update and writes them directly as SOPS
+ciphertext. Those derived values have no intake files.
+
 The Telegram bot is polling-only and defaults to deny; never enable the global
 allow-all setting. Karakeep runs as a pinned, Nix-extracted MCP program and
 receives its key only through Hermes's runtime secret scope. Hermes memory,
@@ -54,10 +59,12 @@ backup unit remains condition-gated until three root-only files exist:
 All repositories use the existing `fahrican-cloud-recovery` Backblaze B2
 bucket. Hermes, Home Assistant, and mail-edge are confined respectively to
 `services/hosts/hermes/`, `services/hosts/home-assistant/`, and
-`services/hosts/mail-edge/`. Issue an independent B2 application key restricted
-to each prefix so Restic can back up, restore, and prune without crossing a
-host boundary. The repository password is locally generated directly into the
-admin-only SOPS document.
+`services/hosts/mail-edge/`. The pinned Backblaze reconciler creates an
+independent B2 application key restricted to each prefix so Restic can back
+up, restore, and prune without crossing a host boundary. Returned material is
+written directly to the admin-only SOPS document, and the master bootstrap pair
+is cleared only after the complete reconciliation. The repository password is
+locally generated directly into SOPS.
 
 Materialize these files with the host enrollment app after the host is
 reachable through its pinned SSH identity. Never pass values as command
@@ -83,8 +90,9 @@ Critical units also use a local systemd `OnFailure` notifier. Its profile reads
 the dedicated infrastructure bot token and chat identifier from the central
 SOPS contract and writes mode-0400 files at
 `/var/lib/monitoring-bootstrap/bot-token` and
-`/var/lib/monitoring-bootstrap/chat-id`. Enroll them once into the central SOPS
-document, then materialize the profile through encrypted SSH standard input;
+`/var/lib/monitoring-bootstrap/chat-id`. Enroll only the token; the Telegram
+reconciler discovers and encrypts the group identifier. Then materialize the
+profile through encrypted SSH standard input;
 do not put either value in an SSH command, Nix option, shell history, or
 temporary file. The notifier supplies the token to curl through standard input,
 so it is absent from the process list.

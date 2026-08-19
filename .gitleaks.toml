@@ -17,7 +17,7 @@ keywords = ["openai_api_key"]
 [[rules]]
 id = "backblaze-application-key-assignment"
 description = "Backblaze B2 application key assigned as plaintext"
-regex = '''(?i)(?:B2_APPLICATION_KEY|AWS_SECRET_ACCESS_KEY)\s*[:=]\s*["']?([A-Za-z0-9]{20,})'''
+regex = '''(?i)(?:B2_(?:MASTER_)?APPLICATION_KEY|AWS_SECRET_ACCESS_KEY)\s*[:=]\s*["']?([A-Za-z0-9]{20,})'''
 secretGroup = 1
 keywords = ["b2_application_key", "aws_secret_access_key"]
 

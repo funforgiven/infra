@@ -3,13 +3,34 @@ set -euo pipefail
 umask 077
 
 from_file=false
-if [[ "${1:-}" == "--from-file" ]]; then
-  from_file=true
-  shift
-fi
+intake_directory=''
+while [[ "${1:-}" == --* ]]; do
+  case "$1" in
+    --from-file)
+      from_file=true
+      shift
+      ;;
+    --intake-directory)
+      if [[ -z "${2:-}" ]]; then
+        echo '--intake-directory requires a path.' >&2
+        exit 64
+      fi
+      intake_directory="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      exit 64
+      ;;
+  esac
+done
 
 if [[ "$#" -ne 1 ]]; then
-  echo "Usage: enroll-services-credential [--from-file] KEY" >&2
+  echo "Usage: enroll-services-credential [--from-file] [--intake-directory DIR] KEY" >&2
+  exit 64
+fi
+if [[ -n "$intake_directory" && "$from_file" != true ]]; then
+  echo '--intake-directory is valid only with --from-file.' >&2
   exit 64
 fi
 
@@ -25,11 +46,20 @@ readonly secret_file
 sops filestatus "$secret_file" | rg --quiet '"encrypted":true'
 
 if [[ "$from_file" == true ]]; then
-  source_file="$repository_root/secrets/$key.key"
+  if [[ -z "$intake_directory" ]]; then
+    intake_directory="$repository_root/secrets"
+  fi
+  if [[ ! -d "$intake_directory" || -L "$intake_directory" ]]; then
+    echo 'The credential intake directory must be a non-symlink directory.' >&2
+    exit 1
+  fi
+  intake_directory="$(realpath "$intake_directory")"
+  readonly intake_directory
+  source_file="$intake_directory/$key.key"
   readonly source_file
   if [[ ! -f "$source_file" || -L "$source_file" ]] ||
     [[ "$(stat --format=%a "$source_file")" != 600 ]]; then
-    echo "secrets/$key.key must be a regular, non-symlink mode-0600 file." >&2
+    echo "$key.key must be a regular, non-symlink mode-0600 intake file." >&2
     exit 1
   fi
   value="$(<"$source_file")"
@@ -65,5 +95,5 @@ printf '%s\n' \
   "$key was added to $relative_secret_file as SOPS ciphertext." \
   'No plaintext value was printed, written to Git, or passed as an argument.'
 if [[ "$from_file" == true ]]; then
-  printf '%s\n' "secrets/$key.key was cleared after successful enrollment."
+  printf '%s\n' "$key.key was cleared after successful enrollment."
 fi

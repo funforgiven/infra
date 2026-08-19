@@ -3,11 +3,11 @@ exceptions:
   - id: telegram-botfather-bootstrap
     resource: Telegram bots for infrastructure, Hermes, and media acquisition
     owner: funforgiven
-    rationale: Telegram exposes bot creation and token rotation only through BotFather.
-    procedure: Create three distinct bots for infrastructure alerts, Hermes conversation, and media acquisition; record only their public usernames, and ingest each token with the no-echo SOPS bootstrap command.
-    secret_handling: Bot tokens go directly to workload-specific SOPS documents and are never printed, passed as arguments, or shared between bots.
+    rationale: Telegram exposes bot identity creation and token rotation only through BotFather; supported Bot API methods manage the remaining metadata and update discovery.
+    procedure: Create the three Git-declared names and globally unique usernames in BotFather, ingest only their tokens with the no-echo SOPS bootstrap command, create the two declared private groups, and send one /activate message to each bot. The pinned reconciler applies descriptions, clears command menus, discovers numeric chat/user IDs, and encrypts them into their routed SOPS documents.
+    secret_handling: Bot tokens go directly to workload-specific SOPS documents and are never printed, passed as arguments, or shared between bots. Numeric targets are selected from one exact update and written directly as SOPS ciphertext.
     backup: SOPS ciphertext is in Git; BotFather remains the recovery and revocation authority.
-    drift_probe: Verify bot usernames and numeric allowlists monthly without retrieving or displaying tokens.
+    drift_probe: Run the pinned Telegram check and verify the public usernames monthly without retrieving or displaying tokens or numeric targets.
     review_interval: monthly
     exit_criterion: Replace this exception when Telegram provides a supported declarative bot-management API.
   - id: openai-api-key-issuance
@@ -61,15 +61,15 @@ exceptions:
     review_interval: monthly
     exit_criterion: Remove when Hetzner supports a workload identity flow that the controller can use without a long-lived token.
   - id: offsite-backup-credential-issuance
-    resource: Backblaze B2 application-key issuance for service backup writers
+    resource: Backblaze B2 master-key bootstrap for service backup writers
     owner: funforgiven
-    rationale: Backblaze returns each application-key secret only at issuance and does not provide a state-free workload-identity path for these consumers.
-    procedure: Keep the existing retained fahrican-cloud-recovery bucket, apply its reviewed lifecycle policy, issue one key restricted to each declared services prefix, enroll each value through the contract tool, and perform an isolated restore before service activation.
-    secret_handling: Provider credentials never enter Nix, OpenTofu variables, state, plans, logs, shell history, or command arguments. Restic repository passwords are generated directly into SOPS; only ciphertext and root-only runtime files are retained.
+    rationale: Backblaze has no workload-identity path for these consumers, so a master credential must bootstrap independently scoped application keys; each new secret is returned only at issuance.
+    procedure: Place the master key ID and key in the two fixed mode-0600 ignored intake files. The pinned reconciler retains the existing fahrican-cloud-recovery bucket, applies its reviewed private/encrypted lifecycle policy, creates one key restricted to each declared services prefix, writes returned material directly into the routed SOPS documents, and clears both master files only after the whole reconciliation succeeds.
+    secret_handling: The master and derived credentials never enter Nix, OpenTofu variables, state, plans, logs, shell history, or command arguments. The master exists only in the ignored bootstrap files and process memory, while application keys persist only as SOPS ciphertext and root-only runtime files. Restic repository passwords are generated directly into SOPS.
     backup: Offline recovery readers and the personal age identity remain separate from workload writers; lost workload credentials are recovered by rotation, not retrieval.
     drift_probe: Compare non-secret key inventory, bucket scope, lifecycle policy, last successful backup, and restore evidence monthly without retrieving any credential value.
     review_interval: monthly
-    exit_criterion: Replace enrollment with a supported workload identity or secret-store delivery flow that exposes no key material to Git or state.
+    exit_criterion: Replace the master bootstrap with a supported workload identity or secret-store delivery flow.
   - id: music-store-accounts-and-purchases
     resource: Bandcamp and OTOTOY accounts, payment, and checkout
     owner: funforgiven
