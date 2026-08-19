@@ -1,0 +1,160 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: tenant-tofu-controller-leader-election
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - configmaps/status
+      - events
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: tenant-tofu-controller-manager
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - secrets
+      - pods
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - infra.contrib.fluxcd.io
+    resources:
+      - terraforms
+      - terraforms/finalizers
+      - terraforms/status
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - source.toolkit.fluxcd.io
+    resources:
+      - buckets
+      - gitrepositories
+      - ocirepositories
+      - buckets/status
+      - gitrepositories/status
+      - ocirepositories/status
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: tenant-tofu-runner
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - secrets
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tenant-tofu-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: tenant-tofu-controller-manager
+subjects:
+  - kind: ServiceAccount
+    name: tenant-tofu-controller
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tenant-tofu-controller-leader-election
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: tenant-tofu-controller-leader-election
+subjects:
+  - kind: ServiceAccount
+    name: tenant-tofu-controller
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tenant-tofu-runner
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: tenant-tofu-runner
+subjects:
+  - kind: ServiceAccount
+    name: tf-runner
