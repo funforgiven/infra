@@ -99,11 +99,24 @@ nix run .#reconcile-services-openai -- apply
 ```
 
 The one-time value goes directly into the admin-only Hermes SOPS document and
-never enters OpenTofu state, an intake file, or command output. Commit and push
-that ciphertext before running the full services preflight. If the reconciler
-reports partial or unrecoverable state, replace the service account
-declaratively; OpenAI does not permit deleting its keys through the project-key
-delete endpoint.
+never enters OpenTofu state, an intake file, or command output. After the
+OpenTofu resource is Ready, retire the organization-wide bootstrap capability:
+
+```console
+nix run .#reconcile-services-openai -- retire-admin
+```
+
+Retirement is refused unless the scoped runtime key exists both remotely and as
+SOPS ciphertext, the Luna allowlist is exact, all five hosted tools are denied,
+and the USD 50 monthly hard limit is current. The command then revokes the
+uniquely named Admin key through OpenAI's Administration API and removes its
+local ciphertext. Suspend the OpenAI Terraform resource, remove the Admin
+Secret and controller credential from the declarative contract, run the full
+checks, and push the runtime ciphertext plus retirement state in a signed
+commit. A future control-plane change requires a new temporary Admin key and an
+explicit maintenance activation. If runtime-key reconciliation reports partial
+or unrecoverable state, replace the service account declaratively; OpenAI does
+not permit deleting its keys through the project-key delete endpoint.
 
 Locally owned high-entropy values are declared under `generatedSecrets` and
 generated directly into their target SOPS document. The initial values are

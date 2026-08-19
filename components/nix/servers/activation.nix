@@ -129,7 +129,7 @@
 
       apps.reconcile-services-openai = {
         program = "${reconcileServicesOpenAI}/bin/reconcile-services-openai";
-        meta.description = "Issue the least-privilege Hermes OpenAI key directly into SOPS";
+        meta.description = "Issue the Hermes OpenAI key and retire its temporary Admin key";
       };
 
       apps.reconcile-services-operator-network = {
@@ -208,6 +208,12 @@
               ${./activation/reconcile_services_backblaze.py}
             rg --fixed-strings --quiet 'api.responses.write' \
               ${./activation/reconcile_services_openai.py}
+            rg --fixed-strings --quiet 'choices=("check", "apply", "retire-admin")' \
+              ${./activation/reconcile_services_openai.py}
+            rg --fixed-strings --quiet 'delete_administration_key' \
+              ${./activation/reconcile_services_openai.py}
+            rg --fixed-strings --quiet 'def remove(' \
+              ${./activation/sops_credentials.py}
             if rg --quiet 'print\([^)]*(administration_key|value)|OPENAI_API_KEY\.key' \
               ${./activation/reconcile_services_openai.py} \
               ${inputs.self}/deployments/homelab/cloud/services/ACTIVATION.md; then

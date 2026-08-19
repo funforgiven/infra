@@ -15,9 +15,13 @@ deferred. OpenAI requires its organization-level policy for each tool to be
 conditional credential-final check is documented as a manual exception because
 the Administration API does not expose organization-level tool policy.
 
-`OPENAI_ADMIN_KEY` authenticates the provider through the environment. It is a
-bootstrap/control-plane credential, not a Hermes runtime credential. API-key
-material is excluded from this root and its state because OpenAI returns a
-service-account key value only once. After this root applies, run the pinned
-`reconcile-services-openai` app; it issues the scoped key and sends the value
-directly to the admin-only Hermes SOPS document.
+`OPENAI_ADMIN_KEY` authenticates the provider through the environment only
+during an explicit maintenance window. It is an ephemeral bootstrap
+credential, not a Hermes runtime credential. API-key material is excluded from
+this root and its state because OpenAI returns a service-account key value only
+once. After this root applies, the pinned `reconcile-services-openai` app issues
+the scoped key directly into the admin-only Hermes SOPS document. Its guarded
+`retire-admin` command verifies that key, the Luna allowlist, every hosted-tool
+deny, and the USD 50 hard limit before revoking the named Admin key and removing
+its ciphertext. The Terraform reconciliation is then suspended until a future
+maintenance window enrolls a new temporary Admin key.
