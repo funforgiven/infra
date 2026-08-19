@@ -9,26 +9,19 @@ from runtime_contract import CONTRACT_PATH, ContractError, RuntimeContract
 
 CLUSTER_FILE = Path("cluster-runtime.sops.yaml")
 HERMES_FILE = Path("hermes-runtime.sops.yaml")
-CONTROLLER_FILE = Path("controller-runtime.sops.yaml")
 GENERATED_FILE = Path("generated-runtime.sops.yaml")
 PROVISIONED_FILE = Path("provisioned-runtime.sops.yaml")
 
 
 def contract_document() -> dict:
     return {
-        "schemaVersion": 5,
+        "schemaVersion": 6,
         "secretFile": str(CLUSTER_FILE),
         "credentials": {"initial": ["CLUSTER_KEY"]},
         "hostCredentials": {
             "hermes": {
                 "secretFile": str(HERMES_FILE),
-                "keys": ["HERMES_TELEGRAM_BOT_TOKEN"],
-            }
-        },
-        "controllerCredentials": {
-            "openai-control-plane": {
-                "secretFile": str(CONTROLLER_FILE),
-                "keys": ["OPENAI_ADMIN_KEY"],
+                "keys": ["HERMES_TELEGRAM_BOT_TOKEN", "OPENAI_API_KEY"],
             }
         },
         "generatedSecrets": {
@@ -77,12 +70,12 @@ class RuntimeContractTest(unittest.TestCase):
             HERMES_FILE,
         )
         self.assertEqual(
-            contract.credential("OPENAI_ADMIN_KEY").secret_file,
-            CONTROLLER_FILE,
+            contract.credential("OPENAI_API_KEY").secret_file,
+            HERMES_FILE,
         )
         self.assertEqual(
-            contract.credential("OPENAI_ADMIN_KEY").consumer,
-            "openai-control-plane",
+            contract.credential("OPENAI_API_KEY").consumer,
+            "hermes",
         )
         self.assertEqual(
             contract.generated_credential("GENERATED_KEY").secret_file,
@@ -115,13 +108,14 @@ class RuntimeContractTest(unittest.TestCase):
             ["CLUSTER_KEY"],
         )
         self.write_secret(HERMES_FILE, [])
-        self.write_secret(CONTROLLER_FILE, [])
         self.write_secret(GENERATED_FILE, ["GENERATED_KEY"])
         self.write_secret(PROVISIONED_FILE, ["PROVISIONED_KEY"])
-        with self.assertRaisesRegex(ContractError, "OPENAI_ADMIN_KEY"):
+        with self.assertRaisesRegex(ContractError, "OPENAI_API_KEY"):
             contract.verify_ciphertext()
-        self.write_secret(HERMES_FILE, ["HERMES_TELEGRAM_BOT_TOKEN"])
-        self.write_secret(CONTROLLER_FILE, ["OPENAI_ADMIN_KEY"])
+        self.write_secret(
+            HERMES_FILE,
+            ["HERMES_TELEGRAM_BOT_TOKEN", "OPENAI_API_KEY"],
+        )
         contract.verify_ciphertext()
 
     def test_rejects_paths_outside_repository(self) -> None:

@@ -59,7 +59,6 @@
       reconcileServicesBackblaze = reconcilerApplication "reconcile-services-backblaze" ./activation/reconcile_services_backblaze.py;
       reconcileServicesTelegram = reconcilerApplication "reconcile-services-telegram" ./activation/reconcile_services_telegram.py;
       reconcileServicesResend = reconcilerApplication "reconcile-services-resend" ./activation/reconcile_services_resend.py;
-      reconcileServicesOpenAI = reconcilerApplication "reconcile-services-openai" ./activation/reconcile_services_openai.py;
       reconcileServicesOperatorNetwork = reconcilerApplication "reconcile-services-operator-network" ./activation/reconcile_services_operator_network.py;
       servicesActivationPreflight = pkgs.writeShellApplication {
         name = "services-activation-preflight";
@@ -127,11 +126,6 @@
         meta.description = "Create or rotate the domain-scoped Stalwart Resend key into SOPS";
       };
 
-      apps.reconcile-services-openai = {
-        program = "${reconcileServicesOpenAI}/bin/reconcile-services-openai";
-        meta.description = "Issue the Hermes OpenAI key and retire its temporary Admin key";
-      };
-
       apps.reconcile-services-operator-network = {
         program = "${reconcileServicesOperatorNetwork}/bin/reconcile-services-operator-network";
         meta.description = "Discover and encrypt the operator mail-management host CIDR";
@@ -150,7 +144,6 @@
         reconcile-services-backblaze = reconcileServicesBackblaze;
         reconcile-services-telegram = reconcileServicesTelegram;
         reconcile-services-resend = reconcileServicesResend;
-        reconcile-services-openai = reconcileServicesOpenAI;
         reconcile-services-operator-network = reconcileServicesOperatorNetwork;
         services-activation-preflight = servicesActivationPreflight;
       };
@@ -174,7 +167,6 @@
             python -m py_compile ${./activation/reconcile_services_backblaze.py}
             python -m py_compile ${./activation/reconcile_services_telegram.py}
             python -m py_compile ${./activation/reconcile_services_resend.py}
-            python -m py_compile ${./activation/reconcile_services_openai.py}
             python -m py_compile ${./activation/reconcile_services_operator_network.py}
             python -m py_compile ${./activation/sops_credentials.py}
             shellcheck \
@@ -206,20 +198,6 @@
               ${./activation/runtime_contract.py}
             rg --fixed-strings --quiet 'keyName' \
               ${./activation/reconcile_services_backblaze.py}
-            rg --fixed-strings --quiet 'api.responses.write' \
-              ${./activation/reconcile_services_openai.py}
-            rg --fixed-strings --quiet 'choices=("check", "apply", "retire-admin")' \
-              ${./activation/reconcile_services_openai.py}
-            rg --fixed-strings --quiet 'delete_administration_key' \
-              ${./activation/reconcile_services_openai.py}
-            rg --fixed-strings --quiet 'def remove(' \
-              ${./activation/sops_credentials.py}
-            if rg --quiet 'print\([^)]*(administration_key|value)|OPENAI_API_KEY\.key' \
-              ${./activation/reconcile_services_openai.py} \
-              ${inputs.self}/deployments/homelab/cloud/services/ACTIVATION.md; then
-              echo 'OpenAI runtime key material may escape the SOPS reconciler.' >&2
-              exit 1
-            fi
             if rg --quiet 'prompt_value|R2_ENDPOINT|cloudflarestorage' \
               ${./activation/enroll-service-host-secrets.sh} \
               ${./README.md} \

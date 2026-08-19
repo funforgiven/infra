@@ -144,9 +144,6 @@
               deployments/homelab/cloud/services/50-synthetic-monitoring \
               >/dev/null
             kustomize build \
-              deployments/homelab/cloud/undercloud/79-openai-control-plane \
-              >/dev/null
-            kustomize build \
               deployments/homelab/cloud/undercloud/81-services-foundation \
               >/dev/null
             kustomize build \
@@ -172,8 +169,8 @@
                 (root / "undercloud/82-services-cluster/runtime-contract.yaml").read_text()
             )
             contract = yaml.safe_load(contract_document["data"]["required-keys.yaml"])
-            if contract["schemaVersion"] != 5:
-                raise SystemExit("services runtime contract must use schema version 5")
+            if contract["schemaVersion"] != 6:
+                raise SystemExit("services runtime contract must use schema version 6")
             credentials = {
                 key
                 for group in contract["credentials"].values()
@@ -182,6 +179,7 @@
             expected_host_credentials = {
                 "hermes": {
                     "HERMES_TELEGRAM_BOT_TOKEN",
+                    "OPENAI_API_KEY",
                 },
             }
             host_credentials = {
@@ -190,21 +188,9 @@
             }
             if host_credentials != expected_host_credentials:
                 raise SystemExit("host credentials are not independently routed")
-            controller_credentials = {
-                consumer: set(definition["keys"])
-                for consumer, definition in contract["controllerCredentials"].items()
-            }
-            if controller_credentials != {
-                "openai-control-plane": {"OPENAI_ADMIN_KEY"}
-            }:
-                raise SystemExit("controller credentials are not independently routed")
             generated_definitions = contract["generatedSecrets"]
             provisioned_definitions = contract["provisionedSecrets"]
             expected_provisioned = {
-                "openai-hermes": (
-                    "reconcile-services-openai",
-                    {"OPENAI_API_KEY"},
-                ),
                 "backblaze-services": (
                     "reconcile-services-backblaze",
                     {"B2_APPLICATION_KEY_ID", "B2_APPLICATION_KEY"},
@@ -299,28 +285,6 @@
                 )
             if "OPENAI_API_KEY" in reconcile_script:
                 raise SystemExit("Hermes OpenAI key must not enter cluster reconciliation")
-
-            openai_admin = yaml.safe_load(
-                (root / "undercloud/79-openai-control-plane/admin.sops.yaml").read_text()
-            )
-            if openai_admin["metadata"] != {
-                "name": "openai-admin",
-                "namespace": "tofu-system",
-            }:
-                raise SystemExit("OpenAI Admin key has the wrong controller boundary")
-            if any(
-                not str(value).startswith("ENC[")
-                for value in openai_admin["data"].values()
-            ):
-                raise SystemExit("OpenAI Admin Secret contains non-SOPS data")
-            openai_admin_recipients = {
-                entry["recipient"] for entry in openai_admin["sops"]["age"]
-            }
-            if openai_admin_recipients != {
-                "age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea",
-                "age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2",
-            }:
-                raise SystemExit("OpenAI Admin Secret has the wrong recipients")
 
             runtime = yaml.safe_load(
                 (root / "undercloud/81-services-foundation/runtime.sops.yaml").read_text()
@@ -431,90 +395,30 @@
             exception_ids = {entry["id"] for entry in exceptions["exceptions"]}
             if "hermes-openai-oauth-enrollment" in exception_ids:
                 raise SystemExit("obsolete Hermes OAuth exception remains declared")
-            if "openai-api-key-issuance" in exception_ids:
-                raise SystemExit("manual Hermes OpenAI runtime-key issuance remains")
-            if "openai-admin-key-bootstrap" not in exception_ids:
-                raise SystemExit("OpenAI credential-zero bootstrap is undocumented")
-            if "openai-organization-hosted-tool-policy" not in exception_ids:
-                raise SystemExit("OpenAI organization tool-policy exception is undocumented")
-
-            openai_tofu = pathlib.Path(
-                "components/cloud/services/openai/tofu/main.tf"
-            ).read_text()
-            openai_contract = yaml.safe_load(
-                (root / "openai-hermes.yaml").read_text()
-            )
-            if openai_contract.get("administrationKeyName") != (
-                "fahrican-infra-openai-control-plane"
-            ):
-                raise SystemExit("OpenAI Admin-key retirement target drifted")
-            if openai_contract.get("policy") != {
-                "modelIds": ["gpt-5.6-luna"],
-                "hostedTools": [
-                    "code_interpreter",
-                    "file_search",
-                    "image_generation",
-                    "mcp",
-                    "web_search",
-                ],
-                "hardSpendLimit": {
-                    "thresholdAmount": 5000,
-                    "currency": "USD",
-                    "interval": "month",
-                },
-            }:
-                raise SystemExit("Hermes OpenAI retirement policy drifted")
-            required_openai_declarations = (
-                'source  = "openai/openai"',
-                'version = "= 1.1.0"',
-                'permissions = local.runtime_permissions',
-                'runtime_permissions  = ["api.responses.write"]',
-                'model_ids  = ["gpt-5.6-luna"]',
-                'threshold_amount = 5000',
-                'resource "openai_project_hosted_tool_permissions" "hermes"',
-                'file_search_enabled      = false',
-                'web_search_enabled       = false',
-                'image_generation_enabled = false',
-                'mcp_enabled              = false',
-                'code_interpreter_enabled = false',
-            )
-            if any(value not in openai_tofu for value in required_openai_declarations):
-                raise SystemExit("Hermes OpenAI control plane is not least privilege")
-            if "openai_project_rate_limit" in openai_tofu:
-                raise SystemExit("OpenAI rate-limit records must not be selected dynamically")
-
-            openai_manifests = list(yaml.safe_load_all(
-                (root / "undercloud/79-openai-control-plane/tofu.yaml").read_text()
-            ))
-            openai_source = next(
-                item for item in openai_manifests if item["kind"] == "GitRepository"
-            )
-            openai_controller = next(
-                item for item in openai_manifests if item["kind"] == "Terraform"
-            )
-            if openai_source["spec"].get("verify") != {
-                "mode": "HEAD",
-                "secretRef": {"name": "openai-tofu-signing-key"},
-            }:
-                raise SystemExit("OpenAI OpenTofu source does not require signed commits")
-            env_sources = openai_controller["spec"]["runnerPodTemplate"]["spec"]["envFrom"]
-            if env_sources != [{"secretRef": {"name": "openai-admin"}}]:
-                raise SystemExit("OpenAI controller does not use its isolated Admin Secret")
-            undercloud_waves = (root / "undercloud/20-gitops/waves.yaml").read_text()
-            if not re.search(
-                r"name: wave79-openai-control-plane.*?spec:\n  suspend: true",
-                undercloud_waves,
-                re.S,
-            ):
-                raise SystemExit("OpenAI control plane lacks an explicit activation gate")
+            if "openai-api-key-issuance" not in exception_ids:
+                raise SystemExit("operator-issued OpenAI runtime key is undocumented")
+            if {
+                "openai-admin-key-bootstrap",
+                "openai-organization-hosted-tool-policy",
+            } & exception_ids:
+                raise SystemExit("obsolete OpenAI administration exception remains")
 
             repository_text = "\n".join(
                 path.read_text(errors="ignore")
                 for path in pathlib.Path(".").rglob("*")
                 if path.is_file() and ".terraform" not in path.parts
             )
-            if "OPENAI_API_KEY.key" in repository_text:
-                raise SystemExit("derived Hermes OpenAI key still has an intake file")
+            openai_intake_name = "OPENAI_API_KEY" + ".key"
+            if openai_intake_name not in repository_text:
+                raise SystemExit("Hermes OpenAI intake contract is undocumented")
+            obsolete_openai_control_plane = (
+                "OPENAI_" + "ADMIN_KEY",
+                "reconcile-services-" + "openai",
+                "79-" + "openai-control-plane",
+                "openai/" + "openai",
+            )
+            if any(value in repository_text for value in obsolete_openai_control_plane):
+                raise SystemExit("obsolete OpenAI administration machinery remains")
 
             sentinel_files = [
                 root / "services/40-media/importer.yaml",

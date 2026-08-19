@@ -10,7 +10,6 @@ from pathlib import Path
 UNDERCLOUD_WAVES = Path("deployments/homelab/cloud/undercloud/20-gitops/waves.yaml")
 SERVICES_WAVES = Path("deployments/homelab/cloud/services/waves.yaml")
 STAGES = {
-    "openai": ((UNDERCLOUD_WAVES, "wave79-openai-control-plane"),),
     "foundation": ((UNDERCLOUD_WAVES, "wave81-services-foundation"),),
     "cluster": ((UNDERCLOUD_WAVES, "wave82-services-cluster"),),
     "hosts": (

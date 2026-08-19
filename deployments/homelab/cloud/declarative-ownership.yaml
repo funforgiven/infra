@@ -15,12 +15,9 @@ resources:
   - resource: zitadel-projects-applications-and-roles
     owner: opentofu
     state: OpenTofu state and reviewed identity configuration in Git
-  - resource: openai-projects-service-accounts-and-controls
-    owner: opentofu
-    state: Official-provider OpenTofu state; API key values are deliberately excluded
   - resource: openai-hermes-runtime-key
-    owner: pinned-api-reconciler
-    state: Scoped issuance policy in Git and key value only as admin-recipient SOPS ciphertext
+    owner: sops
+    state: Operator-issued project key stored only as admin-recipient SOPS ciphertext and a mode-0400 runtime file
   - resource: resend-domain-and-verification
     owner: pinned-api-reconciler
     state: Desired domain policy and non-secret identifiers in Git

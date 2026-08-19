@@ -20,22 +20,16 @@ documents first; locally owned passwords are generated directly as ciphertext.
 ## Hermes enrollment
 
 Hermes uses the direct `openai-api` provider with `gpt-5.6-luna` as its default
-model. Enroll the temporary organization bootstrap `OPENAI_ADMIN_KEY` only for
-an explicit control-plane maintenance window. The official
-OpenAI OpenTofu provider creates a dedicated Hermes project, no-default-role
-service account, `api.responses.write` role, Luna-only allowlist, and monthly
-hard spend limit. The project explicitly disables every OpenAI hosted tool;
-Hermes uses local SearXNG and Karakeep instead. The pinned
-`reconcile-services-openai` app then issues the
-runtime `OPENAI_API_KEY` straight into the admin-recipient
-`deployments/homelab/cloud/host-runtime/hermes.sops.yaml` document; the value
-never enters an intake file or OpenTofu state. The
+model. The operator creates and constrains its independently revocable project
+key in the OpenAI dashboard, then the generic credential enrollment app moves
+`OPENAI_API_KEY` from its ignored mode-0600 one-way intake file into the
+admin-recipient-only `deployments/homelab/cloud/host-runtime/hermes.sops.yaml`
+document. No OpenAI Admin credential, project policy, budget, or identifier is
+managed here. The
 `hermes-openai` host profile decrypts that one value in memory and streams a
 root-only `/var/lib/hermes-bootstrap/openai.env` file over SSH standard input.
-After policy and runtime-key verification, `reconcile-services-openai
-retire-admin` revokes the named Admin key and removes its ciphertext. Normal
-operation retains only the scoped Hermes key; future project changes require a
-new temporary Admin key and explicit control-plane activation.
+The model remains declarative because Hermes must name a model in each API
+request; an API key authenticates the request but does not select its model.
 
 The separate `hermes-integrations` profile reads its independently routed SOPS
 document and creates
@@ -46,11 +40,8 @@ credential. Hermes remains condition-gated until both files exist. Apply the
 NixOS closure again after enrollment so the Hermes module reseeds its
 service-owned `.env`; no interactive provider authentication is required.
 
-OpenAI service-account keys cannot be deleted through the project-key delete
-endpoint. If key issuance succeeds but SOPS storage fails, or ciphertext is
-lost, stop: declare a replacement service account and group membership, apply
-it, issue the replacement key, deploy it, and only then remove the old account.
-Do not create another key on the same account as an improvised rotation.
+If ciphertext is lost or the key must rotate, issue a replacement project key,
+enroll and deploy it, verify Hermes, and then revoke the old key in OpenAI.
 
 Only the Hermes bot token is externally enrolled. The pinned Telegram
 reconciler derives the allowlisted user and home-channel identifiers from the
