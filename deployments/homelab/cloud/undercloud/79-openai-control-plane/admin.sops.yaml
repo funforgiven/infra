@@ -4,7 +4,8 @@ metadata:
     name: openai-admin
     namespace: tofu-system
 type: Opaque
-data: {}
+data:
+    OPENAI_ADMIN_KEY: ENC[AES256_GCM,data:9Y7MwMZzJhEmlr1GZP8nkAVutRIzwkgFRSUJzeKGBy+hxnKd8bEeyWczanmCO3jsQ3s+QoKqR0w8eLDwpwYiHePFPIsOrZfoYsR0efU4gXZ+XBBmVhDjDRjry1qu+iSqfi7ELbpO828/hqT6dSbVGgzq/AKe3dje5cfYSrXldfKu2kdCTKTcO7xlOilGEUqRoeoXfnMaHLdKtggKgpLpAI8Lydew4zC5narFuCQE/Hjas1pk,iv:hYbcCWgwPGoN4WsssNSOB1AX8cTLZJnd0EmgwvrNCRI=,tag:dMO+GX6DfYdMkGwH2WTdnw==,type:str]
 sops:
     age:
         - enc: |
@@ -26,6 +27,6 @@ sops:
             -----END AGE ENCRYPTED FILE-----
           recipient: age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-08-19T20:18:34Z"
-    mac: ENC[AES256_GCM,data:z5OHyJ6k2kjaMIMiGO4BxAoAvmHlkVRVj6pRNuXiAzjqWzqiOe5YrDNv6FMqYNOhdfP/T5v0ju3MauGPZiBaZKmmfaA+GxA/lj/RAPe6CmZ2D8pct3y6z6pSBdXW/JrQPBXw6x3ZGTfjxpMHGLggMHMKUzHHaV13+2FtfiIZjXg=,iv:6o2o0sTbnSudh8lMBMBL9u8FvwVo/PAmSoVjydJZl6I=,tag:/zjhj62gvkch/OgXDr8Ynw==,type:str]
+    lastmodified: "2026-08-19T20:32:01Z"
+    mac: ENC[AES256_GCM,data:uL6U1HHpiHP76krst83HkuGONjsrwjE2wMsKMg6rUTVlCrWE5ZEoCDSIsfuIKmdY1bQPGnVbiYEemACwtAWUdu7p0yO8Jf7zMqVKWUIQQjJg+v4ILg2BiDdJSc72XfAa/Wiv/979WRZkufpZs55IX4BXFCRpbH764uqWBF0zQ3g=,iv:bbLxTT41SkcV7dlIvZqZC32Y7d6wZFcUaEXJ//aObXs=,tag:IbK1f3lnisRFWzL2KKfpSA==,type:str]
     version: 3.13.3
