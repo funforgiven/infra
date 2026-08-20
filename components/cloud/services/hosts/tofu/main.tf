@@ -29,8 +29,9 @@ variable "image_revision" {
 }
 
 locals {
-  image_revision_short = substr(var.image_revision, 0, 12)
-  tags                 = ["managed-by-opentofu", "platform-services"]
+  image_revision_short  = substr(var.image_revision, 0, 12)
+  tags                  = ["managed-by-opentofu", "platform-services"]
+  trusted_operator_cidr = "10.21.10.0/24"
 }
 
 data "openstack_networking_network_v2" "services" {
@@ -76,7 +77,7 @@ data "openstack_images_image_v2" "home_assistant" {
 
 resource "openstack_networking_secgroup_v2" "service_ssh" {
   name        = "service-ssh"
-  description = "SSH and diagnostics from the trusted provider LAN"
+  description = "SSH and diagnostics from the trusted operator LAN"
   tags        = local.tags
 }
 
@@ -86,7 +87,7 @@ resource "openstack_networking_secgroup_rule_v2" "service_ssh" {
   protocol          = "tcp"
   port_range_min    = 22
   port_range_max    = 22
-  remote_ip_prefix  = "10.21.40.0/24"
+  remote_ip_prefix  = local.trusted_operator_cidr
   security_group_id = openstack_networking_secgroup_v2.service_ssh.id
 }
 
@@ -94,7 +95,7 @@ resource "openstack_networking_secgroup_rule_v2" "service_icmp" {
   direction         = "ingress"
   ethertype         = "IPv4"
   protocol          = "icmp"
-  remote_ip_prefix  = "10.21.40.0/24"
+  remote_ip_prefix  = local.trusted_operator_cidr
   security_group_id = openstack_networking_secgroup_v2.service_ssh.id
 }
 
@@ -126,7 +127,7 @@ resource "openstack_networking_secgroup_rule_v2" "home_assistant_private_http" {
 
 resource "openstack_networking_secgroup_v2" "home_assistant_provider" {
   name        = "home-assistant-provider"
-  description = "Home Assistant UI and discovery from the trusted provider LAN"
+  description = "Home Assistant UI and discovery from the trusted operator LAN"
   tags        = local.tags
 }
 
@@ -136,7 +137,7 @@ resource "openstack_networking_secgroup_rule_v2" "home_assistant_provider_ssh" {
   protocol          = "tcp"
   port_range_min    = 22
   port_range_max    = 22
-  remote_ip_prefix  = "10.21.40.0/24"
+  remote_ip_prefix  = local.trusted_operator_cidr
   security_group_id = openstack_networking_secgroup_v2.home_assistant_provider.id
 }
 
@@ -146,7 +147,7 @@ resource "openstack_networking_secgroup_rule_v2" "home_assistant_provider_http" 
   protocol          = "tcp"
   port_range_min    = 8123
   port_range_max    = 8123
-  remote_ip_prefix  = "10.21.40.0/24"
+  remote_ip_prefix  = local.trusted_operator_cidr
   security_group_id = openstack_networking_secgroup_v2.home_assistant_provider.id
 }
 
@@ -156,7 +157,7 @@ resource "openstack_networking_secgroup_rule_v2" "home_assistant_provider_mdns" 
   protocol          = "udp"
   port_range_min    = 5353
   port_range_max    = 5353
-  remote_ip_prefix  = "10.21.40.0/24"
+  remote_ip_prefix  = local.trusted_operator_cidr
   security_group_id = openstack_networking_secgroup_v2.home_assistant_provider.id
 }
 
@@ -166,7 +167,7 @@ resource "openstack_networking_secgroup_rule_v2" "home_assistant_provider_ssdp" 
   protocol          = "udp"
   port_range_min    = 1900
   port_range_max    = 1900
-  remote_ip_prefix  = "10.21.40.0/24"
+  remote_ip_prefix  = local.trusted_operator_cidr
   security_group_id = openstack_networking_secgroup_v2.home_assistant_provider.id
 }
 
@@ -174,7 +175,7 @@ resource "openstack_networking_secgroup_rule_v2" "home_assistant_provider_icmp" 
   direction         = "ingress"
   ethertype         = "IPv4"
   protocol          = "icmp"
-  remote_ip_prefix  = "10.21.40.0/24"
+  remote_ip_prefix  = local.trusted_operator_cidr
   security_group_id = openstack_networking_secgroup_v2.home_assistant_provider.id
 }
 
@@ -335,7 +336,7 @@ resource "openstack_networking_floatingip_v2" "hermes" {
   address     = "10.21.40.121"
   port_id     = openstack_networking_port_v2.hermes.id
   fixed_ip    = "192.168.80.11"
-  description = "Hermes administration from the trusted provider LAN"
+  description = "Hermes administration from the trusted operator LAN"
   tags        = local.tags
 
   lifecycle {
@@ -349,7 +350,7 @@ output "hermes_private_address" {
 }
 
 output "hermes_provider_address" {
-  description = "Hermes floating address on the trusted provider LAN"
+  description = "Hermes floating address reachable from the trusted operator LAN"
   value       = openstack_networking_floatingip_v2.hermes.address
 }
 
