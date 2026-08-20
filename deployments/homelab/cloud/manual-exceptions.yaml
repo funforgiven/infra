@@ -91,13 +91,13 @@ exceptions:
     review_interval: monthly
     exit_criterion: Remove the first-admin portion when Navidrome exposes a supported declarative bootstrap; retain per-user consent while the upstream services require interactive grants.
   - id: ghcr-media-publisher-credential
-    resource: GitHub Container Registry writer used to publish the Nix-built media importer
+    resource: GitHub Container Registry writer and initial public visibility for the Nix-built media importer
     owner: funforgiven
-    rationale: GHCR requires an externally issued publisher credential before a locally built OCI archive can be uploaded.
-    procedure: Issue the narrowest packages-write credential, store it only in a mode-0400 or mode-0600 containers auth file, and run the signed-commit promotion app.
+    rationale: GHCR requires an externally issued publisher credential before a locally built OCI archive can be uploaded, creates personal-account packages as private, and exposes no supported declarative interface for changing that package visibility. The workload intentionally has no long-lived registry pull credential.
+    procedure: Issue the narrowest packages-write credential, store it only in a mode-0400 or mode-0600 containers auth file, and run the signed-commit promotion app. On the first publish only, open the media-importer package settings, change its visibility to Public, confirm the irreversible transition, and verify an anonymous digest-pinned pull before activation.
     secret_handling: The credential never enters Nix, Git, an image, a command argument, an OpenTofu value, or a log; the promotion app receives only the auth-file path.
     backup: The image is reproducible from the signed source revision; recover by rotating the publisher credential and rebuilding rather than preserving the token.
-    drift_probe: Compare non-secret package, version, revision tag, and digest metadata to versions.yaml and the deployed manifest.
+    drift_probe: Compare public package visibility plus non-secret package, version, revision tag, and digest metadata to versions.yaml and the deployed manifest, including an anonymous digest-pinned inspection.
     review_interval: monthly
     exit_criterion: Replace with repository workload identity when an approved CI publisher is introduced.
   - id: home-assistant-runtime-registry

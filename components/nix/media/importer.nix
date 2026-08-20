@@ -370,6 +370,10 @@ _: {
             "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
             "TMPDIR=/tmp"
           ];
+          Labels = {
+            "org.opencontainers.image.description" = "Declarative media import and release-watching jobs";
+            "org.opencontainers.image.source" = "https://github.com/funforgiven/infra";
+          };
           User = "1000:1000";
           WorkingDir = "/state";
         };
