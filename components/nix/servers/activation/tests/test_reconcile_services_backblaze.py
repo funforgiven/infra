@@ -55,6 +55,7 @@ def backup_document() -> dict:
         "deleteFiles",
         "listAllBucketNames",
         "listFiles",
+        "readBuckets",
         "readFiles",
         "writeFiles",
     ]
@@ -171,6 +172,9 @@ class ServicesBackblazeReconcilerTest(unittest.TestCase):
         self.assertEqual(
             {spec.secret_file for spec in self.contract.keys},
             {Path(RUNTIME_FILE), Path(BACKUPS_FILE)},
+        )
+        self.assertTrue(
+            all("readBuckets" in spec.capabilities for spec in self.contract.keys)
         )
 
     def test_apply_creates_and_encrypts_without_reporting_material(self) -> None:

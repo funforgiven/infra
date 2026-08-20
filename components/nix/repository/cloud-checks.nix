@@ -425,6 +425,7 @@
                 "deleteFiles",
                 "listAllBucketNames",
                 "listFiles",
+                "readBuckets",
                 "readFiles",
                 "writeFiles",
             }

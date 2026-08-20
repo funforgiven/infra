@@ -142,6 +142,7 @@ services:
       - deleteFiles
       - listAllBucketNames
       - listFiles
+      - readBuckets
       - readFiles
       - writeFiles
   hosts:
@@ -167,5 +168,6 @@ services:
     - deleteFiles
     - listAllBucketNames
     - listFiles
+    - readBuckets
     - readFiles
     - writeFiles
