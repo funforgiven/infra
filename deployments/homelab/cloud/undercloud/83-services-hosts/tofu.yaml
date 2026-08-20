@@ -4,7 +4,7 @@ metadata:
   name: services-hosts
   namespace: openstack
 spec:
-  suspend: true
+  suspend: false
   interval: 10m
   retryInterval: 1m
   approvePlan: auto
