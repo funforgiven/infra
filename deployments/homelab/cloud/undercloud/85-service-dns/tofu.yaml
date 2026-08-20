@@ -19,7 +19,7 @@ metadata:
   name: service-dns
   namespace: cert-manager
 spec:
-  suspend: true
+  suspend: false
   interval: 10m
   retryInterval: 1m
   approvePlan: auto
