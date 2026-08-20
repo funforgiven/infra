@@ -350,7 +350,7 @@
                 {
                     "kind": "Secret",
                     "name": "mail-edge-tofu-inputs",
-                    "varsKeys": ["management_cidrs"],
+                    "varsKeys": ["management_cidrs_json"],
                 }
             ]:
                 raise SystemExit("mail-edge Terraform input is not interface-scoped")
@@ -361,7 +361,7 @@
             if any(name.startswith("TF_VAR_") for name in mail_runner_environment):
                 raise SystemExit("mail-edge Terraform bypasses the varsFrom interface")
             if (
-                "--from-file=management_cidrs="
+                "--from-file=management_cidrs_json="
                 "/runtime-bootstrap/MAIL_MANAGEMENT_CIDRS_JSON"
                 not in reconcile_script
             ):
