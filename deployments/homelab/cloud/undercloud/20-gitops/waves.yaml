@@ -1272,7 +1272,7 @@ metadata:
   name: wave83-services-hosts
   namespace: flux-system
 spec:
-  suspend: true
+  suspend: false
   interval: 10m
   retryInterval: 1m
   timeout: 20m
