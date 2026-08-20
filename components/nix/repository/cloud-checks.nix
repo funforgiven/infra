@@ -295,6 +295,21 @@
             reconcile_pod = reconcile_cronjob["spec"]["jobTemplate"]["spec"][
                 "template"
             ]["spec"]
+            reconcile_container = next(
+                container
+                for container in reconcile_pod["containers"]
+                if container["name"] == "reconcile"
+            )
+            reconcile_environment = {
+                item["name"]: item.get("value")
+                for item in reconcile_container["env"]
+            }
+            if reconcile_environment.get("HOME") != "/tmp":
+                raise SystemExit("services reconciler needs a writable home")
+            if reconcile_environment.get("SHELL") != "/bin/sh":
+                raise SystemExit(
+                    "Magnum kubeconfig export needs an explicit shell"
+                )
             pod_security = reconcile_pod["securityContext"]
             if pod_security.get("runAsUser") != 65532 or not pod_security.get(
                 "runAsNonRoot"
