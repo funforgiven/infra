@@ -3,4 +3,6 @@ kind: Secret
 metadata:
   name: mail-edge-tofu-inputs
   namespace: openstack
+  annotations:
+    kustomize.toolkit.fluxcd.io/ssa: IfNotPresent
 type: Opaque
