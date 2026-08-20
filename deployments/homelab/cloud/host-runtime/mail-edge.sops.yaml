@@ -1,5 +1,6 @@
 schemaVersion: 1
-data: {}
+data:
+    STALWART_RESEND_API_KEY: ENC[AES256_GCM,data:uMdnxWz71RGCoxFys/RGibKSp7wY9EDJB9BHAAUZQnAC4Aup9P0u1+8UrflrkfcV,iv:KXGLErSEwuGqJ2Qkhj8mpnh/hu25nZnARIXSFggR44I=,tag:sGbyD7L+qxXOB8PZ9dPF7Q==,type:str]
 sops:
     age:
         - enc: |
@@ -12,6 +13,6 @@ sops:
             -----END AGE ENCRYPTED FILE-----
           recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-08-15T10:13:25Z"
-    mac: ENC[AES256_GCM,data:2tEQXmsb614YA+u7ZdWnFUWBGPo9MroIHIYDl1LpAwmt1j+irxoO4puX/3X/QKtaAHvx80nqRpxOLyS4ORrNGNnGvBSLuLj/WPXKxuOLEWpWs89R2506Qzgoln7+oDHtvVv352sC+8TxfmE5lwYYabcoFlVI5r23SzY9KgxJm6s=,iv:Y12jxVjDWKWuP/ZAw3wkj1UIRl5QW8cbHbszvKM4/ZI=,tag:8NPy+9ukGNWoSxPjASqZ0Q==,type:str]
+    lastmodified: "2026-08-20T21:28:15Z"
+    mac: ENC[AES256_GCM,data:OrkPGUXzE/HVR3Zbvrdi493gn0dBpw9Bmlc3wOW05K24ZTcQ0cClh89CCq+MsfTKI60lB1iMNAk/rO2dxa/kCcEG0XfdtX68xB+ZakbnO7Mp12rz1+jsS2LJm0SYABm/Vo/b4FGr3kRXCYMcH2UUho2Dq9vFya9tYFFUoeGF678=,iv:Cx2ve+hcHZFJQUvmt2pWKAv/7DiisSUBRm8fs0Ps2xo=,tag:PGuZC92CuFnJ+ofTxeEmMw==,type:str]
     version: 3.13.3
