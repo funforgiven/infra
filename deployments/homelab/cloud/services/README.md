@@ -3,14 +3,14 @@
 This directory is the Flux root for the Magnum workload cluster named
 `services-v1`. It is intentionally separate from the OpenStack undercloud and
 the CAPI management cluster: application failures, upgrades, browser workloads,
-and media jobs cannot consume control-plane capacity.
+and media workloads cannot consume control-plane capacity.
 
 ## Placement and trust boundaries
 
 | Boundary | Placement | Initial workloads |
 | --- | --- | --- |
 | OpenStack control plane | Existing undercloud | Keystone, Magnum, Cinder, Manila, Octavia, Flux controllers |
-| Services Kubernetes | Magnum, three 2-vCPU/4-GiB masters and two 4-vCPU/12-GiB workers | Karakeep, SearXNG, databases, Navidrome, acquisition workflow, monitoring |
+| Services Kubernetes | Magnum, three 2-vCPU/4-GiB masters and two 4-vCPU/12-GiB workers | Karakeep, SearXNG, databases, Navidrome, SFTPGo, monitoring |
 | Agent VM | Dedicated NixOS VM in the `services` project | Hermes Agent, Telegram conversation bot, direct OpenAI API runtime |
 | Home automation VM | Dedicated NixOS VM in the `services` project | Home Assistant and hardware/LAN integrations |
 | Mail edge | Dedicated Hetzner NixOS VM | Stalwart ingress and Resend-backed outbound delivery |
@@ -25,6 +25,27 @@ Karakeep full-text search is the only knowledge retrieval layer in the initial
 deployment. Vector databases, embeddings, Hindsight, and other semantic-memory
 services are deferred until Karakeep's own retrieval is satisfactory or measured
 usage demonstrates that a separate layer is justified.
+
+## Human identity policy
+
+ZITADEL is the central human identity provider wherever an application offers
+a compatible native OIDC flow. Karakeep uses its own declaratively managed
+ZITADEL client and disables password authentication. The existing central
+Grafana at `https://grafana.cloud.fahrican.com` also uses a separate ZITADEL
+client; the services cluster intentionally does not deploy a second Grafana.
+
+Protocol and device clients keep application-native authentication when OIDC
+would break their supported flow. Hermes has no human web login: its private
+Telegram bot admits only the discovered allowed user, while its OpenAI and
+Karakeep credentials authenticate machine integrations. Alertmanager sends
+through the separate infrastructure bot and exposes no Telegram login.
+Navidrome keeps native credentials for Subsonic clients such as Symfonium,
+Home Assistant keeps its supported local account and MFA flow, and the pinned
+Stalwart release keeps mail-client and recovery credentials. SFTPGo initially
+uses its generated, independently rotatable library credential so the direct
+upload path remains simple. These are deliberate boundaries, not a second IdP;
+reassess native OIDC during application upgrades without placing an auth proxy
+in front of protocol endpoints.
 
 ## Activation gates
 

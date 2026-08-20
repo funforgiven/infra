@@ -7,14 +7,13 @@ discovered numeric IDs directly to SOPS.
 
 ## Create the identities
 
-Open Telegram's verified `@BotFather` account. Run `/newbot` three times and
+Open Telegram's verified `@BotFather` account. Run `/newbot` twice and
 enter these exact pairs:
 
 | Role | BotFather name | Globally unique username |
 | --- | --- | --- |
 | Infrastructure alerts | `Fahrican Infra Alerts` | `fahrican_infra_alerts_bot` |
 | Hermes conversation | `Fahrican Hermes` | `fahrican_hermes_bot` |
-| Media acquisition | `Fahrican Media Watch` | `fahrican_media_watch_bot` |
 
 If a username is unavailable, stop and change the public username in
 `../telegram-bots.yaml` in a reviewed commit before creating that bot. Do not
@@ -26,7 +25,6 @@ intake file. Do not paste tokens into a shell command or this document:
 
 - `INFRA_TELEGRAM_BOT_TOKEN.key`
 - `HERMES_TELEGRAM_BOT_TOKEN.key`
-- `MEDIA_TELEGRAM_BOT_TOKEN.key`
 
 In `/mybots` → bot → Bot Settings, configure:
 
@@ -34,7 +32,6 @@ In `/mybots` → bot → Bot Settings, configure:
 | --- | --- | --- |
 | `@fahrican_infra_alerts_bot` | Enabled | Enabled |
 | `@fahrican_hermes_bot` | Disabled | Enabled/default |
-| `@fahrican_media_watch_bot` | Enabled | Enabled |
 
 Do not add commands, descriptions, short descriptions, or an avatar manually.
 The pinned reconciler applies the exact Git-declared name, description, short
@@ -43,26 +40,22 @@ deliberately has no avatar asset.
 
 ## Create the private targets
 
-Create two private Telegram groups with these exact, case-sensitive titles:
-
-1. `Fahrican Infra Alerts`; add `@fahrican_infra_alerts_bot`.
-2. `Fahrican Media Watch`; add `@fahrican_media_watch_bot`.
-
-The bots need permission to send messages but do not need administrator
-rights. Never convert either group to public and do not add unrelated bots.
-Hermes uses a direct private conversation, not either group.
+Create one private Telegram group named exactly `Fahrican Infra Alerts` and add
+`@fahrican_infra_alerts_bot`. The bot needs permission to send messages but
+does not need administrator rights. Never convert the group to public and do
+not add unrelated bots. Hermes uses a direct private conversation, not the
+alerts group.
 
 Enroll each token with the no-echo tool. Then, with no extra messages between
 these actions and reconciliation:
 
 1. Send exactly `/activate` in `Fahrican Infra Alerts`.
 2. Send exactly `/activate` in the direct chat with `@fahrican_hermes_bot`.
-3. Send exactly `/activate` in `Fahrican Media Watch`.
-4. Run `nix run .#reconcile-services-telegram -- apply`.
+3. Run `nix run .#reconcile-services-telegram -- apply`.
 
 Group privacy still delivers the explicit command. The reconciler requires
 exactly one matching update per bot, validates the expected username, chat
-type, and group title, applies metadata, encrypts the two group IDs plus the
+type, and group title, applies metadata, encrypts the alert group ID plus the
 Hermes private chat/user IDs into their routed SOPS documents, and acknowledges
 the consumed updates. It prints none of those values. If multiple matching
 updates exist, send no more commands; acknowledge or inspect the ambiguity

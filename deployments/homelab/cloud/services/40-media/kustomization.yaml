@@ -4,8 +4,6 @@ resources:
   - storage.yaml
   - sftpgo.yaml
   - navidrome.yaml
-  - importer.yaml
-  - release-watcher.yaml
   - routes.yaml
   - monitoring.yaml
   - network-policy.yaml

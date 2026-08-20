@@ -159,8 +159,6 @@ data:
     require_file INFRA_TELEGRAM_CHAT_ID '^-?[0-9]+$' 1 32
     require_file B2_APPLICATION_KEY_ID '^[A-Za-z0-9]+$' 12 64
     require_file B2_APPLICATION_KEY '^[A-Za-z0-9/+_-]+={0,2}$' 20 128
-    require_file MEDIA_TELEGRAM_BOT_TOKEN '^[0-9]+:[A-Za-z0-9_-]+$' 32 256
-    require_file MEDIA_TELEGRAM_CHAT_ID '^-?[0-9]+$' 1 32
     require_file MEILI_MASTER_KEY '^[A-Za-z0-9/+_-]+={0,2}$' 32 256
     require_file NEXTAUTH_SECRET '^[A-Za-z0-9/+_-]+={0,2}$' 32 256
     require_file SEARXNG_SECRET '^[A-Za-z0-9/+_-]+={0,2}$' 32 256
@@ -443,29 +441,13 @@ data:
       --from-file=values.yaml=/tmp/velero-values.yaml \
       --dry-run=client -o yaml | "$kubectl" apply -f -
 
-    if test -r /runtime-bootstrap/RELEASE_WATCHER_KARAKEEP_API_KEY; then
-      require_file RELEASE_WATCHER_KARAKEEP_API_KEY '^[A-Za-z0-9._-]+$' 32 512
-      "$kubectl" -n media create secret generic media-runtime \
-        --from-file=TELEGRAM_BOT_TOKEN=/runtime-bootstrap/MEDIA_TELEGRAM_BOT_TOKEN \
-        --from-file=TELEGRAM_CHAT_ID=/runtime-bootstrap/MEDIA_TELEGRAM_CHAT_ID \
-        --from-file=ND_LASTFM_APIKEY=/runtime-bootstrap/ND_LASTFM_APIKEY \
-        --from-file=ND_LASTFM_SECRET=/runtime-bootstrap/ND_LASTFM_SECRET \
-        --from-file=ND_PASSWORDENCRYPTIONKEY=/runtime-bootstrap/ND_PASSWORDENCRYPTIONKEY \
-        --from-file=RELEASE_WATCHER_KARAKEEP_API_KEY=/runtime-bootstrap/RELEASE_WATCHER_KARAKEEP_API_KEY \
-        --from-file=SFTPGO_ADMIN_PASSWORD=/runtime-bootstrap/SFTPGO_ADMIN_PASSWORD \
-        --from-file=SFTPGO_USER_PASSWORD=/runtime-bootstrap/SFTPGO_USER_PASSWORD \
-        --dry-run=client -o yaml | "$kubectl" apply -f -
-    else
-      "$kubectl" -n media create secret generic media-runtime \
-        --from-file=TELEGRAM_BOT_TOKEN=/runtime-bootstrap/MEDIA_TELEGRAM_BOT_TOKEN \
-        --from-file=TELEGRAM_CHAT_ID=/runtime-bootstrap/MEDIA_TELEGRAM_CHAT_ID \
-        --from-file=ND_LASTFM_APIKEY=/runtime-bootstrap/ND_LASTFM_APIKEY \
-        --from-file=ND_LASTFM_SECRET=/runtime-bootstrap/ND_LASTFM_SECRET \
-        --from-file=ND_PASSWORDENCRYPTIONKEY=/runtime-bootstrap/ND_PASSWORDENCRYPTIONKEY \
-        --from-file=SFTPGO_ADMIN_PASSWORD=/runtime-bootstrap/SFTPGO_ADMIN_PASSWORD \
-        --from-file=SFTPGO_USER_PASSWORD=/runtime-bootstrap/SFTPGO_USER_PASSWORD \
-        --dry-run=client -o yaml | "$kubectl" apply -f -
-    fi
+    "$kubectl" -n media create secret generic media-runtime \
+      --from-file=ND_LASTFM_APIKEY=/runtime-bootstrap/ND_LASTFM_APIKEY \
+      --from-file=ND_LASTFM_SECRET=/runtime-bootstrap/ND_LASTFM_SECRET \
+      --from-file=ND_PASSWORDENCRYPTIONKEY=/runtime-bootstrap/ND_PASSWORDENCRYPTIONKEY \
+      --from-file=SFTPGO_ADMIN_PASSWORD=/runtime-bootstrap/SFTPGO_ADMIN_PASSWORD \
+      --from-file=SFTPGO_USER_PASSWORD=/runtime-bootstrap/SFTPGO_USER_PASSWORD \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
     "$kubectl" apply -f /config/sync.yaml
     "$flux" reconcile source git flux-system --timeout=5m
     "$flux" reconcile kustomization flux-system --with-source --timeout=20m

@@ -68,7 +68,7 @@ cluster rebuild; rotate them only as an explicit recipient migration.
 Ignored `*.key` files are a one-way intake boundary, not a secret store. Keep
 each file mode `0600`, put exactly one key in it, and never paste a value into a
 command, chat, commit, or log. The credential-final services workflow accepts
-only these ten externally issued keys:
+only these nine externally issued keys:
 
 | Intake file | Issuer and purpose |
 | --- | --- |
@@ -77,7 +77,6 @@ only these ten externally issued keys:
 | `HCLOUD_TOKEN.key` | Dedicated Hetzner mail-edge project token |
 | `INFRA_TELEGRAM_BOT_TOKEN.key` | Infrastructure-alert bot token |
 | `HERMES_TELEGRAM_BOT_TOKEN.key` | Private Hermes bot token |
-| `MEDIA_TELEGRAM_BOT_TOKEN.key` | Media-watch bot token |
 | `ND_LASTFM_APIKEY.key` | Navidrome Last.fm application key |
 | `ND_LASTFM_SECRET.key` | Navidrome Last.fm application secret |
 | `OPENAI_API_KEY.key` | Independently revocable project key used only by Hermes |
@@ -92,8 +91,8 @@ CIDR is independently discovered. Stalwart and backup passwords are generated
 locally. The operator owns the OpenAI project permissions and hard spend limit
 in the OpenAI dashboard; the generic enrollment app writes `OPENAI_API_KEY`
 directly from its one-way intake file into the admin-only Hermes SOPS document.
-No OpenAI Admin credential enters this repository. Karakeep's two
-integration keys are created by the operator after the
+No OpenAI Admin credential enters this repository. Karakeep's Hermes
+integration key is created by the operator after the
 service is live because Karakeep currently exposes that lifecycle only in its
 UI. None of those derived values has or needs a hand-filled intake file.
 

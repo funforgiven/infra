@@ -171,8 +171,8 @@ class RuntimeContract:
         return (*self.credentials, *self.generated, *self.provisioned)
 
     def _validate(self) -> None:
-        if self.document.get("schemaVersion") != 6:
-            raise ContractError("runtime contract schemaVersion must be 6")
+        if self.document.get("schemaVersion") != 7:
+            raise ContractError("runtime contract schemaVersion must be 7")
         names = [credential.name for credential in self.managed]
         invalid = sorted(name for name in names if not KEY_PATTERN.fullmatch(name))
         if invalid:

@@ -20,13 +20,12 @@ Flux Kustomizations are authoritative, and a live-only change would be drift.
 
 ## 1. Issue credentials without broadening trust
 
-Supply only the ten externally issued values listed in
-`secrets/README.md`: the Backblaze master pair, dedicated Hetzner token, three
+Supply only the nine externally issued values listed in
+`secrets/README.md`: the Backblaze master pair, dedicated Hetzner token, two
 Telegram bot tokens, Last.fm pair, Resend administration key, and dedicated
-Hermes OpenAI API key. Keep the GHCR publishing credential in a mode-0400
-or mode-0600 containers auth file outside the repository. Do not issue or
-prepare placeholders for derived application keys, numeric Telegram targets,
-the operator CIDR, or locally generated passwords.
+Hermes OpenAI API key. Do not issue or prepare placeholders for derived
+application keys, numeric Telegram targets, the operator CIDR, or locally
+generated passwords.
 
 Enroll each external runtime value with the no-echo app:
 
@@ -144,16 +143,10 @@ credentials and run:
 nix run .#promote-service-images
 ```
 
-With `REGISTRY_AUTH_FILE` pointing to the root-only GHCR auth file, run:
-
-```console
-nix run .#promote-media-importer
-```
-
-The commands verify the source commit, publish immutable artifacts, and update
-the host revision plus all media image digest pins. Review those non-secret
-changes, run the full checks, create a second signed Conventional Commit, and
-push it directly to `main`.
+The command verifies the source commit, publishes immutable host artifacts,
+and updates the host revision. Review those non-secret changes, run the full
+checks, create a second signed Conventional Commit, and push it directly to
+`main`.
 
 Run the promoted-host preflight before advancing the host wave:
 
@@ -162,7 +155,7 @@ nix run .#services-activation-preflight -- hosts
 ```
 
 It retains the same two provider deferrals as the foundation phase and also
-requires both immutable image promotions.
+requires the immutable service-host image promotion.
 
 ## 4. Standalone hosts
 
@@ -173,8 +166,8 @@ profiles. Enroll the `hermes-openai` profile;
 it decrypts only `OPENAI_API_KEY` in memory and streams it into the dedicated
 root-only OpenAI environment file. Leave Hermes condition-gated until Karakeep
 is live, because its independently revocable API key cannot be issued earlier.
-The infrastructure Telegram bot is reused for host failure alerts; Hermes and
-media retain their separate bots and chats.
+The infrastructure Telegram bot is reused for host failure alerts; Hermes
+retains its separate private bot and chat.
 
 Activate stage `mail`, confirm its retained address and reverse DNS, then
 perform the explicitly destructive nixos-anywhere install against that exact
@@ -197,18 +190,15 @@ next stage:
 3. `backup-policy`
 4. `knowledge`
 
-After Karakeep is live, the operator creates two independently revocable API
-keys in its UI, one for Hermes and one for the release watcher, and writes each
-directly into its declared `provisionedSecrets` SOPS target without creating
-an ignored intake placeholder. Materialize the `hermes-integrations` profile
-with the host app, and rebuild Hermes so its
-managed environment is reseeded from the separate OpenAI and integration
-files. Create and push a signed credential commit, wait for
-`wave81-services-foundation`, and wait for or operationally trigger the
-already-declared services-cluster CronJob so `media-runtime` gains its key.
-This provider-provisioned ordering breaks the otherwise impossible dependency
-on a not-yet-running Karakeep instance. Hermes then starts directly with its
-API and integration credentials.
+After Karakeep is live, the operator creates an independently revocable Hermes
+API key in its UI and writes it directly into the declared
+`provisionedSecrets` SOPS target without creating an ignored intake
+placeholder. Materialize the `hermes-integrations` profile with the host app,
+then create and push a signed credential commit. Rebuild Hermes so its managed
+environment is reseeded from the separate OpenAI and integration files. This
+provider-provisioned ordering breaks the otherwise impossible dependency on a
+not-yet-running Karakeep instance. Hermes then starts directly with its API and
+integration credentials.
 
 Run the final repository gate:
 
@@ -224,12 +214,12 @@ Then activate the remaining stages:
 
 Confirm the Velero storage location is Available, complete the isolated restore
 qualification, and inspect one daily backup before accepting application data.
-Then complete only the documented UI exceptions: Karakeep integration keys,
+Then complete only the documented UI exceptions: the Karakeep integration key,
 Navidrome first admin and scrobbling grants, Stalwart directory objects, and
 Home Assistant UI-only integrations. Every accepted UI change is followed by
 an encrypted backup and a drift-record update.
 
 The final synthetic wave probes every private HTTP route, public mail ports,
 Hermes/Home Assistant node exporters, and the last successful host Restic
-timestamp. Purchases remain manual; the release watcher creates Karakeep cards
-and notifications but never authenticates to Bandcamp or OTOTOY.
+timestamp. Purchases and discovery remain manual; purchased albums are uploaded
+directly through SFTPGo and then scanned by Navidrome.

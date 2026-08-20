@@ -21,20 +21,6 @@ spec:
   groups:
     - name: media
       rules:
-        - alert: MediaImportFailed
-          expr: >-
-            max by (namespace) (
-              kube_job_status_failed{
-                namespace="media",
-                job_name=~"media-import-.*"
-              }
-            ) > 0
-          for: 5m
-          labels:
-            severity: warning
-          annotations:
-            summary: The purchased-music import job failed
-            description: Inspect the media-import Job without printing mounted secret data.
         - alert: NavidromeUnavailable
           expr: up{namespace="media",service="navidrome"} == 0
           for: 10m

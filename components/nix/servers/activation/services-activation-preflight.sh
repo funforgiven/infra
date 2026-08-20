@@ -47,12 +47,6 @@ done
 runtime-contract "${verification_arguments[@]}" >/dev/null
 
 if [[ "$require_promotions" == true ]]; then
-  if rg --quiet 'sha256:0{64}' \
-    deployments/homelab/cloud/services/40-media \
-    deployments/homelab/cloud/versions.yaml; then
-    echo 'The media image has not passed signed-revision promotion.' >&2
-    exit 1
-  fi
   if rg --quiet 'value: "0{40}"' \
     deployments/homelab/cloud/undercloud/83-services-hosts/tofu.yaml; then
     echo 'The service-host images have not passed signed-revision promotion.' >&2
