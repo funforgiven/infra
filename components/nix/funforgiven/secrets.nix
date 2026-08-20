@@ -129,21 +129,41 @@ let
     let
       allowedSignersFile = "${config.home.homeDirectory}/.ssh/allowed_signers";
       githubPublicKey = user.accounts.github.sshPublicKey;
-      cloudHostSshSettings =
-        lib.mapAttrs
-          (_: hostName: {
-            HostName = hostName;
-            User = "ubuntu";
-            IdentityAgent = "none";
-            IdentitiesOnly = true;
-            IdentityFile = secretPaths.github-ssh-key;
-            StrictHostKeyChecking = "yes";
-          })
-          {
-            asiago = "10.21.20.12";
-            pecorino = "10.21.20.10";
-            taleggio = "10.21.20.11";
-          };
+      mkManagedHostSshSettings =
+        {
+          hostName,
+          user,
+        }:
+        {
+          HostName = hostName;
+          User = user;
+          IdentityAgent = "none";
+          IdentitiesOnly = true;
+          IdentityFile = secretPaths.github-ssh-key;
+          StrictHostKeyChecking = "yes";
+        };
+      managedHostSshSettings = lib.mapAttrs (_: mkManagedHostSshSettings) {
+        asiago = {
+          hostName = "10.21.20.12";
+          user = "ubuntu";
+        };
+        hermes = {
+          hostName = "10.21.40.121";
+          user = "funforgiven";
+        };
+        home-assistant = {
+          hostName = "10.21.40.120";
+          user = "funforgiven";
+        };
+        pecorino = {
+          hostName = "10.21.20.10";
+          user = "ubuntu";
+        };
+        taleggio = {
+          hostName = "10.21.20.11";
+          user = "ubuntu";
+        };
+      };
       context7McpLauncher = mkSecretMcpLauncher {
         name = "context7-mcp";
         package = pkgs.context7-mcp;
@@ -249,7 +269,7 @@ let
               };
               "*".IdentityAgent = "none";
             }
-            // cloudHostSshSettings;
+            // managedHostSshSettings;
           };
         };
       };

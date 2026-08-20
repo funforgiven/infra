@@ -18,6 +18,20 @@
     ],
     "publicKey": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC9p5NSzw5ZDgnT22vaFWA3wnmGVRbQtpJqDy4unKdt7CQsXJ0eldwsrp8eZ+fHTeHjxagp4m0WdsC7ZwXQtXYX/VX6qrrxp4TkLNBho87fNm9+M2P/KmrJ7DGzcsd/NnA8AhMEpaYRUPpBOXaWI+gXUMjOPTmdrKwxxkIeJ4Iy6D75Vl/To/MdFnpBAsJS6C7jbBd5uA1KK4SbMegHbZ6CQth/qs1nLxMftELOy4QYDmxzccUPRouvMslO+GrPPBDOACyuvPzOwHFw74hriudMNDDPmYAjcMZnJhch3/p7i03pHNXSZtJROoPshXsYq4uoGMdxTjmE+WXfFX5aAx3z"
   },
+  "hermes": {
+    "hostNames": [
+      "10.21.40.121",
+      "hermes"
+    ],
+    "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDFvoeqOsNYnRcvhMFIxB4E5Bkww714Xt5epAFQS8q5x"
+  },
+  "home-assistant": {
+    "hostNames": [
+      "10.21.40.120",
+      "home-assistant"
+    ],
+    "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFbRbwGXKunJLZ4jrRO2ysZZCIJbY8bRyjtsUqMbua1L"
+  },
   "pecorino": {
     "hostNames": [
       "10.21.20.10",
