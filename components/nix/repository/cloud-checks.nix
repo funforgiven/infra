@@ -108,6 +108,27 @@
                 expected_address = f'{address}/{variables["cloud_host_prefix_length"]}'
                 if expected_address not in management["addresses"]:
                     raise SystemExit(f"{path.name} has the wrong management address")
+
+            role = pathlib.Path("components/cloud/host-automation/roles/cloud_host")
+            defaults = yaml.safe_load((role / "defaults/main.yml").read_text())
+            if defaults["cloud_libvirt_qemu_uid"] != 42424:
+                raise SystemExit("containerized QEMU UID contract changed")
+            if "acl" not in defaults["cloud_packages"]:
+                raise SystemExit("KVM access policy requires the acl package")
+            kvm_rule = (role / "templates/cloud-kvm.rules.j2").read_text()
+            expected_acl = "setfacl -m u:{{ cloud_libvirt_qemu_uid }}:rw /dev/kvm"
+            if expected_acl not in kvm_rule or 'MODE="0660"' not in kvm_rule:
+                raise SystemExit("KVM udev policy is not least privilege")
+            kernel_tasks = yaml.safe_load((role / "tasks/kernel.yml").read_text())
+            task_names = {task.get("name") for task in kernel_tasks}
+            required_tasks = {
+                "Check that the containerized QEMU UID is host-local unused",
+                "Persist least-privilege KVM access for containerized QEMU",
+                "Reconcile the active KVM device policy",
+                "Require containerized QEMU access without world-writable KVM",
+            }
+            if not required_tasks <= task_names:
+                raise SystemExit("KVM access reconciliation contract is incomplete")
             PY
             (
               cd components/cloud/network-automation
