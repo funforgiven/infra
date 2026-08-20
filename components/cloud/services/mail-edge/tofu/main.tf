@@ -11,13 +11,13 @@ terraform {
 
 provider "hcloud" {}
 
-variable "management_cidrs" {
-  description = "Public CIDRs permitted to bootstrap and administer the mail edge over SSH"
-  type        = list(string)
+variable "management_cidrs_json" {
+  description = "JSON-encoded public CIDRs permitted to bootstrap and administer the mail edge over SSH"
+  type        = string
 
   validation {
-    condition = length(var.management_cidrs) > 0 && alltrue([
-      for cidr in var.management_cidrs :
+    condition = length(try(tolist(jsondecode(var.management_cidrs_json)), [])) > 0 && alltrue([
+      for cidr in try(tolist(jsondecode(var.management_cidrs_json)), []) :
       can(cidrhost(cidr, 0)) && cidr != "203.0.113.255/32"
     ])
     error_message = "Every management entry must be an explicit valid CIDR, not a documentation sentinel."
@@ -25,6 +25,7 @@ variable "management_cidrs" {
 }
 
 locals {
+  management_cidrs = try(tolist(jsondecode(var.management_cidrs_json)), [])
   labels = {
     environment = "production"
     managed_by  = "opentofu"
@@ -58,7 +59,7 @@ resource "hcloud_firewall" "mail_edge" {
     direction   = "in"
     protocol    = "tcp"
     port        = "22"
-    source_ips  = var.management_cidrs
+    source_ips  = local.management_cidrs
     description = "SSH administration from explicit operator networks"
   }
 
