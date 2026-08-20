@@ -17,7 +17,7 @@ spec:
     # Activation requires an exact signed revision whose images have already
     # passed the promotion gate. This sentinel is intentionally undeployable.
     - name: image_revision
-      value: "0000000000000000000000000000000000000000"
+      value: "80ab8bcb18b757363d31317d61d8950b26271a6f"
   runnerPodTemplate:
     spec:
       envFrom:
