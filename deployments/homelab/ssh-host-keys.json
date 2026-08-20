@@ -32,6 +32,13 @@
     ],
     "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFbRbwGXKunJLZ4jrRO2ysZZCIJbY8bRyjtsUqMbua1L"
   },
+  "mail-edge": {
+    "hostNames": [
+      "62.238.112.111",
+      "mail-edge"
+    ],
+    "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP7i3ibgRKh3inTfxFG3v3czgAe/If0s1+55aSfDTCmQ"
+  },
   "pecorino": {
     "hostNames": [
       "10.21.20.10",
