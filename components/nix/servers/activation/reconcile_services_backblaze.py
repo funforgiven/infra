@@ -26,7 +26,14 @@ from sops_credentials import SopsCredentialError, SopsCredentialStore
 BACKUP_CONTRACT_PATH = Path("deployments/homelab/cloud/backup-destination.yaml")
 AUTHORIZE_URL = "https://api.backblazeb2.com/b2api/v4/b2_authorize_account"
 REQUIRED_CAPABILITIES = frozenset(
-    {"deleteFiles", "listAllBucketNames", "listFiles", "readFiles", "writeFiles"}
+    {
+        "deleteFiles",
+        "listAllBucketNames",
+        "listFiles",
+        "readBuckets",
+        "readFiles",
+        "writeFiles",
+    }
 )
 
 
