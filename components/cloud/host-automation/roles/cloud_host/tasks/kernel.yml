@@ -22,6 +22,75 @@
     state: present
   loop: "{{ (cloud_kernel_modules + [cloud_cpu_virtualization_module]) | unique }}"
 
+- name: Check that the containerized QEMU UID is host-local unused
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/getent
+      - passwd
+      - "{{ cloud_libvirt_qemu_uid }}"
+  register: cloud_libvirt_qemu_host_identity
+  changed_when: false
+  failed_when: false
+
+- name: Require an isolated containerized QEMU UID
+  ansible.builtin.assert:
+    that:
+      - cloud_libvirt_qemu_uid | int > 0
+      - cloud_libvirt_qemu_host_identity.rc != 0
+    fail_msg: >-
+      The libvirt QEMU UID must be non-root and unused by host accounts.
+
+- name: Persist least-privilege KVM access for containerized QEMU
+  ansible.builtin.template:
+    src: cloud-kvm.rules.j2
+    dest: /etc/udev/rules.d/99-openstack-kvm.rules
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Reload KVM device policy
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/udevadm
+      - control
+      - --reload-rules
+  changed_when: false
+
+- name: Reconcile the active KVM device policy
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/udevadm
+      - trigger
+      - --action=change
+      - --sysname-match=kvm
+  changed_when: false
+
+- name: Wait for KVM device policy reconciliation
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/udevadm
+      - settle
+  changed_when: false
+
+- name: Read the effective KVM device ACL
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/getfacl
+      - --absolute-names
+      - --omit-header
+      - /dev/kvm
+  register: cloud_kvm_acl
+  changed_when: false
+
+- name: Require containerized QEMU access without world-writable KVM
+  ansible.builtin.assert:
+    that:
+      - "('user:' ~ (cloud_libvirt_qemu_uid | string) ~ ':rw-') in cloud_kvm_acl.stdout_lines"
+      - "'other::---' in cloud_kvm_acl.stdout_lines"
+    fail_msg: >-
+      The KVM ACL must grant only the declared containerized QEMU UID while
+      preserving a closed other-user mode.
+
 - name: Persist IOMMU boot parameters
   ansible.builtin.template:
     src: cloud-iommu.cfg.j2
