@@ -14,6 +14,12 @@ _: {
         matchConfig.MACAddress = "fa:16:3e:80:00:10";
         address = [ "10.21.40.120/24" ];
         networkConfig.LinkLocalAddressing = "no";
+        routes = [
+          {
+            Destination = "10.21.10.0/24";
+            Gateway = "10.21.40.1";
+          }
+        ];
       };
 
       services.home-assistant = {
