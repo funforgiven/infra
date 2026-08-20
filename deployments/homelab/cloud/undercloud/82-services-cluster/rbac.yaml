@@ -117,6 +117,37 @@ roleRef:
   name: resend-domain-output-writer
 ---
 apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: mail-edge-tofu-input-writer
+  namespace: openstack
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    resourceNames:
+      - mail-edge-tofu-inputs
+    verbs:
+      - get
+      - patch
+      - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mail-edge-tofu-input-writer
+  namespace: openstack
+subjects:
+  - kind: ServiceAccount
+    name: services-cluster-reconcile
+    namespace: openstack
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: mail-edge-tofu-input-writer
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: services-provisioning-output-reader

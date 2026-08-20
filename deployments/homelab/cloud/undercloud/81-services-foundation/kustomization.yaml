@@ -4,6 +4,7 @@ resources:
   - tofu-controller
   - signing-key.yaml
   - runtime.sops.yaml
+  - mail-edge-tofu-input.yaml
   - service-dns-input.yaml
   - resend-domain-output.yaml
   - backup.yaml

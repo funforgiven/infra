@@ -343,6 +343,58 @@
             if "OPENAI_API_KEY" in reconcile_script:
                 raise SystemExit("Hermes OpenAI key must not enter cluster reconciliation")
 
+            mail_tofu = yaml.safe_load(
+                (root / "undercloud/84-mail-edge/tofu.yaml").read_text()
+            )
+            if mail_tofu["spec"].get("varsFrom") != [
+                {
+                    "kind": "Secret",
+                    "name": "mail-edge-tofu-inputs",
+                    "varsKeys": ["management_cidrs"],
+                }
+            ]:
+                raise SystemExit("mail-edge Terraform input is not interface-scoped")
+            mail_runner_environment = {
+                item["name"]
+                for item in mail_tofu["spec"]["runnerPodTemplate"]["spec"]["env"]
+            }
+            if any(name.startswith("TF_VAR_") for name in mail_runner_environment):
+                raise SystemExit("mail-edge Terraform bypasses the varsFrom interface")
+            if (
+                "--from-file=management_cidrs="
+                "/runtime-bootstrap/MAIL_MANAGEMENT_CIDRS_JSON"
+                not in reconcile_script
+            ):
+                raise SystemExit("mail-edge Terraform input is not reconciled in memory")
+            foundation = yaml.safe_load(
+                (
+                    root
+                    / "undercloud/81-services-foundation/kustomization.yaml"
+                ).read_text()
+            )
+            if "mail-edge-tofu-input.yaml" not in foundation["resources"]:
+                raise SystemExit("mail-edge Terraform input target is not predeclared")
+            reconcile_rbac = list(
+                yaml.safe_load_all(
+                    (root / "undercloud/82-services-cluster/rbac.yaml").read_text()
+                )
+            )
+            mail_input_role = next(
+                document
+                for document in reconcile_rbac
+                if document["kind"] == "Role"
+                and document["metadata"]["name"] == "mail-edge-tofu-input-writer"
+            )
+            if mail_input_role["rules"] != [
+                {
+                    "apiGroups": [""],
+                    "resources": ["secrets"],
+                    "resourceNames": ["mail-edge-tofu-inputs"],
+                    "verbs": ["get", "patch", "update"],
+                }
+            ]:
+                raise SystemExit("mail-edge Terraform input writer is over-privileged")
+
             runtime = yaml.safe_load(
                 (root / "undercloud/81-services-foundation/runtime.sops.yaml").read_text()
             )

@@ -300,6 +300,13 @@ data:
       KUBECONFIG="$undercloud_kubeconfig" \
         "$kubectl" -n openstack apply -f -
 
+    KUBECONFIG="$undercloud_kubeconfig" \
+      "$kubectl" -n openstack create secret generic mail-edge-tofu-inputs \
+      --from-file=management_cidrs=/runtime-bootstrap/MAIL_MANAGEMENT_CIDRS_JSON \
+      --dry-run=client -o yaml | \
+      KUBECONFIG="$undercloud_kubeconfig" \
+        "$kubectl" -n openstack apply -f -
+
     if KUBECONFIG="$undercloud_kubeconfig" \
       "$kubectl" -n openstack get secret mail-edge-outputs >/dev/null 2>&1; then
       KUBECONFIG="$undercloud_kubeconfig" \
