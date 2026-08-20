@@ -27,15 +27,3 @@ bots:
     outputs:
       chatCredential: HERMES_TELEGRAM_HOME_CHANNEL
       allowedUsersCredential: HERMES_TELEGRAM_ALLOWED_USERS
-  media:
-    name: Fahrican Media Watch
-    username: fahrican_media_watch_bot
-    description: Private Bandcamp, OTOTOY, J-pop, and anison release, purchase, and media-import notifications.
-    shortDescription: Private J-pop and anison release alerts.
-    tokenCredential: MEDIA_TELEGRAM_BOT_TOKEN
-    activation:
-      command: /activate
-      chatType: group
-      chatTitle: Fahrican Media Watch
-    outputs:
-      chatCredential: MEDIA_TELEGRAM_CHAT_ID

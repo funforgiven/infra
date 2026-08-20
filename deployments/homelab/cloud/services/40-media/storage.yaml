@@ -27,19 +27,6 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: media-importer-state
-  namespace: media
-spec:
-  accessModes:
-    - ReadWriteOnce
-  storageClassName: rbd1
-  resources:
-    requests:
-      storage: 5Gi
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
   name: sftpgo-data
   namespace: media
 spec:
@@ -49,16 +36,3 @@ spec:
   resources:
     requests:
       storage: 5Gi
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: music-release-watcher-state
-  namespace: media
-spec:
-  accessModes:
-    - ReadWriteOnce
-  storageClassName: rbd1
-  resources:
-    requests:
-      storage: 1Gi

@@ -5,14 +5,13 @@ metadata:
   namespace: openstack
 data:
   required-keys.yaml: |
-    schemaVersion: 6
+    schemaVersion: 7
     secret: services-runtime-bootstrap
     secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
     credentials:
       infrastructure:
         - INFRA_TELEGRAM_BOT_TOKEN
       media:
-        - MEDIA_TELEGRAM_BOT_TOKEN
         - ND_LASTFM_APIKEY
         - ND_LASTFM_SECRET
       mailProvisioning:
@@ -63,11 +62,6 @@ data:
         secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
         keys:
           - INFRA_TELEGRAM_CHAT_ID
-      telegram-media:
-        provisioner: reconcile-services-telegram
-        secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
-        keys:
-          - MEDIA_TELEGRAM_CHAT_ID
       telegram-hermes:
         provisioner: reconcile-services-telegram
         secretFile: deployments/homelab/cloud/host-runtime/hermes.sops.yaml
@@ -89,11 +83,6 @@ data:
         secretFile: deployments/homelab/cloud/host-runtime/hermes.sops.yaml
         keys:
           - HERMES_KARAKEEP_API_KEY
-      karakeep-media:
-        provisioner: karakeep-ui
-        secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
-        keys:
-          - RELEASE_WATCHER_KARAKEEP_API_KEY
     policy:
       semanticRetrieval: deferred
       initialRetrieval: karakeep-full-text

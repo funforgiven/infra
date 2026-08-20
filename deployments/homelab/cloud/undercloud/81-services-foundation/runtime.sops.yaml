@@ -11,12 +11,10 @@ data:
     MAIL_MANAGEMENT_CIDRS_JSON: ENC[AES256_GCM,data:VfPYg9ifBZs26LrRtA+Te46WUhh2HRX30KsWeQ==,iv:5fv/o1eL2pRaqFuwXjDlB5dHkIygRLCyYP5upI3LSRI=,tag:lPs89x+5+O0mYjY+jnPJrQ==,type:str]
     HCLOUD_TOKEN: ENC[AES256_GCM,data:FjrQ3rUKE2CRwZ7IepUebJwypbkxvlGjYDM3NX3GP4Eu2OvyVfOQ/ngNpy5JyS/eaArKTfF+S13dzrgd2BsOLkYiazgARiyR82zyupVJHcThSk4UVuMB9A==,iv:AbOGZAn7hY1qP2wjbzrG4VHPpd5dOvLY8cEdQmmGb9s=,tag:C8TdIVUv0BsBl6rmejtfOQ==,type:str]
     INFRA_TELEGRAM_BOT_TOKEN: ENC[AES256_GCM,data:45wncBQWaCh2M3WH7OOEot2wRyJMBF5qy/UVKV1/bNcMr3q3pUAQoI9aIWrECMZ1Z9namGHE2bThilT3s7aU7w==,iv:I0WYfrir2Ce5lQ4KeydrH2+fOImKs8K/psujrmmltDs=,tag:Wa0CN6atG/SUERn0AfPu/A==,type:str]
-    MEDIA_TELEGRAM_BOT_TOKEN: ENC[AES256_GCM,data:kVrwK7gKF/XPArafhoW9gtPwIdzbFbWyKtGL73DAfGRUzFS32gEXL1y1T9+Ii0Egt4lt1De2cMFITm0J6sEdFA==,iv:6G07mMra++Dd/Aqg16tPvRVbj+KFkGW6afCgpC8WFdc=,tag:ZxEcYsvfzFVnVK0CmXnzlg==,type:str]
     ND_LASTFM_APIKEY: ENC[AES256_GCM,data:DT2gxNxGgn3DIOAI3/CDDcptDUYZ8ALNNjIlQ6b93kaFdomwHxiifS4ZKek=,iv:XDkzzHAv05cf5Q8XWPWLQl/eaWHQ/Ee/4I0qVXpuspc=,tag:8Ay3MV2B6/OtgjMDHsRIsA==,type:str]
     ND_LASTFM_SECRET: ENC[AES256_GCM,data:okSf1EvJud0arP9DAr9IgwWy7vNvZ9B5oucYnI/CGaxYu0XmwFWjWvaIpPs=,iv:eEsIpA+TDkT0iLLzLtvSHLMQFDQzgbA6ZQDmXUip0oE=,tag:ph0MGiSlXepbDFTn1y/zcw==,type:str]
     RESEND_ADMIN_API_KEY: ENC[AES256_GCM,data:QKoLdViqlYqmlttZmobLiSUMM1EM98WOzSe63ryfHj+BxVIIowtwMHgpZRDjY1MK,iv:jen7NaTE9nnz4ja89gRbthcQoldUJ9BksPh72FSUTdk=,tag:XbocqjKRcEjbggWEo0N9CQ==,type:str]
     INFRA_TELEGRAM_CHAT_ID: ENC[AES256_GCM,data:ufFK9BvSURhArLic8yMnIw==,iv:o46rtCSHUrINgtOOYUbpoQK2rjQQkNkgWuKvLax1Tm8=,tag:fV5t3vy4fWHWcjkHH8nHXQ==,type:str]
-    MEDIA_TELEGRAM_CHAT_ID: ENC[AES256_GCM,data:akfz/dcR3lOwbxEL4Hvmag==,iv:MmAHuWQ+9YRtcMNpeC+kanDO27iRXgdggY1RA2Z3pcQ=,tag:j9KB7fpjoH/cxFmh/qKdvQ==,type:str]
 kind: Secret
 metadata:
     name: services-runtime-bootstrap
@@ -42,6 +40,6 @@ sops:
             -----END AGE ENCRYPTED FILE-----
           recipient: age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-08-19T23:08:08Z"
-    mac: ENC[AES256_GCM,data:Iqg9STRvkd9p0G4B6M2F44LLzNJ266krOFg4Lk/Bs8peDohzcLsR/oYZey0p4Eo365JOpVFQ0PTZnkg+opXLOzLyTio/spUKSiP0s/OzhWDgUoFZdmfo5Ow3ISmz6j6rnCivelsrV7MTw74jrA67cOS+6GBlYmO2YHOdC4YCWNc=,iv:mT4Xu+PotucLgkMXUrZEL4kxvS1iEK5WlxkFxjJUyXI=,tag:zqpNEQf/jB7pOFu7vrHFoA==,type:str]
+    lastmodified: "2026-08-20T18:23:49Z"
+    mac: ENC[AES256_GCM,data:J5tmrhKOeOBnqQR7mGJxA2egU12aKaPCcT2Yo1mA8Wqn/wv9sAlov0BOX/Xo5LKRTo0YU4lg33dFnAULy1D0MZcx0fkEiib9pbUY0ugIpG9daVyUv459ca1Xg6ekB9Exb9wTWR5vQQ8yrVBPQRCKnslmgNwdC0RvyLOkglCu7Kw=,iv:seZv44NbEGt4+Cx6WTJJOMeoKgeY2cGQcIDTADIx2RY=,tag:HCmNbbSFiiqQm3tJC2BIDg==,type:str]
     version: 3.13.3

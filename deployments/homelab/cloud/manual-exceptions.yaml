@@ -1,10 +1,10 @@
 version: 1
 exceptions:
   - id: telegram-botfather-bootstrap
-    resource: Telegram bots for infrastructure, Hermes, and media acquisition
+    resource: Telegram bots for infrastructure alerts and Hermes
     owner: funforgiven
     rationale: Telegram exposes bot identity creation and token rotation only through BotFather; supported Bot API methods manage the remaining metadata and update discovery.
-    procedure: Create the three Git-declared names and globally unique usernames in BotFather, ingest only their tokens with the no-echo SOPS bootstrap command, create the two declared private groups, and send one /activate message to each bot. The pinned reconciler applies descriptions, clears command menus, discovers numeric chat/user IDs, and encrypts them into their routed SOPS documents.
+    procedure: Create the two Git-declared names and globally unique usernames in BotFather, ingest only their tokens with the no-echo SOPS bootstrap command, create the declared private alert group, and send one /activate message to each bot. The pinned reconciler applies descriptions, clears command menus, discovers numeric chat/user IDs, and encrypts them into their routed SOPS documents.
     secret_handling: Bot tokens go directly to workload-specific SOPS documents and are never printed, passed as arguments, or shared between bots. Numeric targets are selected from one exact update and written directly as SOPS ciphertext.
     backup: SOPS ciphertext is in Git; BotFather remains the recovery and revocation authority.
     drift_probe: Run the pinned Telegram check and verify the public usernames monthly without retrieving or displaying tokens or numeric targets.
@@ -21,10 +21,10 @@ exceptions:
     review_interval: monthly
     exit_criterion: Replace this exception when OpenAI offers a workload identity or narrow key-delivery mechanism that does not require organization-administrator authority.
   - id: karakeep-api-key-issuance
-    resource: Dedicated Karakeep API keys used by Hermes and the music release watcher
+    resource: Dedicated Karakeep API key used by Hermes
     owner: funforgiven
     rationale: Karakeep currently issues personal API keys only through its authenticated user interface.
-    procedure: Create one independently revocable key per integration after SSO enrollment and ingest each directly into its workload-specific SOPS or root-only runtime boundary.
+    procedure: Create an independently revocable Hermes key after SSO enrollment and ingest it directly into the root-only Hermes runtime boundary.
     secret_handling: The key is never displayed in documentation, passed as a command argument, or stored in OpenTofu state; Hermes receives it through a mode-0400 runtime file.
     backup: SOPS ciphertext preserves the active key, and Karakeep remains the revocation and rotation authority.
     drift_probe: Verify the key record, integration health, and last-used metadata monthly without retrieving the key value.
@@ -74,10 +74,10 @@ exceptions:
     resource: Bandcamp and OTOTOY accounts, payment, and checkout
     owner: funforgiven
     rationale: Storefront purchase and payment flows are human transactions without an appropriate unattended declarative interface.
-    procedure: Use the discovery card to choose a store, complete checkout manually, and transfer the purchased files through the declared inbox.
+    procedure: Choose a store, complete checkout manually, and upload the purchased files directly into the shared music library through the declared SFTPGo WebClient.
     secret_handling: Passwords and payment data remain in the personal password manager and are never supplied to Hermes or the media workloads.
-    backup: Purchase metadata is retained in Karakeep; audio recovery relies on local copies and store redownload in version one.
-    drift_probe: Review unresolved purchase cards and storefront availability without authenticating an automated service.
+    backup: Audio is protected by the declared media-volume backups; retain store receipts and redownload access outside the workload as a second recovery path.
+    drift_probe: Review storefront availability and a representative restored album without authenticating an automated service.
     review_interval: monthly
     exit_criterion: Reassess only if a store publishes a supported purchase API with explicit unattended-use terms.
   - id: music-account-linking
@@ -90,16 +90,6 @@ exceptions:
     drift_probe: Compare the redacted user/link inventory and last successful scrobble monthly without retrieving tokens or passwords.
     review_interval: monthly
     exit_criterion: Remove the first-admin portion when Navidrome exposes a supported declarative bootstrap; retain per-user consent while the upstream services require interactive grants.
-  - id: ghcr-media-publisher-credential
-    resource: GitHub Container Registry writer and initial public visibility for the Nix-built media importer
-    owner: funforgiven
-    rationale: GHCR requires an externally issued publisher credential before a locally built OCI archive can be uploaded, creates personal-account packages as private, and exposes no supported declarative interface for changing that package visibility. The workload intentionally has no long-lived registry pull credential.
-    procedure: Issue the narrowest packages-write credential, store it only in a mode-0400 or mode-0600 containers auth file, and run the signed-commit promotion app. On the first publish only, open the media-importer package settings, change its visibility to Public, confirm the irreversible transition, and verify an anonymous digest-pinned pull before activation.
-    secret_handling: The credential never enters Nix, Git, an image, a command argument, an OpenTofu value, or a log; the promotion app receives only the auth-file path.
-    backup: The image is reproducible from the signed source revision; recover by rotating the publisher credential and rebuilding rather than preserving the token.
-    drift_probe: Compare public package visibility plus non-secret package, version, revision tag, and digest metadata to versions.yaml and the deployed manifest, including an anonymous digest-pinned inspection.
-    review_interval: monthly
-    exit_criterion: Replace with repository workload identity when an approved CI publisher is introduced.
   - id: home-assistant-runtime-registry
     resource: Home Assistant integrations that are stored only in the runtime registry
     owner: funforgiven

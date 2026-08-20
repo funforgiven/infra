@@ -190,8 +190,8 @@
                 (root / "undercloud/82-services-cluster/runtime-contract.yaml").read_text()
             )
             contract = yaml.safe_load(contract_document["data"]["required-keys.yaml"])
-            if contract["schemaVersion"] != 6:
-                raise SystemExit("services runtime contract must use schema version 6")
+            if contract["schemaVersion"] != 7:
+                raise SystemExit("services runtime contract must use schema version 7")
             credentials = {
                 key
                 for group in contract["credentials"].values()
@@ -231,10 +231,6 @@
                     "reconcile-services-telegram",
                     {"INFRA_TELEGRAM_CHAT_ID"},
                 ),
-                "telegram-media": (
-                    "reconcile-services-telegram",
-                    {"MEDIA_TELEGRAM_CHAT_ID"},
-                ),
                 "telegram-hermes": (
                     "reconcile-services-telegram",
                     {
@@ -253,10 +249,6 @@
                 "karakeep-hermes": (
                     "karakeep-ui",
                     {"HERMES_KARAKEEP_API_KEY"},
-                ),
-                "karakeep-media": (
-                    "karakeep-ui",
-                    {"RELEASE_WATCHER_KARAKEEP_API_KEY"},
                 ),
             }
             actual_provisioned = {
@@ -354,8 +346,11 @@
             runtime = yaml.safe_load(
                 (root / "undercloud/81-services-foundation/runtime.sops.yaml").read_text()
             )
-            if not cluster_generated.issubset(runtime["data"]):
-                raise SystemExit("generated cluster secrets are missing from SOPS")
+            expected_runtime_keys = (
+                credentials | cluster_generated | cluster_provisioned
+            )
+            if set(runtime["data"]) != expected_runtime_keys:
+                raise SystemExit("cluster SOPS keys diverge from the runtime contract")
             if any(
                 not str(value).startswith("ENC[")
                 for value in runtime["data"].values()
@@ -452,7 +447,6 @@
             } != {
                 "fahrican_infra_alerts_bot",
                 "fahrican_hermes_bot",
-                "fahrican_media_watch_bot",
             }:
                 raise SystemExit("Telegram bot identity contract drifted")
 
@@ -559,28 +553,25 @@
                             f"Flux Kustomization {name} owns SOPS resources without decryption"
                         )
 
-            sentinel_files = [
-                root / "services/40-media/importer.yaml",
-                root / "services/40-media/release-watcher.yaml",
-                root / "versions.yaml",
-            ]
-            sentinel_count = 0
-            for path in sentinel_files:
-                text = path.read_text()
-                pins = re.findall(
-                    r"ghcr\.io/funforgiven/media-importer:[^@\s]+@sha256:[0-9a-f]{64}",
-                    text,
-                )
-                if len(pins) != 1:
-                    raise SystemExit(f"{path} must contain exactly one pinned media image")
-                sentinel_count += pins[0].endswith("sha256:" + "0" * 64)
-            if sentinel_count not in (0, len(sentinel_files)):
-                raise SystemExit("media image promotion is only partially represented")
-            waves = (root / "services/waves.yaml").read_text()
-            if sentinel_count and not re.search(
-                r"name: services-media.*?spec:\n  suspend: true", waves, re.S
-            ):
-                raise SystemExit("media promotion sentinel requires a suspended media wave")
+            media_root = root / "services/40-media"
+            media_kustomization = yaml.safe_load(
+                (media_root / "kustomization.yaml").read_text()
+            )
+            if set(media_kustomization["resources"]) != {
+                "storage.yaml",
+                "sftpgo.yaml",
+                "navidrome.yaml",
+                "routes.yaml",
+                "monitoring.yaml",
+                "network-policy.yaml",
+            }:
+                raise SystemExit("media service set must remain the direct upload workflow")
+            sftpgo = (media_root / "sftpgo.yaml").read_text()
+            navidrome = (media_root / "navidrome.yaml").read_text()
+            if '"home_dir":"/srv/sftpgo/data/media/library"' not in sftpgo:
+                raise SystemExit("SFTPGo must write directly to the Navidrome library")
+            if "subPath: library" not in navidrome or "mountPath: /music" not in navidrome:
+                raise SystemExit("Navidrome must read the shared SFTPGo library")
 
             observability = (root / "services/12-observability/kube-prometheus-stack.yaml").read_text()
             velero = (root / "services/15-backup-controller/velero.yaml").read_text()

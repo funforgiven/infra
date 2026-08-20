@@ -19,7 +19,7 @@ BACKUPS_FILE = "backups.sops.yaml"
 
 def runtime_document() -> dict:
     return {
-        "schemaVersion": 6,
+        "schemaVersion": 7,
         "secretFile": RUNTIME_FILE,
         "credentials": {"external": ["EXTERNAL_KEY"]},
         "hostCredentials": {

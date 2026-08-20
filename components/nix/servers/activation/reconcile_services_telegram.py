@@ -59,9 +59,8 @@ class TelegramContract:
         if not isinstance(definitions, dict) or set(definitions) != {
             "infrastructure",
             "hermes",
-            "media",
         }:
-            raise TelegramReconcileError("Telegram contract must declare the three service bots")
+            raise TelegramReconcileError("Telegram contract must declare the two service bots")
         runtime = RuntimeContract.load(repository_root)
         bots: list[BotSpec] = []
         for identifier, value in definitions.items():

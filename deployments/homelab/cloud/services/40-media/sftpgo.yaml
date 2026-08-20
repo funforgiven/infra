@@ -21,17 +21,13 @@ data:
     test "${#admin_password}" -ge 32
     test "${#user_password}" -ge 32
 
-    mkdir -p \
-      /srv/sftpgo/data/media/inbox \
-      /srv/sftpgo/data/media/processing \
-      /srv/sftpgo/data/media/quarantine \
-      /srv/sftpgo/data/media/library
+    mkdir -p /srv/sftpgo/data/media/library
 
     {
       printf '{"users":[{'
-      printf '"status":1,"username":"music-ingest",'
+      printf '"status":1,"username":"music-library",'
       printf '"password":"%s",' "$user_password"
-      printf '"home_dir":"/srv/sftpgo/data/media/inbox",'
+      printf '"home_dir":"/srv/sftpgo/data/media/library",'
       printf '"uid":1000,"gid":1000,'
       printf '"permissions":{"/":["*"]}'
       printf '}],"admins":[{'
