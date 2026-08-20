@@ -13,6 +13,11 @@ spec:
   sourceRef:
     kind: GitRepository
     name: services-tofu-source
+  varsFrom:
+    - kind: Secret
+      name: mail-edge-tofu-inputs
+      varsKeys:
+        - management_cidrs
   runnerPodTemplate:
     spec:
       env:
@@ -21,11 +26,6 @@ spec:
             secretKeyRef:
               name: services-runtime-bootstrap
               key: HCLOUD_TOKEN
-        - name: TF_VAR_management_cidrs
-          valueFrom:
-            secretKeyRef:
-              name: services-runtime-bootstrap
-              key: MAIL_MANAGEMENT_CIDRS_JSON
   writeOutputsToSecret:
     name: mail-edge-outputs
     outputs:
