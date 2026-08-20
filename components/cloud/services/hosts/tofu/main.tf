@@ -99,6 +99,18 @@ resource "openstack_networking_secgroup_rule_v2" "service_icmp" {
   security_group_id = openstack_networking_secgroup_v2.service_ssh.id
 }
 
+# Temporary recovery path used only to deploy the networkd fix to the existing
+# Home Assistant boot volume. Remove after direct provider-LAN SSH is healthy.
+resource "openstack_networking_secgroup_rule_v2" "home_assistant_recovery_ssh" {
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 22
+  port_range_max    = 22
+  remote_ip_prefix  = "192.168.80.11/32"
+  security_group_id = openstack_networking_secgroup_v2.service_ssh.id
+}
+
 resource "openstack_networking_secgroup_rule_v2" "service_node_exporter" {
   direction         = "ingress"
   ethertype         = "IPv4"
