@@ -3,4 +3,6 @@ kind: Secret
 metadata:
   name: service-dns-inputs
   namespace: cert-manager
+  annotations:
+    kustomize.toolkit.fluxcd.io/ssa: IfNotPresent
 type: Opaque

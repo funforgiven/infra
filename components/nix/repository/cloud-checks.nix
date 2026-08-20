@@ -374,6 +374,29 @@
             )
             if "mail-edge-tofu-input.yaml" not in foundation["resources"]:
                 raise SystemExit("mail-edge Terraform input target is not predeclared")
+            interface_placeholders = (
+                "mail-edge-tofu-input.yaml",
+                "resend-domain-output.yaml",
+                "service-dns-input.yaml",
+            )
+            for placeholder_name in interface_placeholders:
+                placeholder = yaml.safe_load(
+                    (
+                        root
+                        / "undercloud/81-services-foundation"
+                        / placeholder_name
+                    ).read_text()
+                )
+                if placeholder["metadata"].get("annotations") != {
+                    "kustomize.toolkit.fluxcd.io/ssa": "IfNotPresent"
+                }:
+                    raise SystemExit(
+                        f"{placeholder_name} does not preserve controller-owned data"
+                    )
+                if "data" in placeholder or "stringData" in placeholder:
+                    raise SystemExit(
+                        f"{placeholder_name} declares generated runtime data"
+                    )
             reconcile_rbac = list(
                 yaml.safe_load_all(
                     (root / "undercloud/82-services-cluster/rbac.yaml").read_text()
