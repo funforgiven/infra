@@ -9,7 +9,7 @@ into this layer. The infrastructure bot must not be shared with Hermes. Resume
 the services-observability wave before the backup
 controller so Velero backup failures, missing backups, and capacity alerts are
 visible from the beginning. The Helm install uses Flux's `RetryOnFailure`
-strategy so the first reconciliation waits through the Prometheus admission
-webhook bootstrap race without an operator reset. cert-manager owns the
-webhook serving certificate and CA injection; the chart's short-lived patch
-Jobs remain disabled.
+strategy for installs and upgrades so reconciliation waits through the
+Prometheus admission webhook bootstrap race without an operator reset.
+cert-manager owns the webhook serving certificate and CA injection; the
+chart's short-lived patch Jobs remain disabled.
