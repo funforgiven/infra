@@ -44,7 +44,7 @@ spec:
       digest: sha256:37396519f399536e5f01427d723565ae69294ec3fb5625cf1c87c09eaa9de16b
     initContainers:
       - name: velero-plugin-for-aws
-        image: docker.io/velero/velero-plugin-for-aws:v1.14.2@sha256:0751144c1c8e52d52c48717fbd13ad5a3061e612ae4d7ad744a946cd5b139d1a
+        image: docker.io/velero/velero-plugin-for-aws:main@sha256:0f442cf9263b3a579d9b22417501dfef75e83b300b8180b9394c86d0127ec220
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false

@@ -440,6 +440,7 @@ data:
         '      config:'
       printf '        region: %s\n' "$region"
       printf '%s\n' \
+        '        checksumAlgorithm: ""' \
         '        s3ForcePathStyle: "true"'
       printf '        s3Url: %s\n' "$endpoint"
     } > /tmp/velero-values.yaml

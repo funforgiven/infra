@@ -14,3 +14,11 @@ application wave is resumed.
 Filesystem backup is selected so recovery does not depend on the source Cinder
 control plane or its snapshots. Object lock, lifecycle retention, and a second
 administrative credential remain at Backblaze.
+
+The AWS object-store plugin is temporarily pinned by immutable amd64 digest to
+the official upstream `main` image built on 2026-08-14. It contains upstream
+commit `8dbd6b8`, which omits the empty `x-amz-tagging` header that Backblaze B2
+rejects. Replace this pin with the first compatible tagged release containing
+that commit. Backblaze's documented compatibility setting also disables SDK
+request checksums; transport integrity and Kopia repository integrity checks
+remain enabled.
