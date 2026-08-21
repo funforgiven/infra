@@ -50,8 +50,9 @@ spec:
       retryInterval: 1m
   upgrade:
     crds: CreateReplace
-    remediation:
-      retries: 3
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 1m
   values:
     prometheus-node-exporter:
       image:

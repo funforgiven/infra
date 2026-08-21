@@ -670,14 +670,19 @@
                 for document in yaml.safe_load_all(observability)
                 if document.get("kind") == "HelmRelease"
             )
-            install_policy = observability_release["spec"]["install"]
-            if install_policy.get("strategy") != {
+            retry_policy = {
                 "name": "RetryOnFailure",
                 "retryInterval": "1m",
-            } or "remediation" in install_policy:
-                raise SystemExit(
-                    "observability install must self-retry its admission webhook bootstrap"
-                )
+            }
+            for action in ("install", "upgrade"):
+                action_policy = observability_release["spec"][action]
+                if (
+                    action_policy.get("strategy") != retry_policy
+                    or "remediation" in action_policy
+                ):
+                    raise SystemExit(
+                        f"observability {action} must self-retry its admission webhook bootstrap"
+                    )
             admission_policy = observability_release["spec"]["values"][
                 "prometheusOperator"
             ]["admissionWebhooks"]
