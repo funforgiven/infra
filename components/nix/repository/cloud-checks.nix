@@ -496,6 +496,26 @@
                 "prefix": "services/kubernetes",
             }:
                 raise SystemExit("services backup destination diverges from Backblaze B2")
+            if "'        checksumAlgorithm: \"\"'" not in reconcile_script:
+                raise SystemExit("Velero must disable unsupported Backblaze request checksums")
+            velero_documents = yaml.safe_load_all(
+                (root / "services/15-backup-controller/velero.yaml").read_text()
+            )
+            velero_release = next(
+                document
+                for document in velero_documents
+                if document.get("kind") == "HelmRelease"
+            )
+            aws_plugin = next(
+                container
+                for container in velero_release["spec"]["values"]["initContainers"]
+                if container["name"] == "velero-plugin-for-aws"
+            )
+            if aws_plugin["image"] != (
+                "docker.io/velero/velero-plugin-for-aws:main@sha256:"
+                "0f442cf9263b3a579d9b22417501dfef75e83b300b8180b9394c86d0127ec220"
+            ):
+                raise SystemExit("Velero must pin the upstream Backblaze header fix")
             required_b2_capabilities = {
                 "deleteFiles",
                 "listAllBucketNames",
