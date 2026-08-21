@@ -71,7 +71,7 @@ class ResticRunner:
             f"s3:{self.endpoint}/{self.bucket_name}/{spec.prefix.rstrip('/')}"
         )
         return subprocess.run(
-            [self.executable, "--repo", repository, *arguments],
+            [self.executable, "--no-cache", "--repo", repository, *arguments],
             check=False,
             capture_output=True,
             text=True,
