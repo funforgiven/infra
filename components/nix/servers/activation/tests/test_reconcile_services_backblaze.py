@@ -12,7 +12,7 @@ from reconcile_services_backblaze import (
     ReconcileError,
     ServicesBackblazeReconciler,
 )
-from initialize_services_restic import ServicesResticInitializer
+from initialize_services_restic import ResticRunner, ServicesResticInitializer
 from runtime_contract import CONTRACT_PATH
 
 
@@ -263,6 +263,46 @@ class ServicesBackblazeReconcilerTest(unittest.TestCase):
             ServicesResticInitializer(
                 self.contract, self._restic_store(), FakeRunner(fail=True)
             ).apply()
+
+    def test_restic_verification_does_not_require_an_ambient_home(self) -> None:
+        completed = MagicMock(returncode=0)
+        with (
+            patch(
+                "initialize_services_restic.shutil.which",
+                return_value="/nix/store/restic/bin/restic",
+            ),
+            patch(
+                "initialize_services_restic.subprocess.run",
+                return_value=completed,
+            ) as run,
+        ):
+            runner = ResticRunner(
+                self.contract.bucket_name,
+                self.contract.s3_endpoint,
+                self.contract.region,
+            )
+            self.assertTrue(
+                runner.ready(
+                    self.contract.keys[1],
+                    "scoped-id",
+                    "scoped-secret",
+                    "restic-password",
+                )
+            )
+        command = run.call_args.args[0]
+        self.assertEqual(
+            command[:4],
+            [
+                "/nix/store/restic/bin/restic",
+                "--no-cache",
+                "--repo",
+                (
+                    "s3:https://s3.test-region.backblazeb2.com/test-recovery/"
+                    "services/hosts/hermes"
+                ),
+            ],
+        )
+        self.assertNotIn("HOME", run.call_args.kwargs["env"])
 
     def test_native_upload_uses_scoped_protocol_headers(self) -> None:
         client = object.__new__(BackblazeClient)

@@ -130,7 +130,7 @@
 
       apps.initialize-services-restic = {
         program = "${initializeServicesRestic}/bin/initialize-services-restic";
-        meta.description = "Initialize host Restic prefixes through one ephemeral Backblaze key";
+        meta.description = "Initialize host Restic prefixes through their scoped Backblaze keys";
       };
 
       apps.reconcile-services-telegram = {
