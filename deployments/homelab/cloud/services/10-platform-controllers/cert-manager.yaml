@@ -38,7 +38,7 @@ spec:
     replicaCount: 2
     extraArgs:
       - --dns01-recursive-nameservers-only
-      - --dns01-recursive-nameservers=1.1.1.1:53,1.0.0.1:53
+      - --dns01-recursive-nameservers=172.24.0.10:53
     podDisruptionBudget:
       enabled: true
       minAvailable: 1

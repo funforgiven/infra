@@ -561,6 +561,24 @@
                 "name": "restore-qualification-modifiers",
             }:
                 raise SystemExit("restore qualification does not reference its PVC modifier")
+            controller_documents = yaml.safe_load_all(
+                (
+                    root
+                    / "services/10-platform-controllers/cert-manager.yaml"
+                ).read_text()
+            )
+            cert_manager_release = next(
+                document
+                for document in controller_documents
+                if document.get("kind") == "HelmRelease"
+            )
+            if cert_manager_release["spec"]["values"].get("extraArgs") != [
+                "--dns01-recursive-nameservers-only",
+                "--dns01-recursive-nameservers=172.24.0.10:53",
+            ]:
+                raise SystemExit(
+                    "cert-manager DNS-01 checks must use the private cluster resolver"
+                )
             required_b2_capabilities = {
                 "deleteFiles",
                 "listAllBucketNames",
