@@ -85,11 +85,9 @@ spec:
         enabled: true
         failurePolicy: Fail
         certManager:
-          enabled: false
-        patch:
           enabled: true
-          image:
-            sha: d0e80b2f62fe43bb5e1b96adc692132fb4522e802f4cf673c09b1f94722b8cb6
+        patch:
+          enabled: false
 
     prometheus:
       prometheusSpec:

@@ -678,6 +678,15 @@
                 raise SystemExit(
                     "observability install must self-retry its admission webhook bootstrap"
                 )
+            admission_policy = observability_release["spec"]["values"][
+                "prometheusOperator"
+            ]["admissionWebhooks"]
+            if not admission_policy["certManager"]["enabled"] or admission_policy[
+                "patch"
+            ]["enabled"]:
+                raise SystemExit(
+                    "observability admission TLS must use cert-manager instead of patch jobs"
+                )
             forbidden = ("backup.invalid", "replace-before-activation", "chat_id: 0")
             if any(value in observability + velero for value in forbidden):
                 raise SystemExit("a runtime placeholder remains in a Helm release")
