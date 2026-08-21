@@ -8,4 +8,6 @@ values from SOPS ciphertext in memory; no token or chat identifier is edited
 into this layer. The infrastructure bot must not be shared with Hermes. Resume
 the services-observability wave before the backup
 controller so Velero backup failures, missing backups, and capacity alerts are
-visible from the beginning.
+visible from the beginning. The Helm install uses Flux's `RetryOnFailure`
+strategy so the first reconciliation waits through the Prometheus admission
+webhook bootstrap race without an operator reset.
