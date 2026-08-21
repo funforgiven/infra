@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Initialize declared host Restic repositories with one ephemeral B2 key."""
+"""Initialize declared host Restic repositories through their scoped B2 keys."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Protocol
 
@@ -15,26 +16,10 @@ from reconcile_services_backblaze import (
     BackblazeClient,
     BackupContract,
     KeySpec,
-    MasterCredentialFiles,
     ReconcileError,
 )
 from runtime_contract import ContractError
 from sops_credentials import SopsCredentialError, SopsCredentialStore
-
-
-class BootstrapKeyClient(Protocol):
-    def bucket(self, name: str) -> dict: ...
-
-    def keys(self) -> list[dict]: ...
-
-    def create_unscoped_key(
-        self,
-        bucket_id: str,
-        name: str,
-        capabilities: tuple[str, ...],
-    ) -> tuple[str, str]: ...
-
-    def delete_key(self, key_id: str) -> None: ...
 
 
 class RepositoryRunner(Protocol):
@@ -111,9 +96,50 @@ class ResticRunner:
         application_key: str,
         password: str,
     ) -> None:
-        result = self._run(spec, key_id, application_key, password, ["init"])
-        if result.returncode != 0:
-            raise ReconcileError(f"cannot initialize Restic repository {spec.prefix}")
+        environment = {"RESTIC_PASSWORD": password}
+        if "PATH" in os.environ:
+            environment["PATH"] = os.environ["PATH"]
+        with tempfile.TemporaryDirectory(prefix="services-restic-") as directory:
+            root = Path(directory)
+            result = subprocess.run(
+                [self.executable, "--repo", str(root), "init"],
+                check=False,
+                capture_output=True,
+                text=True,
+                env=environment,
+            )
+            if result.returncode != 0:
+                raise ReconcileError(
+                    f"cannot create local Restic repository for {spec.prefix}"
+                )
+            client = BackblazeClient(key_id, application_key)
+            bucket = client.bucket(self.bucket_name)
+            bucket_id = bucket.get("bucketId")
+            if not isinstance(bucket_id, str) or not bucket_id:
+                raise ReconcileError("Backblaze bucket has no valid ID")
+            files = sorted(
+                (path for path in root.rglob("*") if path.is_file()),
+                key=lambda path: (path.name == "config", path.as_posix()),
+            )
+            uploaded: list[tuple[str, str]] = []
+            try:
+                for path in files:
+                    relative = path.relative_to(root).as_posix()
+                    uploaded.append(
+                        client.upload_file(
+                            bucket_id,
+                            f"{spec.prefix}{relative}",
+                            path.read_bytes(),
+                        )
+                    )
+                if not self.ready(spec, key_id, application_key, password):
+                    raise ReconcileError(
+                        f"Restic repository verification failed for {spec.prefix}"
+                    )
+            except (OSError, ReconcileError):
+                for file_name, file_id in reversed(uploaded):
+                    client.delete_file_version(file_name, file_id)
+                raise
 
 
 class ServicesResticInitializer:
@@ -160,40 +186,19 @@ class ServicesResticInitializer:
             )
         return reports
 
-    def apply(self, client: BootstrapKeyClient) -> list[str]:
-        bucket = client.bucket(self.contract.bucket_name)
-        bucket_id = bucket.get("bucketId")
-        if not isinstance(bucket_id, str) or not bucket_id:
-            raise ReconcileError("Backblaze bucket has no valid ID")
-        stale_ids = {
-            item.get("applicationKeyId")
-            for item in client.keys()
-            if item.get("keyName") == self.contract.restic_bootstrap_name
-            and isinstance(item.get("applicationKeyId"), str)
-        }
-        for key_id in stale_ids:
-            client.delete_key(key_id)
-        key_id, application_key = client.create_unscoped_key(
-            bucket_id,
-            self.contract.restic_bootstrap_name,
-            self.contract.restic_bootstrap_capabilities,
-        )
+    def apply(self) -> list[str]:
         reports: list[str] = []
-        try:
-            for spec in self.repositories:
-                _, _, password = self._material(spec)
-                if self.runner.ready(spec, key_id, application_key, password):
-                    reports.append(f"{spec.prefix}: ready")
-                    continue
-                self.runner.initialize(spec, key_id, application_key, password)
-                if not self.runner.ready(spec, key_id, application_key, password):
-                    raise ReconcileError(
-                        f"Restic repository verification failed for {spec.prefix}"
-                    )
-                reports.append(f"{spec.prefix}: initialized")
-        finally:
-            client.delete_key(key_id)
-        reports.append("ephemeral Restic bootstrap key: revoked")
+        for spec in self.repositories:
+            key_id, application_key, password = self._material(spec)
+            if self.runner.ready(spec, key_id, application_key, password):
+                reports.append(f"{spec.prefix}: ready")
+                continue
+            self.runner.initialize(spec, key_id, application_key, password)
+            if not self.runner.ready(spec, key_id, application_key, password):
+                raise ReconcileError(
+                    f"Restic repository verification failed for {spec.prefix}"
+                )
+            reports.append(f"{spec.prefix}: initialized")
         return reports
 
 
@@ -201,7 +206,6 @@ def argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("check", "apply"))
     parser.add_argument("--repository-root", type=Path)
-    parser.add_argument("--bootstrap-directory", type=Path)
     return parser
 
 
@@ -234,26 +238,8 @@ def main() -> int:
             reports = initializer.check()
             suffix = "Check completed without changing Backblaze or repository state."
         else:
-            bootstrap_directory = (
-                arguments.bootstrap_directory.resolve()
-                if arguments.bootstrap_directory
-                else repository_root / "secrets"
-            )
-            files = MasterCredentialFiles(
-                bootstrap_directory,
-                contract.master_id_file,
-                contract.master_key_file,
-            )
-            master_id, master_key = files.read()
-            client = BackblazeClient(master_id, master_key)
-            del master_id, master_key
-            reports = initializer.apply(client)
-            if contract.clear_after_success:
-                files.clear()
-            suffix = (
-                "Backblaze master bootstrap files were cleared after successful "
-                "repository initialization."
-            )
+            reports = initializer.apply()
+            suffix = "Repository initialization completed through scoped B2 keys."
         for report in reports:
             print(report)
         print(suffix)

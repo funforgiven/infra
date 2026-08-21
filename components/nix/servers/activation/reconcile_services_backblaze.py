@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
 import json
 import os
 import stat
@@ -63,8 +64,6 @@ class BackupContract:
     master_id_file: str
     master_key_file: str
     clear_after_success: bool
-    restic_bootstrap_name: str
-    restic_bootstrap_capabilities: tuple[str, ...]
     keys: tuple[KeySpec, ...]
 
     @classmethod
@@ -79,9 +78,6 @@ class BackupContract:
         bucket = _mapping(document.get("bucket"), "bucket")
         bootstrap = _mapping(bucket.get("operatorBootstrap"), "operator bootstrap")
         services = _mapping(document.get("services"), "services")
-        restic_bootstrap = _mapping(
-            services.get("resticBootstrap"), "services.resticBootstrap"
-        )
         kubernetes = _mapping(services.get("kubernetes"), "services.kubernetes")
         runtime = RuntimeContract.load(repository_root)
         host_capabilities = _string_list(
@@ -122,14 +118,6 @@ class BackupContract:
                 bootstrap.get("applicationKeyFile"), "applicationKeyFile"
             ),
             clear_after_success=bootstrap.get("clearAfterSuccess") is True,
-            restic_bootstrap_name=_string(
-                restic_bootstrap.get("keyName"),
-                "services.resticBootstrap.keyName",
-            ),
-            restic_bootstrap_capabilities=_string_list(
-                restic_bootstrap.get("capabilities"),
-                "services.resticBootstrap.capabilities",
-            ),
             keys=tuple(specs),
         )
         contract.validate(repository_root)
@@ -142,10 +130,6 @@ class BackupContract:
             raise ReconcileError("Backblaze S3 endpoint and region diverge")
         if len(self.keys) != 4:
             raise ReconcileError("exactly four services backup keys must be declared")
-        if self.restic_bootstrap_name in {spec.name for spec in self.keys}:
-            raise ReconcileError("Restic bootstrap key name must be unique")
-        if frozenset(self.restic_bootstrap_capabilities) != REQUIRED_CAPABILITIES:
-            raise ReconcileError("invalid Restic bootstrap capabilities")
         restic_specs = [
             spec for spec in self.keys if spec.restic_password_credential is not None
         ]
@@ -309,30 +293,60 @@ class BackblazeClient:
         except (KeyError, TypeError) as error:
             raise ReconcileError(f"Backblaze did not return new material for {spec.name}") from error
 
-    def create_unscoped_key(
+    def delete_key(self, key_id: str) -> None:
+        self.call("b2_delete_key", {"applicationKeyId": key_id})
+
+    def upload_file(
         self,
         bucket_id: str,
-        name: str,
-        capabilities: tuple[str, ...],
+        file_name: str,
+        content: bytes,
     ) -> tuple[str, str]:
-        document = self.call(
-            "b2_create_key",
-            {
-                "accountId": self.account_id,
-                "keyName": name,
-                "bucketIds": [bucket_id],
-                "capabilities": list(capabilities),
+        try:
+            target = self.call("b2_get_upload_url", {"bucketId": bucket_id})
+        except ReconcileError as error:
+            if "HTTP 403" in str(error):
+                raise ReconcileError(
+                    "Backblaze storage cap or account standing prevents uploads"
+                ) from error
+            raise
+        try:
+            upload_url = target["uploadUrl"]
+            authorization = target["authorizationToken"]
+        except (KeyError, TypeError) as error:
+            raise ReconcileError("Backblaze returned an invalid upload target") from error
+        request = urllib.request.Request(
+            upload_url,
+            data=content,
+            method="POST",
+            headers={
+                "Authorization": authorization,
+                "Content-Type": "application/octet-stream",
+                "X-Bz-Content-Sha1": hashlib.sha1(
+                    content, usedforsecurity=False
+                ).hexdigest(),
+                "X-Bz-File-Name": urllib.parse.quote(file_name, safe="/"),
             },
         )
         try:
-            return document["applicationKeyId"], document["applicationKey"]
-        except (KeyError, TypeError) as error:
+            with urllib.request.urlopen(request, timeout=60) as response:
+                document = json.load(response)
+        except urllib.error.HTTPError as error:
             raise ReconcileError(
-                f"Backblaze did not return new material for {name}"
+                f"Backblaze rejected a file upload with HTTP {error.code}"
             ) from error
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
+            raise ReconcileError("Backblaze file upload failed") from error
+        try:
+            return document["fileName"], document["fileId"]
+        except (KeyError, TypeError) as error:
+            raise ReconcileError("Backblaze returned invalid upload metadata") from error
 
-    def delete_key(self, key_id: str) -> None:
-        self.call("b2_delete_key", {"applicationKeyId": key_id})
+    def delete_file_version(self, file_name: str, file_id: str) -> None:
+        self.call(
+            "b2_delete_file_version",
+            {"fileName": file_name, "fileId": file_id},
+        )
 
 
 class ServicesBackblazeReconciler:

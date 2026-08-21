@@ -506,11 +506,6 @@
                 "writeFiles",
             }
             b2_services = backup_destination["services"]
-            if b2_services["resticBootstrap"] != {
-                "keyName": "infra-services-restic-bootstrap",
-                "capabilities": sorted(required_b2_capabilities),
-            }:
-                raise SystemExit("Restic bootstrap key contract is invalid")
             if set(b2_services["kubernetes"]["capabilities"]) != required_b2_capabilities:
                 raise SystemExit("Velero B2 key capabilities are not least privilege")
             if set(b2_services["hostCapabilities"]) != required_b2_capabilities:
