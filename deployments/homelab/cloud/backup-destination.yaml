@@ -133,16 +133,6 @@ zitadel:
       - writeFiles
 
 services:
-  resticBootstrap:
-    keyName: infra-services-restic-bootstrap
-    capabilities:
-      - deleteFiles
-      - listAllBucketNames
-      - listBuckets
-      - listFiles
-      - readBuckets
-      - readFiles
-      - writeFiles
   kubernetes:
     keyName: infra-services-velero-writer
     namePrefix: services/kubernetes/

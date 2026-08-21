@@ -1,11 +1,13 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import MagicMock, patch
 
 import yaml
 
 from reconcile_services_backblaze import (
     BACKUP_CONTRACT_PATH,
+    BackblazeClient,
     BackupContract,
     ReconcileError,
     ServicesBackblazeReconciler,
@@ -83,10 +85,6 @@ def backup_document() -> dict:
             "lifecycleRules": [{"fileNamePrefix": "services/"}],
         },
         "services": {
-            "resticBootstrap": {
-                "keyName": "test-services-restic-bootstrap",
-                "capabilities": capabilities,
-            },
             "kubernetes": {
                 "keyName": "test-services-velero",
                 "namePrefix": "services/kubernetes/",
@@ -137,7 +135,6 @@ class FakeClient:
         self.created: list[str] = []
         self.deleted: list[str] = []
         self.policy_updated = False
-        self.bootstrap_created: list[str] = []
 
     def bucket(self, name: str) -> dict:
         assert name == self.contract.bucket_name
@@ -162,18 +159,6 @@ class FakeClient:
 
     def delete_key(self, key_id: str) -> None:
         self.deleted.append(key_id)
-
-    def create_unscoped_key(
-        self,
-        bucket_id: str,
-        name: str,
-        capabilities: tuple[str, ...],
-    ) -> tuple[str, str]:
-        assert bucket_id == "bucket-id"
-        assert set(capabilities) == set(self.contract.restic_bootstrap_capabilities)
-        self.bootstrap_created.append(name)
-        return "bootstrap-id", "bootstrap-secret"
-
 
 class FakeRunner:
     def __init__(self, *, fail: bool = False) -> None:
@@ -264,27 +249,61 @@ class ServicesBackblazeReconcilerTest(unittest.TestCase):
             ] = "restic-password"
         return store
 
-    def test_restic_initializer_revokes_ephemeral_key_after_verification(self) -> None:
-        client = FakeClient(self.contract)
+    def test_restic_initializer_uses_scoped_material_and_verifies(self) -> None:
         runner = FakeRunner()
         reports = ServicesResticInitializer(
             self.contract, self._restic_store(), runner
-        ).apply(client)
-        self.assertEqual(
-            client.bootstrap_created, [self.contract.restic_bootstrap_name]
-        )
-        self.assertEqual(client.deleted, ["bootstrap-id"])
+        ).apply()
         self.assertEqual(len(runner.initialized), 3)
-        self.assertNotIn("bootstrap-secret", "\n".join(reports))
+        self.assertNotIn("scoped-secret", "\n".join(reports))
         self.assertNotIn("restic-password", "\n".join(reports))
 
-    def test_restic_initializer_revokes_ephemeral_key_on_failure(self) -> None:
-        client = FakeClient(self.contract)
+    def test_restic_initializer_reports_safe_failure(self) -> None:
         with self.assertRaisesRegex(ReconcileError, "safe initialization failure"):
             ServicesResticInitializer(
                 self.contract, self._restic_store(), FakeRunner(fail=True)
-            ).apply(client)
-        self.assertEqual(client.deleted, ["bootstrap-id"])
+            ).apply()
+
+    def test_native_upload_uses_scoped_protocol_headers(self) -> None:
+        client = object.__new__(BackblazeClient)
+        client.call = MagicMock(
+            return_value={
+                "uploadUrl": "https://upload.example.invalid/file",
+                "authorizationToken": "upload-token",
+            }
+        )
+        response = MagicMock()
+        response.__enter__.return_value = object()
+        with (
+            patch(
+                "reconcile_services_backblaze.urllib.request.urlopen",
+                return_value=response,
+            ) as urlopen,
+            patch(
+                "reconcile_services_backblaze.json.load",
+                return_value={"fileName": "prefix/config", "fileId": "file-id"},
+            ),
+        ):
+            result = client.upload_file("bucket-id", "prefix/config", b"content")
+        self.assertEqual(result, ("prefix/config", "file-id"))
+        client.call.assert_called_once_with(
+            "b2_get_upload_url", {"bucketId": "bucket-id"}
+        )
+        request = urlopen.call_args.args[0]
+        self.assertEqual(request.data, b"content")
+        self.assertEqual(request.get_header("Authorization"), "upload-token")
+        self.assertEqual(request.get_header("X-bz-file-name"), "prefix/config")
+        self.assertIsNotNone(request.get_header("X-bz-content-sha1"))
+
+    def test_native_upload_classifies_provider_cap_block(self) -> None:
+        client = object.__new__(BackblazeClient)
+        client.call = MagicMock(
+            side_effect=ReconcileError(
+                "b2_get_upload_url failed: provider rejected HTTP 403"
+            )
+        )
+        with self.assertRaisesRegex(ReconcileError, "storage cap or account standing"):
+            client.upload_file("bucket-id", "prefix/config", b"content")
 
 
 if __name__ == "__main__":

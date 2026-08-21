@@ -69,20 +69,19 @@ creates a `sending_access` key scoped only to `fahrican.com` and never exposes
 the administration key to Stalwart.
 
 An empty Restic prefix must be initialized once before its prefix-bound writer
-can distinguish a missing repository from an unauthorized object. Refill the
-same ephemeral master intake pair, then run the focused initializer:
+can distinguish a missing repository from an unauthorized object. Run the
+focused initializer:
 
 ```console
-nix run .#initialize-services-restic -- apply \
-  --bootstrap-directory /absolute/path/to/secrets
+nix run .#initialize-services-restic -- apply
 ```
 
-It creates one short-lived bucket-bound bootstrap key, initializes or verifies
-only the three declared host prefixes, revokes the bootstrap key in all normal
-success and failure paths, and clears the master intake only after every
-repository verifies. Routine backup and restore operations continue with the
-three independent prefix-bound keys. `check` needs no master credential and
-makes no changes:
+It initializes each repository locally, uploads only its encrypted initial
+files through that host's existing prefix-bound key using Backblaze's native
+API, and verifies the result through Restic's S3 backend. No broad or
+additional application key is created. Routine backup and restore operations
+continue with the same three independent prefix-bound keys. `check` makes no
+changes:
 
 ```console
 nix run .#initialize-services-restic -- check
