@@ -516,6 +516,51 @@
                 "0f442cf9263b3a579d9b22417501dfef75e83b300b8180b9394c86d0127ec220"
             ):
                 raise SystemExit("Velero must pin the upstream Backblaze header fix")
+            restore_documents = list(
+                yaml.safe_load_all(
+                    (
+                        root
+                        / "services/16-backup-policy/restore-qualification.yaml"
+                    ).read_text()
+                )
+            )
+            restore_modifiers = next(
+                document
+                for document in restore_documents
+                if document.get("kind") == "ConfigMap"
+                and document["metadata"]["name"]
+                == "restore-qualification-modifiers"
+            )
+            modifier_policy = yaml.safe_load(
+                restore_modifiers["data"]["resource-modifiers.yaml"]
+            )
+            if modifier_policy["resourceModifierRules"] != [
+                {
+                    "conditions": {
+                        "groupResource": "persistentvolumeclaims",
+                        "namespaces": ["backup-qualification"],
+                    },
+                    "patches": [
+                        {
+                            "operation": "remove",
+                            "path": "/spec/volumeName",
+                        }
+                    ],
+                }
+            ]:
+                raise SystemExit("restore qualification must clear source PVC bindings")
+            restore_config = next(
+                document
+                for document in restore_documents
+                if document.get("kind") == "ConfigMap"
+                and document["metadata"]["name"] == "restore-qualification"
+            )
+            restore_template = yaml.safe_load(restore_config["data"]["restore.yaml"])
+            if restore_template["spec"].get("resourceModifier") != {
+                "kind": "ConfigMap",
+                "name": "restore-qualification-modifiers",
+            }:
+                raise SystemExit("restore qualification does not reference its PVC modifier")
             required_b2_capabilities = {
                 "deleteFiles",
                 "listAllBucketNames",

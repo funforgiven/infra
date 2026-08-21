@@ -99,6 +99,23 @@ spec:
             claimName: backup-canary
 ---
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: restore-qualification-modifiers
+  namespace: velero
+data:
+  resource-modifiers.yaml: |
+    version: v1
+    resourceModifierRules:
+      - conditions:
+          groupResource: persistentvolumeclaims
+          namespaces:
+            - backup-qualification
+        patches:
+          - operation: remove
+            path: /spec/volumeName
+---
+apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: restore-qualification
@@ -240,6 +257,9 @@ data:
       namespaceMapping:
         backup-qualification: backup-qualification-restore
       restorePVs: true
+      resourceModifier:
+        kind: ConfigMap
+        name: restore-qualification-modifiers
 ---
 apiVersion: batch/v1
 kind: CronJob
