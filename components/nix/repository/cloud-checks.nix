@@ -665,6 +665,19 @@
             for name, text in (("observability", observability), ("velero", velero)):
                 if "suspend: true" in text:
                     raise SystemExit(f"{name} retains an inner suspension")
+            observability_release = next(
+                document
+                for document in yaml.safe_load_all(observability)
+                if document.get("kind") == "HelmRelease"
+            )
+            install_policy = observability_release["spec"]["install"]
+            if install_policy.get("strategy") != {
+                "name": "RetryOnFailure",
+                "retryInterval": "1m",
+            } or "remediation" in install_policy:
+                raise SystemExit(
+                    "observability install must self-retry its admission webhook bootstrap"
+                )
             forbidden = ("backup.invalid", "replace-before-activation", "chat_id: 0")
             if any(value in observability + velero for value in forbidden):
                 raise SystemExit("a runtime placeholder remains in a Helm release")

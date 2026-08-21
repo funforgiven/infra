@@ -45,8 +45,9 @@ spec:
           name: kube-prometheus-stack-admission
   install:
     crds: Create
-    remediation:
-      retries: 3
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 1m
   upgrade:
     crds: CreateReplace
     remediation:
