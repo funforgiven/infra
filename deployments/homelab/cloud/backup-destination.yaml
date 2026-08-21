@@ -7,6 +7,7 @@ provider: backblaze-b2
 bucket:
   name: fahrican-cloud-recovery
   s3Endpoint: https://s3.us-west-004.backblazeb2.com
+  region: us-west-004
   access: private
   defaultEncryption: SSE-B2
   objectLock: false
@@ -132,6 +133,16 @@ zitadel:
       - writeFiles
 
 services:
+  resticBootstrap:
+    keyName: infra-services-restic-bootstrap
+    capabilities:
+      - deleteFiles
+      - listAllBucketNames
+      - listBuckets
+      - listFiles
+      - readBuckets
+      - readFiles
+      - writeFiles
   kubernetes:
     keyName: infra-services-velero-writer
     namePrefix: services/kubernetes/
@@ -153,18 +164,21 @@ services:
       secretFile: deployments/homelab/cloud/host-runtime/backups.sops.yaml
       idField: HERMES_BACKUP_B2_APPLICATION_KEY_ID
       valueField: HERMES_BACKUP_B2_APPLICATION_KEY
+      resticPasswordField: HERMES_BACKUP_RESTIC_PASSWORD
     - host: home-assistant
       keyName: infra-services-home-assistant-backup-writer
       namePrefix: services/hosts/home-assistant/
       secretFile: deployments/homelab/cloud/host-runtime/backups.sops.yaml
       idField: HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID
       valueField: HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY
+      resticPasswordField: HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD
     - host: mail-edge
       keyName: infra-services-mail-edge-backup-writer
       namePrefix: services/hosts/mail-edge/
       secretFile: deployments/homelab/cloud/host-runtime/backups.sops.yaml
       idField: MAIL_EDGE_BACKUP_B2_APPLICATION_KEY_ID
       valueField: MAIL_EDGE_BACKUP_B2_APPLICATION_KEY
+      resticPasswordField: MAIL_EDGE_BACKUP_RESTIC_PASSWORD
   hostCapabilities:
     - deleteFiles
     - listAllBucketNames

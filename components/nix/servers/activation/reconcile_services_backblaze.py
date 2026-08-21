@@ -50,15 +50,21 @@ class KeySpec:
     secret_file: Path
     id_credential: str
     key_credential: str
+    restic_password_credential: str | None = None
+    restic_password_file: Path | None = None
 
 
 @dataclass(frozen=True)
 class BackupContract:
     bucket_name: str
+    s3_endpoint: str
+    region: str
     lifecycle_rules: tuple[dict, ...]
     master_id_file: str
     master_key_file: str
     clear_after_success: bool
+    restic_bootstrap_name: str
+    restic_bootstrap_capabilities: tuple[str, ...]
     keys: tuple[KeySpec, ...]
 
     @classmethod
@@ -73,11 +79,22 @@ class BackupContract:
         bucket = _mapping(document.get("bucket"), "bucket")
         bootstrap = _mapping(bucket.get("operatorBootstrap"), "operator bootstrap")
         services = _mapping(document.get("services"), "services")
+        restic_bootstrap = _mapping(
+            services.get("resticBootstrap"), "services.resticBootstrap"
+        )
         kubernetes = _mapping(services.get("kubernetes"), "services.kubernetes")
+        runtime = RuntimeContract.load(repository_root)
         host_capabilities = _string_list(
             services.get("hostCapabilities"), "services.hostCapabilities"
         )
-        specs = [_key_spec(kubernetes, kubernetes.get("capabilities"), "kubernetes")]
+        specs = [
+            _key_spec(
+                kubernetes,
+                kubernetes.get("capabilities"),
+                "kubernetes",
+                runtime,
+            )
+        ]
         hosts = services.get("hosts")
         if not isinstance(hosts, list) or not hosts:
             raise ReconcileError("services.hosts must be a non-empty list")
@@ -87,6 +104,7 @@ class BackupContract:
                     _mapping(host, f"services.hosts[{index}]"),
                     host_capabilities,
                     f"host {index}",
+                    runtime,
                 )
             )
         lifecycle_rules = bucket.get("lifecycleRules")
@@ -94,6 +112,8 @@ class BackupContract:
             raise ReconcileError("bucket.lifecycleRules must be a non-empty list")
         contract = cls(
             bucket_name=_string(bucket.get("name"), "bucket.name"),
+            s3_endpoint=_string(bucket.get("s3Endpoint"), "bucket.s3Endpoint"),
+            region=_string(bucket.get("region"), "bucket.region"),
             lifecycle_rules=tuple(_mapping(rule, "lifecycle rule") for rule in lifecycle_rules),
             master_id_file=_safe_basename(
                 bootstrap.get("applicationKeyIdFile"), "applicationKeyIdFile"
@@ -102,6 +122,14 @@ class BackupContract:
                 bootstrap.get("applicationKeyFile"), "applicationKeyFile"
             ),
             clear_after_success=bootstrap.get("clearAfterSuccess") is True,
+            restic_bootstrap_name=_string(
+                restic_bootstrap.get("keyName"),
+                "services.resticBootstrap.keyName",
+            ),
+            restic_bootstrap_capabilities=_string_list(
+                restic_bootstrap.get("capabilities"),
+                "services.resticBootstrap.capabilities",
+            ),
             keys=tuple(specs),
         )
         contract.validate(repository_root)
@@ -110,8 +138,19 @@ class BackupContract:
     def validate(self, repository_root: Path) -> None:
         if not self.clear_after_success:
             raise ReconcileError("operator bootstrap credentials must be cleared on success")
+        if self.s3_endpoint != f"https://s3.{self.region}.backblazeb2.com":
+            raise ReconcileError("Backblaze S3 endpoint and region diverge")
         if len(self.keys) != 4:
             raise ReconcileError("exactly four services backup keys must be declared")
+        if self.restic_bootstrap_name in {spec.name for spec in self.keys}:
+            raise ReconcileError("Restic bootstrap key name must be unique")
+        if frozenset(self.restic_bootstrap_capabilities) != REQUIRED_CAPABILITIES:
+            raise ReconcileError("invalid Restic bootstrap capabilities")
+        restic_specs = [
+            spec for spec in self.keys if spec.restic_password_credential is not None
+        ]
+        if len(restic_specs) != 3:
+            raise ReconcileError("exactly three host Restic repositories must be declared")
         names = [spec.name for spec in self.keys]
         prefixes = [spec.prefix for spec in self.keys]
         credentials = [
@@ -138,6 +177,14 @@ class BackupContract:
                     raise ReconcileError(f"wrong provisioner for {credential}")
                 if routed.secret_file != spec.secret_file:
                     raise ReconcileError(f"wrong SOPS destination for {credential}")
+            if spec.restic_password_credential is not None:
+                routed_password = runtime.managed_credential(
+                    spec.restic_password_credential
+                )
+                if routed_password.secret_file != spec.restic_password_file:
+                    raise ReconcileError(
+                        f"wrong SOPS destination for {spec.restic_password_credential}"
+                    )
 
 
 class CredentialStore(Protocol):
@@ -261,6 +308,28 @@ class BackblazeClient:
             return document["applicationKeyId"], document["applicationKey"]
         except (KeyError, TypeError) as error:
             raise ReconcileError(f"Backblaze did not return new material for {spec.name}") from error
+
+    def create_unscoped_key(
+        self,
+        bucket_id: str,
+        name: str,
+        capabilities: tuple[str, ...],
+    ) -> tuple[str, str]:
+        document = self.call(
+            "b2_create_key",
+            {
+                "accountId": self.account_id,
+                "keyName": name,
+                "bucketIds": [bucket_id],
+                "capabilities": list(capabilities),
+            },
+        )
+        try:
+            return document["applicationKeyId"], document["applicationKey"]
+        except (KeyError, TypeError) as error:
+            raise ReconcileError(
+                f"Backblaze did not return new material for {name}"
+            ) from error
 
     def delete_key(self, key_id: str) -> None:
         self.call("b2_delete_key", {"applicationKeyId": key_id})
@@ -397,10 +466,26 @@ def _safe_basename(value: object, label: str) -> str:
     return path.name
 
 
-def _key_spec(definition: dict, capabilities: object, label: str) -> KeySpec:
+def _key_spec(
+    definition: dict,
+    capabilities: object,
+    label: str,
+    runtime: RuntimeContract,
+) -> KeySpec:
     secret_file = Path(_string(definition.get("secretFile"), f"{label}.secretFile"))
     if secret_file.is_absolute() or ".." in secret_file.parts:
         raise ReconcileError(f"{label}.secretFile must stay inside the repository")
+    password_value = definition.get("resticPasswordField")
+    password_credential = (
+        None
+        if password_value is None
+        else _string(password_value, f"{label}.resticPasswordField")
+    )
+    password_file = (
+        None
+        if password_credential is None
+        else runtime.managed_credential(password_credential).secret_file
+    )
     return KeySpec(
         name=_string(definition.get("keyName"), f"{label}.keyName"),
         prefix=_string(definition.get("namePrefix"), f"{label}.namePrefix"),
@@ -414,6 +499,8 @@ def _key_spec(definition: dict, capabilities: object, label: str) -> KeySpec:
             definition.get("valueField"),
             f"{label}.valueField",
         ),
+        restic_password_credential=password_credential,
+        restic_password_file=password_file,
     )
 
 

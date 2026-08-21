@@ -68,6 +68,26 @@ CIDR. Telegram derives chat and user IDs from exact declared updates. Resend
 creates a `sending_access` key scoped only to `fahrican.com` and never exposes
 the administration key to Stalwart.
 
+An empty Restic prefix must be initialized once before its prefix-bound writer
+can distinguish a missing repository from an unauthorized object. Refill the
+same ephemeral master intake pair, then run the focused initializer:
+
+```console
+nix run .#initialize-services-restic -- apply \
+  --bootstrap-directory /absolute/path/to/secrets
+```
+
+It creates one short-lived bucket-bound bootstrap key, initializes or verifies
+only the three declared host prefixes, revokes the bootstrap key in all normal
+success and failure paths, and clears the master intake only after every
+repository verifies. Routine backup and restore operations continue with the
+three independent prefix-bound keys. `check` needs no master credential and
+makes no changes:
+
+```console
+nix run .#initialize-services-restic -- check
+```
+
 Create the independently revocable Hermes key in the OpenAI dashboard and keep
 its project permissions and hard spend limit under operator control. Put only
 that runtime value in the ignored mode-0600 `secrets/OPENAI_API_KEY.key` intake
