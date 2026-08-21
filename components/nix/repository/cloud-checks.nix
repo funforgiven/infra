@@ -492,7 +492,7 @@
             if services_backup["data"] != {
                 "bucket_name": backup_destination["bucket"]["name"],
                 "endpoint": backup_destination["bucket"]["s3Endpoint"],
-                "region": "us-west-004",
+                "region": backup_destination["bucket"]["region"],
                 "prefix": "services/kubernetes",
             }:
                 raise SystemExit("services backup destination diverges from Backblaze B2")
@@ -506,10 +506,25 @@
                 "writeFiles",
             }
             b2_services = backup_destination["services"]
+            if b2_services["resticBootstrap"] != {
+                "keyName": "infra-services-restic-bootstrap",
+                "capabilities": sorted(required_b2_capabilities),
+            }:
+                raise SystemExit("Restic bootstrap key contract is invalid")
             if set(b2_services["kubernetes"]["capabilities"]) != required_b2_capabilities:
                 raise SystemExit("Velero B2 key capabilities are not least privilege")
             if set(b2_services["hostCapabilities"]) != required_b2_capabilities:
                 raise SystemExit("host B2 key capabilities are not least privilege")
+            expected_restic_passwords = {
+                "hermes": "HERMES_BACKUP_RESTIC_PASSWORD",
+                "home-assistant": "HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD",
+                "mail-edge": "MAIL_EDGE_BACKUP_RESTIC_PASSWORD",
+            }
+            if {
+                host["host"]: host["resticPasswordField"]
+                for host in b2_services["hosts"]
+            } != expected_restic_passwords:
+                raise SystemExit("host Restic password routes are invalid")
             if backup_destination["bucket"]["operatorBootstrap"] != {
                 "applicationKeyIdFile": "secrets/B2_MASTER_APPLICATION_KEY_ID.key",
                 "applicationKeyFile": "secrets/B2_MASTER_APPLICATION_KEY.key",

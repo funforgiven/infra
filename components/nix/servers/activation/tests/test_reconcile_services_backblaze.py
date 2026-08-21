@@ -10,6 +10,7 @@ from reconcile_services_backblaze import (
     ReconcileError,
     ServicesBackblazeReconciler,
 )
+from initialize_services_restic import ServicesResticInitializer
 from runtime_contract import CONTRACT_PATH
 
 
@@ -26,7 +27,15 @@ def runtime_document() -> dict:
             "host": {"secretFile": "host.sops.yaml", "keys": ["HOST_KEY"]}
         },
         "generatedSecrets": {
-            "local": {"secretFile": RUNTIME_FILE, "keys": ["GENERATED_KEY"]}
+            "local": {
+                "secretFile": "generated.sops.yaml",
+                "keys": [
+                    "GENERATED_KEY",
+                    "HERMES_BACKUP_RESTIC_PASSWORD",
+                    "HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD",
+                    "MAIL_EDGE_BACKUP_RESTIC_PASSWORD",
+                ],
+            }
         },
         "provisionedSecrets": {
             "backblaze-services": {
@@ -64,6 +73,8 @@ def backup_document() -> dict:
         "provider": "backblaze-b2",
         "bucket": {
             "name": "test-recovery",
+            "s3Endpoint": "https://s3.test-region.backblazeb2.com",
+            "region": "test-region",
             "operatorBootstrap": {
                 "applicationKeyIdFile": "secrets/B2_MASTER_APPLICATION_KEY_ID.key",
                 "applicationKeyFile": "secrets/B2_MASTER_APPLICATION_KEY.key",
@@ -72,6 +83,10 @@ def backup_document() -> dict:
             "lifecycleRules": [{"fileNamePrefix": "services/"}],
         },
         "services": {
+            "resticBootstrap": {
+                "keyName": "test-services-restic-bootstrap",
+                "capabilities": capabilities,
+            },
             "kubernetes": {
                 "keyName": "test-services-velero",
                 "namePrefix": "services/kubernetes/",
@@ -88,6 +103,7 @@ def backup_document() -> dict:
                     "secretFile": BACKUPS_FILE,
                     "idField": f"{prefix}_BACKUP_B2_APPLICATION_KEY_ID",
                     "valueField": f"{prefix}_BACKUP_B2_APPLICATION_KEY",
+                    "resticPasswordField": f"{prefix}_BACKUP_RESTIC_PASSWORD",
                 }
                 for name, prefix in (
                     ("hermes", "HERMES"),
@@ -121,6 +137,7 @@ class FakeClient:
         self.created: list[str] = []
         self.deleted: list[str] = []
         self.policy_updated = False
+        self.bootstrap_created: list[str] = []
 
     def bucket(self, name: str) -> dict:
         assert name == self.contract.bucket_name
@@ -145,6 +162,35 @@ class FakeClient:
 
     def delete_key(self, key_id: str) -> None:
         self.deleted.append(key_id)
+
+    def create_unscoped_key(
+        self,
+        bucket_id: str,
+        name: str,
+        capabilities: tuple[str, ...],
+    ) -> tuple[str, str]:
+        assert bucket_id == "bucket-id"
+        assert set(capabilities) == set(self.contract.restic_bootstrap_capabilities)
+        self.bootstrap_created.append(name)
+        return "bootstrap-id", "bootstrap-secret"
+
+
+class FakeRunner:
+    def __init__(self, *, fail: bool = False) -> None:
+        self.ready_prefixes: set[str] = set()
+        self.initialized: list[str] = []
+        self.fail = fail
+
+    def ready(self, spec, key_id: str, application_key: str, password: str) -> bool:
+        return spec.prefix in self.ready_prefixes
+
+    def initialize(
+        self, spec, key_id: str, application_key: str, password: str
+    ) -> None:
+        if self.fail:
+            raise ReconcileError("safe initialization failure")
+        self.initialized.append(spec.prefix)
+        self.ready_prefixes.add(spec.prefix)
 
 
 class ServicesBackblazeReconcilerTest(unittest.TestCase):
@@ -205,6 +251,40 @@ class ServicesBackblazeReconcilerTest(unittest.TestCase):
             ServicesBackblazeReconciler(
                 self.contract, client, FakeStore()
             ).reconcile(apply=True, rotate=False)
+
+    def _restic_store(self) -> FakeStore:
+        store = FakeStore()
+        for spec in self.contract.keys:
+            if spec.restic_password_credential is None:
+                continue
+            store.values[(spec.secret_file, spec.id_credential)] = "scoped-id"
+            store.values[(spec.secret_file, spec.key_credential)] = "scoped-secret"
+            store.values[
+                (spec.restic_password_file, spec.restic_password_credential)
+            ] = "restic-password"
+        return store
+
+    def test_restic_initializer_revokes_ephemeral_key_after_verification(self) -> None:
+        client = FakeClient(self.contract)
+        runner = FakeRunner()
+        reports = ServicesResticInitializer(
+            self.contract, self._restic_store(), runner
+        ).apply(client)
+        self.assertEqual(
+            client.bootstrap_created, [self.contract.restic_bootstrap_name]
+        )
+        self.assertEqual(client.deleted, ["bootstrap-id"])
+        self.assertEqual(len(runner.initialized), 3)
+        self.assertNotIn("bootstrap-secret", "\n".join(reports))
+        self.assertNotIn("restic-password", "\n".join(reports))
+
+    def test_restic_initializer_revokes_ephemeral_key_on_failure(self) -> None:
+        client = FakeClient(self.contract)
+        with self.assertRaisesRegex(ReconcileError, "safe initialization failure"):
+            ServicesResticInitializer(
+                self.contract, self._restic_store(), FakeRunner(fail=True)
+            ).apply(client)
+        self.assertEqual(client.deleted, ["bootstrap-id"])
 
 
 if __name__ == "__main__":

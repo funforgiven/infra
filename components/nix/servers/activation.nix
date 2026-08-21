@@ -57,6 +57,18 @@
           '';
         };
       reconcileServicesBackblaze = reconcilerApplication "reconcile-services-backblaze" ./activation/reconcile_services_backblaze.py;
+      initializeServicesRestic = pkgs.writeShellApplication {
+        name = "initialize-services-restic";
+        runtimeInputs = [
+          pkgs.gitMinimal
+          pkgs.restic
+          pkgs.sops
+        ];
+        text = ''
+          export PYTHONPATH=${./activation}
+          exec ${python}/bin/python ${./activation/initialize_services_restic.py} "$@"
+        '';
+      };
       reconcileServicesTelegram = reconcilerApplication "reconcile-services-telegram" ./activation/reconcile_services_telegram.py;
       reconcileServicesResend = reconcilerApplication "reconcile-services-resend" ./activation/reconcile_services_resend.py;
       reconcileServicesOperatorNetwork = reconcilerApplication "reconcile-services-operator-network" ./activation/reconcile_services_operator_network.py;
@@ -116,6 +128,11 @@
         meta.description = "Reconcile scoped Backblaze backup keys directly into SOPS";
       };
 
+      apps.initialize-services-restic = {
+        program = "${initializeServicesRestic}/bin/initialize-services-restic";
+        meta.description = "Initialize host Restic prefixes through one ephemeral Backblaze key";
+      };
+
       apps.reconcile-services-telegram = {
         program = "${reconcileServicesTelegram}/bin/reconcile-services-telegram";
         meta.description = "Reconcile Telegram metadata and discover private chat targets into SOPS";
@@ -142,6 +159,7 @@
         enroll-services-credential = enrollServicesCredential;
         generate-services-credential = generateServicesCredential;
         reconcile-services-backblaze = reconcileServicesBackblaze;
+        initialize-services-restic = initializeServicesRestic;
         reconcile-services-telegram = reconcileServicesTelegram;
         reconcile-services-resend = reconcileServicesResend;
         reconcile-services-operator-network = reconcileServicesOperatorNetwork;
@@ -165,6 +183,7 @@
               -s ${./activation/tests} -p 'test_*.py'
             python -m py_compile ${./activation/advance_services_activation.py}
             python -m py_compile ${./activation/reconcile_services_backblaze.py}
+            python -m py_compile ${./activation/initialize_services_restic.py}
             python -m py_compile ${./activation/reconcile_services_telegram.py}
             python -m py_compile ${./activation/reconcile_services_resend.py}
             python -m py_compile ${./activation/reconcile_services_operator_network.py}

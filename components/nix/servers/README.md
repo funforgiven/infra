@@ -77,8 +77,12 @@ locally generated directly into SOPS.
 Materialize these files with the host enrollment app after the host is
 reachable through its pinned SSH identity. Never pass values as command
 arguments or write plaintext into the repository. The operator must initialize an empty
-repository explicitly, run the first backup, and perform a restore into an
-isolated temporary host before enabling a production service.
+repository with `initialize-services-restic apply`, run the first backup, and
+perform a restore into an isolated temporary host before enabling a production
+service. The initializer uses and immediately revokes one ephemeral
+bucket-bound key because S3 cannot report a missing object to a prefix-bound
+caller. Scheduled operations never receive that bootstrap key and remain
+confined to their host prefix.
 
 The declarative timer runs daily with randomized delay and retains 14 daily,
 8 weekly, 12 monthly, and 3 yearly snapshots. Provider snapshots and Hetzner
