@@ -29,6 +29,7 @@ REQUIRED_CAPABILITIES = frozenset(
     {
         "deleteFiles",
         "listAllBucketNames",
+        "listBuckets",
         "listFiles",
         "readBuckets",
         "readFiles",

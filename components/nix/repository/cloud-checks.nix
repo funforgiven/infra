@@ -499,6 +499,7 @@
             required_b2_capabilities = {
                 "deleteFiles",
                 "listAllBucketNames",
+                "listBuckets",
                 "listFiles",
                 "readBuckets",
                 "readFiles",
