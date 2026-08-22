@@ -9,8 +9,10 @@ to `eu-central-1` and deliberately favors the smallest simple durable design:
 - one single-AZ encrypted `db.t4g.micro` RDS PostgreSQL 17.10 instance with
   14-day point-in-time recovery, deletion protection, a final snapshot, and an
   RDS-managed master password. Storage explicitly uses the no-cost AWS-managed
-  `alias/aws/rds` key, while the managed password intentionally inherits RDS's
-  documented `alias/aws/secretsmanager` default;
+  `alias/aws/rds` key resolved to its canonical key ARN so provider state cannot
+  mistake the equivalent alias ARN for a replacement, while the managed
+  password intentionally inherits RDS's documented
+  `alias/aws/secretsmanager` default;
 - one private encrypted and versioned S3 bucket as Stalwart's live blob store;
 - one retained Elastic IP, with reverse DNS gated until forward DNS is live;
 - Session Manager administration only, with no public SSH ingress;
