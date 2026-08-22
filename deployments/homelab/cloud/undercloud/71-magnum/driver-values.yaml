@@ -51,6 +51,7 @@ data:
         '                            "name": "openstack-manila-csi",\n'
         '                            "version": "2.35.0",\n'
         '                        },\n'
+        '                        "values": {"fsGroupPolicy": "File"},\n'
         '                        "defaultStorageClass": {\n'
         '                            "enabled": True,\n'
         '                            "name": "manila-nfs",\n'
