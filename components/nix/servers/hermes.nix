@@ -24,11 +24,36 @@ in
       pkgs,
       ...
     }:
+    let
+      # The pinned upstream source imports this first-party top-level module
+      # from hermes_cli.plugins, but its pyproject omits the file from
+      # setuptools.py-modules. Keep the compatibility boundary isolated until
+      # the upstream Nix package ships it in the sealed Python environment.
+      registrationLifecycle = pkgs.runCommand "hermes-registration-lifecycle" { } ''
+        install -Dm0444 \
+          ${inputs.hermes-agent}/registration_lifecycle.py \
+          "$out/${pkgs.python312.sitePackages}/registration_lifecycle.py"
+      '';
+      upstreamHermesPackage =
+        inputs.hermes-agent.packages.${pkgs.stdenv.hostPlatform.system}.default.override
+          {
+            extraPythonPackages = [ registrationLifecycle ];
+          };
+      hermesPackage = upstreamHermesPackage.overrideAttrs (old: {
+        doInstallCheck = true;
+        installCheckPhase = (old.installCheckPhase or "") + ''
+          PYTHONPATH=${registrationLifecycle}/${pkgs.python312.sitePackages} \
+            ${upstreamHermesPackage.hermesVenv}/bin/python3 -c \
+              'import registration_lifecycle; import telegram; from hermes_cli import plugins'
+        '';
+      });
+    in
     {
       imports = [ inputs.hermes-agent.nixosModules.default ];
 
       services.hermes-agent = {
         enable = true;
+        package = hermesPackage;
         addToSystemPackages = true;
         extraPackages = [
           pkgs.curl
