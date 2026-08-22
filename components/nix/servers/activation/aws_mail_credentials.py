@@ -579,7 +579,7 @@ class AwsMailCredentials:
             [
                 "aws",
                 "secretsmanager",
-                "update-secret",
+                "put-secret-value",
                 "--region",
                 AWS_REGION,
                 "--secret-id",
