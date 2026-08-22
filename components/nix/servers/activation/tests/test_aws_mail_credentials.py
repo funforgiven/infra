@@ -355,6 +355,7 @@ class AwsMailCredentialsTest(unittest.TestCase):
 
         arguments = aws.call_args.args[0]
         self.assertNotIn(self.access_id, arguments)
+        self.assertEqual(arguments, ["iam", "delete-access-key"])
         self.assertEqual(
             aws.call_args.kwargs["input_document"],
             {"UserName": "fahrican-mail-gitops", "AccessKeyId": self.access_id},
@@ -376,7 +377,7 @@ class AwsMailCredentialsTest(unittest.TestCase):
         arguments, environment = aws.call_args.args
         options = aws.call_args.kwargs
         self.assertNotIn(self.bootstrap_access_id, arguments)
-        self.assertEqual(arguments[-1], "file:///dev/stdin")
+        self.assertEqual(arguments, ["iam", "delete-access-key"])
         self.assertEqual(
             options["input_document"],
             {
@@ -387,6 +388,22 @@ class AwsMailCredentialsTest(unittest.TestCase):
         self.assertEqual(environment["AWS_ACCESS_KEY_ID"], self.bootstrap_access_id)
         for key in BOOTSTRAP_KEYS:
             self.assertGreater((self.root / "secrets" / f"{key}.key").stat().st_size, 0)
+
+    @patch("aws_mail_credentials.subprocess.run")
+    def test_aws_document_uses_an_ephemeral_file_not_process_input(self, run) -> None:
+        run.return_value = subprocess.CompletedProcess([], 0)
+
+        self.credentials._aws(
+            ["iam", "delete-access-key"],
+            {},
+            input_document={"AccessKeyId": self.access_id},
+        )
+
+        command = run.call_args.args[0]
+        self.assertNotIn(self.access_id, command)
+        self.assertEqual(command[-2], "--cli-input-json")
+        self.assertTrue(command[-1].startswith("file:///"))
+        self.assertNotIn("input", run.call_args.kwargs)
 
 
 if __name__ == "__main__":

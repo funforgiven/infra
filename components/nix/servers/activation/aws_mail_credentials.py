@@ -140,15 +140,29 @@ class AwsMailCredentials:
         capture: bool = False,
         input_document: dict[str, str] | None = None,
     ) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            ["aws", *arguments],
-            check=False,
-            input=json.dumps(input_document) if input_document is not None else None,
-            stdout=subprocess.PIPE if capture else subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            env=environment,
-        )
+        command = ["aws", *arguments]
+        if input_document is None:
+            return subprocess.run(
+                command,
+                check=False,
+                stdout=subprocess.PIPE if capture else subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                env=environment,
+            )
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", prefix="aws-cli-input-"
+        ) as input_file:
+            json.dump(input_document, input_file)
+            input_file.flush()
+            return subprocess.run(
+                [*command, "--cli-input-json", f"file://{input_file.name}"],
+                check=False,
+                stdout=subprocess.PIPE if capture else subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                env=environment,
+            )
 
     def _caller_identity(
         self, environment: dict[str, str], description: str
@@ -487,12 +501,7 @@ class AwsMailCredentials:
         self, access_key_id: str, bootstrap: dict[str, str]
     ) -> None:
         deleted = self._aws(
-            [
-                "iam",
-                "delete-access-key",
-                "--cli-input-json",
-                "file:///dev/stdin",
-            ],
+            ["iam", "delete-access-key"],
             self._aws_environment(bootstrap),
             input_document={
                 "UserName": GITOPS_USER,
@@ -508,7 +517,7 @@ class AwsMailCredentials:
         self, bootstrap_user: str, bootstrap: dict[str, str]
     ) -> None:
         revoked = self._aws(
-            ["iam", "delete-access-key", "--cli-input-json", "file:///dev/stdin"],
+            ["iam", "delete-access-key"],
             self._aws_environment(bootstrap),
             input_document={
                 "UserName": bootstrap_user,
