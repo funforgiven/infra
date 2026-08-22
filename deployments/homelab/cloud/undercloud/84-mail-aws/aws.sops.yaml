@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: aws-mail-provisioning
+    namespace: openstack
+type: Opaque
+data: {}
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBFN0Nzc3lFdFNZM096NFJy
+            OG9GU0tkUVZtR3h6RFZiekV3c29IQkV0ZUZFCnI1QlRkeHVaUG9sTnMvWHA2T1Rl
+            Tmlqc0JQVHRKM1ZBOVVybTVWZDdBUTQKLS0tIHZ0YUR5R3c1ODl4bG1EckoxUDBG
+            d05vQUtTbU5uYzVDN3NoSVozSTJOWHMKk9LiFA6O5+mvRq5puryZRrl+jmJH+9Be
+            hwFKcnaaIlftsBdm+AtkPct7kupYMk4tceYa4KYlVfTu+ZZYU1fLww==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBjZjY2MEVVWFYzMHN3ZWhI
+            N2VHQ1NodnZWUzV2eEdxY2g0TUxCWEJjalZ3CkVPZE9KMU43ZzdEbGJvajhsdWVp
+            dzI2dEVRM0hjOVM5Umk0ekhCVi9oblkKLS0tIFI4b1BHaENPTUsrUVhPZGhFeG9a
+            OTB6T0lQK1Y3dUlEcisvcWlDNzBrbEEKwkwkKGqhY9X+krSvuj5WZUoMxz85xRIP
+            SjY8St1IMZ/F9ncOGmRWmUMRvjp+bV93fbFPGwDfpgTIYjsNXu8ZVA==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-08-22T17:23:51Z"
+    mac: ENC[AES256_GCM,data:EyIseeNz7VYIY1BA/lNDdqRG5gwXSDpD6eB/atT7cgn+Qx+uYzKQDUhlO/p/QVC6lYtZk5ivuMD8aDo63hoM7CerWnw4w8tif175CUm8TnPl+QDbi4BJgFWRhK2I5eo/DFMADVP0F67TIaxSpvgOvLduANP38t5jjeRK7pYXPhI=,iv:6YcMzAhZPFee1QpG6sr09S94nHK3QN4TUAlmHjKkPRQ=,tag:tGQgqIPmwscO1kjnEGSGYA==,type:str]
+    version: 3.13.3

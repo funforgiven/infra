@@ -1,0 +1,41 @@
+apiVersion: infra.contrib.fluxcd.io/v1alpha2
+kind: Terraform
+metadata:
+  name: mail-aws
+  namespace: openstack
+spec:
+  # Credentials are the final activation touch. Keeping the Terraform object
+  # suspended makes every credential-free object reviewable without a partial
+  # AWS deployment or a placeholder secret.
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  approvePlan: auto
+  destroyResourcesOnDeletion: false
+  path: ./components/cloud/services/mail-aws/tofu
+  sourceRef:
+    kind: GitRepository
+    name: services-tofu-source
+  vars:
+    - name: source_revision
+      value: "0000000000000000000000000000000000000000"
+    - name: enable_reverse_dns
+      value: "false"
+  runnerPodTemplate:
+    spec:
+      envFrom:
+        - secretRef:
+            name: aws-mail-provisioning
+  writeOutputsToSecret:
+    name: mail-aws-outputs
+    outputs:
+      - ipv4_address
+      - instance_id
+      - database_endpoint
+      - blob_bucket
+      - admin_secret_arn
+      - mailbox_secret_arn
+      - resend_secret_arn
+      - alert_topic_arn
+  remediation:
+    retries: 3

@@ -3,7 +3,7 @@ set -euo pipefail
 
 if [[ "$#" -ne 1 ]]; then
   echo 'Usage: services-activation-preflight PHASE' >&2
-  echo 'Phases: foundation hosts final' >&2
+  echo 'Phases: foundation hosts final aws-mail' >&2
   exit 64
 fi
 
@@ -12,18 +12,26 @@ deferred_provisioners=()
 require_promotions=false
 case "$phase" in
   foundation)
-    deferred_provisioners=(reconcile-services-resend)
+    deferred_provisioners=(reconcile-services-resend enroll-aws-mail-auth)
     ;;
   hosts)
-    deferred_provisioners=(reconcile-services-resend)
+    deferred_provisioners=(reconcile-services-resend enroll-aws-mail-auth)
     require_promotions=true
     ;;
   final)
+    deferred_provisioners=(enroll-aws-mail-auth)
     require_promotions=true
+    ;;
+  aws-mail)
+    if rg --quiet 'value: "0{40}"' \
+      deployments/homelab/cloud/undercloud/84-mail-aws/tofu.yaml; then
+      echo 'The AWS mail appliance source revision is still a sentinel.' >&2
+      exit 1
+    fi
     ;;
   *)
     echo "Unknown activation preflight phase: $phase" >&2
-    echo 'Phases: foundation hosts final' >&2
+    echo 'Phases: foundation hosts final aws-mail' >&2
     exit 64
     ;;
 esac

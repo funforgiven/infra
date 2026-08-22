@@ -50,6 +50,16 @@ exceptions:
     drift_probe: Verify the dedicated token inventory and last rotation date monthly without retrieving or displaying its value.
     review_interval: monthly
     exit_criterion: Remove when Hetzner supports a workload identity flow that the controller can use without a long-lived token.
+  - id: aws-mail-bootstrap-credential-issuance
+    resource: AWS provisioning credential and SNS email subscription for the independent mail platform
+    owner: funforgiven
+    rationale: The non-AWS GitOps controller needs one initial AWS identity before it can create the narrower EC2 runtime role, while AWS requires the recipient to confirm an email subscription interactively. Neither ceremony has a safe unauthenticated declarative interface.
+    procedure: Place a temporary bootstrap access pair in the two ignored AWS_BOOTSTRAP mode-0600 intake files. Run the pinned enrollment tool, which reconciles the Git-declared regional policy, creates the dedicated fahrican-mail-gitops identity and its only key, encrypts only that narrower pair into aws-mail-provisioning, and clears the intake files. Verify the dedicated identity, then revoke the temporary pair before applying. Confirm only the declared stalwart-mail-alerts SNS subscription from the provider email. Prefer short-lived federation if it becomes available to the undercloud controller.
+    secret_handling: Both bootstrap values are held through fixed no-follow file descriptors and provider subprocess environment only. The generated GitOps secret is captured in memory, encrypted directly to the workload-specific SOPS manifest, and rolled back at AWS if encryption fails; neither pair enters OpenTofu variables, state, plans, command arguments, logs, or documentation. SNS confirmation contains no infrastructure credential.
+    backup: SOPS ciphertext preserves only the dedicated active controller pair; AWS remains the revocation authority. The email subscription is recreated from OpenTofu metadata and reconfirmed if necessary.
+    drift_probe: Review the provisioning identity's non-secret policy, last-used timestamp, access-key age, and the SNS subscription confirmation state monthly without retrieving key material.
+    review_interval: monthly
+    exit_criterion: Replace the access pair with workload federation once the undercloud can assume an AWS role without a long-lived bootstrap secret; retain email confirmation while SNS requires recipient consent.
   - id: smtp-inbound-monitoring-vantage
     resource: Continuous SMTP port 25 reachability from an independent Internet vantage
     owner: funforgiven
@@ -91,12 +101,12 @@ exceptions:
     review_interval: monthly
     exit_criterion: Remove the first-admin portion when Navidrome exposes a supported declarative bootstrap; retain per-user consent while the upstream services require interactive grants.
   - id: home-assistant-runtime-registry
-    resource: Home Assistant HTTP configuration and integrations stored only in the runtime registry
+    resource: Home Assistant OS onboarding, provider-LAN network, HTTP settings, backup location, and integrations stored only in appliance state
     owner: funforgiven
-    rationale: Home Assistant 2026.8 migrated HTTP settings from YAML to its authenticated runtime store, and some integrations likewise expose no stable declarative representation. HTTP changes are deliberately trialled and require an administrator to confirm the working configuration, so neither first-user creation nor promotion can be safely fabricated before onboarding.
-    procedure: Complete first-administrator onboarding through the routed provider address, configure the built-in HTTP settings to trust only 192.168.80.0/24 and use forwarded headers, then verify and confirm the pending configuration through https://home.fahrican.com within its five-minute trial. Prefer Git-managed YAML for settings that still support it, document each UI-only enrollment, and run an encrypted backup immediately after every accepted change.
-    secret_handling: The local administrator password, MFA material, HTTP runtime state, and integration credentials remain in Home Assistant state and encrypted backups, not documentation or Git plaintext.
-    backup: Daily encrypted Home Assistant state export plus a pre-change export for every UI-only modification.
-    drift_probe: Verify the public reverse-proxy path and compare the documented HTTP and integration inventory with the redacted Home Assistant diagnostics export.
+    rationale: HAOS intentionally owns its operating system and authenticated runtime registry. It has no cloud-init interface for the static non-DHCP provider NIC, and first-user, HTTP trial confirmation, native Backblaze backup enrollment, and many integrations expose no supported declarative API.
+    procedure: Keep the Git cutover variable on nixos until a full encrypted native backup and emergency kit have passed an isolated HAOS restore. After the declared VM replacement, restore that backup during onboarding; configure 10.21.40.120/24 on the MAC-pinned provider NIC with route 10.21.10.0/24 through 10.21.40.1; trust only 192.168.80.0/24 for forwarded HTTP headers; and confirm the pending proxy configuration through https://home.fahrican.com. Enroll the native Backblaze B2 backup location with the existing prefix-scoped key and services/hosts/home-assistant/ prefix, then enable encrypted daily backups with retention of at least 14.
+    secret_handling: The administrator password, MFA material, backup emergency kit, prefix-scoped B2 key, HTTP state, and integration credentials remain in Home Assistant state, the password manager, and encrypted backups; they never enter Git plaintext or command arguments.
+    backup: Retain the protected NixOS Cinder root through migration. Require an encrypted native backup before cutover and after every accepted UI-only change, a daily encrypted native B2 backup, and an isolated restore before retiring the rollback volume or legacy Restic contract.
+    drift_probe: Verify both fixed addresses, the public reverse-proxy path, last successful automatic backup, B2 prefix confinement, and the documented integration inventory monthly using redacted diagnostics without retrieving credentials.
     review_interval: monthly
-    exit_criterion: Migrate HTTP settings or an integration to Git as soon as Home Assistant restores a supported declarative representation.
+    exit_criterion: Move each setting to Git if HAOS exposes a supported declarative interface; the appliance network and first-user portions remain until HAOS adds unattended provisioning.

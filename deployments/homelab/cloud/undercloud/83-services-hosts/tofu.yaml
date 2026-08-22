@@ -18,6 +18,10 @@ spec:
     # passed the promotion gate. This sentinel is intentionally undeployable.
     - name: image_revision
       value: "80ab8bcb18b757363d31317d61d8950b26271a6f"
+    # Keep this on NixOS until the encrypted native-backup restore and HAOS
+    # image-promotion gates have both passed.
+    - name: home_assistant_platform
+      value: nixos
   runnerPodTemplate:
     spec:
       envFrom:

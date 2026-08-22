@@ -4,6 +4,7 @@
     { pkgs, ... }:
     let
       python = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
+      awsMailConfiguration = inputs.self.nixosConfigurations.mail-aws.config;
       runtimeContract = pkgs.writeShellApplication {
         name = "runtime-contract";
         runtimeInputs = [ pkgs.gitMinimal ];
@@ -72,6 +73,30 @@
       reconcileServicesTelegram = reconcilerApplication "reconcile-services-telegram" ./activation/reconcile_services_telegram.py;
       reconcileServicesResend = reconcilerApplication "reconcile-services-resend" ./activation/reconcile_services_resend.py;
       reconcileServicesOperatorNetwork = reconcilerApplication "reconcile-services-operator-network" ./activation/reconcile_services_operator_network.py;
+      awsMailCredentials = pkgs.writeShellApplication {
+        name = "aws-mail-credentials";
+        runtimeInputs = [
+          pkgs.awscli2
+          pkgs.gitMinimal
+          pkgs.sops
+        ];
+        text = ''
+          export PYTHONPATH=${./activation}
+          exec ${python}/bin/python ${./activation/aws_mail_credentials.py} "$@"
+        '';
+      };
+      enrollAwsMailAuth = pkgs.writeShellApplication {
+        name = "enroll-aws-mail-auth";
+        text = ''
+          exec ${awsMailCredentials}/bin/aws-mail-credentials provisioning "$@"
+        '';
+      };
+      publishAwsMailResend = pkgs.writeShellApplication {
+        name = "publish-aws-mail-resend";
+        text = ''
+          exec ${awsMailCredentials}/bin/aws-mail-credentials resend "$@"
+        '';
+      };
       servicesActivationPreflight = pkgs.writeShellApplication {
         name = "services-activation-preflight";
         runtimeInputs = [
@@ -153,6 +178,16 @@
         meta.description = "Verify phase-appropriate credentials, promotions, and signed clean state before activation";
       };
 
+      apps.enroll-aws-mail-auth = {
+        program = "${enrollAwsMailAuth}/bin/enroll-aws-mail-auth";
+        meta.description = "Enroll the final AWS mail provider pair into SOPS and clear its intake files";
+      };
+
+      apps.publish-aws-mail-resend = {
+        program = "${publishAwsMailResend}/bin/publish-aws-mail-resend";
+        meta.description = "Publish the existing Resend key directly from SOPS to AWS Secrets Manager";
+      };
+
       packages = {
         advance-services-activation = advanceServicesActivation;
         enroll-service-host-secrets = enrollServiceHostSecrets;
@@ -164,6 +199,7 @@
         reconcile-services-resend = reconcileServicesResend;
         reconcile-services-operator-network = reconcileServicesOperatorNetwork;
         services-activation-preflight = servicesActivationPreflight;
+        aws-mail-credentials = awsMailCredentials;
       };
 
       checks.services-activation-contract =
@@ -188,6 +224,7 @@
             python -m py_compile ${./activation/reconcile_services_resend.py}
             python -m py_compile ${./activation/reconcile_services_operator_network.py}
             python -m py_compile ${./activation/sops_credentials.py}
+            python -m py_compile ${./activation/aws_mail_credentials.py}
             shellcheck \
               ${./activation/advance-services-activation.sh} \
               ${./activation/enroll-service-host-secrets.sh} \
@@ -207,10 +244,10 @@
               exit 1
             fi
             rg --fixed-strings --quiet \
-              'Home Assistant 2026.8 migrated HTTP settings' \
+              'Home Assistant OS onboarding' \
               ${inputs.self}/deployments/homelab/cloud/manual-exceptions.yaml
             rg --fixed-strings --quiet \
-              '`192.168.80.0/24` and use forwarded headers' \
+              'services/hosts/home-assistant/' \
               ${inputs.self}/deployments/homelab/cloud/services/ACTIVATION.md
             if rg --quiet 'openai-codex|auth\.json|device-code|device-auth' \
               ${./hermes.nix} \
@@ -228,6 +265,10 @@
               ${./activation/enroll-services-credential.sh}
             rg --fixed-strings --quiet 'provisioned-key-file' \
               ${./activation/runtime_contract.py}
+            rg --fixed-strings --quiet 'os.O_NOFOLLOW' \
+              ${./activation/aws_mail_credentials.py}
+            rg --fixed-strings --quiet 'stdout=subprocess.DEVNULL' \
+              ${./activation/aws_mail_credentials.py}
             rg --fixed-strings --quiet 'keyName' \
               ${./activation/reconcile_services_backblaze.py}
             if rg --quiet 'prompt_value|R2_ENDPOINT|cloudflarestorage' \
@@ -237,6 +278,31 @@
               echo 'Obsolete interactive or Cloudflare R2 host enrollment remains.' >&2
               exit 1
             fi
+            touch "$out"
+          '';
+
+      checks.services-aws-mail-evaluation =
+        pkgs.runCommandLocal "services-aws-mail-evaluation-check" { }
+          ''
+            test ${pkgs.lib.escapeShellArg awsMailConfiguration.nixpkgs.hostPlatform.system} = aarch64-linux
+            test ${pkgs.lib.escapeShellArg awsMailConfiguration.systemd.services.stalwart.serviceConfig.User} = stalwart
+            test ${pkgs.lib.escapeShellArg awsMailConfiguration.systemd.services.stalwart-secrets.serviceConfig.Type} = oneshot
+            test ${if awsMailConfiguration.services.amazon-ssm-agent.enable then "1" else "0"} = 1
+            test ${if awsMailConfiguration.services.openssh.openFirewall then "1" else "0"} = 0
+            test ${
+              if
+                awsMailConfiguration.networking.firewall.allowedTCPPorts == [
+                  25
+                  443
+                  465
+                  587
+                  993
+                ]
+              then
+                "1"
+              else
+                "0"
+            } = 1
             touch "$out"
           '';
     };

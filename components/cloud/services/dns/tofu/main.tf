@@ -12,7 +12,7 @@ terraform {
 provider "cloudflare" {}
 
 variable "mail_ipv4_address" {
-  description = "Stable public IPv4 address of the Hetzner mail edge"
+  description = "Stable public IPv4 address of the active mail origin"
   type        = string
 
   validation {
@@ -45,8 +45,8 @@ locals {
   services_gateway_address = "10.21.40.122"
   private_services = toset([
     "home",
-    "inbox",
     "music",
+    "upload",
   ])
   mail_hosts = toset([
     "autoconfig",

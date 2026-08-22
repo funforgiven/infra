@@ -2,7 +2,6 @@ apiVersion: v1
 data:
     ND_PASSWORDENCRYPTIONKEY: ENC[AES256_GCM,data:Lf6mO6eGwp+rq+Kx6ShjaX5ohJDGGhaMDOp6drIqg4wqg1LDOUPyp8P4cOYlDGTR0dWl8Mt2tynwUePqNOHnNp+Unid9ReYhpzeALJqTu2qYjnXd2IxF+w==,iv:vwP6mZw4/GGxCjbqz44kyQ1pYWtHwrY33yksFw3OanU=,tag:4B4OHE1FvGwXGrWzzY1FKA==,type:str]
     SFTPGO_ADMIN_PASSWORD: ENC[AES256_GCM,data:ROAmh2rbShO1iUg81seaaiEqAbRw5XlllebsD+MVGUuAhGw7ObRamiEy2MGxhGUeg+XhrLzOkvRlZcsCNKzHImVDBgUcguLFWfWVyD+8Bar0sVSajWkX9A==,iv:7VRXe0goZrlOJuCprrgX/CEtlltpMRWQtdPqiCop26c=,tag:gknqa+vwnQycjAslVGCILw==,type:str]
-    SFTPGO_USER_PASSWORD: ENC[AES256_GCM,data:KAfvNi3FadeRa9QAE1PnCIJ/ME0zQxVo9gY9hmfLewaf52oJTf7UGJJUmJErYRptbrwrtkRF7RBHlZuiP8stBduwiC8NAspMdJifDVD1ncKpg8Y+Hoa8Rw==,iv:jD+XMYud5h8kx4sNQLP1zyYFWBM3IkKvJOIsmcBIJGM=,tag:b7dURQNzjiZDg7BKI4Wk/w==,type:str]
     B2_APPLICATION_KEY_ID: ENC[AES256_GCM,data:7EHIF7uDpnbP68Z70MP/rI/9YcF8zIYqqM2rOQa14CLzCz8D,iv:ULMH9BaVrAb5X1iAQH/ubxQ1DvYS38hfa+yqdqGirhg=,tag:7fe80KkJK18VVmVEjMDMLw==,type:str]
     B2_APPLICATION_KEY: ENC[AES256_GCM,data:+nBz1UdNKydJ+s1karrfUej7K714xm+ViPlXJ6qZLcBrB1ifKqzyRzD6k/Q=,iv:9/OVNDwr1S/LytWK2FyjgBBbwdUOIwnJcmVN2M/uEiU=,tag:oDeL6T+ODZRLUc4N0HwXoA==,type:str]
     MAIL_MANAGEMENT_CIDRS_JSON: ENC[AES256_GCM,data:VfPYg9ifBZs26LrRtA+Te46WUhh2HRX30KsWeQ==,iv:5fv/o1eL2pRaqFuwXjDlB5dHkIygRLCyYP5upI3LSRI=,tag:lPs89x+5+O0mYjY+jnPJrQ==,type:str]
@@ -37,6 +36,6 @@ sops:
             -----END AGE ENCRYPTED FILE-----
           recipient: age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-08-22T01:09:22Z"
-    mac: ENC[AES256_GCM,data:iovuBLb0duM9RejkckJgXcSJtEPTvqL2RzhzmGT2SQYQH7VDfMLCXlqcuXTlvqFUQBS17Nzd2Mga/XHlIUV2A3dJtKotggERY9vPYFwpyI2uzw5LTypw1UeBGIkiLfn85EIBq0PRBFHyg+gQfbpdEWPWY1NBT4g/1zQkB4MVoKM=,iv:o0LG4+jji/eQm3/mGAXAUbCiGwm2YCKR2T9mM3tg5S8=,tag:OgfHgRR0cNjaO1MnT9Akqg==,type:str]
+    lastmodified: "2026-08-22T17:01:03Z"
+    mac: ENC[AES256_GCM,data:N3aPP34AUteKjiG0A9ZXPVvkdl4DwBy41t5q09/+qCjAk/GZbUg6zAqqlQ3F2fZgTukaypaxkkmCrulf8+OlWUUSaKstlGZRzzPNTpalMmzQgQaeh1lOZ4rXhc9JUkWdE8RERqCW2f2sFi00gXhhBOz9u3nhHtDt1AO9cZqL5oA=,iv:PUFB8LH+kSGlUHdRyHRYfm4dd3oBUKJUPB5abn6IemY=,tag:MLdzMJS2cYm6pa1KiZr5PA==,type:str]
     version: 3.13.3

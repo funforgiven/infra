@@ -7,6 +7,12 @@ paths = ['''components/cloud/identity/tofu/main\.tf''']
 regexTarget = "line"
 regexes = ['''password_check_lifetime\s*=\s*"[0-9]+h[0-9]+m[0-9]+s"''']
 
+[[allowlists]]
+description = "Nix verified-fetches requires the repository's public SSH signing key"
+paths = ['''components/cloud/services/mail-aws/tofu/user-data\.sh\.tftpl''']
+regexTarget = "line"
+regexes = ['''key\s*=\s*"AAAAC3NzaC1lZDI1NTE5AAAAI[A-Za-z0-9+/]+"''']
+
 [[rules]]
 id = "openai-key-assignment"
 description = "OpenAI Admin or runtime API key assigned as plaintext"

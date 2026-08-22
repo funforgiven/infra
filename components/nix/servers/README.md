@@ -1,8 +1,9 @@
 # Declarative service hosts
 
-The Hermes, Home Assistant, and mail-edge hosts are NixOS closures built from
-this repository. OpenStack images are promoted only from a clean, signed Git
-revision; the Hetzner host is installed with the pinned nixos-anywhere input.
+Hermes and the legacy Home Assistant installation are NixOS closures built from
+this repository. Home Assistant is migrating to the official HAOS appliance;
+its version and archive digest are pinned by the same signed image-promotion
+gate. The Hetzner mail host remains the rollback source until AWS mail cutover.
 The operator account authenticates only with the pinned SSH key and has
 passwordless sudo because service hosts intentionally have no login password.
 
@@ -62,7 +63,7 @@ backup unit remains condition-gated until three root-only files exist:
   the least-privilege object-store writer credential
 
 All repositories use the existing `fahrican-cloud-recovery` Backblaze B2
-bucket. Hermes, Home Assistant, and mail-edge are confined respectively to
+bucket. Hermes, legacy Home Assistant, and legacy mail-edge are confined respectively to
 `services/hosts/hermes/`, `services/hosts/home-assistant/`, and
 `services/hosts/mail-edge/`. The pinned Backblaze reconciler creates an
 independent B2 application key restricted to each prefix so Restic can back
@@ -81,10 +82,15 @@ only its initial files through the already prefix-bound key because Backblaze
 cannot report a missing object to that caller. Scheduled operations use the
 same key and remain confined to their host prefix.
 
-The declarative timer runs daily with randomized delay and retains 14 daily,
+The declarative Restic timer runs daily with randomized delay and retains 14 daily,
 8 weekly, 12 monthly, and 3 yearly snapshots. Provider snapshots and Hetzner
 server backups are secondary recovery aids; they do not replace the encrypted
 off-site Restic copy.
+
+After HAOS cutover, Home Assistant uses its native encrypted automatic-backup
+manager and native Backblaze B2 backup-location integration with the same
+prefix-scoped application key. Restic stays in the contract only until a native
+isolated restore passes and the retained NixOS root is retired.
 
 ## Host alert enrollment
 

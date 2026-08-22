@@ -6,8 +6,10 @@ The initial music workflow is intentionally direct:
    store. Payment credentials stay in the personal password manager and are
    never provided to Hermes or a workload.
 2. Sign in to the SFTPGo WebClient at
-   https://inbox.fahrican.com/web/client as `music-library` and upload the album
-   files or directory as received.
+   https://upload.fahrican.com/web/client with ZITADEL and upload the album files
+   or directory as received. The predeclared upload account is matched from the
+   identity token's verified `email` claim and has no local password or file
+   transfer protocol access.
 3. SFTPGo writes directly to the shared `media-library` volume. Navidrome
    mounts its `library` directory read-only at `/music` and scans it for
    changes.
@@ -26,7 +28,8 @@ per Navidrome user through their upstream interactive authorization flows.
 ## Activation gates
 
 - Enroll the media contract into the central services bootstrap SOPS Secret;
-  the reconciler derives `media-runtime` without persisting plaintext.
+  the reconciler combines it in memory with the Git-managed ZITADEL application
+  output to derive `media-runtime` without persisting plaintext.
 - Confirm the Manila RWX and Cinder RWO qualification, Velero object-store
   location, daily and weekly schedules, and an isolated restore of all three
   PVCs.
@@ -38,5 +41,6 @@ per Navidrome user through their upstream interactive authorization flows.
   workflow as production.
 
 SFTPGo configuration and accounts are recreated from Git plus runtime secrets
-on every pod start. WebAdmin is inspection-only; accepted configuration changes
-must be represented in the bootstrap data before they are retained.
+on every pod start. The local administrator login remains an emergency and
+inspection path; accepted configuration changes must be represented in the
+bootstrap data before they are retained.

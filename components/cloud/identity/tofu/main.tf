@@ -112,6 +112,11 @@ locals {
       redirect_uri = "https://identity.cloud.fahrican.com/v3/redirect_uri"
       post_logout  = "https://dashboard.cloud.fahrican.com/"
     }
+    sftpgo = {
+      name         = "SFTPGo Music Upload"
+      redirect_uri = "https://upload.fahrican.com/web/oidc/redirect"
+      post_logout  = "https://upload.fahrican.com/web/client/logout"
+    }
   }
 }
 
@@ -188,6 +193,16 @@ output "openstack_client_id" {
 
 output "openstack_client_secret" {
   value     = zitadel_application_oidc.web["openstack"].client_secret
+  sensitive = true
+}
+
+output "sftpgo_client_id" {
+  value     = zitadel_application_oidc.web["sftpgo"].client_id
+  sensitive = true
+}
+
+output "sftpgo_client_secret" {
+  value     = zitadel_application_oidc.web["sftpgo"].client_secret
   sensitive = true
 }
 

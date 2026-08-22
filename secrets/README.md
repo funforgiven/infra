@@ -81,6 +81,8 @@ only these nine externally issued keys:
 | `ND_LASTFM_SECRET.key` | Navidrome Last.fm application secret |
 | `OPENAI_API_KEY.key` | Independently revocable project key used only by Hermes |
 | `RESEND_ADMIN_API_KEY.key` | Resend administration key used by the pinned reconcilers |
+| `AWS_BOOTSTRAP_ACCESS_KEY_ID.key` | Temporary AWS bootstrap identity used once to create the narrower mail GitOps identity |
+| `AWS_BOOTSTRAP_SECRET_ACCESS_KEY.key` | Temporary AWS bootstrap secret used only in process memory and cleared after successful SOPS enrollment |
 
 The enrollment and provider reconcilers clear an intake file only after its
 value has been successfully encrypted or consumed. Backblaze's master pair

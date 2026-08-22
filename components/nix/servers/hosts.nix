@@ -19,5 +19,16 @@ in
     hermes = mkServer "services-openstack-guest" "services-hermes";
     home-assistant = mkServer "services-openstack-guest" "services-home-assistant";
     mail-edge = mkServer "services-hetzner-guest" "services-mail-edge";
+    mail-aws = {
+      system = "aarch64-linux";
+      stateVersion = "26.05";
+      user = "funforgiven";
+      homeProfiles = [ ];
+      features = [
+        "services-server-common"
+        "services-aws-guest"
+        "services-aws-mail"
+      ];
+    };
   };
 }

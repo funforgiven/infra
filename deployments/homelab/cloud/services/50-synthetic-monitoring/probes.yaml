@@ -14,7 +14,7 @@ spec:
     staticConfig:
       static:
         - https://home.fahrican.com
-        - https://inbox.fahrican.com/web/client/
+        - https://upload.fahrican.com/web/client/
         - https://mail.fahrican.com
         - https://music.fahrican.com/ping
 ---

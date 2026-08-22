@@ -69,6 +69,23 @@ spec:
               value: /var/lib/sftpgo/sftpgo.db
             - name: SFTPGO_HTTPD__BINDINGS__0__PORT
               value: "8080"
+            - name: SFTPGO_HTTPD__BINDINGS__0__DISABLED_LOGIN_METHODS
+              value: "8"
+            - name: SFTPGO_HTTPD__BINDINGS__0__OIDC__CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: media-runtime
+                  key: SFTPGO_OIDC_CLIENT_ID
+            - name: SFTPGO_HTTPD__BINDINGS__0__OIDC__CLIENT_SECRET_FILE
+              value: /run/secrets/sftpgo-oidc-client-secret
+            - name: SFTPGO_HTTPD__BINDINGS__0__OIDC__CONFIG_URL
+              value: https://auth.cloud.fahrican.com
+            - name: SFTPGO_HTTPD__BINDINGS__0__OIDC__REDIRECT_BASE_URL
+              value: https://upload.fahrican.com
+            - name: SFTPGO_HTTPD__BINDINGS__0__OIDC__SCOPES
+              value: openid,profile,email
+            - name: SFTPGO_HTTPD__BINDINGS__0__OIDC__USERNAME_FIELD
+              value: email
             - name: SFTPGO_LOADDATA_CLEAN
               value: "true"
             - name: SFTPGO_LOADDATA_FROM
@@ -114,6 +131,9 @@ spec:
               mountPath: /var/lib/sftpgo
             - name: media
               mountPath: /srv/sftpgo/data/media
+            - name: oidc
+              mountPath: /run/secrets
+              readOnly: true
       volumes:
         - name: bootstrap
           configMap:
@@ -126,8 +146,13 @@ spec:
             items:
               - key: SFTPGO_ADMIN_PASSWORD
                 path: sftpgo-admin-password
-              - key: SFTPGO_USER_PASSWORD
-                path: sftpgo-user-password
+        - name: oidc
+          secret:
+            secretName: media-runtime
+            defaultMode: 0440
+            items:
+              - key: SFTPGO_OIDC_CLIENT_SECRET
+                path: sftpgo-oidc-client-secret
         - name: bootstrap-rendered
           emptyDir:
             medium: Memory
