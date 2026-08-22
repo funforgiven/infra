@@ -146,7 +146,7 @@ spec:
             - name: NEXTAUTH_URL
               value: https://keep.fahrican.com
             - name: OAUTH_AUTO_REDIRECT
-              value: "true"
+              value: "false"
             - name: OAUTH_PROVIDER_NAME
               value: ZITADEL
             - name: OAUTH_WELLKNOWN_URL
