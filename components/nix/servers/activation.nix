@@ -201,6 +201,17 @@
               ${./hermes.nix}
             rg --fixed-strings --quiet 'agent.disabled_toolsets = [ "web" ];' \
               ${./hermes.nix}
+            if rg --fixed-strings --quiet 'http = {' \
+              ${./home-assistant.nix}; then
+              echo 'Home Assistant HTTP settings must not return to ignored YAML.' >&2
+              exit 1
+            fi
+            rg --fixed-strings --quiet \
+              'Home Assistant 2026.8 migrated HTTP settings' \
+              ${inputs.self}/deployments/homelab/cloud/manual-exceptions.yaml
+            rg --fixed-strings --quiet \
+              '`192.168.80.0/24` and use forwarded headers' \
+              ${inputs.self}/deployments/homelab/cloud/services/ACTIVATION.md
             if rg --quiet 'openai-codex|auth\.json|device-code|device-auth' \
               ${./hermes.nix} \
               ${./README.md} \

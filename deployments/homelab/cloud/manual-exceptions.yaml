@@ -81,12 +81,12 @@ exceptions:
     review_interval: monthly
     exit_criterion: Remove the first-admin portion when Navidrome exposes a supported declarative bootstrap; retain per-user consent while the upstream services require interactive grants.
   - id: home-assistant-runtime-registry
-    resource: Home Assistant integrations that are stored only in the runtime registry
+    resource: Home Assistant HTTP configuration and integrations stored only in the runtime registry
     owner: funforgiven
-    rationale: Some integrations do not expose a stable YAML or API representation and must be enrolled through the Home Assistant UI.
-    procedure: Prefer Git-managed YAML; document each UI-only enrollment and run an encrypted backup immediately after an accepted change.
-    secret_handling: Integration credentials remain in Home Assistant state and encrypted backups, not documentation or Git plaintext.
+    rationale: Home Assistant 2026.8 migrated HTTP settings from YAML to its authenticated runtime store, and some integrations likewise expose no stable declarative representation. HTTP changes are deliberately trialled and require an administrator to confirm the working configuration, so neither first-user creation nor promotion can be safely fabricated before onboarding.
+    procedure: Complete first-administrator onboarding through the routed provider address, configure the built-in HTTP settings to trust only 192.168.80.0/24 and use forwarded headers, then verify and confirm the pending configuration through https://home.fahrican.com within its five-minute trial. Prefer Git-managed YAML for settings that still support it, document each UI-only enrollment, and run an encrypted backup immediately after every accepted change.
+    secret_handling: The local administrator password, MFA material, HTTP runtime state, and integration credentials remain in Home Assistant state and encrypted backups, not documentation or Git plaintext.
     backup: Daily encrypted Home Assistant state export plus a pre-change export for every UI-only modification.
-    drift_probe: Compare the documented integration inventory with the redacted Home Assistant diagnostics export.
+    drift_probe: Verify the public reverse-proxy path and compare the documented HTTP and integration inventory with the redacted Home Assistant diagnostics export.
     review_interval: monthly
-    exit_criterion: Migrate an integration to Git as soon as Home Assistant offers a supported declarative representation.
+    exit_criterion: Migrate HTTP settings or an integration to Git as soon as Home Assistant restores a supported declarative representation.

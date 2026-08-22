@@ -225,8 +225,12 @@ Confirm the Velero storage location is Available, complete the isolated restore
 qualification, and inspect one daily backup before accepting application data.
 Then complete only the documented UI exceptions: Navidrome first admin and
 scrobbling grants, Stalwart directory objects, and
-Home Assistant UI-only integrations. Every accepted UI change is followed by
-an encrypted backup and a drift-record update.
+Home Assistant first-administrator onboarding, HTTP proxy confirmation, and
+UI-only integrations. Home Assistant's built-in HTTP settings must trust only
+`192.168.80.0/24` and use forwarded headers; verify and confirm the pending
+configuration through `https://home.fahrican.com` within its five-minute safety
+trial. Every accepted UI change is followed by an encrypted backup and a
+drift-record update.
 
 The final synthetic wave probes every private HTTP route, public mail ports,
 Hermes/Home Assistant node exporters, and the last successful host Restic
