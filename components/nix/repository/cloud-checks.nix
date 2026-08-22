@@ -894,6 +894,20 @@
             prometheus_spec = observability_release["spec"]["values"]["prometheus"][
                 "prometheusSpec"
             ]
+            if prometheus_spec.get("serviceDiscoveryRole") != "EndpointSlice":
+                raise SystemExit(
+                    "Prometheus must discover services through EndpointSlice"
+                )
+            operator_values = observability_release["spec"]["values"][
+                "prometheusOperator"
+            ]
+            if (
+                operator_values.get("kubeletEndpointsEnabled") is not False
+                or operator_values.get("kubeletEndpointSliceEnabled") is not True
+            ):
+                raise SystemExit(
+                    "Prometheus Operator must publish only kubelet EndpointSlices"
+                )
             for resource in ("podMonitor", "probe", "rule", "serviceMonitor"):
                 if (
                     prometheus_spec.get(f"{resource}SelectorNilUsesHelmValues")
