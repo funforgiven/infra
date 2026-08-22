@@ -18,15 +18,20 @@ SSH-signed commit, builds the matching Hermes image, and imports the pinned
 official HAOS 18.2 QCOW2 only after verifying its archive SHA-256. Both artifacts
 are private, protected, and carry their source digests as Glance properties.
 
-Activation is deliberately two-step:
+Image promotion and host activation are deliberately separate:
 
 1. Merge and sign the NixOS image configuration.
 2. From a services-project OpenStack shell, run
    nix run .#promote-service-images.
-3. Replace the image revision in wave 83 with that full commit.
-4. Review the resulting OpenTofu plan.
-5. Remove the Terraform resource suspension only after backup and restore
-   checks pass, then resume wave 83.
+3. Verify the promoted image and record its full signed revision as a candidate.
+4. Leave wave 83's active image revision unchanged until a separate migration
+   has staged runtime credentials and a recovery-tested retained root.
+
+The promotion command never edits the active revision. Changing that value on
+an already provisioned host would ask OpenTofu to replace a protected boot
+volume; it is therefore not an image-publication step and must be implemented as
+an explicit retained-volume migration. HAOS uses its own retained root and the
+platform selector below, so publishing HAOS does not alter the running NixOS VM.
 
 ## Home Assistant OS cutover
 
