@@ -301,10 +301,14 @@ _: {
 
       environment.systemPackages = [ cliPackage ];
 
-      # The synchronization timer and the long-running daemon share this
-      # tmpfs boundary. Let tmpfiles own its lifetime so one unit stopping
-      # cannot remove credentials still in use by another unit.
+      # EC2 user data must create the deployment environment before the
+      # stalwart account exists.  On activation, tmpfiles narrows access to
+      # root and that service group before the unprivileged bootstrap runs.
+      # It also owns the shared tmpfs boundary so one unit stopping cannot
+      # remove credentials still in use by another unit.
       systemd.tmpfiles.rules = [
+        "d /etc/stalwart-bootstrap 0750 root stalwart -"
+        "z ${deploymentEnvironment} 0640 root stalwart -"
         "d ${runtimeDirectory} 0700 stalwart stalwart -"
       ];
 
