@@ -670,6 +670,17 @@
                 raise SystemExit("Stalwart directory inventory version is invalid")
             if mail_directory.get("domains") != [{"name": "fahrican.com"}]:
                 raise SystemExit("Stalwart directory must retain the declared mail domain")
+            if mail_directory.get("accounts") != [
+                {
+                    "address": "fahrican@fahrican.com",
+                    "displayName": "Fahrican",
+                }
+            ]:
+                raise SystemExit("Stalwart initial mailbox inventory drifted")
+            if mail_directory.get("aliases") or mail_directory.get(
+                "applicationPasswords"
+            ):
+                raise SystemExit("Stalwart contains undeclared directory objects")
             if set(mail_directory) != {
                 "version",
                 "domains",
