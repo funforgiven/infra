@@ -46,12 +46,12 @@ ignored mode-0600 `AWS_BOOTSTRAP_*` intake files. The cohesive credential tool
 uses that authority only to reconcile the `fahrican-mail-gitops` IAM user and
 the reviewed regional policy in `bootstrap-iam-policy.json`, creates one new
 access pair for that identity, encrypts only the narrower pair into the
-`aws-mail-provisioning` SOPS Secret, and clears the intake files after success.
-Neither pair is passed as an OpenTofu variable, committed in plaintext, or
-placed in a shell argument. Revoke the temporary bootstrap key in AWS after the
-dedicated identity passes `GetCallerIdentity`. The GitOps Terraform object
-remains suspended and carries a non-deployable source-revision sentinel until
-that final enrollment.
+`aws-mail-provisioning` SOPS Secret, verifies the dedicated identity, revokes
+the exact temporary key, and only then clears the intake files. Neither pair is
+passed as an OpenTofu variable, committed in plaintext, or placed in a shell
+argument. Interrupted revocation is resumable from the encrypted dedicated
+pair. The GitOps Terraform object remains suspended until that final
+enrollment.
 
 ## Safe activation and migration
 
@@ -61,8 +61,8 @@ that final enrollment.
    repository signing key using Nix verified fetches.
 2. Put the temporary AWS bootstrap pair in the declared intake files and run
    `nix run .#enroll-aws-mail-auth`. Verify that both files are empty, review
-   the dedicated identity and policy, revoke the temporary key, review the
-   OpenTofu plan, and unsuspend only `mail-aws`. Do not change
+   the dedicated identity and policy, confirm the temporary key was revoked,
+   review the OpenTofu plan, and unsuspend only `mail-aws`. Do not change
    `active-mail-origin`; Hetzner remains the live MX and rollback source.
 3. Confirm the SNS email subscription. Through Session Manager, require the
    bootstrap marker, a healthy Stalwart unit, RDS connectivity, an S3 write/read

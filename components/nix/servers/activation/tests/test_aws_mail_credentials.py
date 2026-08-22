@@ -11,6 +11,7 @@ from aws_mail_credentials import (
     AUTH_KEYS,
     BOOTSTRAP_KEYS,
     GITOPS_POLICY_FILE,
+    ProvisioningIdentity,
     RESEND_FILE,
     RESEND_KEY,
     AwsMailCredentialError,
@@ -94,24 +95,33 @@ class AwsMailCredentialsTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
 
+    @patch.object(AwsMailCredentials, "_revoke_bootstrap_key")
     @patch.object(AwsMailCredentials, "_reconcile_gitops_identity")
     def test_enrollment_writes_one_destination_then_clears_intake(
-        self, reconcile
+        self, reconcile, revoke
     ) -> None:
-        reconcile.return_value = {
-            AUTH_KEYS[0]: self.access_id,
-            AUTH_KEYS[1]: self.secret,
-        }
+        values = {AUTH_KEYS[0]: self.access_id, AUTH_KEYS[1]: self.secret}
+        reconcile.return_value = ProvisioningIdentity(
+            values, "bootstrap-admin", True
+        )
         self.credentials.enroll_provisioning()
         reconcile.assert_called_once_with(
             {
                 BOOTSTRAP_KEYS[0]: self.bootstrap_access_id,
                 BOOTSTRAP_KEYS[1]: self.bootstrap_secret,
-            }
+            },
+            AWS_FILE,
+        )
+        revoke.assert_called_once_with(
+            "bootstrap-admin",
+            {
+                BOOTSTRAP_KEYS[0]: self.bootstrap_access_id,
+                BOOTSTRAP_KEYS[1]: self.bootstrap_secret,
+            },
         )
         self.assertEqual(
             self.store.writes,
-            [(AWS_FILE, {AUTH_KEYS[0]: self.access_id, AUTH_KEYS[1]: self.secret})],
+            [(AWS_FILE, values)],
         )
         for key in BOOTSTRAP_KEYS:
             self.assertEqual((self.root / "secrets" / f"{key}.key").stat().st_size, 0)
@@ -146,7 +156,18 @@ class AwsMailCredentialsTest(unittest.TestCase):
         self, aws
     ) -> None:
         aws.side_effect = [
-            subprocess.CompletedProcess([], 0, '{"Account":"123456789012"}'),
+            subprocess.CompletedProcess(
+                [],
+                0,
+                '{"Account":"123456789012",'
+                '"Arn":"arn:aws:iam::123456789012:user/bootstrap-admin"}',
+            ),
+            subprocess.CompletedProcess(
+                [],
+                0,
+                '{"User":{"UserName":"bootstrap-admin",'
+                '"Arn":"arn:aws:iam::123456789012:user/bootstrap-admin"}}',
+            ),
             subprocess.CompletedProcess([], 0, ""),
             subprocess.CompletedProcess([], 0, ""),
             subprocess.CompletedProcess([], 0, '{"AccessKeyMetadata":[]}'),
@@ -158,6 +179,12 @@ class AwsMailCredentialsTest(unittest.TestCase):
                 f'\"SecretAccessKey\":\"{self.secret}\"'
                 "}}",
             ),
+            subprocess.CompletedProcess(
+                [],
+                0,
+                '{"Account":"123456789012",'
+                '"Arn":"arn:aws:iam::123456789012:user/fahrican-mail-gitops"}',
+            ),
         ]
         bootstrap = {
             BOOTSTRAP_KEYS[0]: self.bootstrap_access_id,
@@ -165,13 +192,96 @@ class AwsMailCredentialsTest(unittest.TestCase):
         }
 
         self.assertEqual(
-            self.credentials._reconcile_gitops_identity(bootstrap),
-            {AUTH_KEYS[0]: self.access_id, AUTH_KEYS[1]: self.secret},
+            self.credentials._reconcile_gitops_identity(bootstrap, AWS_FILE),
+            ProvisioningIdentity(
+                {AUTH_KEYS[0]: self.access_id, AUTH_KEYS[1]: self.secret},
+                "bootstrap-admin",
+                True,
+            ),
         )
         rendered_commands = repr([call.args[0] for call in aws.call_args_list])
         self.assertNotIn(self.bootstrap_access_id, rendered_commands)
         self.assertNotIn(self.bootstrap_secret, rendered_commands)
         self.assertNotIn(self.secret, rendered_commands)
+
+    @patch.object(AwsMailCredentials, "_aws")
+    def test_enrollment_resumes_with_the_matching_encrypted_gitops_key(
+        self, aws
+    ) -> None:
+        for key, value in zip(AUTH_KEYS, (self.access_id, self.secret), strict=True):
+            self.store.values[(AWS_FILE, key)] = value
+        aws.side_effect = [
+            subprocess.CompletedProcess(
+                [],
+                0,
+                '{"Account":"123456789012",'
+                '"Arn":"arn:aws:iam::123456789012:user/bootstrap-admin"}',
+            ),
+            subprocess.CompletedProcess(
+                [],
+                0,
+                '{"User":{"UserName":"bootstrap-admin",'
+                '"Arn":"arn:aws:iam::123456789012:user/bootstrap-admin"}}',
+            ),
+            subprocess.CompletedProcess([], 0, ""),
+            subprocess.CompletedProcess([], 0, ""),
+            subprocess.CompletedProcess(
+                [],
+                0,
+                '{"AccessKeyMetadata":[{"AccessKeyId":"'
+                f"{self.access_id}"
+                '"}]}',
+            ),
+            subprocess.CompletedProcess(
+                [],
+                0,
+                '{"Account":"123456789012",'
+                '"Arn":"arn:aws:iam::123456789012:user/fahrican-mail-gitops"}',
+            ),
+        ]
+        bootstrap = {
+            BOOTSTRAP_KEYS[0]: self.bootstrap_access_id,
+            BOOTSTRAP_KEYS[1]: self.bootstrap_secret,
+        }
+
+        self.assertEqual(
+            self.credentials._reconcile_gitops_identity(bootstrap, AWS_FILE),
+            ProvisioningIdentity(
+                {AUTH_KEYS[0]: self.access_id, AUTH_KEYS[1]: self.secret},
+                "bootstrap-admin",
+                False,
+            ),
+        )
+        commands = [call.args[0] for call in aws.call_args_list]
+        self.assertFalse(any("create-access-key" in command for command in commands))
+
+    @patch.object(AwsMailCredentials, "_aws")
+    def test_bootstrap_revocation_uses_stdin_and_preserves_intake_on_failure(
+        self, aws
+    ) -> None:
+        aws.return_value = subprocess.CompletedProcess([], 1)
+        bootstrap = {
+            BOOTSTRAP_KEYS[0]: self.bootstrap_access_id,
+            BOOTSTRAP_KEYS[1]: self.bootstrap_secret,
+        }
+
+        with self.assertRaisesRegex(AwsMailCredentialError, "intake files were preserved"):
+            self.credentials._revoke_bootstrap_key("bootstrap-admin", bootstrap)
+
+        arguments, environment = aws.call_args.args
+        options = aws.call_args.kwargs
+        self.assertNotIn(self.bootstrap_access_id, arguments)
+        self.assertEqual(arguments[-1], "file:///dev/stdin")
+        self.assertEqual(
+            options["input_document"],
+            {
+                "UserName": "bootstrap-admin",
+                "AccessKeyId": self.bootstrap_access_id,
+            },
+        )
+        self.assertEqual(environment["AWS_ACCESS_KEY_ID"], self.bootstrap_access_id)
+        for key in BOOTSTRAP_KEYS:
+            self.assertGreater((self.root / "secrets" / f"{key}.key").stat().st_size, 0)
 
 
 if __name__ == "__main__":
