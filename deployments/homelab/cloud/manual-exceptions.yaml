@@ -50,16 +50,16 @@ exceptions:
     drift_probe: Verify the dedicated token inventory and last rotation date monthly without retrieving or displaying its value.
     review_interval: monthly
     exit_criterion: Remove when Hetzner supports a workload identity flow that the controller can use without a long-lived token.
-  - id: hetzner-smtp-port-unblock
-    resource: Hetzner account-level SMTP port restriction for the mail edge
+  - id: smtp-inbound-monitoring-vantage
+    resource: Continuous SMTP port 25 reachability from an independent Internet vantage
     owner: funforgiven
-    rationale: Hetzner applies an account-level port 25 and 465 restriction that is outside the server and firewall APIs. Removing it requires an eligible account owner to submit a reviewed limit request in the Hetzner Console.
-    procedure: In the Hetzner Console limits view, submit the SMTP port-unblock request for the fahrican.com personal mail use case. Accept completion only after the external mail-tcp probe reaches mail.fahrican.com:25; the declarative Hetzner and NixOS firewalls must remain unchanged and open only the documented mail listeners.
-    secret_handling: The request contains no server credentials, API tokens, mailbox passwords, or application passwords; retain only the provider ticket reference and decision.
-    backup: The provider ticket and account decision are the recovery record; the server, address, reverse DNS, and firewall remain reproducible through OpenTofu.
-    drift_probe: The external mail-tcp probe continuously verifies port 25, while OpenTofu detects firewall drift independently.
+    rationale: The services-cluster network cannot establish outbound TCP port 25 to the mail edge even though its other mail probes pass, the live Hetzner and NixOS firewalls admit port 25, Stalwart listens on it, and an external Resend delivery through public MX reaches the mailbox. A credentialed mail-loop exporter or another custom monitoring service is not justified for this personal deployment.
+    procedure: Retain the non-paging mail.fahrican.com:25 probe series for diagnosis. After mail-edge, DNS, or provider changes, send one idempotent acceptance message from Resend through the public MX, require Resend's delivered state, and verify the exact subject over authenticated IMAPS. Ports 465, 587, and 993 and every HTTP endpoint remain continuously paging from the services cluster.
+    secret_handling: Resend administration and mailbox credentials are read only from their existing SOPS or mode-0600 runtime boundaries into process memory; they are never printed, committed, passed as command arguments, or copied into the monitoring cluster.
+    backup: The encrypted Stalwart state backup remains the recovery artifact; the acceptance message contains no secret or operational state.
+    drift_probe: Review the retained port 25 series and repeat the external MX-to-IMAP acceptance monthly without displaying message content or credentials. OpenTofu and NixOS independently detect server and firewall drift.
     review_interval: monthly
-    exit_criterion: Close the request after port 25 remains externally reachable; retain this record while Hetzner keeps the setting outside its API.
+    exit_criterion: Remove this exception when a trustworthy external TCP vantage can feed the existing alert path without a new long-lived credential or custom service, or when the services-cluster source network can reach port 25 reliably.
   - id: offsite-backup-credential-issuance
     resource: Backblaze B2 master-key bootstrap for service backup writers
     owner: funforgiven

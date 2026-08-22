@@ -193,9 +193,13 @@ Activate stage `mail`, confirm its retained address and reverse DNS, then
 perform the explicitly destructive nixos-anywhere install against that exact
 server. Enroll only its `mail-edge-backup` and `monitoring` profiles initially;
 the absent mail runtime keeps Stalwart stopped while DNS and ACME are pending.
-Confirm the Hetzner account-level SMTP restriction is removed through the
-documented provider exception; the final external probe must reach port 25 even
-when the host listener and declarative firewalls are already healthy.
+Confirm the Hetzner account-level outbound SMTP restriction is removed by
+reaching an independent MX on port 25 from the host. Prove public inbound SMTP
+separately by sending an idempotent Resend acceptance message through the
+published MX and finding it over authenticated IMAPS. If the services-cluster
+source network cannot reach port 25 while that external delivery passes, retain
+the non-paging diagnostic series and follow the documented monitoring-vantage
+exception instead of adding a credentialed custom mail-loop service.
 Activate stage `dns` after the cluster reconciler has copied the mail-edge
 output into `service-dns-inputs`. Once the A and Resend verification records
 are live and the domain is verified, run `reconcile-services-resend apply`.

@@ -543,6 +543,17 @@
                 "0f442cf9263b3a579d9b22417501dfef75e83b300b8180b9394c86d0127ec220"
             ):
                 raise SystemExit("Velero must pin the upstream Backblaze header fix")
+            velero_alerts = {
+                rule["alert"]: rule
+                for rule in velero_release["spec"]["values"]["metrics"][
+                    "prometheusRule"
+                ]["spec"]
+            }
+            recent_backup_expression = velero_alerts["VeleroNoRecentBackup"]["expr"]
+            if "bool" in recent_backup_expression:
+                raise SystemExit(
+                    "Velero age alert must drop false comparison series"
+                )
             restore_documents = list(
                 yaml.safe_load_all(
                     (
@@ -653,8 +664,33 @@
                 raise SystemExit("obsolete Hermes OAuth exception remains declared")
             if "openai-api-key-issuance" not in exception_ids:
                 raise SystemExit("operator-issued OpenAI runtime key is undocumented")
-            if "hetzner-smtp-port-unblock" not in exception_ids:
-                raise SystemExit("Hetzner SMTP port review is undocumented")
+            if "smtp-inbound-monitoring-vantage" not in exception_ids:
+                raise SystemExit("SMTP external-monitoring limitation is undocumented")
+            if "hetzner-smtp-port-unblock" in exception_ids:
+                raise SystemExit("completed Hetzner SMTP unblock remains open")
+            synthetic_alerts = yaml.safe_load(
+                (root / "services/50-synthetic-monitoring/alerts.yaml").read_text()
+            )
+            endpoint_alert = next(
+                rule
+                for group in synthetic_alerts["spec"]["groups"]
+                for rule in group["rules"]
+                if rule["alert"] == "ServicesEndpointDown"
+            )
+            endpoint_expression = endpoint_alert["expr"]
+            if (
+                'job="services-http"' not in endpoint_expression
+                or 'job="mail-tcp"' not in endpoint_expression
+                or 'instance!="mail.fahrican.com:25"' not in endpoint_expression
+            ):
+                raise SystemExit(
+                    "synthetic paging must exclude only the inconclusive SMTP-25 vantage"
+                )
+            synthetic_probes = (
+                root / "services/50-synthetic-monitoring/probes.yaml"
+            ).read_text()
+            if "mail.fahrican.com:25" not in synthetic_probes:
+                raise SystemExit("SMTP-25 diagnostic probe series was removed")
             if {
                 "openai-admin-key-bootstrap",
                 "openai-organization-hosted-tool-policy",
