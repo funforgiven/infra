@@ -28,6 +28,17 @@ variable "image_revision" {
   }
 }
 
+variable "home_assistant_platform" {
+  description = "Home Assistant boot platform; switch to haos only after the migration gate passes"
+  type        = string
+  default     = "nixos"
+
+  validation {
+    condition     = contains(["nixos", "haos"], var.home_assistant_platform)
+    error_message = "home_assistant_platform must be nixos or haos."
+  }
+}
+
 locals {
   image_revision_short  = substr(var.image_revision, 0, 12)
   tags                  = ["managed-by-opentofu", "platform-services"]
@@ -72,6 +83,16 @@ data "openstack_images_image_v2" "home_assistant" {
   properties = {
     image_role            = "home-assistant"
     image_source_revision = var.image_revision
+  }
+}
+
+data "openstack_images_image_v2" "home_assistant_os" {
+  count = var.home_assistant_platform == "haos" ? 1 : 0
+  name  = "haos-18.2"
+
+  properties = {
+    image_role   = "home-assistant-os"
+    haos_version = "18.2"
   }
 }
 
@@ -268,6 +289,24 @@ resource "openstack_blockstorage_volume_v3" "home_assistant_root" {
   }
 }
 
+resource "openstack_blockstorage_volume_v3" "home_assistant_os_root" {
+  count       = var.home_assistant_platform == "haos" ? 1 : 0
+  name        = "home-assistant-root-haos-18.2"
+  description = "Retained Home Assistant OS root; native backups carry application state"
+  size        = 100
+  image_id    = data.openstack_images_image_v2.home_assistant_os[0].id
+
+  metadata = {
+    haos_version = "18.2"
+    managed_by   = "opentofu"
+    service      = "home-assistant"
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
 resource "openstack_compute_instance_v2" "hermes" {
   name                = "hermes"
   flavor_id           = data.openstack_compute_flavor_v2.services.id
@@ -300,11 +339,13 @@ resource "openstack_compute_instance_v2" "hermes" {
 resource "openstack_compute_instance_v2" "home_assistant" {
   name                = "home-assistant"
   flavor_id           = data.openstack_compute_flavor_v2.services.id
-  config_drive        = true
+  config_drive        = var.home_assistant_platform == "nixos"
   stop_before_destroy = true
 
   block_device {
-    uuid                  = openstack_blockstorage_volume_v3.home_assistant_root.id
+    uuid = var.home_assistant_platform == "haos" ? (
+      openstack_blockstorage_volume_v3.home_assistant_os_root[0].id
+    ) : openstack_blockstorage_volume_v3.home_assistant_root.id
     source_type           = "volume"
     destination_type      = "volume"
     boot_index            = 0
@@ -320,13 +361,9 @@ resource "openstack_compute_instance_v2" "home_assistant" {
   }
 
   metadata = {
-    image_source_revision = var.image_revision
-    managed_by            = "opentofu"
-    service               = "home-assistant"
-  }
-
-  lifecycle {
-    prevent_destroy = true
+    managed_by = "opentofu"
+    platform   = var.home_assistant_platform
+    service    = "home-assistant"
   }
 }
 

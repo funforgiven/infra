@@ -26,8 +26,13 @@
           ''
             set -euo pipefail
 
-            mkdir -p source/components source/deployments/homelab source/secrets
+            mkdir -p \
+              source/components/nix/servers \
+              source/deployments/homelab \
+              source/secrets
             cp -R ${inputs.self}/components/cloud source/components/cloud
+            cp ${inputs.self}/components/nix/servers/image-promotion.nix \
+              source/components/nix/servers/image-promotion.nix
             cp -R ${inputs.self}/deployments/homelab/cloud source/deployments/homelab/cloud
             cp ${inputs.self}/deployments/homelab/ssh-host-keys.json \
               source/deployments/homelab/ssh-host-keys.json
@@ -177,9 +182,13 @@
               deployments/homelab/cloud/undercloud/84-mail-edge \
               >/dev/null
             kustomize build \
+              deployments/homelab/cloud/undercloud/84-mail-aws \
+              >/dev/null
+            kustomize build \
               deployments/homelab/cloud/undercloud/85-service-dns \
               >/dev/null
             python - <<'PY'
+            import json
             import pathlib
             import re
 
@@ -241,6 +250,10 @@
                 "operator-network": (
                     "reconcile-services-operator-network",
                     {"MAIL_MANAGEMENT_CIDRS_JSON"},
+                ),
+                "aws-mail-auth": (
+                    "enroll-aws-mail-auth",
+                    {"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"},
                 ),
                 "resend-mail-edge": (
                     "reconcile-services-resend",
@@ -338,6 +351,11 @@
                 )
             if "OPENAI_API_KEY" in reconcile_script:
                 raise SystemExit("Hermes OpenAI key must not enter cluster reconciliation")
+            if "SFTPGO_USER_PASSWORD" in reconcile_script:
+                raise SystemExit("SFTPGo local user password must remain retired")
+            for oidc_output in ("sftpgo_client_id", "sftpgo_client_secret"):
+                if oidc_output not in reconcile_script:
+                    raise SystemExit("SFTPGo OIDC output is not reconciled")
 
             mail_tofu = yaml.safe_load(
                 (root / "undercloud/84-mail-edge/tofu.yaml").read_text()
@@ -362,6 +380,104 @@
                 not in reconcile_script
             ):
                 raise SystemExit("mail-edge Terraform input is not reconciled in memory")
+
+            aws_mail_root = pathlib.Path("components/cloud/services/mail-aws")
+            aws_mail_tofu = yaml.safe_load(
+                (root / "undercloud/84-mail-aws/tofu.yaml").read_text()
+            )
+            if not aws_mail_tofu["spec"].get("suspend"):
+                raise SystemExit("AWS mail must remain suspended until final auth")
+            aws_source_revision = next(
+                item["value"]
+                for item in aws_mail_tofu["spec"]["vars"]
+                if item["name"] == "source_revision"
+            )
+            if not re.fullmatch(r"[0-9a-f]{40}", aws_source_revision):
+                raise SystemExit("AWS mail source revision must be an exact commit")
+            if aws_mail_tofu["spec"]["runnerPodTemplate"]["spec"].get("envFrom") != [
+                {"secretRef": {"name": "aws-mail-provisioning"}}
+            ]:
+                raise SystemExit("AWS mail provider auth bypasses its SOPS boundary")
+            aws_tofu_text = "\n".join(
+                path.read_text()
+                for path in sorted((aws_mail_root / "tofu").glob("*"))
+                if path.is_file()
+            )
+            required_aws_contract = (
+                'region = "eu-central-1"',
+                'instance_type        = "t4g.micro"',
+                'instance_class = "db.t4g.micro"',
+                'engine_version = "17.10"',
+                "manage_master_user_password = true",
+                "backup_retention_period = 14",
+                "deletion_protection         = true",
+                'versioning_configuration {\n    status = "Enabled"',
+                'sse_algorithm = "AES256"',
+                "prevent_destroy = true",
+                'http_tokens                 = "required"',
+                'policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"',
+            )
+            if any(fragment not in aws_tofu_text for fragment in required_aws_contract):
+                raise SystemExit("AWS mail durability or least-cost contract drifted")
+            forbidden_aws_state = (
+                "aws_secretsmanager_secret_version",
+                "private_key",
+                "key_name",
+            )
+            if any(
+                fragment in aws_tofu_text for fragment in forbidden_aws_state
+            ) or re.search(r"^\s*password\s*=", aws_tofu_text, re.M):
+                raise SystemExit("AWS mail would put credentials or SSH state in OpenTofu")
+            if "from_port   = 22" in aws_tofu_text:
+                raise SystemExit("AWS mail exposes SSH instead of Session Manager")
+            if 'var.source_revision != "0000000000000000000000000000000000000000"' not in (
+                aws_mail_root / "tofu/variables.tf"
+            ).read_text():
+                raise SystemExit("AWS appliance must reject the source sentinel")
+            iam_policy_text = (
+                aws_mail_root / "bootstrap-iam-policy.json"
+            ).read_text()
+            if iam_policy_text.count("ACCOUNT_ID") != 4:
+                raise SystemExit("AWS bootstrap policy account scoping drifted")
+            iam_policy = json.loads(iam_policy_text.replace("ACCOUNT_ID", "123456789012"))
+            policy_statements = {
+                statement["Sid"]: statement
+                for statement in iam_policy["Statement"]
+            }
+            if policy_statements["ManageFrankfurtMailServices"]["Condition"] != {
+                "StringEquals": {"aws:RequestedRegion": "eu-central-1"}
+            }:
+                raise SystemExit("AWS GitOps mutation policy is not Frankfurt-scoped")
+            if set(policy_statements) != {
+                "ReadProvisionedState",
+                "ManageFrankfurtMailServices",
+                "ManageMailBucket",
+                "ManageMailRuntimeRole",
+                "CreateRdsServiceRole",
+            }:
+                raise SystemExit("AWS GitOps IAM policy shape drifted")
+
+            aws_sops = yaml.safe_load(
+                (root / "undercloud/84-mail-aws/aws.sops.yaml").read_text()
+            )
+            if set(aws_sops.get("data", {})) not in (
+                set(),
+                {"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"},
+            ):
+                raise SystemExit("AWS provisioning SOPS document has unexpected keys")
+            if any(
+                not str(value).startswith("ENC[")
+                for value in aws_sops.get("data", {}).values()
+            ):
+                raise SystemExit("AWS provisioning document contains plaintext")
+            aws_recipients = {
+                entry["recipient"] for entry in aws_sops["sops"]["age"]
+            }
+            if aws_recipients != {
+                "age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea",
+                "age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2",
+            }:
+                raise SystemExit("AWS provider auth must be admin/undercloud scoped")
             foundation = yaml.safe_load(
                 (
                     root
@@ -664,6 +780,8 @@
                 raise SystemExit("obsolete Hermes OAuth exception remains declared")
             if "openai-api-key-issuance" not in exception_ids:
                 raise SystemExit("operator-issued OpenAI runtime key is undocumented")
+            if "aws-mail-bootstrap-credential-issuance" not in exception_ids:
+                raise SystemExit("AWS mail bootstrap ceremony is undocumented")
             if "smtp-inbound-monitoring-vantage" not in exception_ids:
                 raise SystemExit("SMTP external-monitoring limitation is undocumented")
             if "hetzner-smtp-port-unblock" in exception_ids:
@@ -747,6 +865,12 @@
             openai_intake_name = "OPENAI_API_KEY" + ".key"
             if openai_intake_name not in repository_text:
                 raise SystemExit("Hermes OpenAI intake contract is undocumented")
+            for aws_intake_name in (
+                "AWS_BOOTSTRAP_ACCESS_KEY_ID" + ".key",
+                "AWS_BOOTSTRAP_SECRET_ACCESS_KEY" + ".key",
+            ):
+                if aws_intake_name not in repository_text:
+                    raise SystemExit("AWS bootstrap intake contract is undocumented")
             obsolete_openai_control_plane = (
                 "OPENAI_" + "ADMIN_KEY",
                 "reconcile-services-" + "openai",
@@ -892,6 +1016,61 @@
                 )
             if '"home_dir":"/srv/sftpgo/data/media/library"' not in sftpgo_bootstrap:
                 raise SystemExit("SFTPGo must write directly to the Navidrome library")
+            required_sftpgo_oidc = (
+                '"username":"fahricanelidemir@gmail.com"',
+                'SFTPGO_HTTPD__BINDINGS__0__OIDC__CLIENT_SECRET_FILE',
+                'SFTPGO_HTTPD__BINDINGS__0__OIDC__USERNAME_FIELD',
+                'value: https://auth.cloud.fahrican.com',
+                'value: https://upload.fahrican.com',
+            )
+            if any(
+                fragment not in sftpgo + sftpgo_bootstrap
+                for fragment in required_sftpgo_oidc
+            ):
+                raise SystemExit("SFTPGo native ZITADEL OIDC contract drifted")
+            if "SFTPGO_USER_PASSWORD" in sftpgo + sftpgo_bootstrap:
+                raise SystemExit("SFTPGo upload identity must not have a local password")
+
+            identity_tofu = pathlib.Path(
+                "components/cloud/identity/tofu/main.tf"
+            ).read_text()
+            for identity_fragment in (
+                'redirect_uri = "https://upload.fahrican.com/web/oidc/redirect"',
+                'output "sftpgo_client_id"',
+                'output "sftpgo_client_secret"',
+            ):
+                if identity_fragment not in identity_tofu:
+                    raise SystemExit("SFTPGo ZITADEL application contract drifted")
+
+            haos_promotion = pathlib.Path(
+                "components/nix/servers/image-promotion.nix"
+            ).read_text()
+            haos_hosts = pathlib.Path(
+                "components/cloud/services/hosts/tofu/main.tf"
+            ).read_text()
+            haos_activation = yaml.safe_load(
+                (root / "undercloud/83-services-hosts/tofu.yaml").read_text()
+            )
+            haos_platform = next(
+                item["value"]
+                for item in haos_activation["spec"]["vars"]
+                if item["name"] == "home_assistant_platform"
+            )
+            if haos_platform != "nixos":
+                raise SystemExit("HAOS must remain behind the restore-qualified cutover")
+            for haos_fragment in (
+                "haos_ova-$haos_version.qcow2.xz",
+                "254e53f354df0739e3afc09be5431a07df53f0df6b703885404f665c454f254e",
+                "--protected",
+            ):
+                if haos_fragment not in haos_promotion:
+                    raise SystemExit("HAOS official-image promotion contract drifted")
+            if (
+                'default     = "nixos"' not in haos_hosts
+                or 'name        = "home-assistant-root-haos-18.2"' not in haos_hosts
+                or haos_hosts.count("prevent_destroy = true") < 3
+            ):
+                raise SystemExit("HAOS cutover or retained-volume protection drifted")
             if (
                 "IFS= read" in sftpgo_bootstrap
                 or 'admin_password="$(cat ' not in sftpgo_bootstrap

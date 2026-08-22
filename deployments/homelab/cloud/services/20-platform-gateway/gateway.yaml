@@ -52,7 +52,7 @@ spec:
     name: letsencrypt-cloudflare
   dnsNames:
     - music.fahrican.com
-    - inbox.fahrican.com
+    - upload.fahrican.com
     - home.fahrican.com
 ---
 apiVersion: gateway.networking.k8s.io/v1
@@ -98,7 +98,7 @@ spec:
       sectionName: http
   hostnames:
     - music.fahrican.com
-    - inbox.fahrican.com
+    - upload.fahrican.com
     - home.fahrican.com
   rules:
     - filters:

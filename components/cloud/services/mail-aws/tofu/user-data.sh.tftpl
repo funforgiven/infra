@@ -1,0 +1,34 @@
+#!/bin/sh
+set -eu
+
+install -d -m 0750 -o root -g root /etc/stalwart-bootstrap
+umask 0027
+
+printf '%s\n' \
+  'AWS_REGION=eu-central-1' \
+  'STALWART_BUCKET=${bucket_name}' \
+  'STALWART_RDS_HOST=${rds_host}' \
+  'STALWART_RDS_SECRET_ARN=${rds_secret_arn}' \
+  'STALWART_ADMIN_SECRET_ARN=${admin_secret_arn}' \
+  'STALWART_MAILBOX_SECRET_ARN=${mailbox_secret_arn}' \
+  'STALWART_RESEND_SECRET_ARN=${resend_secret_arn}' \
+  > /etc/stalwart-bootstrap/aws.env
+
+source_path="$(
+  nix --extra-experimental-features 'nix-command flakes verified-fetches' \
+    eval --raw --impure --expr '
+      builtins.fetchGit {
+        url = "https://github.com/funforgiven/infra.git";
+        rev = "${source_revision}";
+        verifyCommit = true;
+        publicKeys = [{
+          type = "ssh-ed25519";
+          key = "AAAAC3NzaC1lZDI1NTE5AAAAIL1nHHxNA1YUl+89HhieA+YOyOLYJaSRBmutEOVxVQeB";
+        }];
+      }
+    '
+)"
+
+exec nixos-rebuild switch \
+  --option experimental-features 'nix-command flakes verified-fetches' \
+  --flake "$source_path#mail-aws"

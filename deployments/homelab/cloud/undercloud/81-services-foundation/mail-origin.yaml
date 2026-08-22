@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: active-mail-origin
+  namespace: openstack
+data:
+  # The legacy host remains authoritative until AWS delivery, IMAP migration,
+  # TLS, DKIM, restore, and rollback gates have all passed.
+  provider: hetzner

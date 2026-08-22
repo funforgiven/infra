@@ -163,7 +163,6 @@ data:
     require_file ND_LASTFM_SECRET '^[A-Za-z0-9_-]+$' 16 256
     require_file ND_PASSWORDENCRYPTIONKEY '^[A-Za-z0-9_-]+$' 32 256
     require_file SFTPGO_ADMIN_PASSWORD '^[A-Za-z0-9_-]+$' 32 256
-    require_file SFTPGO_USER_PASSWORD '^[A-Za-z0-9_-]+$' 32 256
     require_file HCLOUD_TOKEN '^[A-Za-z0-9._-]+$' 32 512
     require_file MAIL_MANAGEMENT_CIDRS_JSON '^\[[^]]+\]$' 9 1024
     require_file RESEND_ADMIN_API_KEY '^re_[A-Za-z0-9_-]+$' 23 512
@@ -273,6 +272,14 @@ data:
         -o "jsonpath={.data.$key}" > "/tmp/$key"
     done
 
+    for key in sftpgo_client_id sftpgo_client_secret; do
+      KUBECONFIG="$undercloud_kubeconfig" \
+        "$kubectl" -n tofu-system get secret zitadel-identity-outputs \
+        -o "jsonpath={.data.$key}" | base64 -d > "/tmp/$key"
+      test -s "/tmp/$key"
+      test "$(wc -c < "/tmp/$key" | tr -d ' ')" -le 512
+    done
+
     grep -Fx fahrican-cloud-recovery /tmp/bucket_name >/dev/null
     grep -Fx https://s3.us-west-004.backblazeb2.com /tmp/endpoint >/dev/null
     grep -Fx us-west-004 /tmp/region >/dev/null
@@ -296,10 +303,21 @@ data:
       KUBECONFIG="$undercloud_kubeconfig" \
         "$kubectl" -n openstack apply -f -
 
-    if KUBECONFIG="$undercloud_kubeconfig" \
-      "$kubectl" -n openstack get secret mail-edge-outputs >/dev/null 2>&1; then
+    mail_origin="$(
       KUBECONFIG="$undercloud_kubeconfig" \
-        "$kubectl" -n openstack get secret mail-edge-outputs \
+        "$kubectl" -n openstack get configmap active-mail-origin \
+        -o jsonpath='{.data.provider}'
+    )"
+    case "$mail_origin" in
+      hetzner) mail_output_secret=mail-edge-outputs ;;
+      aws) mail_output_secret=mail-aws-outputs ;;
+      *) echo "Unsupported active mail origin: $mail_origin" >&2; exit 1 ;;
+    esac
+
+    if KUBECONFIG="$undercloud_kubeconfig" \
+      "$kubectl" -n openstack get secret "$mail_output_secret" >/dev/null 2>&1; then
+      KUBECONFIG="$undercloud_kubeconfig" \
+        "$kubectl" -n openstack get secret "$mail_output_secret" \
         -o jsonpath='{.data.ipv4_address}' | base64 -d > /tmp/mail_ipv4_address
       grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}$' /tmp/mail_ipv4_address
       KUBECONFIG="$undercloud_kubeconfig" \
@@ -317,6 +335,7 @@ data:
         KUBECONFIG="$undercloud_kubeconfig" \
           "$kubectl" -n cert-manager apply -f -
     fi
+    unset mail_origin mail_output_secret
 
     openstack coe cluster config "$cluster" --dir /tmp/kube --force
     export KUBECONFIG="$kubeconfig"
@@ -432,7 +451,8 @@ data:
       --from-file=ND_LASTFM_SECRET=/runtime-bootstrap/ND_LASTFM_SECRET \
       --from-file=ND_PASSWORDENCRYPTIONKEY=/runtime-bootstrap/ND_PASSWORDENCRYPTIONKEY \
       --from-file=SFTPGO_ADMIN_PASSWORD=/runtime-bootstrap/SFTPGO_ADMIN_PASSWORD \
-      --from-file=SFTPGO_USER_PASSWORD=/runtime-bootstrap/SFTPGO_USER_PASSWORD \
+      --from-file=SFTPGO_OIDC_CLIENT_ID=/tmp/sftpgo_client_id \
+      --from-file=SFTPGO_OIDC_CLIENT_SECRET=/tmp/sftpgo_client_secret \
       --dry-run=client -o yaml | "$kubectl" apply -f -
     "$kubectl" apply -f /config/sync.yaml
     "$flux" reconcile source git flux-system --timeout=5m

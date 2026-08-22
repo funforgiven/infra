@@ -8,6 +8,7 @@
 
         runtimeInputs = [
           pkgs.coreutils
+          pkgs.curl
           pkgs.findutils
           pkgs.gitMinimal
           pkgs.gnugrep
@@ -15,6 +16,7 @@
           pkgs.jq
           pkgs.nix
           pkgs.openstackclient
+          pkgs.xz
         ];
 
         text = ''
@@ -46,7 +48,7 @@
           temporary_directory="$(mktemp --directory)"
           trap 'rm -rf "$temporary_directory"' EXIT
 
-          for host in hermes home-assistant; do
+          for host in hermes; do
             image_name="nixos-$host-''${revision:0:12}"
 
             nix build \
@@ -114,6 +116,64 @@
               --column id
           done
 
+          haos_version=18.2
+          haos_name="haos-$haos_version"
+          haos_archive_sha256=254e53f354df0739e3afc09be5431a07df53f0df6b703885404f665c454f254e
+          haos_url="https://github.com/home-assistant/operating-system/releases/download/$haos_version/haos_ova-$haos_version.qcow2.xz"
+
+          mapfile -t haos_existing_ids < <(
+            openstack image list \
+              --name "$haos_name" \
+              --property image_role=home-assistant-os \
+              --property "haos_version=$haos_version" \
+              --format value \
+              --column ID
+          )
+
+          if [[ "''${#haos_existing_ids[@]}" -gt 1 ]]; then
+            echo "More than one immutable image matches $haos_name." >&2
+            exit 1
+          fi
+
+          if [[ "''${#haos_existing_ids[@]}" -eq 1 ]]; then
+            recorded_archive_sha256="$(
+              openstack image show "''${haos_existing_ids[0]}" --format json |
+                jq --raw-output '.properties.image_source_archive_sha256 // empty'
+            )"
+            if [[ "$recorded_archive_sha256" != "$haos_archive_sha256" ]]; then
+              echo "Existing image $haos_name has an unexpected source digest." >&2
+              exit 1
+            fi
+            echo "$haos_name already exists from the pinned official asset."
+          else
+            haos_archive="$temporary_directory/$haos_name.qcow2.xz"
+            haos_image="$temporary_directory/$haos_name.qcow2"
+            curl --fail --location --retry 5 --output "$haos_archive" "$haos_url"
+            printf '%s  %s\n' "$haos_archive_sha256" "$haos_archive" |
+              sha256sum --check --strict
+            xz --decompress --stdout "$haos_archive" > "$haos_image"
+            haos_image_sha256="$(sha256sum "$haos_image" | cut -d ' ' -f 1)"
+
+            openstack image create "$haos_name" \
+              --private \
+              --protected \
+              --container-format bare \
+              --disk-format qcow2 \
+              --file "$haos_image" \
+              --tag managed-by-nix \
+              --property hw_firmware_type=uefi \
+              --property hw_machine_type=q35 \
+              --property image_role=home-assistant-os \
+              --property "haos_version=$haos_version" \
+              --property "image_source_archive_sha256=$haos_archive_sha256" \
+              --property "image_source_sha256=$haos_image_sha256" \
+              --property "image_source_url=$haos_url" \
+              --property os_distro=home-assistant \
+              --property os_type=linux \
+              --format value \
+              --column id
+          fi
+
           activation_manifest=deployments/homelab/cloud/undercloud/83-services-hosts/tofu.yaml
           if [[ "$(grep -Ec 'value: "[0-9a-f]{40}"' "$activation_manifest")" -ne 1 ]]; then
             echo "$activation_manifest must contain exactly one image revision." >&2
@@ -123,7 +183,7 @@
             "s/value: \"[0-9a-f]{40}\"/value: \"$revision\"/" \
             "$activation_manifest"
           printf '%s\n' \
-            "Promoted images for $revision and updated $activation_manifest." \
+            "Promoted Hermes for $revision and HAOS $haos_version; updated $activation_manifest." \
             'Review and create a signed promotion commit before resuming the host wave.'
         '';
       };
@@ -137,8 +197,6 @@
       packages = {
         hermes-openstack-image =
           inputs.self.nixosConfigurations.hermes.config.system.build.images.openstack;
-        home-assistant-openstack-image =
-          inputs.self.nixosConfigurations.home-assistant.config.system.build.images.openstack;
         nixos-anywhere = inputs.nixos-anywhere.packages.${pkgs.stdenv.hostPlatform.system}.nixos-anywhere;
         promote-service-images = promoteServiceImages;
       };

@@ -29,7 +29,6 @@ data:
         keys:
           - ND_PASSWORDENCRYPTIONKEY
           - SFTPGO_ADMIN_PASSWORD
-          - SFTPGO_USER_PASSWORD
       service-hosts:
         secretFile: deployments/homelab/cloud/host-runtime/generated.sops.yaml
         keys:
@@ -70,6 +69,12 @@ data:
         secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
         keys:
           - MAIL_MANAGEMENT_CIDRS_JSON
+      aws-mail-auth:
+        provisioner: enroll-aws-mail-auth
+        secretFile: deployments/homelab/cloud/undercloud/84-mail-aws/aws.sops.yaml
+        keys:
+          - AWS_ACCESS_KEY_ID
+          - AWS_SECRET_ACCESS_KEY
       resend-mail-edge:
         provisioner: reconcile-services-resend
         secretFile: deployments/homelab/cloud/host-runtime/mail-edge.sops.yaml

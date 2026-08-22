@@ -162,8 +162,8 @@ credentials and run:
 nix run .#promote-service-images
 ```
 
-The command verifies the source commit, publishes immutable host artifacts,
-and updates the host revision. Review those non-secret changes, run the full
+The command verifies the source commit, publishes the immutable Hermes build and
+the SHA-256-pinned official HAOS 18.2 image, and updates the host revision. Review those non-secret changes, run the full
 checks, create a second signed Conventional Commit, and push it directly to
 `main`.
 
@@ -207,6 +207,18 @@ It creates and encrypts `STALWART_RESEND_API_KEY`; then materialize
 `mail-runtime` and start Stalwart after its certificate is ready. The fallback
 administrator secret is generated, not manually supplied.
 
+The Hetzner stage above remains the live migration source while the prepared AWS
+root is suspended. AWS activation is a separate deliberate migration described
+in `components/cloud/services/mail-aws/README.md`: enroll a temporary bootstrap
+pair only after all credential-free validation passes; the enrollment tool
+creates and encrypts the narrower regional GitOps identity. Revoke the
+temporary pair, then apply the Frankfurt
+`t4g.micro`/RDS/S3 root without changing the active origin, reconcile the Resend
+key, publish the new public DKIM records, restore-test RDS and S3, copy the
+mailbox twice over IMAP, and only then change the Git-managed origin selector to
+`aws`. Forward DNS must point at the retained EIP before reverse DNS is enabled.
+Keep the protected Hetzner host for the documented rollback interval.
+
 ## 5. Application and recovery gates
 
 Activate in this order, waiting for each health check before committing the
@@ -232,12 +244,17 @@ Confirm the Velero storage location is Available, complete the isolated restore
 qualification, and inspect one daily backup before accepting application data.
 Then complete only the documented UI exceptions: Navidrome first admin and
 scrobbling grants, Stalwart directory objects, and
-Home Assistant first-administrator onboarding, HTTP proxy confirmation, and
-UI-only integrations. Home Assistant's built-in HTTP settings must trust only
+Home Assistant migration onboarding, provider-NIC configuration, HTTP proxy
+confirmation, native Backblaze backup location, and UI-only integrations. Keep
+the host cutover variable on `nixos` until a native full encrypted backup and
+emergency kit have passed an isolated HAOS restore. After changing it to `haos`,
+restore that backup, configure `10.21.40.120/24` and the operator-LAN route on
+the MAC-pinned provider interface, then configure automatic encrypted Backblaze
+backups in the existing `services/hosts/home-assistant/` prefix. Home Assistant's built-in HTTP settings must trust only
 `192.168.80.0/24` and use forwarded headers; verify and confirm the pending
 configuration through `https://home.fahrican.com` within its five-minute safety
-trial. Every accepted UI change is followed by an encrypted backup and a
-drift-record update.
+trial. Retain the old NixOS volume until a post-cutover B2 restore passes. Every
+accepted UI change is followed by an encrypted backup and a drift-record update.
 
 For Stalwart, `components/cloud/services/mail-edge/directory-inventory.yaml`
 is the authoritative non-secret inventory. Update it before making an additive

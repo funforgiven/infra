@@ -26,6 +26,12 @@ STAGES = {
             "mail-edge",
         ),
     ),
+    "mail-aws": (
+        (
+            Path("deployments/homelab/cloud/undercloud/84-mail-aws/tofu.yaml"),
+            "mail-aws",
+        ),
+    ),
     "dns": (
         (UNDERCLOUD_WAVES, "wave85-service-dns"),
         (

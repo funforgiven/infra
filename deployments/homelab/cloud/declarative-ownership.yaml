@@ -12,6 +12,9 @@ resources:
   - resource: hetzner-smtp-edge-and-public-address
     owner: opentofu
     state: OpenTofu state and reviewed configuration in Git
+  - resource: aws-mail-vpc-compute-rds-s3-secrets-and-monitoring
+    owner: opentofu
+    state: OpenTofu state and reviewed configuration in Git; runtime secret versions are produced only by RDS, the appliance IAM role, or the no-echo enrollment boundary
   - resource: public-and-private-dns
     owner: opentofu
     state: OpenTofu state and reviewed DNS records in Git
@@ -30,6 +33,9 @@ resources:
   - resource: nixos-hosts-and-system-services
     owner: nixos
     state: NixOS closures built from the repository flake
+  - resource: home-assistant-os-appliance
+    owner: opentofu
+    state: Pinned official HAOS image and VM attachment in OpenTofu; unavoidable appliance state is registered, encrypted, and restore-tested under the manual exception policy
   - resource: application-api-configuration
     owner: pinned-api-reconciler
     state: Desired application configuration and comparison tests in Git
