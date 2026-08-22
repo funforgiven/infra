@@ -441,7 +441,7 @@
             iam_policy_text = (
                 aws_mail_root / "bootstrap-iam-policy.json"
             ).read_text()
-            if iam_policy_text.count("ACCOUNT_ID") != 5:
+            if iam_policy_text.count("ACCOUNT_ID") != 8:
                 raise SystemExit("AWS bootstrap policy account scoping drifted")
             iam_policy = json.loads(iam_policy_text.replace("ACCOUNT_ID", "123456789012"))
             policy_statements = {
@@ -467,9 +467,62 @@
                 },
             }:
                 raise SystemExit("AWS GitOps KMS inspection escaped managed mail keys")
+            if any(
+                action in iam_policy_text
+                for action in (
+                    "secretsmanager:GetSecretValue",
+                    "secretsmanager:UpdateSecret",
+                )
+            ):
+                raise SystemExit("AWS GitOps identity has broad secret-value access")
+            if policy_statements["ManageMailSecretContainers"]["Resource"] != (
+                "arn:aws:secretsmanager:eu-central-1:123456789012:"
+                "secret:fahrican/stalwart/*"
+            ):
+                raise SystemExit("AWS GitOps secret management escaped Stalwart")
+            if set(policy_statements["ManageMailSecretContainers"]["Action"]) != {
+                "secretsmanager:CreateSecret",
+                "secretsmanager:DeleteSecret",
+                "secretsmanager:DescribeSecret",
+                "secretsmanager:GetResourcePolicy",
+                "secretsmanager:PutResourcePolicy",
+                "secretsmanager:RestoreSecret",
+                "secretsmanager:TagResource",
+                "secretsmanager:UntagResource",
+            }:
+                raise SystemExit("AWS GitOps secret container actions drifted")
+            if policy_statements["PublishResendRuntimeCredential"] != {
+                "Sid": "PublishResendRuntimeCredential",
+                "Effect": "Allow",
+                "Action": "secretsmanager:PutSecretValue",
+                "Resource": (
+                    "arn:aws:secretsmanager:eu-central-1:123456789012:"
+                    "secret:fahrican/stalwart/resend-*"
+                ),
+                "Condition": {
+                    "StringEquals": {"aws:RequestedRegion": "eu-central-1"}
+                },
+            }:
+                raise SystemExit("AWS Resend publication is not independently scoped")
+            if policy_statements["RunCommandsOnMailInstance"]["Condition"] != {
+                "StringEquals": {
+                    "aws:RequestedRegion": "eu-central-1",
+                    "aws:ResourceTag/Service": "stalwart-mail",
+                }
+            }:
+                raise SystemExit("AWS SSM commands escaped the tagged mail instance")
+            if policy_statements["UseMailRunCommandDocument"]["Resource"] != (
+                "arn:aws:ssm:eu-central-1::document/AWS-RunShellScript"
+            ):
+                raise SystemExit("AWS SSM command document is not constrained")
             if set(policy_statements) != {
                 "ReadProvisionedState",
                 "ManageFrankfurtMailServices",
+                "ManageMailSecretContainers",
+                "PublishResendRuntimeCredential",
+                "InspectMailManagedNode",
+                "UseMailRunCommandDocument",
+                "RunCommandsOnMailInstance",
                 "ManageMailBucket",
                 "DescribeAwsManagedMailKeys",
                 "ManageMailRuntimeRole",
