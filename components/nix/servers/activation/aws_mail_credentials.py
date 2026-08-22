@@ -433,18 +433,26 @@ class AwsMailCredentials:
             raise AwsMailCredentialError("AWS returned an invalid access-key inventory") from error
         if inventory:
             stored = {key: self.store.read(destination, key) for key in AUTH_KEYS}
+            stored_values = tuple(stored.values())
             if (
                 len(inventory) == 1
-                and all(stored.values())
+                and all(stored_values)
                 and inventory[0].get("AccessKeyId") == stored[AUTH_KEYS[0]]
             ):
                 values = {key: str(stored[key]) for key in AUTH_KEYS}
                 self._verify_gitops_identity(values, account_id)
                 return ProvisioningIdentity(values, bootstrap_user, False)
-            raise AwsMailCredentialError(
-                "the dedicated mail GitOps identity already has an unrecoverable key; "
-                "review and delete it before enrollment"
-            )
+            if any(stored_values):
+                raise AwsMailCredentialError(
+                    "the encrypted mail GitOps credential does not match its AWS key"
+                )
+            for item in inventory:
+                access_key_id = item.get("AccessKeyId")
+                if not isinstance(access_key_id, str) or not access_key_id:
+                    raise AwsMailCredentialError(
+                        "AWS returned an invalid access-key inventory"
+                    )
+                self._delete_gitops_key(access_key_id, bootstrap)
 
         created_key = self._aws(
             [
