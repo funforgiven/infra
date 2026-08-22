@@ -1,0 +1,92 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: services-share-quota-reconcile-v1
+  namespace: openstack
+  labels:
+    app.kubernetes.io/name: services-share-quota-reconcile
+    app.kubernetes.io/part-of: self-hosted-platform
+spec:
+  schedule: "43 */6 * * *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 600
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: services-share-quota-reconcile
+            app.kubernetes.io/part-of: self-hosted-platform
+        spec:
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          nodeSelector:
+            openstack-control-plane: enabled
+          securityContext:
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: reconcile
+              image: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+              command:
+                - /bin/sh
+                - -ec
+                - |
+                  project=services
+                  gigabytes=2048
+                  shares=50
+                  snapshots=50
+                  share_networks=10
+
+                  openstack share quota set \
+                    --shares "$shares" \
+                    --snapshots "$snapshots" \
+                    --gigabytes "$gigabytes" \
+                    --snapshot-gigabytes "$gigabytes" \
+                    --share-networks "$share_networks" \
+                    --per-share-gigabytes "$gigabytes" \
+                    "$project"
+
+                  test "$(openstack share quota show "$project" -f value -c shares)" = "$shares"
+                  test "$(openstack share quota show "$project" -f value -c snapshots)" = "$snapshots"
+                  test "$(openstack share quota show "$project" -f value -c gigabytes)" = "$gigabytes"
+                  test "$(openstack share quota show "$project" -f value -c snapshot_gigabytes)" = "$gigabytes"
+                  test "$(openstack share quota show "$project" -f value -c share_networks)" = "$share_networks"
+                  test "$(openstack share quota show "$project" -f value -c per_share_gigabytes)" = "$gigabytes"
+              envFrom:
+                - secretRef:
+                    name: magnum-keystone-admin
+              env:
+                - name: HOME
+                  value: /tmp
+                - name: SHELL
+                  value: /bin/sh
+              resources:
+                requests:
+                  cpu: 25m
+                  memory: 64Mi
+                limits:
+                  cpu: 500m
+                  memory: 384Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+                readOnlyRootFilesystem: true
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: tmp
+              emptyDir:
+                medium: Memory
+                sizeLimit: 64Mi

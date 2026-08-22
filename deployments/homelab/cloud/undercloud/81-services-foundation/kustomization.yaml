@@ -8,4 +8,5 @@ resources:
   - service-dns-input.yaml
   - resend-domain-output.yaml
   - backup.yaml
+  - share-quota.yaml
   - tofu.yaml

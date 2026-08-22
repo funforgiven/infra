@@ -1,8 +1,11 @@
 version: 1
 resources:
-  - resource: openstack-projects-networks-compute-storage
+  - resource: openstack-projects-networks-compute-and-block-storage
     owner: opentofu
     state: OpenTofu state and reviewed configuration in Git
+  - resource: openstack-shared-filesystem-quotas
+    owner: pinned-api-reconciler
+    state: Git-declared Manila limits reconciled through the scoped OpenStack administration credential
   - resource: magnum-services-cluster-and-flux-bootstrap
     owner: pinned-api-reconciler
     state: Desired topology in Git; kubeconfig exists only on a memory-backed reconciliation volume
