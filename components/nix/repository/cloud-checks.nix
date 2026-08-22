@@ -409,7 +409,9 @@
                 'instance_type        = "t4g.micro"',
                 'instance_class = "db.t4g.micro"',
                 'engine_version = "17.10"',
-                "manage_master_user_password = true",
+                "manage_master_user_password   = true",
+                'kms_key_id            = "alias/aws/rds"',
+                'master_user_secret_kms_key_id = "alias/aws/secretsmanager"',
                 "backup_retention_period = 14",
                 "deletion_protection         = true",
                 'versioning_configuration {\n    status = "Enabled"',
@@ -438,7 +440,7 @@
             iam_policy_text = (
                 aws_mail_root / "bootstrap-iam-policy.json"
             ).read_text()
-            if iam_policy_text.count("ACCOUNT_ID") != 4:
+            if iam_policy_text.count("ACCOUNT_ID") != 5:
                 raise SystemExit("AWS bootstrap policy account scoping drifted")
             iam_policy = json.loads(iam_policy_text.replace("ACCOUNT_ID", "123456789012"))
             policy_statements = {
@@ -449,10 +451,26 @@
                 "StringEquals": {"aws:RequestedRegion": "eu-central-1"}
             }:
                 raise SystemExit("AWS GitOps mutation policy is not Frankfurt-scoped")
+            if policy_statements["DescribeAwsManagedMailKeys"] != {
+                "Sid": "DescribeAwsManagedMailKeys",
+                "Effect": "Allow",
+                "Action": "kms:DescribeKey",
+                "Resource": "arn:aws:kms:eu-central-1:123456789012:key/*",
+                "Condition": {
+                    "ForAnyValue:StringEquals": {
+                        "kms:ResourceAliases": [
+                            "alias/aws/rds",
+                            "alias/aws/secretsmanager",
+                        ]
+                    }
+                },
+            }:
+                raise SystemExit("AWS GitOps KMS inspection escaped managed mail keys")
             if set(policy_statements) != {
                 "ReadProvisionedState",
                 "ManageFrankfurtMailServices",
                 "ManageMailBucket",
+                "DescribeAwsManagedMailKeys",
                 "ManageMailRuntimeRole",
                 "CreateRdsServiceRole",
             }:

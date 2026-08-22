@@ -7,7 +7,8 @@ to `eu-central-1` and deliberately favors the smallest simple durable design:
   configuration;
 - one single-AZ encrypted `db.t4g.micro` RDS PostgreSQL 17.10 instance with
   14-day point-in-time recovery, deletion protection, a final snapshot, and an
-  RDS-managed master password;
+  RDS-managed master password. The choices of the no-cost AWS-managed
+  `alias/aws/rds` and `alias/aws/secretsmanager` KMS keys are explicit;
 - one private encrypted and versioned S3 bucket as Stalwart's live blob store;
 - one retained Elastic IP, with reverse DNS gated until forward DNS is live;
 - Session Manager administration only, with no public SSH ingress;
@@ -56,6 +57,12 @@ before replacement. Interrupted revocation is resumable from the encrypted
 dedicated pair, while a mismatch between AWS and existing ciphertext is a hard
 failure. The GitOps Terraform object remains suspended until that final
 enrollment.
+
+RDS validates the creating principal's access to both AWS-managed KMS keys.
+The provisioning identity can only describe KMS keys in Frankfurt whose
+resource aliases are exactly `alias/aws/rds` or `alias/aws/secretsmanager`; it
+cannot create, rotate, disable, decrypt with, or schedule deletion of any KMS
+key.
 
 ## Safe activation and migration
 
