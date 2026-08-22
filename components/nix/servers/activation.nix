@@ -274,6 +274,15 @@
               ${./activation/aws_mail_credentials.py}
             test "$(rg --count 'excludeShellChecks = \[ "SC1091" \];' \
               ${./mail-aws.nix})" = 2
+            rg --fixed-strings --quiet 'STALWART_PASSWORD="$(<' \
+              ${./mail-aws.nix}
+            rg --line-regexp --quiet '[[:space:]]+export STALWART_PASSWORD' \
+              ${./mail-aws.nix}
+            if rg --fixed-strings --quiet \
+              'export STALWART_PASSWORD="$(' ${./mail-aws.nix}; then
+              echo 'Stalwart password assignment masks read failures from ShellCheck.' >&2
+              exit 1
+            fi
             rg --fixed-strings --quiet 'keyName' \
               ${./activation/reconcile_services_backblaze.py}
             if rg --quiet 'prompt_value|R2_ENDPOINT|cloudflarestorage' \
