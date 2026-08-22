@@ -1066,6 +1066,13 @@
                 if haos_fragment not in haos_promotion:
                     raise SystemExit("HAOS official-image promotion contract drifted")
             if (
+                "83-services-hosts/tofu.yaml" in haos_promotion
+                or "activation_manifest" in haos_promotion
+            ):
+                raise SystemExit(
+                    "image promotion must not mutate an active boot-volume revision"
+                )
+            if (
                 'default     = "nixos"' not in haos_hosts
                 or 'name        = "home-assistant-root-haos-18.2"' not in haos_hosts
                 or haos_hosts.count("prevent_destroy = true") < 3

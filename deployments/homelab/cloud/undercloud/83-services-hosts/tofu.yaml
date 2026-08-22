@@ -14,10 +14,12 @@ spec:
     kind: GitRepository
     name: services-tofu-source
   vars:
-    # Activation requires an exact signed revision whose images have already
-    # passed the promotion gate. A zero revision is intentionally undeployable.
+    # This is the revision of the protected active NixOS boot volumes. Image
+    # promotion creates candidates but never advances this value implicitly:
+    # doing so would request replacement of retained roots before their
+    # runtime credentials and recovery path were staged.
     - name: image_revision
-      value: "61b154bf1269ff1d2d649636a924c3143f905208"
+      value: "80ab8bcb18b757363d31317d61d8950b26271a6f"
     # Keep this on NixOS until the encrypted native-backup restore and HAOS
     # image-promotion gates have both passed.
     - name: home_assistant_platform

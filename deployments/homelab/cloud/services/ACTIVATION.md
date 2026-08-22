@@ -162,10 +162,11 @@ credentials and run:
 nix run .#promote-service-images
 ```
 
-The command verifies the source commit, publishes the immutable Hermes build and
-the SHA-256-pinned official HAOS 18.2 image, and updates the host revision. Review those non-secret changes, run the full
-checks, create a second signed Conventional Commit, and push it directly to
-`main`.
+The command verifies the source commit and publishes the immutable Hermes
+candidate and the SHA-256-pinned official HAOS 18.2 image. It deliberately does
+not change the active host revision: an active-revision change is a separate
+retained-volume migration with credential staging and recovery gates, not part
+of image publication.
 
 Run the promoted-host preflight before advancing the host wave:
 
