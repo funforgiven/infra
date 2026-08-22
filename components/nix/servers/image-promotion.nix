@@ -45,7 +45,7 @@
               sops decrypt \
                 --extract '["stringData"]["values.yaml"]' \
                 "$openstack_values" |
-                yq eval --raw-output '.endpoints.identity.auth.admin.password' -
+                yq eval --unwrapScalar '.endpoints.identity.auth.admin.password' -
             )"
             export OS_PASSWORD
             export OS_PROJECT_DOMAIN_NAME=Default
