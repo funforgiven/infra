@@ -1020,8 +1020,15 @@
                 '"username":"fahricanelidemir@gmail.com"',
                 'SFTPGO_HTTPD__BINDINGS__0__OIDC__CLIENT_SECRET_FILE',
                 'SFTPGO_HTTPD__BINDINGS__0__OIDC__USERNAME_FIELD',
+                'SFTPGO_HTTPD__BINDINGS__0__DISABLED_LOGIN_METHODS',
+                'value: "168"',
                 'value: https://auth.cloud.fahrican.com',
                 'value: https://upload.fahrican.com',
+                '"password-change-disabled"',
+                '"password-reset-disabled"',
+                '"api-key-auth-change-disabled"',
+                '"publickey-change-disabled"',
+                '"tls-cert-change-disabled"',
             )
             if any(
                 fragment not in sftpgo + sftpgo_bootstrap
@@ -1030,6 +1037,10 @@
                 raise SystemExit("SFTPGo native ZITADEL OIDC contract drifted")
             if "SFTPGO_USER_PASSWORD" in sftpgo + sftpgo_bootstrap:
                 raise SystemExit("SFTPGo upload identity must not have a local password")
+            if '"denied_login_methods"' in sftpgo_bootstrap:
+                raise SystemExit(
+                    "SFTPGo OIDC identity must not deny every valid login method"
+                )
 
             identity_tofu = pathlib.Path(
                 "components/cloud/identity/tofu/main.tf"

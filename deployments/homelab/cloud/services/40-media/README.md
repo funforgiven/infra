@@ -43,4 +43,7 @@ per Navidrome user through their upstream interactive authorization flows.
 SFTPGo configuration and accounts are recreated from Git plus runtime secrets
 on every pod start. The local administrator login remains an emergency and
 inspection path; accepted configuration changes must be represented in the
-bootstrap data before they are retained.
+bootstrap data before they are retained. The public user surface accepts
+ZITADEL OIDC only: the native WebClient login form, user token endpoint, and
+user API-key login are disabled globally, while password, API-key, public-key,
+and TLS-certificate changes are disabled for the predeclared upload account.

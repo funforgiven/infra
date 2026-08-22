@@ -70,7 +70,7 @@ spec:
             - name: SFTPGO_HTTPD__BINDINGS__0__PORT
               value: "8080"
             - name: SFTPGO_HTTPD__BINDINGS__0__DISABLED_LOGIN_METHODS
-              value: "8"
+              value: "168"
             - name: SFTPGO_HTTPD__BINDINGS__0__OIDC__CLIENT_ID
               valueFrom:
                 secretKeyRef:
