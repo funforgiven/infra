@@ -28,6 +28,7 @@ _: {
           "backup"
           "default_config"
           "esphome"
+          "google_translate"
           "met"
           "mobile_app"
           "mqtt"
