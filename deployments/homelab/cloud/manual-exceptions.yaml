@@ -50,6 +50,16 @@ exceptions:
     drift_probe: Verify the dedicated token inventory and last rotation date monthly without retrieving or displaying its value.
     review_interval: monthly
     exit_criterion: Remove when Hetzner supports a workload identity flow that the controller can use without a long-lived token.
+  - id: hetzner-smtp-port-unblock
+    resource: Hetzner account-level SMTP port restriction for the mail edge
+    owner: funforgiven
+    rationale: Hetzner applies an account-level port 25 and 465 restriction that is outside the server and firewall APIs. Removing it requires an eligible account owner to submit a reviewed limit request in the Hetzner Console.
+    procedure: In the Hetzner Console limits view, submit the SMTP port-unblock request for the fahrican.com personal mail use case. Accept completion only after the external mail-tcp probe reaches mail.fahrican.com:25; the declarative Hetzner and NixOS firewalls must remain unchanged and open only the documented mail listeners.
+    secret_handling: The request contains no server credentials, API tokens, mailbox passwords, or application passwords; retain only the provider ticket reference and decision.
+    backup: The provider ticket and account decision are the recovery record; the server, address, reverse DNS, and firewall remain reproducible through OpenTofu.
+    drift_probe: The external mail-tcp probe continuously verifies port 25, while OpenTofu detects firewall drift independently.
+    review_interval: monthly
+    exit_criterion: Close the request after port 25 remains externally reachable; retain this record while Hetzner keeps the setting outside its API.
   - id: offsite-backup-credential-issuance
     resource: Backblaze B2 master-key bootstrap for service backup writers
     owner: funforgiven

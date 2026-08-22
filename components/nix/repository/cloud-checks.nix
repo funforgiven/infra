@@ -653,6 +653,8 @@
                 raise SystemExit("obsolete Hermes OAuth exception remains declared")
             if "openai-api-key-issuance" not in exception_ids:
                 raise SystemExit("operator-issued OpenAI runtime key is undocumented")
+            if "hetzner-smtp-port-unblock" not in exception_ids:
+                raise SystemExit("Hetzner SMTP port review is undocumented")
             if {
                 "openai-admin-key-bootstrap",
                 "openai-organization-hosted-tool-policy",

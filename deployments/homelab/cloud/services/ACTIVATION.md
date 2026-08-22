@@ -193,6 +193,9 @@ Activate stage `mail`, confirm its retained address and reverse DNS, then
 perform the explicitly destructive nixos-anywhere install against that exact
 server. Enroll only its `mail-edge-backup` and `monitoring` profiles initially;
 the absent mail runtime keeps Stalwart stopped while DNS and ACME are pending.
+Confirm the Hetzner account-level SMTP restriction is removed through the
+documented provider exception; the final external probe must reach port 25 even
+when the host listener and declarative firewalls are already healthy.
 Activate stage `dns` after the cluster reconciler has copied the mail-edge
 output into `service-dns-inputs`. Once the A and Resend verification records
 are live and the domain is verified, run `reconcile-services-resend apply`.
