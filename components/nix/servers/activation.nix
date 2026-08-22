@@ -265,6 +265,9 @@
               ${./activation/enroll-services-credential.sh}
             rg --fixed-strings --quiet 'provisioned-key-file' \
               ${./activation/runtime_contract.py}
+            rg --fixed-strings --quiet \
+              "yq eval --unwrapScalar '.endpoints.identity.auth.admin.password' -" \
+              ${./image-promotion.nix}
             rg --fixed-strings --quiet 'os.O_NOFOLLOW' \
               ${./activation/aws_mail_credentials.py}
             rg --fixed-strings --quiet 'stdout=subprocess.DEVNULL' \
