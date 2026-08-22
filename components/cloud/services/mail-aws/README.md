@@ -44,8 +44,8 @@ cannot write the Resend container.
 The final activation input is a temporary AWS bootstrap pair placed in the two
 ignored mode-0600 `AWS_BOOTSTRAP_*` intake files. The cohesive credential tool
 uses that authority only to reconcile the `fahrican-mail-gitops` IAM user and
-the reviewed regional policy in `bootstrap-iam-policy.json`, creates one new
-access pair for that identity, encrypts only the narrower pair into the
+the reviewed customer-managed regional policy in `bootstrap-iam-policy.json`,
+creates one new access pair for that identity, encrypts only the narrower pair into the
 `aws-mail-provisioning` SOPS Secret, verifies the dedicated identity, revokes
 the exact temporary key, and only then clears the intake files. Neither pair is
 passed as an OpenTofu variable, committed in plaintext, or placed in a shell
