@@ -18,7 +18,7 @@ mkdir -p /srv/sftpgo/data/media/library
   printf '"uid":1000,"gid":1000,'
   printf '"permissions":{"/":["*"]},'
   printf '"filters":{"denied_protocols":["SSH","FTP","DAV"],'
-  printf '"denied_login_methods":["publickey","password","password-over-SSH","keyboard-interactive","publickey+password","publickey+keyboard-interactive","TLSCertificate","TLSCertificate+password"]}'
+  printf '"web_client":["password-change-disabled","password-reset-disabled","api-key-auth-change-disabled","publickey-change-disabled","tls-cert-change-disabled"]}'
   printf '}],"admins":[{'
   printf '"status":1,"username":"admin",'
   printf '"password":"%s",' "$admin_password"
