@@ -91,23 +91,13 @@ resource "zitadel_org_member" "identity_controller" {
   roles   = ["ORG_OWNER"]
 }
 
-resource "zitadel_project_member" "identity_controller" {
-  org_id     = local.org_id
-  project_id = zitadel_project.infrastructure.id
-  user_id    = zitadel_machine_user.identity_controller.id
-  roles      = ["PROJECT_OWNER"]
-}
-
 resource "zitadel_machine_key" "identity_controller" {
   org_id          = local.org_id
   user_id         = zitadel_machine_user.identity_controller.id
   key_type        = "KEY_TYPE_JSON"
   expiration_date = "2031-08-09T00:00:00Z"
 
-  depends_on = [
-    zitadel_org_member.identity_controller,
-    zitadel_project_member.identity_controller,
-  ]
+  depends_on = [zitadel_org_member.identity_controller]
 }
 
 locals {

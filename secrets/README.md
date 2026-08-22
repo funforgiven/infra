@@ -201,10 +201,9 @@ committed.
 `zitadel.yaml` is the identity-plane break-glass credential. It is encrypted
 only to the personal age recipient and is not materialized by sops-nix, Flux,
 or any cluster. Normal reconciliation uses the `tofu-identity-controller`
-machine account with `ORG_OWNER` and explicit `PROJECT_OWNER` access to the
-Infrastructure project; use the offline PAT only when that account or its key
-must be recovered. The local `iam-breakglass` human and Kubernetes certificate
-kubeconfigs remain independent interactive recovery paths.
+machine account with `ORG_OWNER`; use the offline PAT only when that account or
+its key must be recovered. The local `iam-breakglass` human and Kubernetes
+certificate kubeconfigs remain independent interactive recovery paths.
 
 A root `.env` is forbidden; its ignore rule is defense in depth, not a secret
 storage mechanism. Use the SOPS editor above rather than
