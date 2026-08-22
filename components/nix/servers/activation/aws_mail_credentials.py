@@ -359,7 +359,7 @@ class AwsMailCredentials:
             raise AwsMailCredentialError(
                 "AWS could not attach the dedicated mail GitOps policy"
             )
-        deleted = self._aws(
+        self._aws(
             [
                 "iam",
                 "delete-user-policy",
@@ -486,7 +486,7 @@ class AwsMailCredentials:
     def _delete_gitops_key(
         self, access_key_id: str, bootstrap: dict[str, str]
     ) -> None:
-        self._aws(
+        deleted = self._aws(
             [
                 "iam",
                 "delete-access-key",
