@@ -33,6 +33,9 @@ _: {
           "mqtt"
           "radio_browser"
         ];
+        # Home Assistant 2026.8 migrated HTTP settings into its authenticated
+        # runtime store. The narrow UI exception and recovery procedure are
+        # recorded in deployments/homelab/cloud/manual-exceptions.yaml.
         config = {
           default_config = { };
           homeassistant = {
@@ -43,14 +46,6 @@ _: {
             name = "Home";
             time_zone = "Europe/Istanbul";
             unit_system = "metric";
-          };
-          http = {
-            server_host = [
-              "0.0.0.0"
-              "::"
-            ];
-            trusted_proxies = [ "192.168.80.0/24" ];
-            use_x_forwarded_for = true;
           };
         };
       };
