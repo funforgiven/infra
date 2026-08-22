@@ -308,6 +308,22 @@
             test ${toString (builtins.head awsMailConfiguration.swapDevices).size} = 2048
             test ${
               if
+                builtins.elem "d /etc/stalwart-bootstrap 0750 root stalwart -" awsMailConfiguration.systemd.tmpfiles.rules
+              then
+                "1"
+              else
+                "0"
+            } = 1
+            test ${
+              if
+                builtins.elem "z /etc/stalwart-bootstrap/aws.env 0640 root stalwart -" awsMailConfiguration.systemd.tmpfiles.rules
+              then
+                "1"
+              else
+                "0"
+            } = 1
+            test ${
+              if
                 awsMailConfiguration.networking.firewall.allowedTCPPorts == [
                   25
                   443
