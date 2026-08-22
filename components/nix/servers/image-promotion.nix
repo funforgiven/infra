@@ -16,7 +16,9 @@
           pkgs.jq
           pkgs.nix
           pkgs.openstackclient
+          pkgs.sops
           pkgs.xz
+          pkgs.yq-go
         ];
 
         text = ''
@@ -32,6 +34,30 @@
 
           revision="$(git rev-parse --verify HEAD)"
           git verify-commit "$revision" >/dev/null
+
+          if [[ -z "''${OS_AUTH_URL:-}" ]]; then
+            openstack_values=deployments/homelab/cloud/undercloud/71-magnum/secrets.sops.yaml
+            export OS_AUTH_TYPE=password
+            export OS_AUTH_URL=https://identity.cloud.fahrican.com/v3
+            export OS_IDENTITY_API_VERSION=3
+            export OS_INTERFACE=public
+            OS_PASSWORD="$(
+              sops decrypt \
+                --extract '["stringData"]["values.yaml"]' \
+                "$openstack_values" |
+                yq eval --raw-output '.endpoints.identity.auth.admin.password' -
+            )"
+            export OS_PASSWORD
+            export OS_PROJECT_DOMAIN_NAME=Default
+            export OS_PROJECT_NAME=services
+            export OS_REGION_NAME=RegionOne
+            export OS_USER_DOMAIN_NAME=Default
+            export OS_USERNAME=admin
+            if [[ -z "$OS_PASSWORD" || "$OS_PASSWORD" == null ]]; then
+              echo "The encrypted OpenStack administrator profile is incomplete." >&2
+              exit 1
+            fi
+          fi
 
           services_project_id="$(
             openstack project show services --format value --column id
