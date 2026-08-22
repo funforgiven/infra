@@ -11,6 +11,11 @@ _: {
       deploymentEnvironment = "/etc/stalwart-bootstrap/aws.env";
       stalwartPackage = pkgs.stalwart_0_16;
       cliPackage = pkgs.stalwart-cli;
+      rdsCaBundle = pkgs.fetchurl {
+        name = "aws-rds-eu-central-1-ca-bundle.pem";
+        url = "https://truststore.pki.rds.amazonaws.com/eu-central-1/eu-central-1-bundle.pem";
+        hash = "sha256-VqDK4ES2zEM5cdlkNHQBaSqS6gKU45J1Oj69ruVNi4Q=";
+      };
 
       syncSecrets = pkgs.writeShellApplication {
         name = "sync-stalwart-aws-secrets";
@@ -300,6 +305,10 @@ _: {
       };
 
       environment.systemPackages = [ cliPackage ];
+      # Stalwart 0.16 validates PostgreSQL through the platform trust store.
+      # RDS uses AWS-private roots, so add the official regional bundle while
+      # retaining hostname and certificate validation.
+      security.pki.certificateFiles = [ rdsCaBundle ];
 
       # EC2 user data must create the deployment environment before the
       # stalwart account exists.  On activation, tmpfiles narrows access to
