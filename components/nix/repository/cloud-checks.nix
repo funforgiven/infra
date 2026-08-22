@@ -370,6 +370,37 @@
             )
             if "mail-edge-tofu-input.yaml" not in foundation["resources"]:
                 raise SystemExit("mail-edge Terraform input target is not predeclared")
+            if "share-quota.yaml" not in foundation["resources"]:
+                raise SystemExit("Manila quota reconciliation is not predeclared")
+            share_quota = yaml.safe_load(
+                (
+                    root / "undercloud/81-services-foundation/share-quota.yaml"
+                ).read_text()
+            )
+            share_pod = share_quota["spec"]["jobTemplate"]["spec"]["template"]["spec"]
+            share_container = share_pod["containers"][0]
+            if share_pod.get("automountServiceAccountToken") is not False:
+                raise SystemExit("Manila quota reconciler mounts a Kubernetes token")
+            if share_container.get("envFrom") != [
+                {"secretRef": {"name": "magnum-keystone-admin"}}
+            ]:
+                raise SystemExit("Manila quota reconciler uses the wrong credential boundary")
+            if share_container["image"] != (
+                "quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:"
+                "f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676"
+            ):
+                raise SystemExit("Manila quota reconciler image is not pinned")
+            quota_script = share_container["command"][2]
+            for quota_fragment in (
+                "gigabytes=2048",
+                "openstack share quota set",
+                '--per-share-gigabytes "$gigabytes"',
+                'test "$(openstack share quota show',
+            ):
+                if quota_fragment not in quota_script:
+                    raise SystemExit(
+                        f"Manila quota reconciliation lacks {quota_fragment!r}"
+                    )
             interface_placeholders = (
                 "mail-edge-tofu-input.yaml",
                 "resend-domain-output.yaml",
