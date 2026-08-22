@@ -151,9 +151,10 @@ class AwsMailCredentialsTest(unittest.TestCase):
         self.assertEqual(options["env"][AUTH_KEYS[0]], self.access_id)
         self.assertEqual(options["env"][AUTH_KEYS[1]], self.secret)
 
+    @patch.object(AwsMailCredentials, "_reconcile_gitops_policy")
     @patch.object(AwsMailCredentials, "_aws")
     def test_bootstrap_creates_a_separate_gitops_key_without_argument_leaks(
-        self, aws
+        self, aws, reconcile_policy
     ) -> None:
         aws.side_effect = [
             subprocess.CompletedProcess(
@@ -168,7 +169,6 @@ class AwsMailCredentialsTest(unittest.TestCase):
                 '{"User":{"UserName":"bootstrap-admin",'
                 '"Arn":"arn:aws:iam::123456789012:user/bootstrap-admin"}}',
             ),
-            subprocess.CompletedProcess([], 0, ""),
             subprocess.CompletedProcess([], 0, ""),
             subprocess.CompletedProcess([], 0, '{"AccessKeyMetadata":[]}'),
             subprocess.CompletedProcess(
@@ -203,10 +203,12 @@ class AwsMailCredentialsTest(unittest.TestCase):
         self.assertNotIn(self.bootstrap_access_id, rendered_commands)
         self.assertNotIn(self.bootstrap_secret, rendered_commands)
         self.assertNotIn(self.secret, rendered_commands)
+        reconcile_policy.assert_called_once()
 
+    @patch.object(AwsMailCredentials, "_reconcile_gitops_policy")
     @patch.object(AwsMailCredentials, "_aws")
     def test_enrollment_resumes_with_the_matching_encrypted_gitops_key(
-        self, aws
+        self, aws, reconcile_policy
     ) -> None:
         for key, value in zip(AUTH_KEYS, (self.access_id, self.secret), strict=True):
             self.store.values[(AWS_FILE, key)] = value
@@ -223,7 +225,6 @@ class AwsMailCredentialsTest(unittest.TestCase):
                 '{"User":{"UserName":"bootstrap-admin",'
                 '"Arn":"arn:aws:iam::123456789012:user/bootstrap-admin"}}',
             ),
-            subprocess.CompletedProcess([], 0, ""),
             subprocess.CompletedProcess([], 0, ""),
             subprocess.CompletedProcess(
                 [],
@@ -254,6 +255,23 @@ class AwsMailCredentialsTest(unittest.TestCase):
         )
         commands = [call.args[0] for call in aws.call_args_list]
         self.assertFalse(any("create-access-key" in command for command in commands))
+        reconcile_policy.assert_called_once()
+
+    @patch.object(AwsMailCredentials, "_aws")
+    def test_gitops_policy_uses_one_customer_managed_policy(self, aws) -> None:
+        aws.side_effect = [
+            subprocess.CompletedProcess([], 1, ""),
+            subprocess.CompletedProcess([], 0, ""),
+            subprocess.CompletedProcess([], 0, ""),
+            subprocess.CompletedProcess([], 1, ""),
+        ]
+
+        self.credentials._reconcile_gitops_policy({}, "123456789012")
+
+        commands = [call.args[0] for call in aws.call_args_list]
+        self.assertTrue(any("create-policy" in command for command in commands))
+        self.assertTrue(any("attach-user-policy" in command for command in commands))
+        self.assertFalse(any("put-user-policy" in command for command in commands))
 
     @patch.object(AwsMailCredentials, "_aws")
     def test_bootstrap_revocation_uses_stdin_and_preserves_intake_on_failure(

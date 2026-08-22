@@ -12,6 +12,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import urllib.parse
 from pathlib import Path
 
 from runtime_contract import RuntimeContract
@@ -208,6 +209,175 @@ class AwsMailCredentials:
                 "the generated AWS pair does not belong to the dedicated mail GitOps identity"
             )
 
+    def _reconcile_gitops_policy(
+        self, environment: dict[str, str], account_id: str
+    ) -> None:
+        try:
+            policy_text = (
+                self.repository_root / GITOPS_POLICY_FILE
+            ).read_text(encoding="utf-8").replace("ACCOUNT_ID", account_id)
+            desired_policy = json.loads(policy_text)
+        except (OSError, json.JSONDecodeError) as error:
+            raise AwsMailCredentialError("the AWS mail IAM policy is invalid") from error
+
+        policy_arn = f"arn:aws:iam::{account_id}:policy/{GITOPS_POLICY}"
+        current = self._aws(
+            ["iam", "get-policy", "--policy-arn", policy_arn, "--output", "json"],
+            environment,
+            capture=True,
+        )
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", prefix="aws-mail-policy-"
+        ) as policy_file:
+            policy_file.write(policy_text)
+            policy_file.flush()
+            if current.returncode != 0:
+                created = self._aws(
+                    [
+                        "iam",
+                        "create-policy",
+                        "--policy-name",
+                        GITOPS_POLICY,
+                        "--policy-document",
+                        f"file://{policy_file.name}",
+                    ],
+                    environment,
+                )
+                if created.returncode != 0:
+                    raise AwsMailCredentialError(
+                        "AWS could not create the dedicated mail GitOps policy"
+                    )
+            else:
+                try:
+                    default_version = str(
+                        json.loads(current.stdout)["Policy"]["DefaultVersionId"]
+                    )
+                except (json.JSONDecodeError, KeyError, TypeError) as error:
+                    raise AwsMailCredentialError(
+                        "AWS returned invalid mail GitOps policy metadata"
+                    ) from error
+                version = self._aws(
+                    [
+                        "iam",
+                        "get-policy-version",
+                        "--policy-arn",
+                        policy_arn,
+                        "--version-id",
+                        default_version,
+                        "--output",
+                        "json",
+                    ],
+                    environment,
+                    capture=True,
+                )
+                if version.returncode != 0:
+                    raise AwsMailCredentialError(
+                        "AWS could not inspect the mail GitOps policy version"
+                    )
+                try:
+                    active_policy = json.loads(version.stdout)["PolicyVersion"][
+                        "Document"
+                    ]
+                    if isinstance(active_policy, str):
+                        active_policy = json.loads(urllib.parse.unquote(active_policy))
+                except (json.JSONDecodeError, KeyError, TypeError) as error:
+                    raise AwsMailCredentialError(
+                        "AWS returned an invalid mail GitOps policy version"
+                    ) from error
+                if active_policy != desired_policy:
+                    versions = self._aws(
+                        [
+                            "iam",
+                            "list-policy-versions",
+                            "--policy-arn",
+                            policy_arn,
+                            "--output",
+                            "json",
+                        ],
+                        environment,
+                        capture=True,
+                    )
+                    if versions.returncode != 0:
+                        raise AwsMailCredentialError(
+                            "AWS could not inspect mail GitOps policy versions"
+                        )
+                    try:
+                        inventory = json.loads(versions.stdout)["Versions"]
+                    except (json.JSONDecodeError, KeyError, TypeError) as error:
+                        raise AwsMailCredentialError(
+                            "AWS returned invalid mail GitOps policy versions"
+                        ) from error
+                    for item in inventory:
+                        if not item.get("IsDefaultVersion"):
+                            self._delete_policy_version(
+                                environment, policy_arn, str(item["VersionId"])
+                            )
+                    updated = self._aws(
+                        [
+                            "iam",
+                            "create-policy-version",
+                            "--policy-arn",
+                            policy_arn,
+                            "--policy-document",
+                            f"file://{policy_file.name}",
+                            "--set-as-default",
+                        ],
+                        environment,
+                    )
+                    if updated.returncode != 0:
+                        raise AwsMailCredentialError(
+                            "AWS could not update the dedicated mail GitOps policy"
+                        )
+                    self._delete_policy_version(
+                        environment, policy_arn, default_version
+                    )
+
+        attached = self._aws(
+            [
+                "iam",
+                "attach-user-policy",
+                "--user-name",
+                GITOPS_USER,
+                "--policy-arn",
+                policy_arn,
+            ],
+            environment,
+        )
+        if attached.returncode != 0:
+            raise AwsMailCredentialError(
+                "AWS could not attach the dedicated mail GitOps policy"
+            )
+        self._aws(
+            [
+                "iam",
+                "delete-user-policy",
+                "--user-name",
+                GITOPS_USER,
+                "--policy-name",
+                GITOPS_POLICY,
+            ],
+            environment,
+        )
+
+    def _delete_policy_version(
+        self, environment: dict[str, str], policy_arn: str, version_id: str
+    ) -> None:
+        deleted = self._aws(
+            [
+                "iam",
+                "delete-policy-version",
+                "--policy-arn",
+                policy_arn,
+                "--version-id",
+                version_id,
+            ],
+            environment,
+        )
+        if deleted.returncode != 0:
+            raise AwsMailCredentialError(
+                "AWS could not retire an obsolete mail GitOps policy version"
+            )
+
     def _reconcile_gitops_identity(
         self, bootstrap: dict[str, str], destination: Path
     ) -> ProvisioningIdentity:
@@ -229,36 +399,7 @@ class AwsMailCredentials:
                     "AWS could not create the dedicated mail GitOps identity"
                 )
 
-        try:
-            policy_template = (
-                self.repository_root / GITOPS_POLICY_FILE
-            ).read_text(encoding="utf-8")
-            policy = policy_template.replace("ACCOUNT_ID", account_id)
-            json.loads(policy)
-        except (OSError, json.JSONDecodeError) as error:
-            raise AwsMailCredentialError("the AWS mail IAM policy is invalid") from error
-        with tempfile.NamedTemporaryFile(
-            mode="w", encoding="utf-8", prefix="aws-mail-policy-"
-        ) as policy_file:
-            policy_file.write(policy)
-            policy_file.flush()
-            reconciled = self._aws(
-                [
-                    "iam",
-                    "put-user-policy",
-                    "--user-name",
-                    GITOPS_USER,
-                    "--policy-name",
-                    GITOPS_POLICY,
-                    "--policy-document",
-                    f"file://{policy_file.name}",
-                ],
-                environment,
-            )
-        if reconciled.returncode != 0:
-            raise AwsMailCredentialError(
-                "AWS could not reconcile the dedicated mail GitOps policy"
-            )
+        self._reconcile_gitops_policy(environment, account_id)
 
         existing = self._aws(
             [
