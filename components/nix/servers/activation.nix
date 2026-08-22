@@ -283,6 +283,17 @@
               echo 'Stalwart password assignment masks read failures from ShellCheck.' >&2
               exit 1
             fi
+            rg --fixed-strings --quiet \
+              'https://truststore.pki.rds.amazonaws.com/eu-central-1/eu-central-1-bundle.pem' \
+              ${./mail-aws.nix}
+            rg --fixed-strings --quiet \
+              'sha256-VqDK4ES2zEM5cdlkNHQBaSqS6gKU45J1Oj69ruVNi4Q=' \
+              ${./mail-aws.nix}
+            if rg --fixed-strings --quiet '"allowInvalidCerts":true' \
+              ${./mail-aws.nix}; then
+              echo 'Stalwart contains a TLS certificate-validation bypass.' >&2
+              exit 1
+            fi
             rg --fixed-strings --quiet 'keyName' \
               ${./activation/reconcile_services_backblaze.py}
             if rg --quiet 'prompt_value|R2_ENDPOINT|cloudflarestorage' \
@@ -306,6 +317,7 @@
             test ${toString (builtins.length awsMailConfiguration.swapDevices)} = 1
             test ${pkgs.lib.escapeShellArg (builtins.head awsMailConfiguration.swapDevices).device} = /swapfile
             test ${toString (builtins.head awsMailConfiguration.swapDevices).size} = 2048
+            test ${toString (builtins.length awsMailConfiguration.security.pki.certificateFiles)} = 1
             test ${
               if
                 builtins.elem "d /etc/stalwart-bootstrap 0750 root stalwart -" awsMailConfiguration.systemd.tmpfiles.rules

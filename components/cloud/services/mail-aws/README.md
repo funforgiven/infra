@@ -12,7 +12,8 @@ to `eu-central-1` and deliberately favors the smallest simple durable design:
   `alias/aws/rds` key resolved to its canonical key ARN so provider state cannot
   mistake the equivalent alias ARN for a replacement, while the managed
   password intentionally inherits RDS's documented
-  `alias/aws/secretsmanager` default;
+  `alias/aws/secretsmanager` default. Stalwart retains strict PostgreSQL TLS
+  validation through the content-hash-pinned official Frankfurt RDS CA bundle;
 - one private encrypted and versioned S3 bucket as Stalwart's live blob store;
 - one retained Elastic IP, with reverse DNS gated until forward DNS is live;
 - Session Manager administration only, with no public SSH ingress;
