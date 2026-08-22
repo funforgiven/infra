@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - cert-manager.yaml
   - envoy-gateway.yaml
+  - manila-csi-policy.yaml
