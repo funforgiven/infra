@@ -17,11 +17,13 @@ resource "aws_db_instance" "mail" {
   max_allocated_storage = 100
   storage_type          = "gp3"
   storage_encrypted     = true
+  kms_key_id            = "alias/aws/rds"
 
-  db_name                     = "stalwart"
-  username                    = "stalwart"
-  manage_master_user_password = true
-  port                        = 5432
+  db_name                       = "stalwart"
+  username                      = "stalwart"
+  manage_master_user_password   = true
+  master_user_secret_kms_key_id = "alias/aws/secretsmanager"
+  port                          = 5432
 
   db_subnet_group_name   = aws_db_subnet_group.mail.name
   vpc_security_group_ids = [aws_security_group.database.id]

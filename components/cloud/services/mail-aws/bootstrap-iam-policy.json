@@ -110,6 +110,20 @@
       ]
     },
     {
+      "Sid": "DescribeAwsManagedMailKeys",
+      "Effect": "Allow",
+      "Action": "kms:DescribeKey",
+      "Resource": "arn:aws:kms:eu-central-1:ACCOUNT_ID:key/*",
+      "Condition": {
+        "ForAnyValue:StringEquals": {
+          "kms:ResourceAliases": [
+            "alias/aws/rds",
+            "alias/aws/secretsmanager"
+          ]
+        }
+      }
+    },
+    {
       "Sid": "ManageMailRuntimeRole",
       "Effect": "Allow",
       "Action": [
