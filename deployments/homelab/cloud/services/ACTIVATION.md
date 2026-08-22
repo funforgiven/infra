@@ -210,7 +210,11 @@ next stage:
 4. `knowledge`
 
 After Karakeep is live, the operator creates an independently revocable Hermes
-API key in its UI and writes it directly into the declared
+API key under **Settings > API Keys**. Name it `Hermes integration`, select
+limited scopes, grant only **Bookmarks: Read/Write** and **Lists: Read/Write**,
+and leave every other user and administrator scope unset. Those are the only
+resources used by the pinned Karakeep MCP search, create, update, tag, and list
+tools. Write the returned one-time value directly into the declared
 `provisionedSecrets` SOPS target without creating an ignored intake
 placeholder. Materialize the `hermes-integrations` profile with the host app,
 then create and push a signed credential commit. Rebuild Hermes so its managed

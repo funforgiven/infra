@@ -199,6 +199,10 @@
               ${./hermes.nix}
             rg --fixed-strings --quiet 'default = "gpt-5.6-luna";' \
               ${./hermes.nix}
+            rg --fixed-strings --quiet \
+              'Bookmarks Read/Write and Lists Read/Write' \
+              ${./README.md} \
+              ${inputs.self}/deployments/homelab/cloud/manual-exceptions.yaml
             if rg --quiet 'openai-codex|auth\.json|device-code|device-auth' \
               ${./hermes.nix} \
               ${./README.md} \

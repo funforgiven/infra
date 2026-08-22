@@ -24,7 +24,7 @@ exceptions:
     resource: Dedicated Karakeep API key used by Hermes
     owner: funforgiven
     rationale: Karakeep currently issues personal API keys only through its authenticated user interface.
-    procedure: Create an independently revocable Hermes key after SSO enrollment and ingest it directly into the root-only Hermes runtime boundary.
+    procedure: After SSO enrollment, create an independently revocable key named Hermes integration under Settings > API Keys, select limited scopes, grant only Bookmarks Read/Write and Lists Read/Write, and ingest the one-time value directly into the root-only Hermes runtime boundary.
     secret_handling: The key is never displayed in documentation, passed as a command argument, or stored in OpenTofu state; Hermes receives it through a mode-0400 runtime file.
     backup: SOPS ciphertext preserves the active key, and Karakeep remains the revocation and rotation authority.
     drift_probe: Verify the key record, integration health, and last-used metadata monthly without retrieving the key value.
