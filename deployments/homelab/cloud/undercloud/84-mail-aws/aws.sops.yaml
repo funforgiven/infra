@@ -4,7 +4,9 @@ metadata:
     name: aws-mail-provisioning
     namespace: openstack
 type: Opaque
-data: {}
+data:
+    AWS_ACCESS_KEY_ID: ENC[AES256_GCM,data:8X1ivsxOxYVrLEyagHwEmPGnCiPTCGqv+vfVTQ==,iv:8pT99xExp417aV2ozRInfbSRbvbk+gtIk7JcB5xwxT0=,tag:p7XKYcSWBBYRcT7sOX3u2Q==,type:str]
+    AWS_SECRET_ACCESS_KEY: ENC[AES256_GCM,data:Q8QlexXtn07N319dw3phTPO7IlCLX62WQ/HnQ8uXT7skp9nzLg9otun5Vubdh6LyVGOHaPYVmDI=,iv:1brugFiJHo2/V/QLBE54x9Vnf47i7sWhveYq1bVwVvk=,tag:QzYonEtNmnQuMMHyJYN9Mg==,type:str]
 sops:
     age:
         - enc: |
@@ -26,6 +28,6 @@ sops:
             -----END AGE ENCRYPTED FILE-----
           recipient: age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-08-22T17:23:51Z"
-    mac: ENC[AES256_GCM,data:EyIseeNz7VYIY1BA/lNDdqRG5gwXSDpD6eB/atT7cgn+Qx+uYzKQDUhlO/p/QVC6lYtZk5ivuMD8aDo63hoM7CerWnw4w8tif175CUm8TnPl+QDbi4BJgFWRhK2I5eo/DFMADVP0F67TIaxSpvgOvLduANP38t5jjeRK7pYXPhI=,iv:6YcMzAhZPFee1QpG6sr09S94nHK3QN4TUAlmHjKkPRQ=,tag:tGQgqIPmwscO1kjnEGSGYA==,type:str]
+    lastmodified: "2026-08-22T19:14:44Z"
+    mac: ENC[AES256_GCM,data:uovnryT9nAZXrh4bEEDsR5t789aOom6ITiMFksX7lTQQKmrLB0mita4qdlMkFvlAj9qHfk9MF9FcX0tdAPm0cB4XwdGtUeoTZN36rz7GEu//qxpBfiDAFnNYIf6lzj2jav9dHiL6ag8wRD31+rGvNCLYDeOxKCsemEi5/WK1Udc=,iv:H9d7fqjKKq7/7nrpA7QGH0ohWk7gdakragZPbMHW1AI=,tag:Je1Mj0tKk2no/B3iMJl9NA==,type:str]
     version: 3.13.3
