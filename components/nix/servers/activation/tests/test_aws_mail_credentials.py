@@ -344,6 +344,23 @@ class AwsMailCredentialsTest(unittest.TestCase):
         sleep.assert_called_once_with(5)
 
     @patch.object(AwsMailCredentials, "_aws")
+    def test_gitops_key_cleanup_checks_the_aws_result(self, aws) -> None:
+        aws.return_value = subprocess.CompletedProcess([], 0)
+        bootstrap = {
+            BOOTSTRAP_KEYS[0]: self.bootstrap_access_id,
+            BOOTSTRAP_KEYS[1]: self.bootstrap_secret,
+        }
+
+        self.credentials._delete_gitops_key(self.access_id, bootstrap)
+
+        arguments = aws.call_args.args[0]
+        self.assertNotIn(self.access_id, arguments)
+        self.assertEqual(
+            aws.call_args.kwargs["input_document"],
+            {"UserName": "fahrican-mail-gitops", "AccessKeyId": self.access_id},
+        )
+
+    @patch.object(AwsMailCredentials, "_aws")
     def test_bootstrap_revocation_uses_stdin_and_preserves_intake_on_failure(
         self, aws
     ) -> None:
