@@ -235,6 +235,11 @@ configuration through `https://home.fahrican.com` within its five-minute safety
 trial. Every accepted UI change is followed by an encrypted backup and a
 drift-record update.
 
+For Stalwart, `components/cloud/services/mail-edge/directory-inventory.yaml`
+is the authoritative non-secret inventory. Update it before making an additive
+directory change through the private management interface; passwords go
+directly from the password manager into Stalwart and never enter Git.
+
 The final synthetic wave probes every private HTTP route, public mail ports,
 Hermes/Home Assistant node exporters, and the last successful host Restic
 timestamp. Purchases and discovery remain manual; purchased albums are uploaded

@@ -34,10 +34,10 @@ exceptions:
     resource: Stalwart mail domain, initial mailbox, aliases, and application passwords
     owner: funforgiven
     rationale: The pinned NixOS-compatible Stalwart 0.15 release lacks the safe declarative apply interface available in Stalwart 0.16, while destructive reconciliation through its legacy principal API can orphan existing mail state.
-    procedure: After the encrypted backup has passed an isolated restore, create the domain and initial account through the private management interface; record the non-secret desired directory inventory beside the operational runbook, make additive changes only, and take an immediate encrypted backup after every accepted change.
+    procedure: After the encrypted backup has passed an isolated restore, create only the objects declared in components/cloud/services/mail-edge/directory-inventory.yaml through the private management interface; update that non-secret desired inventory before every additive change and take an immediate encrypted backup after every accepted change.
     secret_handling: Passwords and application-password values go directly from the password manager into Stalwart and never enter Nix, Git, shell history, command arguments, OpenTofu state, screenshots, or documentation.
     backup: The encrypted Stalwart state backup is the authoritative recovery copy; retain a verified pre-change snapshot before any rename or deletion.
-    drift_probe: Compare the redacted domain, account, alias, and application-password metadata with the documented desired inventory monthly without retrieving hashes or secret values.
+    drift_probe: Compare the redacted domain, account, alias, and application-password metadata with components/cloud/services/mail-edge/directory-inventory.yaml monthly without retrieving hashes or secret values.
     review_interval: monthly
     exit_criterion: Migrate to the supported Stalwart declarative apply workflow when a compatible NixOS module is available, then remove this exception after a restore-tested migration.
   - id: hcloud-api-token-issuance

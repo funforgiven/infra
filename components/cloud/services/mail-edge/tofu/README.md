@@ -14,9 +14,10 @@ configuration. After the suspended OpenTofu plan is reviewed and applied:
 3. Enroll the SOPS host identity and the Stalwart and Resend runtime
    credentials without placing plaintext in Git or OpenTofu state.
 4. Run the first encrypted Stalwart backup and restore it into an isolated host.
-5. Through the private management interface, add the domain, initial mailbox,
-   aliases, and application passwords described by the redacted desired
-   directory inventory. Make additive changes only and back up immediately.
+5. Through the private management interface, add only the domain, mailbox,
+   aliases, and application-password metadata declared in
+   `../directory-inventory.yaml`. The redacted inventory is authoritative;
+   make additive changes only and back up immediately.
 6. Publish DNS only after SMTP, TLS, SPF, DKIM, DMARC, inbound delivery, and
    Resend relay checks pass.
 
