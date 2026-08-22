@@ -16,6 +16,22 @@ let
     that search, semantic retrieval, embeddings, Hindsight, or a vector database
     is available.
   '';
+  hermesSettings = {
+    agent.disabled_toolsets = [ "web" ];
+    model = {
+      provider = "openai-api";
+      default = "gpt-5.6-luna";
+    };
+    memory = {
+      memory_enabled = false;
+      user_profile_enabled = false;
+    };
+    platforms.telegram.extra.status_indicator = true;
+    terminal = {
+      backend = "local";
+      timeout = 180;
+    };
+  };
 in
 {
   nixos.modules.services-hermes =
@@ -52,6 +68,14 @@ in
               'import registration_lifecycle; import telegram; from hermes_cli import plugins'
         '';
       });
+      # Upstream's generated-settings path merges into mutable config.yaml and
+      # intentionally preserves absent keys. Use its exact configFile path so a
+      # retired integration cannot survive a declarative removal.
+      hermesConfigFile = pkgs.writeText "hermes-declarative-config.yaml" (
+        builtins.toJSON (
+          lib.recursiveUpdate { terminal.cwd = config.services.hermes-agent.workingDirectory; } hermesSettings
+        )
+      );
     in
     {
       imports = [ inputs.hermes-agent.nixosModules.default ];
@@ -59,6 +83,7 @@ in
       services.hermes-agent = {
         enable = true;
         package = hermesPackage;
+        configFile = hermesConfigFile;
         addToSystemPackages = true;
         extraPackages = [
           pkgs.curl
@@ -72,22 +97,7 @@ in
           "/var/lib/hermes-bootstrap/openai.env"
           "/var/lib/hermes-bootstrap/telegram.env"
         ];
-        settings = {
-          agent.disabled_toolsets = [ "web" ];
-          model = {
-            provider = "openai-api";
-            default = "gpt-5.6-luna";
-          };
-          memory = {
-            memory_enabled = false;
-            user_profile_enabled = false;
-          };
-          platforms.telegram.extra.status_indicator = true;
-          terminal = {
-            backend = "local";
-            timeout = 180;
-          };
-        };
+        settings = hermesSettings;
       };
 
       system.activationScripts.hermes-declarative-soul = lib.stringAfter [ "hermes-agent-setup" ] ''
