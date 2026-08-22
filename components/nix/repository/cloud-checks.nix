@@ -780,6 +780,10 @@
             navidrome = (media_root / "navidrome.yaml").read_text()
             if '"home_dir":"/srv/sftpgo/data/media/library"' not in sftpgo:
                 raise SystemExit("SFTPGo must write directly to the Navidrome library")
+            if "IFS= read" in sftpgo or 'admin_password="$(cat ' not in sftpgo:
+                raise SystemExit(
+                    "SFTPGo must accept generated Secret files without trailing newlines"
+                )
             if "subPath: library" not in navidrome or "mountPath: /music" not in navidrome:
                 raise SystemExit("Navidrome must read the shared SFTPGo library")
 

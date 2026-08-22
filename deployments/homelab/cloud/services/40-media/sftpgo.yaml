@@ -9,8 +9,8 @@ data:
     set -eu
     umask 077
 
-    IFS= read -r admin_password < /run/source/sftpgo-admin-password
-    IFS= read -r user_password < /run/source/sftpgo-user-password
+    admin_password="$(cat /run/source/sftpgo-admin-password)"
+    user_password="$(cat /run/source/sftpgo-user-password)"
 
     case "$admin_password" in
       *[!A-Za-z0-9_-]*|"") exit 1 ;;
