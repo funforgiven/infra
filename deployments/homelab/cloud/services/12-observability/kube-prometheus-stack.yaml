@@ -105,6 +105,9 @@ spec:
         podMonitorSelectorNilUsesHelmValues: false
         podMonitorSelector: {}
         podMonitorNamespaceSelector: {}
+        probeSelectorNilUsesHelmValues: false
+        probeSelector: {}
+        probeNamespaceSelector: {}
         ruleSelectorNilUsesHelmValues: false
         ruleSelector: {}
         ruleNamespaceSelector: {}
