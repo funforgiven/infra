@@ -661,6 +661,37 @@
             } & exception_ids:
                 raise SystemExit("obsolete OpenAI administration exception remains")
 
+            mail_directory = yaml.safe_load(
+                pathlib.Path(
+                    "components/cloud/services/mail-edge/directory-inventory.yaml"
+                ).read_text()
+            )
+            if mail_directory.get("version") != 1:
+                raise SystemExit("Stalwart directory inventory version is invalid")
+            if mail_directory.get("domains") != [{"name": "fahrican.com"}]:
+                raise SystemExit("Stalwart directory must retain the declared mail domain")
+            if set(mail_directory) != {
+                "version",
+                "domains",
+                "accounts",
+                "aliases",
+                "applicationPasswords",
+            }:
+                raise SystemExit("Stalwart directory inventory schema drifted")
+            if not all(
+                isinstance(mail_directory[field], list)
+                for field in ("accounts", "aliases", "applicationPasswords")
+            ):
+                raise SystemExit("Stalwart directory objects must be explicit lists")
+            if any(
+                forbidden in entry
+                for field in ("accounts", "aliases", "applicationPasswords")
+                for entry in mail_directory[field]
+                if isinstance(entry, dict)
+                for forbidden in ("password", "secret", "token", "credential")
+            ):
+                raise SystemExit("Stalwart directory inventory contains secret material")
+
             repository_text = "\n".join(
                 path.read_text(errors="ignore")
                 for path in pathlib.Path(".").rglob("*")
