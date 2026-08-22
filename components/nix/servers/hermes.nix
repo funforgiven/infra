@@ -113,6 +113,7 @@ in
         "/var/lib/hermes-bootstrap/openai.env"
         "/var/lib/hermes-bootstrap/telegram.env"
       ];
+      systemd.services.hermes-agent.restartTriggers = [ hermesConfigFile ];
 
       systemd.tmpfiles.rules = [
         "d /var/lib/hermes-bootstrap 0700 root root - -"
