@@ -891,6 +891,19 @@
                 raise SystemExit(
                     "observability admission TLS must use cert-manager instead of patch jobs"
                 )
+            prometheus_spec = observability_release["spec"]["values"]["prometheus"][
+                "prometheusSpec"
+            ]
+            for resource in ("podMonitor", "probe", "rule", "serviceMonitor"):
+                if (
+                    prometheus_spec.get(f"{resource}SelectorNilUsesHelmValues")
+                    is not False
+                    or prometheus_spec.get(f"{resource}Selector") != {}
+                    or prometheus_spec.get(f"{resource}NamespaceSelector") != {}
+                ):
+                    raise SystemExit(
+                        f"Prometheus must discover every declared {resource} across namespaces"
+                    )
             forbidden = ("backup.invalid", "replace-before-activation", "chat_id: 0")
             if any(value in observability + velero for value in forbidden):
                 raise SystemExit("a runtime placeholder remains in a Helm release")
