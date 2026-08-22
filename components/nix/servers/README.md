@@ -35,6 +35,8 @@ The separate `hermes-integrations` profile reads its independently routed SOPS
 document and creates
 `/var/lib/hermes-bootstrap/integrations.env` with `TELEGRAM_BOT_TOKEN`,
 `TELEGRAM_ALLOWED_USERS`, `TELEGRAM_HOME_CHANNEL`, and `KARAKEEP_API_KEY`.
+The Karakeep key is limited to Bookmarks Read/Write and Lists Read/Write; the
+pinned MCP uses no other user or administrator resource scopes.
 This split permits OpenAI and Karakeep rotation without re-enrolling the other
 credential. Hermes remains condition-gated until both files exist. Apply the
 NixOS closure again after enrollment so the Hermes module reseeds its
