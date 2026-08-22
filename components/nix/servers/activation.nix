@@ -272,6 +272,8 @@
               ${./activation/aws_mail_credentials.py}
             rg --fixed-strings --quiet 'stdout=subprocess.DEVNULL' \
               ${./activation/aws_mail_credentials.py}
+            test "$(rg --count 'excludeShellChecks = \[ "SC1091" \];' \
+              ${./mail-aws.nix})" = 2
             rg --fixed-strings --quiet 'keyName' \
               ${./activation/reconcile_services_backblaze.py}
             if rg --quiet 'prompt_value|R2_ENDPOINT|cloudflarestorage' \

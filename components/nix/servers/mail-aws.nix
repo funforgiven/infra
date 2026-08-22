@@ -14,6 +14,9 @@ _: {
 
       syncSecrets = pkgs.writeShellApplication {
         name = "sync-stalwart-aws-secrets";
+        # The file is intentionally materialized by EC2 user data, outside the
+        # Nix store, and therefore cannot be followed during the build check.
+        excludeShellChecks = [ "SC1091" ];
         runtimeInputs = [
           pkgs.awscli2
           pkgs.coreutils
@@ -82,6 +85,9 @@ _: {
 
       bootstrap = pkgs.writeShellApplication {
         name = "bootstrap-stalwart-aws";
+        # The file is intentionally materialized by EC2 user data, outside the
+        # Nix store, and therefore cannot be followed during the build check.
+        excludeShellChecks = [ "SC1091" ];
         runtimeInputs = [
           pkgs.awscli2
           pkgs.coreutils
