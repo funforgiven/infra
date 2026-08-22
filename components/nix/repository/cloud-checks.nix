@@ -190,8 +190,8 @@
                 (root / "undercloud/82-services-cluster/runtime-contract.yaml").read_text()
             )
             contract = yaml.safe_load(contract_document["data"]["required-keys.yaml"])
-            if contract["schemaVersion"] != 7:
-                raise SystemExit("services runtime contract must use schema version 7")
+            if contract["schemaVersion"] != 8:
+                raise SystemExit("services runtime contract must use schema version 8")
             credentials = {
                 key
                 for group in contract["credentials"].values()
@@ -245,10 +245,6 @@
                 "resend-mail-edge": (
                     "reconcile-services-resend",
                     {"STALWART_RESEND_API_KEY"},
-                ),
-                "karakeep-hermes": (
-                    "karakeep-ui",
-                    {"HERMES_KARAKEEP_API_KEY"},
                 ),
             }
             actual_provisioned = {
@@ -648,6 +644,19 @@
             )
             if any(value in repository_text for value in obsolete_openai_control_plane):
                 raise SystemExit("obsolete OpenAI administration machinery remains")
+            retired_knowledge_stack = (
+                "kara" + "keep",
+                "meili" + "search",
+                "sear" + "xng",
+                "keep." + "fahrican.com",
+                "search." + "fahrican.com",
+                "HERMES_KARA" + "KEEP_API_KEY",
+            )
+            if any(
+                value.lower() in repository_text.lower()
+                for value in retired_knowledge_stack
+            ):
+                raise SystemExit("retired knowledge or search machinery remains")
 
             primary_controller_documents = yaml.safe_load_all(
                 (

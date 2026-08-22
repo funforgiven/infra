@@ -159,9 +159,6 @@ data:
     require_file INFRA_TELEGRAM_CHAT_ID '^-?[0-9]+$' 1 32
     require_file B2_APPLICATION_KEY_ID '^[A-Za-z0-9]+$' 12 64
     require_file B2_APPLICATION_KEY '^[A-Za-z0-9/+_-]+={0,2}$' 20 128
-    require_file MEILI_MASTER_KEY '^[A-Za-z0-9/+_-]+={0,2}$' 32 256
-    require_file NEXTAUTH_SECRET '^[A-Za-z0-9/+_-]+={0,2}$' 32 256
-    require_file SEARXNG_SECRET '^[A-Za-z0-9/+_-]+={0,2}$' 32 256
     require_file ND_LASTFM_APIKEY '^[A-Za-z0-9_-]+$' 16 256
     require_file ND_LASTFM_SECRET '^[A-Za-z0-9_-]+$' 16 256
     require_file ND_PASSWORDENCRYPTIONKEY '^[A-Za-z0-9_-]+$' 32 256
@@ -267,14 +264,6 @@ data:
     unset service_account_token
 
     KUBECONFIG="$undercloud_kubeconfig" \
-      "$kubectl" -n tofu-system get secret services-identity-outputs \
-      -o jsonpath='{.data.OAUTH_CLIENT_ID}' | \
-      base64 -d > /tmp/OAUTH_CLIENT_ID
-    KUBECONFIG="$undercloud_kubeconfig" \
-      "$kubectl" -n tofu-system get secret services-identity-outputs \
-      -o jsonpath='{.data.OAUTH_CLIENT_SECRET}' | \
-      base64 -d > /tmp/OAUTH_CLIENT_SECRET
-    KUBECONFIG="$undercloud_kubeconfig" \
       "$kubectl" -n cert-manager get secret cloudflare-dns01 \
       -o jsonpath='{.data.api-token}' | \
       base64 -d > /tmp/cloudflare-api-token
@@ -355,22 +344,11 @@ data:
     "$kubectl" -n cert-manager create secret generic cloudflare-dns01 \
       --from-file=api-token=/tmp/cloudflare-api-token \
       --dry-run=client -o yaml | "$kubectl" apply -f -
-    "$kubectl" create namespace knowledge \
-      --dry-run=client -o yaml | "$kubectl" apply -f -
     "$kubectl" create namespace media \
       --dry-run=client -o yaml | "$kubectl" apply -f -
     "$kubectl" create namespace services-observability \
       --dry-run=client -o yaml | "$kubectl" apply -f -
     "$kubectl" create namespace velero \
-      --dry-run=client -o yaml | "$kubectl" apply -f -
-    "$kubectl" -n knowledge create secret generic karakeep-runtime \
-      --from-file=NEXTAUTH_SECRET=/runtime-bootstrap/NEXTAUTH_SECRET \
-      --from-file=MEILI_MASTER_KEY=/runtime-bootstrap/MEILI_MASTER_KEY \
-      --from-file=OAUTH_CLIENT_ID=/tmp/OAUTH_CLIENT_ID \
-      --from-file=OAUTH_CLIENT_SECRET=/tmp/OAUTH_CLIENT_SECRET \
-      --dry-run=client -o yaml | "$kubectl" apply -f -
-    "$kubectl" -n knowledge create secret generic searxng-runtime \
-      --from-file=SEARXNG_SECRET=/runtime-bootstrap/SEARXNG_SECRET \
       --dry-run=client -o yaml | "$kubectl" apply -f -
     "$kubectl" -n services-observability create secret generic infrastructure-telegram \
       --from-file=bot-token=/runtime-bootstrap/INFRA_TELEGRAM_BOT_TOKEN \

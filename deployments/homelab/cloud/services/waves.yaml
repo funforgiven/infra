@@ -124,38 +124,6 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: services-knowledge
-  namespace: flux-system
-spec:
-  suspend: false
-  interval: 10m
-  retryInterval: 1m
-  timeout: 20m
-  path: ./deployments/homelab/cloud/services/30-knowledge
-  prune: true
-  sourceRef:
-    kind: GitRepository
-    name: flux-system
-  dependsOn:
-    - name: services-platform-gateway
-    - name: services-backup-policy
-  healthChecks:
-    - apiVersion: apps/v1
-      kind: StatefulSet
-      name: karakeep
-      namespace: knowledge
-    - apiVersion: apps/v1
-      kind: StatefulSet
-      name: meilisearch
-      namespace: knowledge
-    - apiVersion: apps/v1
-      kind: Deployment
-      name: searxng
-      namespace: knowledge
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
   name: services-synthetic-monitoring
   namespace: flux-system
 spec:
@@ -170,7 +138,6 @@ spec:
     name: flux-system
   dependsOn:
     - name: services-home-automation
-    - name: services-knowledge
     - name: services-media
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1

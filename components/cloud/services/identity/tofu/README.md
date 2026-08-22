@@ -1,6 +1,5 @@
 # Services identity
 
-This state is intentionally separate from the main identity state. It can emit
-only the Karakeep client ID and secret, which lets the services-cluster
-bootstrap controller receive the minimum OIDC material without access to the
-Grafana, OpenStack, or ZITADEL controller credentials.
+This temporary empty root retires the former services-specific ZITADEL
+application through its existing OpenTofu state. Remove the root and controller
+object after the empty state has reconciled successfully.

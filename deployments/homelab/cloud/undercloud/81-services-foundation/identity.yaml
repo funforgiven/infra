@@ -17,10 +17,5 @@ spec:
       name: tofu-zitadel-credentials
       varsKeys:
         - jwt_profile_json
-  writeOutputsToSecret:
-    name: services-identity-outputs
-    outputs:
-      - OAUTH_CLIENT_ID
-      - OAUTH_CLIENT_SECRET
   remediation:
     retries: 3

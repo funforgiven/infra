@@ -31,14 +31,11 @@ root-only `/var/lib/hermes-bootstrap/openai.env` file over SSH standard input.
 The model remains declarative because Hermes must name a model in each API
 request; an API key authenticates the request but does not select its model.
 
-The separate `hermes-integrations` profile reads its independently routed SOPS
-document and creates
-`/var/lib/hermes-bootstrap/integrations.env` with `TELEGRAM_BOT_TOKEN`,
-`TELEGRAM_ALLOWED_USERS`, `TELEGRAM_HOME_CHANNEL`, and `KARAKEEP_API_KEY`.
-The Karakeep key is limited to Bookmarks Read/Write and Lists Read/Write; the
-pinned MCP uses no other user or administrator resource scopes.
-This split permits OpenAI and Karakeep rotation without re-enrolling the other
-credential. Hermes remains condition-gated until both files exist. Apply the
+The separate `hermes-telegram` profile reads the independently routed Telegram
+values and creates `/var/lib/hermes-bootstrap/telegram.env` with
+`TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USERS`, and `TELEGRAM_HOME_CHANNEL`.
+This split permits OpenAI and Telegram rotation without re-enrolling the other
+credential boundary. Hermes remains condition-gated until both files exist. Apply the
 NixOS closure again after enrollment so the Hermes module reseeds its
 service-owned `.env`; no interactive provider authentication is required.
 
@@ -51,10 +48,8 @@ single declared private `/activate` update and writes them directly as SOPS
 ciphertext. Those derived values have no intake files.
 
 The Telegram bot is polling-only and defaults to deny; never enable the global
-allow-all setting. Karakeep runs as a pinned, Nix-extracted MCP program and
-receives its key only through Hermes's runtime secret scope. Hermes memory,
-embeddings, Hindsight, and a separate semantic retrieval layer remain disabled.
-Karakeep full-text search is the only initial knowledge-retrieval path.
+allow-all setting. Hermes globally disables its web toolset, autonomous memory,
+embeddings, Hindsight, and external retrieval integrations.
 
 ## Off-site host backups
 
@@ -111,8 +106,8 @@ do not put either value in an SSH command, Nix option, shell history, or
 temporary file. The notifier supplies the token to curl through standard input,
 so it is absent from the process list.
 
-Hermes additionally needs its separate OpenAI and conversation/Karakeep
-runtime files. Mail needs Stalwart/Resend bootstrap files. Those service-specific
+Hermes additionally needs its separate OpenAI and Telegram runtime files. Mail
+needs Stalwart/Resend bootstrap files. Those service-specific
 credentials must not reuse the infrastructure or media bots.
 
 ## Stalwart directory enrollment

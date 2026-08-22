@@ -20,16 +20,6 @@ exceptions:
     drift_probe: Review non-secret project budget and permission settings in the OpenAI dashboard and run a minimal Hermes API health check monthly without retrieving or displaying the key.
     review_interval: monthly
     exit_criterion: Replace this exception when OpenAI offers a workload identity or narrow key-delivery mechanism that does not require organization-administrator authority.
-  - id: karakeep-api-key-issuance
-    resource: Dedicated Karakeep API key used by Hermes
-    owner: funforgiven
-    rationale: Karakeep currently issues personal API keys only through its authenticated user interface.
-    procedure: After SSO enrollment, create an independently revocable key named Hermes integration under Settings > API Keys, select limited scopes, grant only Bookmarks Read/Write and Lists Read/Write, and ingest the one-time value directly into the root-only Hermes runtime boundary.
-    secret_handling: The key is never displayed in documentation, passed as a command argument, or stored in OpenTofu state; Hermes receives it through a mode-0400 runtime file.
-    backup: SOPS ciphertext preserves the active key, and Karakeep remains the revocation and rotation authority.
-    drift_probe: Verify the key record, integration health, and last-used metadata monthly without retrieving the key value.
-    review_interval: monthly
-    exit_criterion: Replace this exception when Karakeep exposes supported declarative API-key lifecycle management.
   - id: resend-api-key-issuance
     resource: Resend administration and Stalwart SMTP credentials
     owner: funforgiven

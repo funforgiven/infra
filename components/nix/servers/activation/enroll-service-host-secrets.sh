@@ -4,7 +4,7 @@ umask 077
 
 if [[ "$#" -ne 2 ]]; then
   echo 'Usage: enroll-service-host-secrets SSH_TARGET PROFILE' >&2
-  echo 'Profiles: monitoring hermes-openai hermes-integrations mail-runtime hermes-backup home-assistant-backup mail-edge-backup' >&2
+  echo 'Profiles: monitoring hermes-openai hermes-telegram mail-runtime hermes-backup home-assistant-backup mail-edge-backup' >&2
   exit 64
 fi
 
@@ -86,26 +86,22 @@ enroll_hermes_openai() {
   unset openai_api_key
 }
 
-enroll_hermes_integrations() {
+enroll_hermes_telegram() {
   local bot_token
   local allowed_users
   local home_channel
-  local karakeep_key
   read_sops_value bot_token HERMES_TELEGRAM_BOT_TOKEN \
     '^[0-9]+:[A-Za-z0-9_-]+$' 32 256
   read_sops_value allowed_users HERMES_TELEGRAM_ALLOWED_USERS \
     '^[0-9]+(,[0-9]+)*$' 1 512
   read_sops_value home_channel HERMES_TELEGRAM_HOME_CHANNEL '^-?[0-9]+$' 1 32
-  read_sops_value karakeep_key HERMES_KARAKEEP_API_KEY \
-    '^[A-Za-z0-9._-]+$' 32 512
   prepare_directory /var/lib/hermes-bootstrap
   {
     printf 'TELEGRAM_BOT_TOKEN=%s\n' "$bot_token"
     printf 'TELEGRAM_ALLOWED_USERS=%s\n' "$allowed_users"
     printf 'TELEGRAM_HOME_CHANNEL=%s\n' "$home_channel"
-    printf 'KARAKEEP_API_KEY=%s\n' "$karakeep_key"
-  } | install_stream /var/lib/hermes-bootstrap/integrations.env
-  unset bot_token allowed_users home_channel karakeep_key
+  } | install_stream /var/lib/hermes-bootstrap/telegram.env
+  unset bot_token allowed_users home_channel
 }
 
 enroll_mail_runtime() {
@@ -154,8 +150,8 @@ case "$profile" in
   hermes-openai)
     enroll_hermes_openai
     ;;
-  hermes-integrations)
-    enroll_hermes_integrations
+  hermes-telegram)
+    enroll_hermes_telegram
     ;;
   mail-runtime)
     enroll_mail_runtime
