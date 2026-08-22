@@ -153,21 +153,43 @@ _: {
           export STALWART_USER=bootstrap
           export STALWART_PASSWORD="$recovery_password"
           export STALWART_RECOVERY_ADMIN="bootstrap:$recovery_password"
+
+          server_pid=
+
+          stop_server() {
+            if [[ -n "$server_pid" ]]; then
+              kill "$server_pid" 2>/dev/null || true
+              wait "$server_pid" 2>/dev/null || true
+              server_pid=
+            fi
+          }
+
+          start_server() {
+            local attempt
+
+            ${stalwartPackage}/bin/stalwart --config "$config_file" &
+            server_pid=$!
+
+            for attempt in $(seq 1 120); do
+              if curl --silent --output /dev/null http://127.0.0.1:8080/.well-known/jmap; then
+                return 0
+              fi
+              if ! kill -0 "$server_pid" 2>/dev/null; then
+                wait "$server_pid" 2>/dev/null || true
+                server_pid=
+                return 1
+              fi
+              sleep 1
+            done
+
+            return 1
+          }
+
+          trap stop_server EXIT
           if [[ -e "$config_file" ]]; then
             export STALWART_RECOVERY_MODE=true
           fi
-
-          ${stalwartPackage}/bin/stalwart --config "$config_file" &
-          server_pid=$!
-          trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' EXIT
-
-          for attempt in $(seq 1 120); do
-            if curl --silent --output /dev/null http://127.0.0.1:8080/.well-known/jmap; then
-              break
-            fi
-            test "$attempt" -lt 120
-            sleep 1
-          done
+          start_server
 
           if [[ ! -e "$config_file" ]]; then
             jq --compact-output --null-input \
@@ -210,6 +232,9 @@ _: {
                 }
               }' | ${cliPackage}/bin/stalwart-cli apply --stdin --json --quiet >/dev/null
             test -s "$config_file"
+            stop_server
+            export STALWART_RECOVERY_MODE=true
+            start_server
           fi
 
           jq --compact-output --null-input \

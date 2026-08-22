@@ -289,6 +289,12 @@
             rg --fixed-strings --quiet \
               'sha256-VqDK4ES2zEM5cdlkNHQBaSqS6gKU45J1Oj69ruVNi4Q=' \
               ${./mail-aws.nix}
+            rg --fixed-strings --quiet 'trap stop_server EXIT' \
+              ${./mail-aws.nix}
+            rg --fixed-strings --quiet 'export STALWART_RECOVERY_MODE=true' \
+              ${./mail-aws.nix}
+            test "$(rg --count '^[[:space:]]+start_server$' \
+              ${./mail-aws.nix})" = 2
             if rg --fixed-strings --quiet '"allowInvalidCerts":true' \
               ${./mail-aws.nix}; then
               echo 'Stalwart contains a TLS certificate-validation bypass.' >&2
