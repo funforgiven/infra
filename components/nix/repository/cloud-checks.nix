@@ -411,7 +411,6 @@
                 'engine_version = "17.10"',
                 "manage_master_user_password = true",
                 '":alias/aws/rds"',
-                '":alias/aws/secretsmanager"',
                 "backup_retention_period = 14",
                 "deletion_protection         = true",
                 'versioning_configuration {\n    status = "Enabled"',
@@ -431,6 +430,8 @@
                 fragment in aws_tofu_text for fragment in forbidden_aws_state
             ) or re.search(r"^\s*password\s*=", aws_tofu_text, re.M):
                 raise SystemExit("AWS mail would put credentials or SSH state in OpenTofu")
+            if "master_user_secret_kms_key_id" in aws_tofu_text:
+                raise SystemExit("AWS mail bypasses the managed Secrets Manager key default")
             if "from_port   = 22" in aws_tofu_text:
                 raise SystemExit("AWS mail exposes SSH instead of Session Manager")
             if 'var.source_revision != "0000000000000000000000000000000000000000"' not in (

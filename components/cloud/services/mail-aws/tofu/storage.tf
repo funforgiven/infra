@@ -26,12 +26,7 @@ resource "aws_db_instance" "mail" {
   db_name                     = "stalwart"
   username                    = "stalwart"
   manage_master_user_password = true
-  master_user_secret_kms_key_id = join("", [
-    "arn:aws:kms:eu-central-1:",
-    data.aws_caller_identity.current.account_id,
-    ":alias/aws/secretsmanager",
-  ])
-  port = 5432
+  port                        = 5432
 
   db_subnet_group_name   = aws_db_subnet_group.mail.name
   vpc_security_group_ids = [aws_security_group.database.id]
