@@ -144,6 +144,8 @@ class AwsMailCredentialsTest(unittest.TestCase):
         self.credentials.publish_resend()
 
         arguments, options = run.call_args
+        self.assertEqual(arguments[0][1:3], ["secretsmanager", "update-secret"])
+        self.assertNotIn("put-secret-value", arguments[0])
         self.assertEqual(options["input"], "re_private-value-not-output")
         self.assertEqual(options["stdout"], subprocess.DEVNULL)
         self.assertEqual(options["stderr"], subprocess.DEVNULL)
