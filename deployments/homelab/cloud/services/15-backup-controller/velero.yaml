@@ -110,7 +110,7 @@ spec:
             expr: >-
               ((time() - velero_backup_last_successful_timestamp{
               schedule="services-daily"})
-              > bool (26 * 3600))
+              > (26 * 3600))
               or absent(velero_backup_last_successful_timestamp{
               schedule="services-daily"})
             for: 1h
