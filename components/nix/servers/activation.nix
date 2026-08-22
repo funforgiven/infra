@@ -292,6 +292,9 @@
             test ${pkgs.lib.escapeShellArg awsMailConfiguration.systemd.services.stalwart-secrets.serviceConfig.Type} = oneshot
             test ${if awsMailConfiguration.services.amazon-ssm-agent.enable then "1" else "0"} = 1
             test ${if awsMailConfiguration.services.openssh.openFirewall then "1" else "0"} = 0
+            test ${toString (builtins.length awsMailConfiguration.swapDevices)} = 1
+            test ${pkgs.lib.escapeShellArg (builtins.head awsMailConfiguration.swapDevices).device} = /swapfile
+            test ${toString (builtins.head awsMailConfiguration.swapDevices).size} = 2048
             test ${
               if
                 awsMailConfiguration.networking.firewall.allowedTCPPorts == [

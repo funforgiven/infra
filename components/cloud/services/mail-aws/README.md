@@ -4,7 +4,8 @@ This is the prepared replacement for the legacy Hetzner mail host. It is fixed
 to `eu-central-1` and deliberately favors the smallest simple durable design:
 
 - one Graviton `t4g.micro` EC2 instance running the signed NixOS `mail-aws`
-  configuration;
+  configuration, with a NixOS-owned 2 GiB swapfile created before the first
+  rebuild so the 1 GiB appliance remains viable without a larger instance;
 - one single-AZ encrypted `db.t4g.micro` RDS PostgreSQL 17.10 instance with
   14-day point-in-time recovery, deletion protection, a final snapshot, and an
   RDS-managed master password. Storage explicitly uses the no-cost AWS-managed

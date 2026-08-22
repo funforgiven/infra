@@ -276,6 +276,15 @@ _: {
       };
     in
     {
+      # The EC2 bootstrap creates this exact file before its first Nix
+      # evaluation.  NixOS then owns its size and activation on every boot.
+      swapDevices = [
+        {
+          device = "/swapfile";
+          size = 2048;
+        }
+      ];
+
       users.groups.stalwart = { };
       users.users.stalwart = {
         isSystemUser = true;
