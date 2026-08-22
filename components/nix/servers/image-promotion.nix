@@ -48,57 +48,55 @@
           temporary_directory="$(mktemp --directory)"
           trap 'rm -rf "$temporary_directory"' EXIT
 
-          for host in hermes; do
-            image_name="nixos-$host-''${revision:0:12}"
+          host=hermes
+          image_name="nixos-$host-''${revision:0:12}"
 
-            nix build \
-              --no-link \
-              --print-out-paths \
-              "$repository_root#$host-openstack-image" \
-              > "$temporary_directory/$host-output-path"
+          nix build \
+            --no-link \
+            --print-out-paths \
+            "$repository_root#$host-openstack-image" \
+            > "$temporary_directory/$host-output-path"
 
-            output_path="$(< "$temporary_directory/$host-output-path")"
-            mapfile -t image_files < <(
-              find "$output_path" -type f -name '*.qcow2' -print
-            )
+          output_path="$(< "$temporary_directory/$host-output-path")"
+          mapfile -t image_files < <(
+            find "$output_path" -type f -name '*.qcow2' -print
+          )
 
-            if [[ "''${#image_files[@]}" -ne 1 ]]; then
-              echo "Expected exactly one QCOW2 image for $host." >&2
+          if [[ "''${#image_files[@]}" -ne 1 ]]; then
+            echo "Expected exactly one QCOW2 image for $host." >&2
+            exit 1
+          fi
+
+          image_file="''${image_files[0]}"
+          image_sha256="$(sha256sum "$image_file" | cut -d ' ' -f 1)"
+
+          mapfile -t existing_ids < <(
+            openstack image list \
+              --name "$image_name" \
+              --property "image_role=$host" \
+              --property "image_source_revision=$revision" \
+              --format value \
+              --column ID
+          )
+
+          if [[ "''${#existing_ids[@]}" -gt 1 ]]; then
+            echo "More than one immutable image matches $image_name." >&2
+            exit 1
+          fi
+
+          if [[ "''${#existing_ids[@]}" -eq 1 ]]; then
+            recorded_sha256="$(
+              openstack image show "''${existing_ids[0]}" --format json |
+                jq --raw-output '.properties.image_source_sha256 // empty'
+            )"
+
+            if [[ "$recorded_sha256" != "$image_sha256" ]]; then
+              echo "Existing image $image_name does not match the local build." >&2
               exit 1
             fi
 
-            image_file="''${image_files[0]}"
-            image_sha256="$(sha256sum "$image_file" | cut -d ' ' -f 1)"
-
-            mapfile -t existing_ids < <(
-              openstack image list \
-                --name "$image_name" \
-                --property "image_role=$host" \
-                --property "image_source_revision=$revision" \
-                --format value \
-                --column ID
-            )
-
-            if [[ "''${#existing_ids[@]}" -gt 1 ]]; then
-              echo "More than one immutable image matches $image_name." >&2
-              exit 1
-            fi
-
-            if [[ "''${#existing_ids[@]}" -eq 1 ]]; then
-              recorded_sha256="$(
-                openstack image show "''${existing_ids[0]}" --format json |
-                  jq --raw-output '.properties.image_source_sha256 // empty'
-              )"
-
-              if [[ "$recorded_sha256" != "$image_sha256" ]]; then
-                echo "Existing image $image_name does not match the local build." >&2
-                exit 1
-              fi
-
-              echo "$image_name already exists with the expected digest."
-              continue
-            fi
-
+            echo "$image_name already exists with the expected digest."
+          else
             openstack image create "$image_name" \
               --private \
               --protected \
@@ -114,7 +112,7 @@
               --property "os_type=linux" \
               --format value \
               --column id
-          done
+          fi
 
           haos_version=18.2
           haos_name="haos-$haos_version"
