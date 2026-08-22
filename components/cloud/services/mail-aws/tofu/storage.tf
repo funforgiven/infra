@@ -1,5 +1,9 @@
 data "aws_caller_identity" "current" {}
 
+data "aws_kms_key" "rds_storage" {
+  key_id = "alias/aws/rds"
+}
+
 resource "aws_db_subnet_group" "mail" {
   name       = "stalwart-mail"
   subnet_ids = [for subnet in aws_subnet.database : subnet.id]
@@ -17,11 +21,9 @@ resource "aws_db_instance" "mail" {
   max_allocated_storage = 100
   storage_type          = "gp3"
   storage_encrypted     = true
-  kms_key_id = join("", [
-    "arn:aws:kms:eu-central-1:",
-    data.aws_caller_identity.current.account_id,
-    ":alias/aws/rds",
-  ])
+  # RDS records the canonical key ARN. Supplying the equivalent alias ARN
+  # creates a perpetual ForceNew diff in the AWS provider.
+  kms_key_id = data.aws_kms_key.rds_storage.arn
 
   db_name                     = "stalwart"
   username                    = "stalwart"
