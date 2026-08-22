@@ -18,7 +18,7 @@ spec:
     name: services-tofu-source
   vars:
     - name: source_revision
-      value: "be61e2b25f9d8fc85ac7a6f487bb994a0f46f56e"
+      value: "91fd5697094e81a5138b86e9383f34be8f21c99f"
     - name: enable_reverse_dns
       value: "false"
   runnerPodTemplate:
