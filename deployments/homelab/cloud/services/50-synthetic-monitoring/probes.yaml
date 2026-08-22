@@ -15,10 +15,8 @@ spec:
       static:
         - https://home.fahrican.com
         - https://inbox.fahrican.com/web/client/
-        - https://keep.fahrican.com
         - https://mail.fahrican.com
         - https://music.fahrican.com/ping
-        - https://search.fahrican.com
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: Probe

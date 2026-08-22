@@ -51,8 +51,6 @@ spec:
     kind: ClusterIssuer
     name: letsencrypt-cloudflare
   dnsNames:
-    - keep.fahrican.com
-    - search.fahrican.com
     - music.fahrican.com
     - inbox.fahrican.com
     - home.fahrican.com
@@ -99,8 +97,6 @@ spec:
     - name: services
       sectionName: http
   hostnames:
-    - keep.fahrican.com
-    - search.fahrican.com
     - music.fahrican.com
     - inbox.fahrican.com
     - home.fahrican.com

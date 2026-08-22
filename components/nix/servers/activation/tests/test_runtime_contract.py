@@ -15,7 +15,7 @@ PROVISIONED_FILE = Path("provisioned-runtime.sops.yaml")
 
 def contract_document() -> dict:
     return {
-        "schemaVersion": 7,
+        "schemaVersion": 8,
         "secretFile": str(CLUSTER_FILE),
         "credentials": {"initial": ["CLUSTER_KEY"]},
         "hostCredentials": {

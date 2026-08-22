@@ -46,9 +46,7 @@ locals {
   private_services = toset([
     "home",
     "inbox",
-    "keep",
     "music",
-    "search",
   ])
   mail_hosts = toset([
     "autoconfig",

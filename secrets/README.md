@@ -91,10 +91,8 @@ CIDR is independently discovered. Stalwart and backup passwords are generated
 locally. The operator owns the OpenAI project permissions and hard spend limit
 in the OpenAI dashboard; the generic enrollment app writes `OPENAI_API_KEY`
 directly from its one-way intake file into the admin-only Hermes SOPS document.
-No OpenAI Admin credential enters this repository. Karakeep's Hermes
-integration key is created by the operator after the
-service is live because Karakeep currently exposes that lifecycle only in its
-UI. None of those derived values has or needs a hand-filled intake file.
+No OpenAI Admin credential enters this repository. None of the provider-derived
+or locally generated values has or needs a hand-filled intake file.
 
 Enroll an external contract key from an intake directory without echoing it:
 

@@ -18,7 +18,7 @@ bots:
   hermes:
     name: Fahrican Hermes
     username: fahrican_hermes_bot
-    description: Private conversational access to the Fahrican Hermes assistant and Karakeep knowledge workflow.
+    description: Private conversational access to the Fahrican Hermes assistant.
     shortDescription: Private Hermes assistant access.
     tokenCredential: HERMES_TELEGRAM_BOT_TOKEN
     activation:

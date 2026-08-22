@@ -36,7 +36,6 @@ STAGES = {
     "observability": ((SERVICES_WAVES, "services-observability"),),
     "backup-controller": ((SERVICES_WAVES, "services-backup-controller"),),
     "backup-policy": ((SERVICES_WAVES, "services-backup-policy"),),
-    "knowledge": ((SERVICES_WAVES, "services-knowledge"),),
     "media": ((SERVICES_WAVES, "services-media"),),
     "home-automation": ((SERVICES_WAVES, "services-home-automation"),),
     "synthetic-monitoring": ((SERVICES_WAVES, "services-synthetic-monitoring"),),

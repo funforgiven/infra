@@ -12,10 +12,10 @@ deferred_provisioners=()
 require_promotions=false
 case "$phase" in
   foundation)
-    deferred_provisioners=(karakeep-ui reconcile-services-resend)
+    deferred_provisioners=(reconcile-services-resend)
     ;;
   hosts)
-    deferred_provisioners=(karakeep-ui reconcile-services-resend)
+    deferred_provisioners=(reconcile-services-resend)
     require_promotions=true
     ;;
   final)

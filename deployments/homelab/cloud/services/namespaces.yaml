@@ -35,13 +35,6 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: knowledge
-  labels:
-    gateway.fahrican.com/services: allowed
----
-apiVersion: v1
-kind: Namespace
-metadata:
   name: media
   labels:
     gateway.fahrican.com/services: allowed

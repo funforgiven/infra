@@ -5,7 +5,7 @@ metadata:
   namespace: openstack
 data:
   required-keys.yaml: |
-    schemaVersion: 7
+    schemaVersion: 8
     secret: services-runtime-bootstrap
     secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
     credentials:
@@ -27,9 +27,6 @@ data:
       services-cluster:
         secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
         keys:
-          - MEILI_MASTER_KEY
-          - NEXTAUTH_SECRET
-          - SEARXNG_SECRET
           - ND_PASSWORDENCRYPTIONKEY
           - SFTPGO_ADMIN_PASSWORD
           - SFTPGO_USER_PASSWORD
@@ -78,12 +75,5 @@ data:
         secretFile: deployments/homelab/cloud/host-runtime/mail-edge.sops.yaml
         keys:
           - STALWART_RESEND_API_KEY
-      karakeep-hermes:
-        provisioner: karakeep-ui
-        secretFile: deployments/homelab/cloud/host-runtime/hermes.sops.yaml
-        keys:
-          - HERMES_KARAKEEP_API_KEY
     policy:
-      semanticRetrieval: deferred
-      initialRetrieval: karakeep-full-text
       secretTransport: isolated-sops-ciphertext-and-memory-backed-reconciliation

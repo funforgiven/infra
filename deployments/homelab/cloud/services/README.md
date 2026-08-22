@@ -10,7 +10,7 @@ and media workloads cannot consume control-plane capacity.
 | Boundary | Placement | Initial workloads |
 | --- | --- | --- |
 | OpenStack control plane | Existing undercloud | Keystone, Magnum, Cinder, Manila, Octavia, Flux controllers |
-| Services Kubernetes | Magnum, three 2-vCPU/4-GiB masters and two 4-vCPU/12-GiB workers | Karakeep, SearXNG, databases, Navidrome, SFTPGo, monitoring |
+| Services Kubernetes | Magnum, three 2-vCPU/4-GiB masters and two 4-vCPU/12-GiB workers | Navidrome, SFTPGo, databases, backup, monitoring |
 | Agent VM | Dedicated NixOS VM in the `services` project | Hermes Agent, Telegram conversation bot, direct OpenAI API runtime |
 | Home automation VM | Dedicated NixOS VM in the `services` project | Home Assistant and hardware/LAN integrations |
 | Mail edge | Dedicated Hetzner NixOS VM | Stalwart ingress and Resend-backed outbound delivery |
@@ -19,25 +19,24 @@ The OpenStack `public` network is RFC1918 provider space. Magnum floating IPs
 therefore provide routed LAN reachability, not Internet exposure. Public HTTP
 endpoints are explicit DNS allow-list entries; all other routes remain private.
 
-## Retrieval policy
+## Search and memory policy
 
-Karakeep full-text search is the only knowledge retrieval layer in the initial
-deployment. Vector databases, embeddings, Hindsight, and other semantic-memory
-services are deferred until Karakeep's own retrieval is satisfactory or measured
-usage demonstrates that a separate layer is justified.
+No search engine, external knowledge store, vector database, embeddings, or
+Hindsight service is deployed. Hermes disables its web toolset and autonomous
+memory globally; add a retrieval layer only after a concrete need justifies its
+operational and security cost.
 
 ## Human identity policy
 
 ZITADEL is the central human identity provider wherever an application offers
-a compatible native OIDC flow. Karakeep uses its own declaratively managed
-ZITADEL client and disables password authentication. The existing central
-Grafana at `https://grafana.cloud.fahrican.com` also uses a separate ZITADEL
-client; the services cluster intentionally does not deploy a second Grafana.
+a compatible native OIDC flow. The existing central Grafana at
+`https://grafana.cloud.fahrican.com` uses ZITADEL; the services cluster
+intentionally does not deploy a second Grafana.
 
 Protocol and device clients keep application-native authentication when OIDC
 would break their supported flow. Hermes has no human web login: its private
-Telegram bot admits only the discovered allowed user, while its OpenAI and
-Karakeep credentials authenticate machine integrations. Alertmanager sends
+Telegram bot admits only the discovered allowed user, while its OpenAI key
+authenticates the model API. Alertmanager sends
 through the separate infrastructure bot and exposes no Telegram login.
 Navidrome keeps native credentials for Subsonic clients such as Symfonium,
 Home Assistant keeps its supported local account and MFA flow, and the pinned

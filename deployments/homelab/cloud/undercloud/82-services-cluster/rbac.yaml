@@ -7,35 +7,6 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: services-identity-output-reader
-  namespace: tofu-system
-rules:
-  - apiGroups:
-      - ""
-    resources:
-      - secrets
-    resourceNames:
-      - services-identity-outputs
-    verbs:
-      - get
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: services-identity-output-reader
-  namespace: tofu-system
-subjects:
-  - kind: ServiceAccount
-    name: services-cluster-reconcile
-    namespace: openstack
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: services-identity-output-reader
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
   name: services-cloudflare-token-reader
   namespace: cert-manager
 rules:

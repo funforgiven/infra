@@ -232,14 +232,6 @@ class NetworkInventoryTests(unittest.TestCase):
                     "tcp",
                     "80,443",
                 ),
-                (
-                    "infra: CLOUD-EXTERNAL to private identity HTTPS",
-                    "infra-forward",
-                    "vlan40-external",
-                    "10.21.20.131",
-                    "tcp",
-                    "443",
-                ),
             ],
             [
                 (
