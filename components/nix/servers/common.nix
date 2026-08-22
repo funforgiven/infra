@@ -154,10 +154,6 @@ in
           openFirewall = false;
         };
 
-        networking.firewall.extraInputRules = ''
-          ip saddr 192.168.80.0/24 tcp dport 9100 accept
-        '';
-
         systemd.services = {
           "telegram-unit-failure@" = {
             description = "Notify the infrastructure Telegram chat about %i";
@@ -179,6 +175,13 @@ in
         systemd.tmpfiles.rules = [
           "d /var/lib/monitoring-bootstrap 0700 root root - -"
           "d /var/lib/node-exporter-textfile 0755 root root - -"
+        ];
+
+        assertions = [
+          {
+            assertion = !builtins.elem 9100 config.networking.firewall.allowedTCPPorts;
+            message = "Node exporter must not be opened globally; each deployment boundary must allow it on an explicit private interface.";
+          }
         ];
       };
     };
