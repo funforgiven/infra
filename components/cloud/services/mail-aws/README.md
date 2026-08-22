@@ -50,9 +50,10 @@ creates one new access pair for that identity, encrypts only the narrower pair i
 the exact temporary key, and only then clears the intake files. Neither pair is
 passed as an OpenTofu variable, committed in plaintext, or placed in a shell
 argument. Identity verification tolerates bounded IAM propagation delay, and
-unpersisted-key cleanup is checked. Interrupted revocation is resumable from
-the encrypted dedicated pair. The GitOps Terraform object remains suspended
-until that final enrollment.
+unpersisted orphan keys are retired before replacement. Interrupted revocation
+is resumable from the encrypted dedicated pair, while a mismatch between AWS
+and existing ciphertext is a hard failure. The GitOps Terraform object remains
+suspended until that final enrollment.
 
 ## Safe activation and migration
 

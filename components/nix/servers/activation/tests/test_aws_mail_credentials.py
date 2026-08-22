@@ -257,6 +257,56 @@ class AwsMailCredentialsTest(unittest.TestCase):
         self.assertFalse(any("create-access-key" in command for command in commands))
         reconcile_policy.assert_called_once()
 
+    @patch.object(AwsMailCredentials, "_verify_gitops_identity")
+    @patch.object(AwsMailCredentials, "_delete_gitops_key")
+    @patch.object(AwsMailCredentials, "_reconcile_gitops_policy")
+    @patch.object(AwsMailCredentials, "_aws")
+    def test_enrollment_replaces_an_unpersisted_orphan_key(
+        self, aws, reconcile_policy, delete_key, verify_identity
+    ) -> None:
+        orphan_id = "AKIA" + "C" * 16
+        aws.side_effect = [
+            subprocess.CompletedProcess(
+                [],
+                0,
+                '{"Account":"123456789012",'
+                '"Arn":"arn:aws:iam::123456789012:user/bootstrap-admin"}',
+            ),
+            subprocess.CompletedProcess(
+                [],
+                0,
+                '{"User":{"UserName":"bootstrap-admin",'
+                '"Arn":"arn:aws:iam::123456789012:user/bootstrap-admin"}}',
+            ),
+            subprocess.CompletedProcess([], 0, ""),
+            subprocess.CompletedProcess(
+                [],
+                0,
+                '{"AccessKeyMetadata":[{"AccessKeyId":"'
+                f"{orphan_id}"
+                '"}]}',
+            ),
+            subprocess.CompletedProcess(
+                [],
+                0,
+                "{\"AccessKey\":{"
+                f'\"AccessKeyId\":\"{self.access_id}\",'
+                f'\"SecretAccessKey\":\"{self.secret}\"'
+                "}}",
+            ),
+        ]
+        bootstrap = {
+            BOOTSTRAP_KEYS[0]: self.bootstrap_access_id,
+            BOOTSTRAP_KEYS[1]: self.bootstrap_secret,
+        }
+
+        result = self.credentials._reconcile_gitops_identity(bootstrap, AWS_FILE)
+
+        self.assertEqual(result.credentials[AUTH_KEYS[0]], self.access_id)
+        delete_key.assert_called_once_with(orphan_id, bootstrap)
+        verify_identity.assert_called_once()
+        reconcile_policy.assert_called_once()
+
     @patch.object(AwsMailCredentials, "_aws")
     def test_gitops_policy_uses_one_customer_managed_policy(self, aws) -> None:
         aws.side_effect = [
