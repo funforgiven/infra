@@ -1,5 +1,22 @@
 #!/bin/sh
 set -eu
+umask 0077
+
+# The final NixOS system owns this same swapfile declaratively.  Create and
+# activate it before the first evaluation so the 1 GiB appliance can build its
+# signed configuration without requiring a permanently larger instance.
+swap_file=/swapfile
+swap_size_bytes=2147483648
+current_swap_size="$(stat -c %s "$swap_file" 2>/dev/null || printf 0)"
+if [ "$current_swap_size" -ne "$swap_size_bytes" ]; then
+  swapoff "$swap_file" 2>/dev/null || true
+  dd if=/dev/zero of="$swap_file" bs=1M count=2048 status=none
+  chmod 0600 "$swap_file"
+  mkswap "$swap_file" >/dev/null
+fi
+if ! grep -q "^$swap_file"'[[:space:]]' /proc/swaps; then
+  swapon "$swap_file"
+fi
 
 install -d -m 0750 -o root -g root /etc/stalwart-bootstrap
 umask 0027

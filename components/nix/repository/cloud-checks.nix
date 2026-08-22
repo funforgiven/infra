@@ -438,6 +438,21 @@
                 aws_mail_root / "tofu/variables.tf"
             ).read_text():
                 raise SystemExit("AWS appliance must reject the source sentinel")
+            aws_user_data = (
+                aws_mail_root / "tofu/user-data.sh.tftpl"
+            ).read_text()
+            required_bootstrap_swap = (
+                "swap_file=/swapfile",
+                "swap_size_bytes=2147483648",
+                'dd if=/dev/zero of="$swap_file" bs=1M count=2048 status=none',
+                'mkswap "$swap_file"',
+                'swapon "$swap_file"',
+            )
+            if any(
+                fragment not in aws_user_data
+                for fragment in required_bootstrap_swap
+            ):
+                raise SystemExit("AWS mail first boot lacks its low-memory swap boundary")
             iam_policy_text = (
                 aws_mail_root / "bootstrap-iam-policy.json"
             ).read_text()
