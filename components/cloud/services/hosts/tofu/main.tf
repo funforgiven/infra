@@ -87,8 +87,7 @@ data "openstack_images_image_v2" "home_assistant" {
 }
 
 data "openstack_images_image_v2" "home_assistant_os" {
-  count = var.home_assistant_platform == "haos" ? 1 : 0
-  name  = "haos-18.2"
+  name = "haos-18.2"
 
   properties = {
     image_role   = "home-assistant-os"
@@ -290,11 +289,10 @@ resource "openstack_blockstorage_volume_v3" "home_assistant_root" {
 }
 
 resource "openstack_blockstorage_volume_v3" "home_assistant_os_root" {
-  count       = var.home_assistant_platform == "haos" ? 1 : 0
   name        = "home-assistant-root-haos-18.2"
   description = "Retained Home Assistant OS root; native backups carry application state"
   size        = 100
-  image_id    = data.openstack_images_image_v2.home_assistant_os[0].id
+  image_id    = data.openstack_images_image_v2.home_assistant_os.id
 
   metadata = {
     haos_version = "18.2"
@@ -344,7 +342,7 @@ resource "openstack_compute_instance_v2" "home_assistant" {
 
   block_device {
     uuid = var.home_assistant_platform == "haos" ? (
-      openstack_blockstorage_volume_v3.home_assistant_os_root[0].id
+      openstack_blockstorage_volume_v3.home_assistant_os_root.id
     ) : openstack_blockstorage_volume_v3.home_assistant_root.id
     source_type           = "volume"
     destination_type      = "volume"
