@@ -385,8 +385,9 @@
             aws_mail_tofu = yaml.safe_load(
                 (root / "undercloud/84-mail-aws/tofu.yaml").read_text()
             )
-            if not aws_mail_tofu["spec"].get("suspend"):
-                raise SystemExit("AWS mail must remain suspended until final auth")
+            aws_mail_suspended = aws_mail_tofu["spec"].get("suspend")
+            if not isinstance(aws_mail_suspended, bool):
+                raise SystemExit("AWS mail must retain an explicit suspension gate")
             aws_source_revision = next(
                 item["value"]
                 for item in aws_mail_tofu["spec"]["vars"]
@@ -460,11 +461,20 @@
             aws_sops = yaml.safe_load(
                 (root / "undercloud/84-mail-aws/aws.sops.yaml").read_text()
             )
-            if set(aws_sops.get("data", {})) not in (
+            aws_auth_keys = set(aws_sops.get("data", {}))
+            expected_aws_auth_keys = {
+                "AWS_ACCESS_KEY_ID",
+                "AWS_SECRET_ACCESS_KEY",
+            }
+            if aws_auth_keys not in (
                 set(),
-                {"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"},
+                expected_aws_auth_keys,
             ):
                 raise SystemExit("AWS provisioning SOPS document has unexpected keys")
+            if not aws_mail_suspended and aws_auth_keys != expected_aws_auth_keys:
+                raise SystemExit(
+                    "AWS mail activation requires complete encrypted provider auth"
+                )
             if any(
                 not str(value).startswith("ENC[")
                 for value in aws_sops.get("data", {}).values()

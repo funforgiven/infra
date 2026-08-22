@@ -4,10 +4,10 @@ metadata:
   name: mail-aws
   namespace: openstack
 spec:
-  # Credentials are the final activation touch. Keeping the Terraform object
-  # suspended makes every credential-free object reviewable without a partial
-  # AWS deployment or a placeholder secret.
-  suspend: true
+  # Credentials are the final activation touch. This gate was enabled only
+  # after the scoped provider pair was verified, encrypted, committed, and
+  # accepted by the signed activation preflight.
+  suspend: false
   interval: 10m
   retryInterval: 1m
   approvePlan: auto
