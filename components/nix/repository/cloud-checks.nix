@@ -829,6 +829,36 @@
             if "subPath: library" not in navidrome or "mountPath: /music" not in navidrome:
                 raise SystemExit("Navidrome must read the shared SFTPGo library")
 
+            media_restore_modifiers = yaml.safe_load(
+                (
+                    root
+                    / "services/16-backup-policy/media-restore-modifiers.yaml"
+                ).read_text()
+            )
+            modifier_rules = yaml.safe_load(
+                media_restore_modifiers["data"]["resource-modifiers.yaml"]
+            )
+            if modifier_rules != {
+                "version": "v1",
+                "resourceModifierRules": [
+                    {
+                        "conditions": {
+                            "groupResource": "persistentvolumeclaims",
+                            "namespaces": ["media"],
+                        },
+                        "patches": [
+                            {
+                                "operation": "remove",
+                                "path": "/spec/volumeName",
+                            }
+                        ],
+                    }
+                ],
+            }:
+                raise SystemExit(
+                    "isolated media restores must dynamically provision every PVC"
+                )
+
             observability = (root / "services/12-observability/kube-prometheus-stack.yaml").read_text()
             velero = (root / "services/15-backup-controller/velero.yaml").read_text()
             for name, text in (("observability", observability), ("velero", velero)):

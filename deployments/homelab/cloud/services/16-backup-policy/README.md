@@ -20,3 +20,9 @@ block all routes and outbound side effects, verify database-native integrity,
 inspect representative records/files, and record the backup and restore IDs in
 the operations log. Never point a qualification workload at production DNS,
 mail relays, Telegram bots, or identity callback URLs.
+
+Media namespace restores use the `media-restore-modifiers` ConfigMap as the
+Velero `resourceModifier`. It removes each backed-up PVC's production
+`spec.volumeName` so Cinder and Manila dynamically provision isolated restore
+volumes. Create a deny-all ingress and egress policy in the mapped namespace
+before the restore, and exclude HTTPRoutes and Services from the restore.
