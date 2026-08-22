@@ -7,3 +7,9 @@ resources:
   - routes.yaml
   - monitoring.yaml
   - network-policy.yaml
+
+configMapGenerator:
+  - name: sftpgo-bootstrap
+    namespace: media
+    files:
+      - render.sh=render-initial-data.sh

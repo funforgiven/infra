@@ -777,12 +777,24 @@
             }:
                 raise SystemExit("media service set must remain the direct upload workflow")
             sftpgo = (media_root / "sftpgo.yaml").read_text()
+            sftpgo_bootstrap = (media_root / "render-initial-data.sh").read_text()
+            media_kustomization = (media_root / "kustomization.yaml").read_text()
             navidrome = (media_root / "navidrome.yaml").read_text()
-            if '"home_dir":"/srv/sftpgo/data/media/library"' not in sftpgo:
+            if '"home_dir":"/srv/sftpgo/data/media/library"' not in sftpgo_bootstrap:
                 raise SystemExit("SFTPGo must write directly to the Navidrome library")
-            if "IFS= read" in sftpgo or 'admin_password="$(cat ' not in sftpgo:
+            if (
+                "IFS= read" in sftpgo_bootstrap
+                or 'admin_password="$(cat ' not in sftpgo_bootstrap
+            ):
                 raise SystemExit(
                     "SFTPGo must accept generated Secret files without trailing newlines"
+                )
+            if (
+                "configMapGenerator:" not in media_kustomization
+                or "render.sh=render-initial-data.sh" not in media_kustomization
+            ):
+                raise SystemExit(
+                    "SFTPGo bootstrap changes must trigger a content-hashed rollout"
                 )
             if "subPath: library" not in navidrome or "mountPath: /music" not in navidrome:
                 raise SystemExit("Navidrome must read the shared SFTPGo library")
