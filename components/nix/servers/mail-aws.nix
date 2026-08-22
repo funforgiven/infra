@@ -262,7 +262,8 @@ _: {
           set -euo pipefail
           export STALWART_URL=https://127.0.0.1:443
           export STALWART_USER=admin@fahrican.com
-          export STALWART_PASSWORD="$(< ${runtimeDirectory}/admin-password)"
+          STALWART_PASSWORD="$(< ${runtimeDirectory}/admin-password)"
+          export STALWART_PASSWORD
 
           jq --compact-output --null-input '
             {"@type":"upsert","object":"MtaRoute","matchOn":["name"],"value":{
