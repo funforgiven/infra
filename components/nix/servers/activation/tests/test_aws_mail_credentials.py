@@ -273,6 +273,26 @@ class AwsMailCredentialsTest(unittest.TestCase):
         self.assertTrue(any("attach-user-policy" in command for command in commands))
         self.assertFalse(any("put-user-policy" in command for command in commands))
 
+    @patch("aws_mail_credentials.time.sleep")
+    @patch.object(AwsMailCredentials, "_caller_identity")
+    def test_gitops_identity_verification_waits_for_iam_propagation(
+        self, caller_identity, sleep
+    ) -> None:
+        caller_identity.side_effect = [
+            AwsMailCredentialError("not propagated"),
+            (
+                "123456789012",
+                "arn:aws:iam::123456789012:user/fahrican-mail-gitops",
+            ),
+        ]
+
+        self.credentials._verify_gitops_identity(
+            {AUTH_KEYS[0]: self.access_id, AUTH_KEYS[1]: self.secret},
+            "123456789012",
+        )
+
+        sleep.assert_called_once_with(5)
+
     @patch.object(AwsMailCredentials, "_aws")
     def test_bootstrap_revocation_uses_stdin_and_preserves_intake_on_failure(
         self, aws
