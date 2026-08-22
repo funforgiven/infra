@@ -12,6 +12,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.parse
 from pathlib import Path
 
@@ -198,9 +199,20 @@ class AwsMailCredentials:
         environment.update(values)
         environment["AWS_DEFAULT_REGION"] = AWS_REGION
         environment.pop("AWS_SESSION_TOKEN", None)
-        verified_account, arn = self._caller_identity(
-            environment, "dedicated mail GitOps pair"
-        )
+        last_error: AwsMailCredentialError | None = None
+        for attempt in range(12):
+            try:
+                verified_account, arn = self._caller_identity(
+                    environment, "dedicated mail GitOps pair"
+                )
+                break
+            except AwsMailCredentialError as error:
+                last_error = error
+                if attempt == 11:
+                    raise AwsMailCredentialError(
+                        "AWS rejected the dedicated mail GitOps pair after propagation retries"
+                    ) from last_error
+                time.sleep(5)
         if (
             verified_account != account_id
             or arn != f"arn:aws:iam::{account_id}:user/{GITOPS_USER}"
@@ -347,7 +359,7 @@ class AwsMailCredentials:
             raise AwsMailCredentialError(
                 "AWS could not attach the dedicated mail GitOps policy"
             )
-        self._aws(
+        deleted = self._aws(
             [
                 "iam",
                 "delete-user-policy",
@@ -479,6 +491,10 @@ class AwsMailCredentials:
                 "AccessKeyId": access_key_id,
             },
         )
+        if deleted.returncode != 0:
+            raise AwsMailCredentialError(
+                "AWS could not clean up the unpersisted mail GitOps key"
+            )
 
     def _revoke_bootstrap_key(
         self, bootstrap_user: str, bootstrap: dict[str, str]

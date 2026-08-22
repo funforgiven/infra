@@ -49,9 +49,10 @@ creates one new access pair for that identity, encrypts only the narrower pair i
 `aws-mail-provisioning` SOPS Secret, verifies the dedicated identity, revokes
 the exact temporary key, and only then clears the intake files. Neither pair is
 passed as an OpenTofu variable, committed in plaintext, or placed in a shell
-argument. Interrupted revocation is resumable from the encrypted dedicated
-pair. The GitOps Terraform object remains suspended until that final
-enrollment.
+argument. Identity verification tolerates bounded IAM propagation delay, and
+unpersisted-key cleanup is checked. Interrupted revocation is resumable from
+the encrypted dedicated pair. The GitOps Terraform object remains suspended
+until that final enrollment.
 
 ## Safe activation and migration
 
