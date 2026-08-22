@@ -777,6 +777,34 @@
             }:
                 raise SystemExit("media service set must remain the direct upload workflow")
             sftpgo = (media_root / "sftpgo.yaml").read_text()
+            sftpgo_statefulset = next(
+                document
+                for document in yaml.safe_load_all(sftpgo)
+                if document.get("kind") == "StatefulSet"
+            )
+            sftpgo_init = {
+                container["name"]: container
+                for container in sftpgo_statefulset["spec"]["template"]["spec"][
+                    "initContainers"
+                ]
+            }
+            library_permissions = sftpgo_init.get("prepare-media-library", {})
+            library_security = library_permissions.get("securityContext", {})
+            if (
+                library_security.get("runAsUser") != 0
+                or library_security.get("allowPrivilegeEscalation") is not False
+                or library_security.get("capabilities", {}).get("drop") != ["ALL"]
+                or set(library_security.get("capabilities", {}).get("add", []))
+                != {"CHOWN", "FOWNER"}
+                or [
+                    mount["name"]
+                    for mount in library_permissions.get("volumeMounts", [])
+                ]
+                != ["media"]
+            ):
+                raise SystemExit(
+                    "SFTPGo must prepare its dedicated Manila library with only the required privileges"
+                )
             sftpgo_bootstrap = (media_root / "render-initial-data.sh").read_text()
             media_kustomization = (media_root / "kustomization.yaml").read_text()
             navidrome = (media_root / "navidrome.yaml").read_text()
