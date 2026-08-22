@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import json
 import os
 import re
@@ -38,6 +39,15 @@ AWS_REGION = "eu-central-1"
 
 class AwsMailCredentialError(RuntimeError):
     """A credential error whose message is safe to display."""
+
+
+@dataclass(frozen=True)
+class ProvisioningIdentity:
+    """Verified identities needed to complete or resume one enrollment."""
+
+    credentials: dict[str, str]
+    bootstrap_user: str
+    created: bool
 
 
 class IntakeFiles:
@@ -122,34 +132,90 @@ class AwsMailCredentials:
 
     @staticmethod
     def _aws(
-        arguments: list[str], environment: dict[str, str], *, capture: bool = False
+        arguments: list[str],
+        environment: dict[str, str],
+        *,
+        capture: bool = False,
+        input_document: dict[str, str] | None = None,
     ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             ["aws", *arguments],
             check=False,
+            input=json.dumps(input_document) if input_document is not None else None,
             stdout=subprocess.PIPE if capture else subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             text=True,
             env=environment,
         )
 
-    def _reconcile_gitops_identity(
-        self, bootstrap: dict[str, str]
-    ) -> dict[str, str]:
-        environment = self._aws_environment(bootstrap)
+    def _caller_identity(
+        self, environment: dict[str, str], description: str
+    ) -> tuple[str, str]:
         identity = self._aws(
             ["sts", "get-caller-identity", "--output", "json"],
             environment,
             capture=True,
         )
         if identity.returncode != 0:
-            raise AwsMailCredentialError("AWS rejected the temporary bootstrap pair")
+            raise AwsMailCredentialError(f"AWS rejected the {description}")
         try:
-            account_id = str(json.loads(identity.stdout)["Account"])
+            document = json.loads(identity.stdout)
+            account_id = str(document["Account"])
+            arn = str(document["Arn"])
         except (json.JSONDecodeError, KeyError, TypeError) as error:
             raise AwsMailCredentialError("AWS returned an invalid account identity") from error
         if not re.fullmatch(r"[0-9]{12}", account_id):
             raise AwsMailCredentialError("AWS returned an invalid account identifier")
+        return account_id, arn
+
+    def _bootstrap_user(
+        self, environment: dict[str, str], caller_arn: str
+    ) -> str:
+        current_user = self._aws(
+            ["iam", "get-user", "--output", "json"],
+            environment,
+            capture=True,
+        )
+        if current_user.returncode != 0:
+            raise AwsMailCredentialError(
+                "the temporary AWS credential must belong to an IAM user"
+            )
+        try:
+            user = json.loads(current_user.stdout)["User"]
+            username = str(user["UserName"])
+            user_arn = str(user["Arn"])
+        except (json.JSONDecodeError, KeyError, TypeError) as error:
+            raise AwsMailCredentialError("AWS returned an invalid bootstrap user") from error
+        if user_arn != caller_arn or not username:
+            raise AwsMailCredentialError("AWS returned an inconsistent bootstrap user")
+        return username
+
+    def _verify_gitops_identity(
+        self, values: dict[str, str], account_id: str
+    ) -> None:
+        environment = os.environ.copy()
+        environment.update(values)
+        environment["AWS_DEFAULT_REGION"] = AWS_REGION
+        environment.pop("AWS_SESSION_TOKEN", None)
+        verified_account, arn = self._caller_identity(
+            environment, "dedicated mail GitOps pair"
+        )
+        if (
+            verified_account != account_id
+            or arn != f"arn:aws:iam::{account_id}:user/{GITOPS_USER}"
+        ):
+            raise AwsMailCredentialError(
+                "the generated AWS pair does not belong to the dedicated mail GitOps identity"
+            )
+
+    def _reconcile_gitops_identity(
+        self, bootstrap: dict[str, str], destination: Path
+    ) -> ProvisioningIdentity:
+        environment = self._aws_environment(bootstrap)
+        account_id, bootstrap_arn = self._caller_identity(
+            environment, "temporary bootstrap pair"
+        )
+        bootstrap_user = self._bootstrap_user(environment, bootstrap_arn)
 
         get_user = self._aws(
             ["iam", "get-user", "--user-name", GITOPS_USER], environment
@@ -213,6 +279,15 @@ class AwsMailCredentials:
         except (json.JSONDecodeError, KeyError, TypeError) as error:
             raise AwsMailCredentialError("AWS returned an invalid access-key inventory") from error
         if inventory:
+            stored = {key: self.store.read(destination, key) for key in AUTH_KEYS}
+            if (
+                len(inventory) == 1
+                and all(stored.values())
+                and inventory[0].get("AccessKeyId") == stored[AUTH_KEYS[0]]
+            ):
+                values = {key: str(stored[key]) for key in AUTH_KEYS}
+                self._verify_gitops_identity(values, account_id)
+                return ProvisioningIdentity(values, bootstrap_user, False)
             raise AwsMailCredentialError(
                 "the dedicated mail GitOps identity already has an unrecoverable key; "
                 "review and delete it before enrollment"
@@ -234,12 +309,18 @@ class AwsMailCredentials:
             raise AwsMailCredentialError("AWS could not create the mail GitOps key")
         try:
             document = json.loads(created_key.stdout)["AccessKey"]
-            return {
+            values = {
                 AUTH_KEYS[0]: document["AccessKeyId"],
                 AUTH_KEYS[1]: document["SecretAccessKey"],
             }
         except (json.JSONDecodeError, KeyError, TypeError) as error:
             raise AwsMailCredentialError("AWS returned an invalid access key") from error
+        try:
+            self._verify_gitops_identity(values, account_id)
+        except AwsMailCredentialError:
+            self._delete_gitops_key(values[AUTH_KEYS[0]], bootstrap)
+            raise
+        return ProvisioningIdentity(values, bootstrap_user, True)
 
     def _delete_gitops_key(
         self, access_key_id: str, bootstrap: dict[str, str]
@@ -248,13 +329,31 @@ class AwsMailCredentials:
             [
                 "iam",
                 "delete-access-key",
-                "--user-name",
-                GITOPS_USER,
-                "--access-key-id",
-                access_key_id,
+                "--cli-input-json",
+                "file:///dev/stdin",
             ],
             self._aws_environment(bootstrap),
+            input_document={
+                "UserName": GITOPS_USER,
+                "AccessKeyId": access_key_id,
+            },
         )
+
+    def _revoke_bootstrap_key(
+        self, bootstrap_user: str, bootstrap: dict[str, str]
+    ) -> None:
+        revoked = self._aws(
+            ["iam", "delete-access-key", "--cli-input-json", "file:///dev/stdin"],
+            self._aws_environment(bootstrap),
+            input_document={
+                "UserName": bootstrap_user,
+                "AccessKeyId": bootstrap[BOOTSTRAP_KEYS[0]],
+            },
+        )
+        if revoked.returncode != 0:
+            raise AwsMailCredentialError(
+                "AWS could not revoke the temporary bootstrap key; intake files were preserved"
+            )
 
     def enroll_provisioning(self) -> None:
         routed = {
@@ -273,14 +372,19 @@ class AwsMailCredentials:
             raise AwsMailCredentialError(
                 "AWS provisioning credentials must share one SOPS destination"
             )
+        destination = destinations.pop()
         with IntakeFiles(self.repository_root) as intake:
             bootstrap = intake.values()
-            values = self._reconcile_gitops_identity(bootstrap)
-            try:
-                self.store.write(destinations.pop(), values)
-            except SopsCredentialError:
-                self._delete_gitops_key(values[AUTH_KEYS[0]], bootstrap)
-                raise
+            identity = self._reconcile_gitops_identity(bootstrap, destination)
+            if identity.created:
+                try:
+                    self.store.write(destination, identity.credentials)
+                except SopsCredentialError:
+                    self._delete_gitops_key(
+                        identity.credentials[AUTH_KEYS[0]], bootstrap
+                    )
+                    raise
+            self._revoke_bootstrap_key(identity.bootstrap_user, bootstrap)
             intake.clear()
 
     def publish_resend(self) -> None:
@@ -335,7 +439,10 @@ def main() -> int:
         credentials = AwsMailCredentials(arguments.repository_root)
         if arguments.action == "provisioning":
             credentials.enroll_provisioning()
-            message = "AWS mail provisioning credentials enrolled; intake files cleared."
+            message = (
+                "AWS mail provisioning credentials enrolled; temporary key revoked "
+                "and intake files cleared."
+            )
         else:
             credentials.publish_resend()
             message = "AWS mail Resend credential published without displaying it."
