@@ -79,7 +79,9 @@ _: {
           done
 
           if [[ "$changed" -eq 1 ]] && systemctl is-active --quiet stalwart.service; then
-            systemctl try-restart stalwart.service
+            # Stalwart requires this oneshot unit. Queueing its restart avoids
+            # waiting for a job that cannot start until this unit has exited.
+            systemctl --no-block try-restart stalwart.service
           fi
         '';
       };

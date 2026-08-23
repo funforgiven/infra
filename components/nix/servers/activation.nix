@@ -289,6 +289,15 @@
               exit 1
             fi
             rg --fixed-strings --quiet \
+              'systemctl --no-block try-restart stalwart.service' \
+              ${./mail-aws.nix}
+            if rg --line-regexp --quiet \
+              '[[:space:]]+systemctl try-restart stalwart\.service' \
+              ${./mail-aws.nix}; then
+              echo 'Stalwart secret refresh must not synchronously restart its dependent service.' >&2
+              exit 1
+            fi
+            rg --fixed-strings --quiet \
               'https://truststore.pki.rds.amazonaws.com/eu-central-1/eu-central-1-bundle.pem' \
               ${./mail-aws.nix}
             rg --fixed-strings --quiet \
