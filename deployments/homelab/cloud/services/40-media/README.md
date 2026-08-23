@@ -29,10 +29,13 @@ After a successful import pass, anything remaining in `inbox` is moved into a
 timestamped directory under `quarantine`. This includes duplicate uploads,
 matches that were not confident enough to accept, unsupported files, and
 extras that Beets did not associate with an album. Quarantine is outside the
-SFTPGo home and the Navidrome library: it preserves data for explicit operator
-review without making the upload service permanent storage or exposing rejected
-media to listeners. A failed Beets process leaves the inbox in place for the
-next run. The first run catalogs the pre-existing `library` as-is before it
+SFTPGo home and the Navidrome library: it provides a 24-hour recovery window
+without making the upload service permanent storage or exposing rejected media
+to listeners. Each importer pass removes only its own timestamped quarantine
+directories older than 24 hours; manually named review paths are retained. This
+retention applies to duplicates, uncertain matches, unsupported files, and
+unassociated extras alike. A failed Beets process leaves the inbox in place for
+the next run. The first run catalogs the pre-existing `library` as-is before it
 processes new uploads, so the database begins with the direct-upload collection.
 
 The WebClient trusts the rightmost `X-Forwarded-For` address only when the
