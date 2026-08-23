@@ -300,8 +300,15 @@
               ${./mail-aws.nix}
             test "$(rg --count '^[[:space:]]+start_server$' \
               ${./mail-aws.nix})" = 2
-            test "$(rg --count '\"credentialId\":\"a\"' \
-              ${./mail-aws.nix})" = 2
+            rg --fixed-strings --quiet \
+              'stalwart-cli query Account' ${./mail-aws.nix}
+            rg --fixed-strings --quiet \
+              '{"0":{"@type":"Password"' ${./mail-aws.nix}
+            if rg --fixed-strings --quiet '"credentialId"' \
+              ${./mail-aws.nix}; then
+              echo 'Stalwart credential IDs are server-owned.' >&2
+              exit 1
+            fi
             if rg --fixed-strings --quiet '"credentials":[' \
               ${./mail-aws.nix}; then
               echo 'Stalwart registry list fields must use numeric-keyed objects.' >&2

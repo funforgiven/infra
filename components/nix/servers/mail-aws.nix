@@ -227,30 +227,64 @@ _: {
             start_server
           fi
 
+          account_exists() {
+            local account_name="$1"
+            local query_output
+
+            if ! query_output="$(${cliPackage}/bin/stalwart-cli query Account \
+              --where "name=$account_name" --fields id --json)"; then
+              echo "Failed to query Stalwart account $account_name." >&2
+              return 2
+            fi
+            if [[ -z "$query_output" ]]; then
+              return 1
+            fi
+            if printf '%s\n' "$query_output" | jq --exit-status --slurp \
+              'length == 1 and (.[0].id | type == "string" and length > 0)' \
+              >/dev/null; then
+              return 0
+            fi
+
+            echo "Stalwart account query for $account_name was ambiguous." >&2
+            return 2
+          }
+
+          admin_exists=false
+          if account_exists admin; then
+            admin_exists=true
+          else
+            account_status=$?
+            test "$account_status" -eq 1
+          fi
+
+          mailbox_exists=false
+          if account_exists fahrican; then
+            mailbox_exists=true
+          else
+            account_status=$?
+            test "$account_status" -eq 1
+          fi
+
           jq --compact-output --null-input \
             --rawfile admin ${stateDirectory}/bootstrap-admin-password \
             --rawfile mailbox ${stateDirectory}/bootstrap-mailbox-password \
+            --argjson admin_exists "$admin_exists" \
+            --argjson mailbox_exists "$mailbox_exists" \
             '
+              def password($secret):
+                {"0":{"@type":"Password","secret":($secret | rtrimstr("\\n"))}};
               {"@type":"upsert","object":"Domain","matchOn":["name"],"value":{
                 "primary-domain":{"name":"fahrican.com","isEnabled":true}
               }},
               {"@type":"upsert","object":"Account","matchOn":["name"],"value":{
-                "admin-account":{
+                "admin-account":({
                   "@type":"User","name":"admin","domainId":"#primary-domain",
-                  "description":"System administrator","roles":{"@type":"Admin"},
-                  "credentials":{"0":{
-                    "@type":"Password","credentialId":"a",
-                    "secret":($admin | rtrimstr("\\n"))
-                  }}
-                },
-                "primary-mailbox":{
+                  "description":"System administrator","roles":{"@type":"Admin"}
+                } + if $admin_exists then {} else {"credentials":password($admin)} end),
+                "primary-mailbox":({
                   "@type":"User","name":"fahrican","domainId":"#primary-domain",
-                  "description":"Fahrican","roles":{"@type":"User"},
-                  "credentials":{"0":{
-                    "@type":"Password","credentialId":"a",
-                    "secret":($mailbox | rtrimstr("\\n"))
-                  }}
-                }
+                  "description":"Fahrican","roles":{"@type":"User"}
+                } + if $mailbox_exists then {} else {"credentials":password($mailbox)} end)
               }},
               {"@type":"reconcile","object":"NetworkListener","matchOn":["name"],"value":{
                 "smtp":{"name":"smtp","protocol":"smtp","bind":["[::]:25"],"useTls":true,"tlsImplicit":false},
