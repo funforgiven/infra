@@ -18,6 +18,14 @@ client certificate, and private key in raw state. The adjacent Git-owned API
 reconciler therefore creates and inspects the cluster with an ephemeral
 kubeconfig on a memory-backed Kubernetes volume.
 
+Control-plane flavors are versioned because Magnum does not permit changing
+`master_flavor_id` on an existing cluster. `services.master` remains declared
+for the current cluster's recorded Magnum state, while new clusters use the
+8 GiB `services.master.v2` flavor. The existing `services-v1` control plane is
+rolled onto `services.master.v2` by changing its immutable Cluster API
+OpenStackMachineTemplate reference; this must remain a one-time operational
+migration rather than a Magnum cluster update.
+
 Run static validation without cloud credentials:
 
 ```console

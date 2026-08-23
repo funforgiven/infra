@@ -62,7 +62,7 @@ spec:
                   printf '%s  %s\n'
                   8eae9bfd58377faaf8c96501d130bfae5e3fedb725cd31d8c717f500cddc3c70
                   /data/canary | sha256sum -c -
-            periodSeconds: 10
+            periodSeconds: 30
           livenessProbe:
             exec:
               command:
@@ -73,13 +73,13 @@ spec:
                   8eae9bfd58377faaf8c96501d130bfae5e3fedb725cd31d8c717f500cddc3c70
                   /data/canary | sha256sum -c -
             initialDelaySeconds: 30
-            periodSeconds: 30
+            periodSeconds: 60
           resources:
             requests:
               cpu: 10m
               memory: 16Mi
             limits:
-              cpu: 100m
+              cpu: 250m
               memory: 64Mi
           securityContext:
             allowPrivilegeEscalation: false

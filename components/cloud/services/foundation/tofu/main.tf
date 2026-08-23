@@ -53,6 +53,15 @@ resource "openstack_compute_flavor_v2" "services_master" {
   is_public   = false
 }
 
+resource "openstack_compute_flavor_v2" "services_master_v2" {
+  name        = "services.master.v2"
+  description = "Magnum services control plane v2: 2 vCPU, 8 GiB RAM, 20 GiB root"
+  ram         = 8192
+  vcpus       = 2
+  disk        = 20
+  is_public   = false
+}
+
 resource "openstack_compute_flavor_v2" "services_worker" {
   name        = "services.worker"
   description = "Magnum services worker: 4 vCPU, 12 GiB RAM, 40 GiB root"
@@ -64,6 +73,11 @@ resource "openstack_compute_flavor_v2" "services_worker" {
 
 resource "openstack_compute_flavor_access_v2" "services_master" {
   flavor_id = openstack_compute_flavor_v2.services_master.id
+  tenant_id = openstack_identity_project_v3.services.id
+}
+
+resource "openstack_compute_flavor_access_v2" "services_master_v2" {
+  flavor_id = openstack_compute_flavor_v2.services_master_v2.id
   tenant_id = openstack_identity_project_v3.services.id
 }
 
