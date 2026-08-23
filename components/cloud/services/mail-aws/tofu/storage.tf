@@ -55,6 +55,63 @@ resource "aws_db_instance" "mail" {
   }
 }
 
+resource "aws_security_group" "restore_qualification" {
+  count = var.enable_restore_qualification ? 1 : 0
+
+  name        = "stalwart-mail-restore-qualification"
+  description = "Temporary isolated PostgreSQL restore target"
+  vpc_id      = aws_vpc.mail.id
+
+  ingress {
+    description     = "Restore verification from the Stalwart appliance"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.mail.id]
+  }
+
+  tags = { Name = "stalwart-mail-restore-qualification" }
+}
+
+resource "aws_db_instance" "restore_qualification" {
+  count = var.enable_restore_qualification ? 1 : 0
+
+  identifier = "stalwart-mail-restore-qualification"
+
+  engine         = "postgres"
+  engine_version = "17.10"
+  instance_class = "db.t4g.micro"
+
+  allocated_storage = 20
+  storage_type      = "gp3"
+  storage_encrypted = true
+  kms_key_id        = data.aws_kms_key.rds_storage.arn
+
+  db_name                     = "stalwart"
+  username                    = "stalwart_restore"
+  manage_master_user_password = true
+  port                        = 5432
+
+  db_subnet_group_name   = aws_db_subnet_group.mail.name
+  vpc_security_group_ids = [aws_security_group.restore_qualification[0].id]
+  publicly_accessible    = false
+  multi_az               = false
+
+  backup_retention_period = 0
+  auto_minor_version_upgrade = true
+  deletion_protection         = false
+  skip_final_snapshot         = true
+  apply_immediately           = true
+
+  performance_insights_enabled = false
+  monitoring_interval          = 0
+
+  tags = {
+    Name      = "stalwart-mail-restore-qualification"
+    Ephemeral = "true"
+  }
+}
+
 resource "aws_s3_bucket" "mail" {
   bucket        = "fahrican-stalwart-${data.aws_caller_identity.current.account_id}-eu-central-1"
   force_destroy = false

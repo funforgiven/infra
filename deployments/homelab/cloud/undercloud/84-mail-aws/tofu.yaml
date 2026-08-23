@@ -23,6 +23,8 @@ spec:
       value: "ami-019a83797574d9161"
     - name: enable_reverse_dns
       value: "false"
+    - name: enable_restore_qualification
+      value: "true"
   runnerPodTemplate:
     spec:
       envFrom:

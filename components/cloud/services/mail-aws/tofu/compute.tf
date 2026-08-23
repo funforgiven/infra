@@ -77,12 +77,17 @@ data "aws_iam_policy_document" "mail" {
       "secretsmanager:DescribeSecret",
       "secretsmanager:GetSecretValue",
     ]
-    resources = [
-      aws_db_instance.mail.master_user_secret[0].secret_arn,
-      aws_secretsmanager_secret.admin.arn,
-      aws_secretsmanager_secret.mailbox.arn,
-      aws_secretsmanager_secret.resend.arn,
-    ]
+    resources = concat(
+      [
+        aws_db_instance.mail.master_user_secret[0].secret_arn,
+        aws_secretsmanager_secret.admin.arn,
+        aws_secretsmanager_secret.mailbox.arn,
+        aws_secretsmanager_secret.resend.arn,
+      ],
+      var.enable_restore_qualification ? [
+        aws_db_instance.restore_qualification[0].master_user_secret[0].secret_arn,
+      ] : [],
+    )
   }
 
   statement {

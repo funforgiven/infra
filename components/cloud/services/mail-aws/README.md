@@ -118,3 +118,13 @@ RDS to the selected time, remove any later S3 delete markers needed by the
 restored registry, then attach a replacement EC2 instance to those stores. The
 test must be performed with isolated copies and a non-public address; never test
 a restore against the production bucket or MX.
+
+For a credential-safe logical restore drill, temporarily set
+`enable_restore_qualification` in the deployment root. OpenTofu creates a
+private disposable `db.t4g.micro` target and grants only the mail instance role
+access to its RDS-managed credential. Stream a custom-format `pg_dump` from the
+production database into that target, compare non-secret schema and row counts,
+then set the variable back to false and require a no-change plan after OpenTofu
+has removed the disposable database and security group. The target has no
+backups, final snapshot, public address, deletion protection, or retained
+credential container; it must never receive production traffic.
