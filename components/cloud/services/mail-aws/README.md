@@ -101,8 +101,9 @@ limited to the AWS shell document and EC2 instances tagged
    Require the `stalwart-resend-reconcile` unit to converge.
 5. Export the AWS domain's public DNS zone through the authenticated CLI, add
    its generated DKIM records to the Git-managed DNS root, and validate SPF,
-   DKIM, DMARC, autoconfiguration records, TLS, submission, IMAPS, inbound SMTP,
-   and outbound Resend relay against the AWS EIP before cutover.
+   DKIM, DMARC, autoconfiguration records, listeners, and the outbound Resend
+   route against the AWS EIP before cutover. TLS-ALPN certificate issuance must
+   wait until the public mail names resolve to that EIP.
 6. Make a final encrypted backup of the Hetzner server. Copy the mailbox with a
    standard IMAP migration tool using credential files or no-echo prompts, run a
    second delta pass during the maintenance window, and compare message and
@@ -110,7 +111,9 @@ limited to the AWS shell document and EC2 instances tagged
 7. Change `active-mail-origin` from `hetzner` to `aws`. The existing reconciler
    selects the AWS output in memory and the Cloudflare root moves the A/MX-facing
    mail names without changing any workload secret. After forward DNS has
-   propagated, set `enable_reverse_dns` to true and verify the EIP PTR.
+   propagated, require TLS-ALPN certificate issuance and validate HTTPS, IMAPS,
+   and submission hostname verification. Then set `enable_reverse_dns` to true
+   and verify the EIP PTR.
 8. Repeat the independent Resend-to-MX acceptance test and authenticated IMAPS
    read. Retain the protected Hetzner server and backup for at least 14 days.
    Remove it only in a later explicit, reviewed change after RDS point-in-time
