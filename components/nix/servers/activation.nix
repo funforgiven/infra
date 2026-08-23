@@ -314,6 +314,21 @@
               echo 'Stalwart registry list fields must use numeric-keyed objects.' >&2
               exit 1
             fi
+            test "$(rg --count '"bind":\{"0":"\[::\]:' \
+              ${./mail-aws.nix})" = 5
+            if rg --fixed-strings --quiet '"bind":[' \
+              ${./mail-aws.nix}; then
+              echo 'Stalwart listener bind fields must use numeric-keyed objects.' >&2
+              exit 1
+            fi
+            rg --fixed-strings --quiet \
+              '"match":{"0":{"if":"is_local_domain(rcpt_domain)"' \
+              ${./mail-aws.nix}
+            if rg --fixed-strings --quiet '"route":{"match":[' \
+              ${./mail-aws.nix}; then
+              echo 'Stalwart expression match fields must use numeric-keyed objects.' >&2
+              exit 1
+            fi
             if rg --fixed-strings --quiet '"allowInvalidCerts":true' \
               ${./mail-aws.nix}; then
               echo 'Stalwart contains a TLS certificate-validation bypass.' >&2
