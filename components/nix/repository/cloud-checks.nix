@@ -436,9 +436,9 @@
                 'http_tokens                 = "required"',
                 'policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"',
                 'identifier = "stalwart-mail-restore-qualification"',
-                "backup_retention_period = 0",
-                "deletion_protection         = false",
-                "skip_final_snapshot         = true",
+                "backup_retention_period    = 0",
+                "deletion_protection        = false",
+                "skip_final_snapshot        = true",
                 'Ephemeral = "true"',
             )
             if any(fragment not in aws_tofu_text for fragment in required_aws_contract):
