@@ -111,6 +111,20 @@
       }
     },
     {
+      "Sid": "CreateRdsManagedCredentials",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:CreateSecret",
+        "secretsmanager:TagResource"
+      ],
+      "Resource": "arn:aws:secretsmanager:eu-central-1:ACCOUNT_ID:secret:rds!db-*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "eu-central-1"
+        }
+      }
+    },
+    {
       "Sid": "PublishResendRuntimeCredential",
       "Effect": "Allow",
       "Action": "secretsmanager:PutSecretValue",
