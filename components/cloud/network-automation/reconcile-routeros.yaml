@@ -663,6 +663,9 @@
     - name: Reconcile the WireGuard admin boundary
       ansible.builtin.import_tasks: tasks/reconcile-routeros-wireguard.yaml
 
+    - name: Reconcile the Mullvad OTOTOY egress
+      ansible.builtin.import_tasks: tasks/reconcile-routeros-mullvad.yaml
+
     - name: Reconcile the external provider network
       community.routeros.command:
         commands:

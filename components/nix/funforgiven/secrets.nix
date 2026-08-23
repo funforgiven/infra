@@ -41,6 +41,10 @@ let
       key = "routeros/ccr2004_wireguard_parmigiano_preshared_key";
       sopsFile = routerosSecretsFile;
     };
+    homelab-routeros-ccr2004-mullvad-private-key = {
+      key = "routeros/ccr2004_mullvad_private_key";
+      sopsFile = routerosSecretsFile;
+    };
     cloud-host-taleggio-ubuntu-console-password = {
       key = "cloud_hosts/taleggio/ubuntu_console_password";
       sopsFile = cloudHostSecretsFile;

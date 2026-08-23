@@ -1,0 +1,452 @@
+---
+- name: Validate the Mullvad OTOTOY inventory
+  ansible.builtin.assert:
+    that:
+      - routeros_mullvad.name | length > 0
+      - routeros_mullvad.address is match('^[0-9.]+/32$')
+      - routeros_mullvad.listen_port | int > 0
+      - routeros_mullvad.listen_port | int != routeros_wireguard.listen_port | int
+      - routeros_mullvad.mtu | int >= 1280
+      - routeros_mullvad.mtu | int <= 1420
+      - routeros_mullvad.private_key_file | length > 0
+      - routeros_mullvad.peer.name | length > 0
+      - routeros_mullvad.peer.public_key | length == 44
+      - routeros_mullvad.peer.endpoint_address is match('^[0-9.]+$')
+      - routeros_mullvad.peer.endpoint_port | int > 0
+      - routeros_mullvad.peer.allowed_address == '0.0.0.0/0'
+      - routeros_mullvad.peer.persistent_keepalive | length > 0
+      - routeros_mullvad.routing.table | length > 0
+      - routeros_mullvad.routing.source_interface | length > 0
+      - routeros_mullvad.routing.source_network is match('^[0-9.]+/[0-9]+$')
+      - routeros_mullvad.routing.destination_name == 'ototoy.jp'
+      - routeros_mullvad.routing.destination is match('^[0-9.]+/32$')
+      - routeros_mullvad.routing.forward_chain == 'infra-forward'
+      - routeros_mullvad.routing.forward_final_drop_comment | length > 0
+    fail_msg: >-
+      The Mullvad client, Osaka peer, trusted source, and OTOTOY-only route
+      must be complete and narrowly scoped.
+  tags: [always, inventory-contract]
+
+- name: Require the Mullvad trusted-source prerequisites
+  community.routeros.command:
+    commands:
+      - >-
+        :if ([:len [/interface vlan find where
+        name="{{ routeros_mullvad.routing.source_interface }}" and disabled=no]] != 1)
+        do={ :error "missing Mullvad trusted source interface" };
+        :if ([:len [/ip firewall filter find where
+        chain="{{ routeros_mullvad.routing.forward_chain }}" and
+        comment="{{ routeros_mullvad.routing.forward_final_drop_comment }}" and
+        disabled=no]] != 1) do={ :error "missing Mullvad forward final drop" }
+  changed_when: false
+  tags: [always]
+
+- name: Read current Mullvad OTOTOY state
+  community.routeros.command:
+    commands:
+      - >-
+        /interface wireguard print detail without-paging where
+        name="{{ routeros_mullvad.name }}"
+      - >-
+        /interface wireguard peers print detail without-paging where
+        comment="infra: Mullvad OTOTOY peer {{ routeros_mullvad.peer.name }}"
+      - >-
+        /ip address print detail without-paging where
+        comment="infra: Mullvad OTOTOY address"
+      - >-
+        /routing table print detail without-paging where
+        name="{{ routeros_mullvad.routing.table }}"
+      - >-
+        /ip route print detail without-paging where
+        comment="infra: Mullvad OTOTOY default route"
+      - >-
+        /routing rule print detail without-paging where
+        comment="infra: Mullvad OTOTOY policy rule"
+      - >-
+        /ip firewall filter print detail without-paging where
+        comment="infra: Mullvad OTOTOY forward"
+      - >-
+        /ip firewall nat print detail without-paging where
+        comment="infra: Mullvad OTOTOY NAT"
+      - >-
+        /ip firewall mangle print detail without-paging where
+        comment="infra: Mullvad OTOTOY MSS"
+  register: routeros_mullvad_preflight
+  changed_when: false
+  tags: [always]
+
+- name: Refuse conflicting Mullvad OTOTOY objects
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/interface wireguard find where
+        name="{{ routeros_mullvad.name }}"];
+        :if ([:len $row] > 1) do={ :error "duplicate Mullvad interface" };
+        :if ([:len $row] = 1 and
+        [/interface wireguard get $row comment] != "infra: Mullvad OTOTOY")
+        do={ :error "Mullvad interface name is owned by another object" };
+        :set row [/interface wireguard peers find where
+        comment="infra: Mullvad OTOTOY peer {{ routeros_mullvad.peer.name }}"];
+        :if ([:len $row] > 1) do={ :error "duplicate Mullvad peer" };
+        :set row [/ip address find where
+        comment="infra: Mullvad OTOTOY address"];
+        :if ([:len $row] > 1) do={ :error "duplicate Mullvad address" };
+        :set row [/routing table find where
+        name="{{ routeros_mullvad.routing.table }}"];
+        :if ([:len $row] > 1) do={ :error "duplicate Mullvad routing table" };
+        :if ([:len $row] = 1 and
+        [/routing table get $row comment] != "infra: Mullvad OTOTOY routing table")
+        do={ :error "Mullvad routing table name is owned by another object" };
+        :set row [/ip route find where
+        comment="infra: Mullvad OTOTOY default route"];
+        :if ([:len $row] > 1) do={ :error "duplicate Mullvad default route" };
+        :set row [/routing rule find where
+        comment="infra: Mullvad OTOTOY policy rule"];
+        :if ([:len $row] > 1) do={ :error "duplicate Mullvad policy rule" };
+        :set row [/ip firewall filter find where
+        comment="infra: Mullvad OTOTOY forward"];
+        :if ([:len $row] > 1) do={ :error "duplicate Mullvad forward rule" };
+        :set row [/ip firewall nat find where
+        comment="infra: Mullvad OTOTOY NAT"];
+        :if ([:len $row] > 1) do={ :error "duplicate Mullvad NAT rule" };
+        :set row [/ip firewall mangle find where
+        comment="infra: Mullvad OTOTOY MSS"];
+        :if ([:len $row] > 1) do={ :error "duplicate Mullvad MSS rule" }
+  changed_when: false
+  tags: [always]
+
+- name: Show the Mullvad preflight without private material
+  ansible.builtin.debug:
+    var: routeros_mullvad_preflight.stdout_lines
+  tags: [always]
+
+- name: Load the Mullvad client private key
+  ansible.builtin.set_fact:
+    routeros_mullvad_private_key: >-
+      {{ lookup(
+        'ansible.builtin.file',
+        routeros_mullvad_private_key_override_file |
+        default(routeros_mullvad.private_key_file, true)) | trim }}
+  no_log: true
+  tags: [never, apply, mullvad]
+
+- name: Validate the Mullvad client private key
+  ansible.builtin.assert:
+    that:
+      - routeros_mullvad_private_key is match('^[A-Za-z0-9+/]{43}=$')
+  no_log: true
+  tags: [never, apply, mullvad]
+
+- name: Reconcile the Mullvad WireGuard client interface
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/interface wireguard find where
+        name="{{ routeros_mullvad.name }}"];
+        :if ([:len $row] = 0) do={
+        /interface wireguard add name="{{ routeros_mullvad.name }}"
+        comment="infra: Mullvad OTOTOY" disabled=no
+        listen-port={{ routeros_mullvad.listen_port }}
+        mtu={{ routeros_mullvad.mtu }}
+        private-key="{{ routeros_mullvad_private_key }}" } else={
+        /interface wireguard set $row comment="infra: Mullvad OTOTOY"
+        disabled=no listen-port={{ routeros_mullvad.listen_port }}
+        mtu={{ routeros_mullvad.mtu }}
+        private-key="{{ routeros_mullvad_private_key }}" }
+  no_log: true
+  tags: [never, apply, mullvad]
+
+- name: Reconcile the Mullvad tunnel address
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/ip address find where
+        comment="infra: Mullvad OTOTOY address"];
+        :if ([:len $row] = 0) do={
+        /ip address add address={{ routeros_mullvad.address }}
+        interface="{{ routeros_mullvad.name }}"
+        comment="infra: Mullvad OTOTOY address" disabled=no } else={
+        /ip address set $row address={{ routeros_mullvad.address }}
+        interface="{{ routeros_mullvad.name }}" disabled=no }
+  tags: [never, apply, mullvad]
+
+- name: Reconcile the Mullvad Osaka peer
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/interface wireguard peers find where
+        comment="infra: Mullvad OTOTOY peer {{ routeros_mullvad.peer.name }}"];
+        :if ([:len $row] = 0) do={
+        /interface wireguard peers add interface="{{ routeros_mullvad.name }}"
+        public-key="{{ routeros_mullvad.peer.public_key }}"
+        endpoint-address={{ routeros_mullvad.peer.endpoint_address }}
+        endpoint-port={{ routeros_mullvad.peer.endpoint_port }}
+        allowed-address={{ routeros_mullvad.peer.allowed_address }}
+        persistent-keepalive={{ routeros_mullvad.peer.persistent_keepalive }}
+        comment="infra: Mullvad OTOTOY peer {{ routeros_mullvad.peer.name }}"
+        disabled=no } else={
+        /interface wireguard peers set $row interface="{{ routeros_mullvad.name }}"
+        public-key="{{ routeros_mullvad.peer.public_key }}"
+        endpoint-address={{ routeros_mullvad.peer.endpoint_address }}
+        endpoint-port={{ routeros_mullvad.peer.endpoint_port }}
+        allowed-address={{ routeros_mullvad.peer.allowed_address }}
+        persistent-keepalive={{ routeros_mullvad.peer.persistent_keepalive }}
+        disabled=no }
+  tags: [never, apply, mullvad]
+
+- name: Create the Mullvad routing table when absent
+  community.routeros.command:
+    commands:
+      - >-
+        /routing table add fib name="{{ routeros_mullvad.routing.table }}"
+        comment="infra: Mullvad OTOTOY routing table"
+  when: "'infra: Mullvad OTOTOY routing table' not in routeros_mullvad_preflight.stdout[3]"
+  tags: [never, apply, mullvad]
+
+- name: Reconcile the Mullvad routing table
+  community.routeros.command:
+    commands:
+      - >-
+        /routing table set [find where
+        name="{{ routeros_mullvad.routing.table }}"] fib=yes
+        comment="infra: Mullvad OTOTOY routing table"
+  changed_when: false
+  tags: [never, apply, mullvad]
+
+- name: Create the fail-closed Mullvad default route when absent
+  community.routeros.command:
+    commands:
+      - >-
+        /ip route add dst-address=0.0.0.0/0
+        gateway="{{ routeros_mullvad.name }}"
+        routing-table="{{ routeros_mullvad.routing.table }}"
+        distance=1 comment="infra: Mullvad OTOTOY default route" disabled=no
+  when: >-
+    ('routing-table=' ~ routeros_mullvad.routing.table) not in
+    routeros_mullvad_preflight.stdout[4]
+  tags: [never, apply, mullvad]
+
+- name: Reconcile the fail-closed Mullvad default route
+  community.routeros.command:
+    commands:
+      - >-
+        /ip route set [find where
+        comment="infra: Mullvad OTOTOY default route"]
+        dst-address=0.0.0.0/0 gateway="{{ routeros_mullvad.name }}"
+        routing-table="{{ routeros_mullvad.routing.table }}"
+        distance=1 disabled=no
+  changed_when: false
+  tags: [never, apply, mullvad]
+
+- name: Reconcile the narrow Mullvad forward rule
+  community.routeros.command:
+    commands:
+      - >-
+        :local drop [/ip firewall filter find where
+        comment="{{ routeros_mullvad.routing.forward_final_drop_comment }}"];
+        :local row [/ip firewall filter find where
+        comment="infra: Mullvad OTOTOY forward"];
+        :if ([:len $row] = 0) do={
+        /ip firewall filter add action=accept
+        chain={{ routeros_mullvad.routing.forward_chain }}
+        in-interface={{ routeros_mullvad.routing.source_interface }}
+        out-interface={{ routeros_mullvad.name }}
+        src-address={{ routeros_mullvad.routing.source_network }}
+        dst-address={{ routeros_mullvad.routing.destination }}
+        comment="infra: Mullvad OTOTOY forward" disabled=no place-before=$drop
+        } else={
+        /ip firewall filter set $row action=accept
+        chain={{ routeros_mullvad.routing.forward_chain }}
+        in-interface={{ routeros_mullvad.routing.source_interface }}
+        out-interface={{ routeros_mullvad.name }}
+        src-address={{ routeros_mullvad.routing.source_network }}
+        dst-address={{ routeros_mullvad.routing.destination }} disabled=no };
+        /ip firewall filter move [find where
+        comment="infra: Mullvad OTOTOY forward"] destination=$drop
+  tags: [never, apply, mullvad]
+
+- name: Reconcile the Mullvad source NAT rule
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/ip firewall nat find where
+        comment="infra: Mullvad OTOTOY NAT"];
+        :if ([:len $row] = 0) do={
+        /ip firewall nat add action=masquerade chain=srcnat
+        out-interface={{ routeros_mullvad.name }}
+        src-address={{ routeros_mullvad.routing.source_network }}
+        dst-address={{ routeros_mullvad.routing.destination }}
+        comment="infra: Mullvad OTOTOY NAT" disabled=no } else={
+        /ip firewall nat set $row action=masquerade chain=srcnat
+        out-interface={{ routeros_mullvad.name }}
+        src-address={{ routeros_mullvad.routing.source_network }}
+        dst-address={{ routeros_mullvad.routing.destination }} disabled=no }
+  tags: [never, apply, mullvad]
+
+- name: Reconcile the Mullvad TCP MSS clamp
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/ip firewall mangle find where
+        comment="infra: Mullvad OTOTOY MSS"];
+        :if ([:len $row] = 0) do={
+        /ip firewall mangle add action=change-mss chain=forward
+        new-mss=clamp-to-pmtu protocol=tcp tcp-flags=syn
+        out-interface={{ routeros_mullvad.name }}
+        src-address={{ routeros_mullvad.routing.source_network }}
+        dst-address={{ routeros_mullvad.routing.destination }}
+        comment="infra: Mullvad OTOTOY MSS" disabled=no } else={
+        /ip firewall mangle set $row action=change-mss chain=forward
+        new-mss=clamp-to-pmtu protocol=tcp tcp-flags=syn
+        out-interface={{ routeros_mullvad.name }}
+        src-address={{ routeros_mullvad.routing.source_network }}
+        dst-address={{ routeros_mullvad.routing.destination }} disabled=no }
+  tags: [never, apply, mullvad]
+
+- name: Create the fail-closed OTOTOY policy rule last when absent
+  community.routeros.command:
+    commands:
+      - >-
+        /routing rule add action=lookup-only-in-table
+        table="{{ routeros_mullvad.routing.table }}"
+        interface={{ routeros_mullvad.routing.source_interface }}
+        dst-address={{ routeros_mullvad.routing.destination }}
+        comment="infra: Mullvad OTOTOY policy rule" disabled=no
+  when: "'action=lookup-only-in-table' not in routeros_mullvad_preflight.stdout[5]"
+  tags: [never, apply, mullvad]
+
+- name: Activate the fail-closed OTOTOY policy rule last
+  community.routeros.command:
+    commands:
+      - >-
+        /routing rule set [find where
+        comment="infra: Mullvad OTOTOY policy rule"]
+        action=lookup-only-in-table
+        table="{{ routeros_mullvad.routing.table }}"
+        interface={{ routeros_mullvad.routing.source_interface }}
+        dst-address={{ routeros_mullvad.routing.destination }} disabled=no
+  changed_when: false
+  tags: [never, apply, mullvad]
+
+- name: Read reconciled Mullvad OTOTOY state
+  community.routeros.command:
+    commands:
+      - >-
+        /interface wireguard print detail without-paging where
+        name="{{ routeros_mullvad.name }}"
+      - >-
+        /interface wireguard peers print detail without-paging where
+        comment="infra: Mullvad OTOTOY peer {{ routeros_mullvad.peer.name }}"
+      - >-
+        /ip address print detail without-paging where
+        comment="infra: Mullvad OTOTOY address"
+      - >-
+        /routing table print detail without-paging where
+        name="{{ routeros_mullvad.routing.table }}"
+      - >-
+        /ip route print detail without-paging where
+        comment="infra: Mullvad OTOTOY default route"
+      - >-
+        /routing rule print detail without-paging where
+        comment="infra: Mullvad OTOTOY policy rule"
+      - >-
+        /ip firewall filter print detail without-paging where
+        comment="infra: Mullvad OTOTOY forward"
+      - >-
+        /ip firewall nat print detail without-paging where
+        comment="infra: Mullvad OTOTOY NAT"
+      - >-
+        /ip firewall mangle print detail without-paging where
+        comment="infra: Mullvad OTOTOY MSS"
+  register: routeros_mullvad_postflight
+  changed_when: false
+  tags: [never, apply, mullvad]
+
+- name: Prove the Mullvad interface, address, and Osaka peer
+  ansible.builtin.assert:
+    that:
+      - >-
+        routeros_mullvad_postflight.stdout[0].count(
+        'infra: Mullvad OTOTOY') >= 1
+      - >-
+        ('name="' ~ routeros_mullvad.name ~ '"') in
+        (routeros_mullvad_postflight.stdout[0] | regex_replace('\\s+', ' '))
+      - >-
+        ('listen-port=' ~ routeros_mullvad.listen_port) in
+        routeros_mullvad_postflight.stdout[0]
+      - ('mtu=' ~ routeros_mullvad.mtu) in routeros_mullvad_postflight.stdout[0]
+      - >-
+        routeros_mullvad_postflight.stdout[1].count(
+        'infra: Mullvad OTOTOY peer ' ~ routeros_mullvad.peer.name) >= 1
+      - >-
+        ('public-key="' ~ routeros_mullvad.peer.public_key ~ '"') in
+        routeros_mullvad_postflight.stdout[1]
+      - >-
+        ('endpoint-address=' ~ routeros_mullvad.peer.endpoint_address) in
+        routeros_mullvad_postflight.stdout[1]
+      - >-
+        ('endpoint-port=' ~ routeros_mullvad.peer.endpoint_port) in
+        routeros_mullvad_postflight.stdout[1]
+      - >-
+        ('allowed-address=' ~ routeros_mullvad.peer.allowed_address) in
+        routeros_mullvad_postflight.stdout[1]
+      - >-
+        routeros_mullvad_postflight.stdout[2].count(
+        'infra: Mullvad OTOTOY address') >= 1
+      - routeros_mullvad.address in routeros_mullvad_postflight.stdout[2]
+      - >-
+        ('interface=' ~ routeros_mullvad.name) in
+        routeros_mullvad_postflight.stdout[2]
+    fail_msg: "The Mullvad WireGuard client or Osaka peer did not reconcile."
+  tags: [never, apply, mullvad]
+
+- name: Prove the fail-closed OTOTOY routing and packet policy
+  ansible.builtin.assert:
+    that:
+      - >-
+        routeros_mullvad_postflight.stdout[3].count(
+        'infra: Mullvad OTOTOY routing table') >= 1
+      - routeros_mullvad.routing.table in routeros_mullvad_postflight.stdout[3]
+      - >-
+        routeros_mullvad_postflight.stdout[4].count(
+        'infra: Mullvad OTOTOY default route') >= 1
+      - routeros_mullvad.name in routeros_mullvad_postflight.stdout[4]
+      - routeros_mullvad.routing.table in routeros_mullvad_postflight.stdout[4]
+      - >-
+        routeros_mullvad_postflight.stdout[5].count(
+        'infra: Mullvad OTOTOY policy rule') >= 1
+      - "'action=lookup-only-in-table' in routeros_mullvad_postflight.stdout[5]"
+      - routeros_mullvad.routing.source_interface in routeros_mullvad_postflight.stdout[5]
+      - >-
+        (routeros_mullvad.routing.destination | regex_replace('/32$', '')) in
+        routeros_mullvad_postflight.stdout[5]
+      - >-
+        routeros_mullvad_postflight.stdout[6].count(
+        'infra: Mullvad OTOTOY forward') >= 1
+      - routeros_mullvad.routing.source_network in routeros_mullvad_postflight.stdout[6]
+      - routeros_mullvad.name in routeros_mullvad_postflight.stdout[6]
+      - >-
+        (routeros_mullvad.routing.destination | regex_replace('/32$', '')) in
+        routeros_mullvad_postflight.stdout[6]
+      - >-
+        routeros_mullvad_postflight.stdout[7].count(
+        'infra: Mullvad OTOTOY NAT') >= 1
+      - "'action=masquerade' in routeros_mullvad_postflight.stdout[7]"
+      - routeros_mullvad.routing.source_network in routeros_mullvad_postflight.stdout[7]
+      - routeros_mullvad.name in routeros_mullvad_postflight.stdout[7]
+      - >-
+        (routeros_mullvad.routing.destination | regex_replace('/32$', '')) in
+        routeros_mullvad_postflight.stdout[7]
+      - >-
+        routeros_mullvad_postflight.stdout[8].count(
+        'infra: Mullvad OTOTOY MSS') >= 1
+      - "'new-mss=clamp-to-pmtu' in routeros_mullvad_postflight.stdout[8]"
+      - routeros_mullvad.routing.source_network in routeros_mullvad_postflight.stdout[8]
+      - routeros_mullvad.name in routeros_mullvad_postflight.stdout[8]
+      - >-
+        (routeros_mullvad.routing.destination | regex_replace('/32$', '')) in
+        routeros_mullvad_postflight.stdout[8]
+    fail_msg: >-
+      The OTOTOY-only route must stay source-scoped, NATed, MTU-safe, and
+      fail closed through the Mullvad table.
+  tags: [never, apply, mullvad]
