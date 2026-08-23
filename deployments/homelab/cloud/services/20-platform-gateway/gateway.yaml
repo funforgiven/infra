@@ -18,7 +18,9 @@ spec:
               memory: 512Mi
       envoyService:
         type: LoadBalancer
-        externalTrafficPolicy: Cluster
+        # Preserve the downstream address so Envoy emits a stable client IP for
+        # applications that bind authenticated sessions and CSRF tokens to it.
+        externalTrafficPolicy: Local
         patch:
           type: StrategicMerge
           value:
