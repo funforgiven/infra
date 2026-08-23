@@ -8,6 +8,9 @@ resource "aws_sns_topic_subscription" "mail_alerts" {
   endpoint  = "fahricanelidemir@gmail.com"
 }
 
+# EC2 stops publishing an old instance dimension while create-before-destroy
+# replacement changes IDs. Absence is not a failed status check; only an
+# observed StatusCheckFailed sample should notify.
 resource "aws_cloudwatch_metric_alarm" "instance_status" {
   alarm_name          = "stalwart-mail-instance-status"
   alarm_description   = "The Stalwart EC2 instance failed an AWS status check"
@@ -18,7 +21,7 @@ resource "aws_cloudwatch_metric_alarm" "instance_status" {
   period              = 60
   statistic           = "Maximum"
   threshold           = 1
-  treat_missing_data  = "breaching"
+  treat_missing_data  = "notBreaching"
   alarm_actions       = [aws_sns_topic.mail_alerts.arn]
   ok_actions          = [aws_sns_topic.mail_alerts.arn]
 

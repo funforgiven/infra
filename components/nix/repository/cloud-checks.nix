@@ -421,6 +421,25 @@
                 raise SystemExit("AWS mail would put credentials or SSH state in OpenTofu")
             if "most_recent = true" in aws_tofu_text:
                 raise SystemExit("AWS mail appliance AMI must not drift during reconciliation")
+            aws_monitoring = (
+                aws_mail_root / "tofu/monitoring.tf"
+            ).read_text()
+            instance_status_alarm = re.search(
+                r'resource "aws_cloudwatch_metric_alarm" "instance_status" '
+                r'\{(?P<body>.*?)\n\}',
+                aws_monitoring,
+                re.S,
+            )
+            if (
+                instance_status_alarm is None
+                or 'metric_name         = "StatusCheckFailed"'
+                not in instance_status_alarm.group("body")
+                or 'treat_missing_data  = "notBreaching"'
+                not in instance_status_alarm.group("body")
+            ):
+                raise SystemExit(
+                    "AWS EC2 status alarm must not treat replacement telemetry gaps as failures"
+                )
             if "master_user_secret_kms_key_id" in aws_tofu_text:
                 raise SystemExit("AWS mail bypasses the managed Secrets Manager key default")
             if "from_port   = 22" in aws_tofu_text:
