@@ -80,7 +80,7 @@ spec:
             - name: ND_PROMETHEUS_ENABLED
               value: "true"
             - name: ND_SCANNER_SCHEDULE
-              value: "@every 5m"
+              value: "@every 1m"
             - name: ND_SEARCH_BACKEND
               value: fts
           ports:

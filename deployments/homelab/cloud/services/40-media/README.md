@@ -11,15 +11,18 @@ SFTPGo is a temporary upload inbox; Beets owns the permanent library:
    identity token's verified `email` claim and has no local password or file
    transfer protocol access.
 3. SFTPGo publishes completed files atomically into the `inbox` directory on
-   the shared `media-library` volume. The Beets CronJob runs every five minutes
-   and waits until the whole inbox has been unchanged for at least 15 minutes,
+   the shared `media-library` volume. The Beets CronJob runs every minute
+   and waits until the whole inbox has been unchanged for at least two minutes,
    so a multi-track album is considered as a unit.
 4. Beets accepts only confident MusicBrainz matches without prompting. It
    writes the matched tags and artwork, skips duplicates already represented
    in its persistent catalog, and moves accepted audio into its standard
    artist/album/track hierarchy under `library`.
-5. Navidrome mounts only `library` read-only at `/music` and scans it every five
-   minutes. Listen at https://music.fahrican.com or through Symfonium
+5. Navidrome mounts only `library` read-only at `/music` and scans it every
+   minute. The server-side path from the final completed upload to Navidrome is
+   therefore normally no more than four minutes. Symfonium may still need its
+   own library refresh, depending on the client's synchronization settings.
+   Listen at https://music.fahrican.com or through Symfonium
    using Navidrome as the server.
 
 After a successful import pass, anything remaining in `inbox` is moved into a

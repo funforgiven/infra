@@ -4,7 +4,7 @@ metadata:
   name: beets-import
   namespace: media
 spec:
-  schedule: "*/5 * * * *"
+  schedule: "* * * * *"
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 300
   successfulJobsHistoryLimit: 1

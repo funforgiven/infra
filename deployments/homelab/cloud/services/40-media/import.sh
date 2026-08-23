@@ -25,8 +25,8 @@ fi
 
 # SFTPGo publishes each file atomically. This additional quiet period keeps a
 # directory containing a multi-file album together while its tracks arrive.
-if find "$inbox" -mindepth 1 -mmin -15 -print -quit | grep -q .; then
-  printf '%s\n' "Beets inbox changed within the last 15 minutes; deferring import"
+if find "$inbox" -mindepth 1 -mmin -2 -print -quit | grep -q .; then
+  printf '%s\n' "Beets inbox changed within the last 2 minutes; deferring import"
   exit 0
 fi
 

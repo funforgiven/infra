@@ -1231,7 +1231,7 @@
             for beets_fragment in (
                 "kind: CronJob",
                 "name: beets-import",
-                'schedule: "*/5 * * * *"',
+                'schedule: "* * * * *"',
                 "concurrencyPolicy: Forbid",
                 "claimName: media-library",
                 "claimName: beets-data",
@@ -1256,7 +1256,7 @@
                 'media_root=''${BEETS_MEDIA_ROOT:-/media}',
                 'inbox=$media_root/inbox',
                 'quarantine=$media_root/quarantine',
-                '-mmin -15',
+                '-mmin -2',
                 '"$beet" import --noautotag "$library"',
                 'mv "$candidate" "$review/"',
             ):
