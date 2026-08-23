@@ -165,12 +165,10 @@ _: {
           }
 
           start_server() {
-            local attempt
-
             ${stalwartPackage}/bin/stalwart --config "$config_file" &
             server_pid=$!
 
-            for attempt in $(seq 1 120); do
+            for _ in $(seq 1 120); do
               if curl --silent --output /dev/null http://127.0.0.1:8080/.well-known/jmap; then
                 return 0
               fi
