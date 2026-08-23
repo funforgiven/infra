@@ -1310,29 +1310,6 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: wave84-mail-edge
-  namespace: flux-system
-spec:
-  suspend: false
-  interval: 10m
-  retryInterval: 1m
-  timeout: 20m
-  path: ./deployments/homelab/cloud/undercloud/84-mail-edge
-  prune: true
-  sourceRef:
-    kind: GitRepository
-    name: flux-system
-  dependsOn:
-    - name: wave81-services-foundation
-  healthChecks:
-    - apiVersion: infra.contrib.fluxcd.io/v1alpha2
-      kind: Terraform
-      name: mail-edge
-      namespace: openstack
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
   name: wave85-service-dns
   namespace: flux-system
 spec:
@@ -1347,7 +1324,7 @@ spec:
     name: flux-system
   dependsOn:
     - name: wave83-services-hosts
-    - name: wave84-mail-edge
+    - name: wave84-mail-aws
   healthChecks:
     - apiVersion: infra.contrib.fluxcd.io/v1alpha2
       kind: Terraform

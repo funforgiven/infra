@@ -1,8 +1,0 @@
-version: 1
-domains:
-  - name: fahrican.com
-accounts:
-  - address: fahrican@fahrican.com
-    displayName: Fahrican
-aliases: []
-applicationPasswords: []

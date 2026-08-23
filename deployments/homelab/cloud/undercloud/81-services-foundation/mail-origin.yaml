@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: active-mail-origin
-  namespace: openstack
-data:
-  # AWS is authoritative after the qualified backup/restore, exact final IMAP
-  # delta, and controlled stop of the retained Hetzner rollback source.
-  provider: aws

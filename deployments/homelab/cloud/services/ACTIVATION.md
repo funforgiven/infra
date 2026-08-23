@@ -20,10 +20,10 @@ Flux Kustomizations are authoritative, and a live-only change would be drift.
 
 ## 1. Issue credentials without broadening trust
 
-Supply only the nine externally issued values listed in
-`secrets/README.md`: the Backblaze master pair, dedicated Hetzner token, two
-Telegram bot tokens, Last.fm pair, Resend administration key, and dedicated
-Hermes OpenAI API key. Do not issue or prepare placeholders for derived
+Supply only the externally issued values listed in `secrets/README.md`: the
+Backblaze master pair, two Telegram bot tokens, Last.fm pair, Resend
+administration key, dedicated Hermes OpenAI API key, and the one-time AWS
+bootstrap pair. Do not issue or prepare placeholders for derived
 application keys, numeric Telegram targets, the operator CIDR, or locally
 generated passwords.
 
@@ -52,7 +52,6 @@ The pinned provider reconcilers own all derived values:
 ```console
 nix run .#reconcile-services-backblaze -- apply \
   --bootstrap-directory /absolute/path/to/secrets
-nix run .#reconcile-services-operator-network -- apply
 # After BotFather creation, token enrollment, and one /activate per bot:
 nix run .#reconcile-services-telegram -- apply
 # After the Resend domain reports verified:
@@ -60,11 +59,10 @@ nix run .#reconcile-services-resend -- apply
 ```
 
 The Backblaze reconciler consumes the master pair, applies the private SSE-B2
-lifecycle declaration, creates four independently scoped S3-compatible
+lifecycle declaration, creates three independently scoped S3-compatible
 writers, encrypts each returned ID/key pair directly into its routed SOPS
-document, and clears both master files only after full success. The network
-reconciler agrees two public-address sources and encrypts the resulting host
-CIDR. Telegram derives chat and user IDs from exact declared updates. Resend
+document, and clears both master files only after full success. Telegram
+derives chat and user IDs from exact declared updates. Resend
 creates a `sending_access` key scoped only to `fahrican.com` and never exposes
 the administration key to Stalwart.
 
@@ -79,8 +77,8 @@ nix run .#initialize-services-restic -- apply
 It initializes each repository locally, uploads only its encrypted initial
 files through that host's existing prefix-bound key using Backblaze's native
 API, and verifies the result through Restic's S3 backend. No broad or
-additional application key is created. Routine backup and restore operations
-continue with the same three independent prefix-bound keys. `check` makes no
+additional application key is created. Routine host backup and restore operations
+continue with the two independent prefix-bound keys. `check` makes no
 changes:
 
 ```console
@@ -190,35 +188,17 @@ profiles exist so it starts with web search and autonomous memory disabled.
 The infrastructure Telegram bot is reused for host failure alerts; Hermes
 retains its separate private bot and chat.
 
-Activate stage `mail`, confirm its retained address and reverse DNS, then
-perform the explicitly destructive nixos-anywhere install against that exact
-server. Enroll only its `mail-edge-backup` and `monitoring` profiles initially;
-the absent mail runtime keeps Stalwart stopped while DNS and ACME are pending.
-Confirm the Hetzner account-level outbound SMTP restriction is removed by
-reaching an independent MX on port 25 from the host. Prove public inbound SMTP
-separately by sending an idempotent Resend acceptance message through the
-published MX and finding it over authenticated IMAPS. If the services-cluster
-source network cannot reach port 25 while that external delivery passes, retain
-the non-paging diagnostic series and follow the documented monitoring-vantage
-exception instead of adding a credentialed custom mail-loop service.
-Activate stage `dns` after the cluster reconciler has copied the mail-edge
-output into `service-dns-inputs`. Once the A and Resend verification records
-are live and the domain is verified, run `reconcile-services-resend apply`.
-It creates and encrypts `STALWART_RESEND_API_KEY`; then materialize
-`mail-runtime` and start Stalwart after its certificate is ready. The fallback
-administrator secret is generated, not manually supplied.
-
-The Hetzner stage above remains the live migration source while the prepared AWS
-root is suspended. AWS activation is a separate deliberate migration described
-in `components/cloud/services/mail-aws/README.md`: enroll a temporary bootstrap
-pair only after all credential-free validation passes; the enrollment tool
-creates and encrypts the narrower regional GitOps identity. Revoke the
-temporary pair, then apply the Frankfurt
-`t4g.micro`/RDS/S3 root without changing the active origin, reconcile the Resend
-key, publish the new public DKIM records, restore-test RDS and S3, copy the
-mailbox twice over IMAP, and only then change the Git-managed origin selector to
-`aws`. Forward DNS must point at the retained EIP before reverse DNS is enabled.
-Keep the protected Hetzner host for the documented rollback interval.
+Mail is already migrated to the AWS Frankfurt platform described in
+`components/cloud/services/mail-aws/README.md`. Its dedicated GitOps identity
+owns the OpenTofu lifecycle; EC2 generates the administrator and mailbox
+credentials into Secrets Manager and applies the declared account plan with
+`stalwart-cli`. Run `reconcile-services-resend apply` to rotate the
+domain-scoped sending key in SOPS, then `publish-aws-mail-resend` to stream it
+into the AWS secret. Activate `mail-aws` before `dns`; the cluster reconciler
+copies only `mail-aws-outputs` into `service-dns-inputs`. Public DNS must point
+at the retained EIP before reverse DNS is enabled. After mail or DNS changes,
+repeat the external Resend-to-MX acceptance and authenticated IMAPS read
+documented by the monitoring-vantage exception.
 
 ## 5. Application and recovery gates
 
@@ -244,7 +224,7 @@ Then activate the remaining stages:
 Confirm the Velero storage location is Available, complete the isolated restore
 qualification, and inspect one daily backup before accepting application data.
 Then complete only the documented UI exceptions: Navidrome first admin and
-scrobbling grants, Stalwart directory objects, and
+scrobbling grants, and
 Home Assistant migration onboarding, provider-NIC configuration, HTTP proxy
 confirmation, native Backblaze backup location, and UI-only integrations. Keep
 the host cutover variable on `nixos` until a native full encrypted backup and
@@ -256,11 +236,6 @@ backups in the existing `services/hosts/home-assistant/` prefix. Home Assistant'
 configuration through `https://home.fahrican.com` within its five-minute safety
 trial. Retain the old NixOS volume until a post-cutover B2 restore passes. Every
 accepted UI change is followed by an encrypted backup and a drift-record update.
-
-For Stalwart, `components/cloud/services/mail-edge/directory-inventory.yaml`
-is the authoritative non-secret inventory. Update it before making an additive
-directory change through the private management interface; passwords go
-directly from the password manager into Stalwart and never enter Git.
 
 The final synthetic wave probes every private HTTP route, public mail ports,
 Hermes/Home Assistant node exporters, and the last successful host Restic

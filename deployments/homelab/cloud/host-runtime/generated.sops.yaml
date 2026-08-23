@@ -1,9 +1,7 @@
 schemaVersion: 1
 data:
-    STALWART_ADMIN_SECRET: ENC[AES256_GCM,data:ev5oqegEM8w2FokngNJkiHCMWguA0zFEwzTPFz8aVrl6eC84tIJvYiN1Sxm80YOUGDIsvHTM7BFwp5CBrRxazBoHWBTMGLtXTIbaLWiFHfFYR7EgkQVa/g==,iv:6nKVrnOvSzvZSqa1XQ2W2pSwsHsTMZr7Zo/a7x74U1k=,tag:7aaT5xiFEmDi+BSXP8Lzdw==,type:str]
     HERMES_BACKUP_RESTIC_PASSWORD: ENC[AES256_GCM,data:isTyts9Q16r9agmZlsUYjbgcgxgogQx4j/iuZMXQQR+JHTGIZGLKCAR2d3f5iTkmxsvzj3F1Lx7qVghc07Jx6lh3vaHgv3PY/+f+VoauIglBILhWqfzLuw==,iv:2syneyEDcoU7Oa8S0783hYTXr35Q4lXiBQY/xHo2NoQ=,tag:QpXGN016PrLwc1zMJgJs1A==,type:str]
     HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD: ENC[AES256_GCM,data:DXVCNrM+Cs/rt0KgXTx52kfXt3VqQPWF/xKBiCMhcoW5jPNG9Lpqhg7t0mONbmbdFd8Ln3CdXcUIOm07Fw5oXzmIp3YQ3RC/+2US0CrFLmz5vHY/t+yOlQ==,iv:XmojhzjZBlGf3rvgfeU/ZxYczoiqWk1CmrLKQglU1rg=,tag:1j8Tg+WhY0Rvx9MJ2JUFLw==,type:str]
-    MAIL_EDGE_BACKUP_RESTIC_PASSWORD: ENC[AES256_GCM,data:qJj3JdR0MRQLzC4mCPiW2gr61K95Xn+PH7dHBPGzY1wQOKHQa+9xYkVk4WV/ZzEIOuPQ/+ppQ0yeoixRhxvAY4ArZ0Qj1p7J126nj/adJvv4QsCyPbNV4A==,iv:TLWWaqEHMqsdAaiY2j9hCzisPcx/IoLSDeNkG4BF2s0=,tag:WPaJsiysK45JpPuYoTossw==,type:str]
 sops:
     age:
         - enc: |
@@ -16,6 +14,6 @@ sops:
             -----END AGE ENCRYPTED FILE-----
           recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-08-15T10:14:03Z"
-    mac: ENC[AES256_GCM,data:ZnilQJQU39V0XJaIV/cVQy6slp/Vw7sYqhPoGl6/AhEkAKyIhViEhA3n8PdSxczDyaHWMu6jjT2uEb3JX/yK1iI61pP6nSbmLer2n1XG3fBz2eb5hNxwk78ZC+Co2fyAfWd+T5F2VDLaFZ1BYOYkKMLp2t/ZchAH1AtZjAPx8ho=,iv:LQY88BiMObjyFX22IE8lPFpmYY3d/gzRrgz2wF9ne0s=,tag:FtpEz5P2eofBjzu74S+qFw==,type:str]
+    lastmodified: "2026-08-23T14:25:14Z"
+    mac: ENC[AES256_GCM,data:gKOldmdmWTakyPG3wGZdA9JmQRk0Zj2xc1HOtz2EqwH6LXTAW5FCrayUURHFwusqxMWqoMK455bO+XHJ6altMbYfGhcz2bRRKjy3W5f06gKLIe04OCRqCAZmV11Bfto0mHZH+CKYkAuQBfNUFZIC4cGyLpDbwblc545ID6/G/ck=,iv:koqRewIy8BZWu0zVBcu99fGukuHh9xKxs0WN/iAtVU4=,tag:hSiGLrOtMb6SprKG+ywshA==,type:str]
     version: 3.13.3

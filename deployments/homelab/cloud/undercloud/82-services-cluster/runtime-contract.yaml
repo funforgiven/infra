@@ -15,7 +15,6 @@ data:
         - ND_LASTFM_APIKEY
         - ND_LASTFM_SECRET
       mailProvisioning:
-        - HCLOUD_TOKEN
         - RESEND_ADMIN_API_KEY
     hostCredentials:
       hermes:
@@ -32,10 +31,8 @@ data:
       service-hosts:
         secretFile: deployments/homelab/cloud/host-runtime/generated.sops.yaml
         keys:
-          - STALWART_ADMIN_SECRET
           - HERMES_BACKUP_RESTIC_PASSWORD
           - HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD
-          - MAIL_EDGE_BACKUP_RESTIC_PASSWORD
     provisionedSecrets:
       backblaze-services:
         provisioner: reconcile-services-backblaze
@@ -51,8 +48,6 @@ data:
           - HERMES_BACKUP_B2_APPLICATION_KEY
           - HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID
           - HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY
-          - MAIL_EDGE_BACKUP_B2_APPLICATION_KEY_ID
-          - MAIL_EDGE_BACKUP_B2_APPLICATION_KEY
       telegram-infrastructure:
         provisioner: reconcile-services-telegram
         secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
@@ -64,20 +59,15 @@ data:
         keys:
           - HERMES_TELEGRAM_ALLOWED_USERS
           - HERMES_TELEGRAM_HOME_CHANNEL
-      operator-network:
-        provisioner: reconcile-services-operator-network
-        secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
-        keys:
-          - MAIL_MANAGEMENT_CIDRS_JSON
       aws-mail-auth:
         provisioner: enroll-aws-mail-auth
         secretFile: deployments/homelab/cloud/undercloud/84-mail-aws/aws.sops.yaml
         keys:
           - AWS_ACCESS_KEY_ID
           - AWS_SECRET_ACCESS_KEY
-      resend-mail-edge:
+      resend-mail-aws:
         provisioner: reconcile-services-resend
-        secretFile: deployments/homelab/cloud/host-runtime/mail-edge.sops.yaml
+        secretFile: deployments/homelab/cloud/undercloud/84-mail-aws/resend.sops.yaml
         keys:
           - STALWART_RESEND_API_KEY
     policy:

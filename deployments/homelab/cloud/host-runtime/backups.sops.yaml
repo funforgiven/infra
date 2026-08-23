@@ -4,8 +4,6 @@ data:
     HERMES_BACKUP_B2_APPLICATION_KEY: ENC[AES256_GCM,data:uGzGQEyGVAPXA629y6qdEC0BHynOkUfEwCO+j5lkmqhDr66Yd4+Lj1U1SH8=,iv:/lKDJ0bEWnfkjjzyNUhhV6GyLPodZ4HXZLDMRgtjd6U=,tag:6rWIoJqQzrimazOE4h4Rhg==,type:str]
     HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID: ENC[AES256_GCM,data:mW96hgb5QiCVG91/7zqUPfSrlCwID2LjFXbn87lbwFy8ZWwe,iv:rsgCU7iHOf12VbAUY68/vChgEomBIxvb4KlryU7MJL0=,tag:p6knhv0ob0pX+gvQipFK0Q==,type:str]
     HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY: ENC[AES256_GCM,data:3Hhnfkfd+uqv1wo0mGkhkgrxB/UnG9ln6aZhaD0tesg1JBmmWicVgIlh/wk=,iv:KsU6riQGzSIfriY6BqAES2JvLqnVH8rBjZEvVRp4Tkw=,tag:Q8abEYFXqvNpFD2qqOtdcw==,type:str]
-    MAIL_EDGE_BACKUP_B2_APPLICATION_KEY_ID: ENC[AES256_GCM,data:pb2H2mcyVdLOHIM1v23OuXpmhie4VPqacuXbSuhs2f0h0nWd,iv:H6gijuV/HtHy0BLiGOmjmXGueb/1uAzp9iyaal05ij8=,tag:jhrUGf3ZnNFZ3aQmwBz1Tg==,type:str]
-    MAIL_EDGE_BACKUP_B2_APPLICATION_KEY: ENC[AES256_GCM,data:3DdamchNR8xNadk+6HVbSqZDEk4x87pZLWHkH7reGeflw15RouPvZwctiYQ=,iv:XPsgihuvJcPYMxFVZ1XMNtXS33tBaQbQ5TcjkTI650k=,tag:I29qX6kMcOgxKJMB36DGqA==,type:str]
 sops:
     age:
         - enc: |
@@ -18,6 +16,6 @@ sops:
             -----END AGE ENCRYPTED FILE-----
           recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-08-21T19:28:39Z"
-    mac: ENC[AES256_GCM,data:Gut3cXoGOBaA+x+rBQMErzXnqnIQb8lCkAqB6220P+DsdS/hO4BAbWSvzcnQTW7CnsB3WspPYtlhYvvn0svkAN63ND6xCstj+42SlGd2gQ3PzInZ+lDNqbBVpbezt7SZhhbR5ypCXDoXWZTk8y34M0LT6L0Fp7eLreS78iAJ1Qw=,iv:8VPOdce3+vQtSPotwEszb/ohKw7mDswu3DkyugmRQEc=,tag:Aem3wOQY/z+e8i6nWKsCXA==,type:str]
+    lastmodified: "2026-08-23T14:25:14Z"
+    mac: ENC[AES256_GCM,data:Xj5uig313lu13ZebFPr1YD9lB/k3UsrY8N/TUA1vpkIG1mYkHJPyAYcEu7L8i1kht1Thf8pXPXGzjNNDKzdxonU2Oisop08JhEu0z7ZeHV+JTH6zpCCWzl1RPBAmF0Z0wZui0tMSN7kr5jsvu/sk4PIvPp+v6MKuq05EMtwZkZ4=,iv:a+CjR3UXwCltzD7EpedImIHppIu23Fj04bnruvG1GbY=,tag:4XsK3g73M9VbjXTul0GNoQ==,type:str]
     version: 3.13.3

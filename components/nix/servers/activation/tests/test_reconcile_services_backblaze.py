@@ -35,7 +35,6 @@ def runtime_document() -> dict:
                     "GENERATED_KEY",
                     "HERMES_BACKUP_RESTIC_PASSWORD",
                     "HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD",
-                    "MAIL_EDGE_BACKUP_RESTIC_PASSWORD",
                 ],
             }
         },
@@ -53,8 +52,6 @@ def runtime_document() -> dict:
                     "HERMES_BACKUP_B2_APPLICATION_KEY",
                     "HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID",
                     "HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY",
-                    "MAIL_EDGE_BACKUP_B2_APPLICATION_KEY_ID",
-                    "MAIL_EDGE_BACKUP_B2_APPLICATION_KEY",
                 ],
             },
         },
@@ -106,7 +103,6 @@ def backup_document() -> dict:
                 for name, prefix in (
                     ("hermes", "HERMES"),
                     ("home-assistant", "HOME_ASSISTANT"),
-                    ("mail-edge", "MAIL_EDGE"),
                 )
             ],
             "hostCapabilities": capabilities,
@@ -198,9 +194,9 @@ class ServicesBackblazeReconcilerTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
 
-    def test_contract_routes_four_independent_least_privilege_keys(self) -> None:
-        self.assertEqual(len(self.contract.keys), 4)
-        self.assertEqual(len({spec.prefix for spec in self.contract.keys}), 4)
+    def test_contract_routes_three_independent_least_privilege_keys(self) -> None:
+        self.assertEqual(len(self.contract.keys), 3)
+        self.assertEqual(len({spec.prefix for spec in self.contract.keys}), 3)
         self.assertEqual(
             {spec.secret_file for spec in self.contract.keys},
             {Path(RUNTIME_FILE), Path(BACKUPS_FILE)},
@@ -219,7 +215,7 @@ class ServicesBackblazeReconcilerTest(unittest.TestCase):
             self.contract, client, store
         ).reconcile(apply=True, rotate=False)
         self.assertEqual(client.created, [spec.name for spec in self.contract.keys])
-        self.assertEqual(len(store.writes), 4)
+        self.assertEqual(len(store.writes), 3)
         output = "\n".join(reports)
         self.assertNotIn("secret-", output)
         self.assertNotIn("id-", output)
@@ -254,7 +250,7 @@ class ServicesBackblazeReconcilerTest(unittest.TestCase):
         reports = ServicesResticInitializer(
             self.contract, self._restic_store(), runner
         ).apply()
-        self.assertEqual(len(runner.initialized), 3)
+        self.assertEqual(len(runner.initialized), 2)
         self.assertNotIn("scoped-secret", "\n".join(reports))
         self.assertNotIn("restic-password", "\n".join(reports))
 

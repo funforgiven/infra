@@ -13,7 +13,7 @@ and media workloads cannot consume control-plane capacity.
 | Services Kubernetes | Magnum, three 2-vCPU/4-GiB masters and two 4-vCPU/12-GiB workers | Navidrome, SFTPGo, databases, backup, monitoring |
 | Agent VM | Dedicated NixOS VM in the `services` project | Hermes Agent, Telegram conversation bot, direct OpenAI API runtime |
 | Home automation VM | Dedicated HAOS appliance in the `services` project (migration is gated while NixOS remains live) | Home Assistant and hardware/LAN integrations |
-| Mail edge | Dedicated Hetzner NixOS VM now; prepared AWS Frankfurt appliance next | Stalwart ingress and Resend-backed outbound delivery |
+| Mail platform | Dedicated AWS Frankfurt appliance with managed PostgreSQL and S3 | Stalwart ingress and Resend-backed outbound delivery |
 
 The OpenStack `public` network is RFC1918 provider space. Magnum floating IPs
 therefore provide routed LAN reachability, not Internet exposure. Public HTTP

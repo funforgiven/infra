@@ -4,7 +4,7 @@ umask 077
 
 if [[ "$#" -ne 2 ]]; then
   echo 'Usage: enroll-service-host-secrets SSH_TARGET PROFILE' >&2
-  echo 'Profiles: monitoring hermes-openai hermes-telegram mail-runtime hermes-backup home-assistant-backup mail-edge-backup' >&2
+  echo 'Profiles: monitoring hermes-openai hermes-telegram hermes-backup home-assistant-backup' >&2
   exit 64
 fi
 
@@ -104,19 +104,6 @@ enroll_hermes_telegram() {
   unset bot_token allowed_users home_channel
 }
 
-enroll_mail_runtime() {
-  local admin_secret
-  local resend_key
-  read_sops_value admin_secret STALWART_ADMIN_SECRET '^[A-Za-z0-9]+$' 64 64
-  read_sops_value resend_key STALWART_RESEND_API_KEY '^re_[A-Za-z0-9_-]+$' 23 512
-  prepare_directory /var/lib/stalwart-bootstrap
-  printf '%s' "$admin_secret" | \
-    install_stream /var/lib/stalwart-bootstrap/admin-secret
-  printf '%s' "$resend_key" | \
-    install_stream /var/lib/stalwart-bootstrap/resend-api-key
-  unset admin_secret resend_key
-}
-
 enroll_backup() {
   local prefix="$1"
   local password_key="$2"
@@ -153,9 +140,6 @@ case "$profile" in
   hermes-telegram)
     enroll_hermes_telegram
     ;;
-  mail-runtime)
-    enroll_mail_runtime
-    ;;
   hermes-backup)
     enroll_backup \
       services/hosts/hermes \
@@ -169,13 +153,6 @@ case "$profile" in
       HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD \
       HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID \
       HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY
-    ;;
-  mail-edge-backup)
-    enroll_backup \
-      services/hosts/mail-edge \
-      MAIL_EDGE_BACKUP_RESTIC_PASSWORD \
-      MAIL_EDGE_BACKUP_B2_APPLICATION_KEY_ID \
-      MAIL_EDGE_BACKUP_B2_APPLICATION_KEY
     ;;
   *)
     echo "Unknown host enrollment profile: $profile" >&2

@@ -155,10 +155,6 @@ let
           hostName = "10.21.40.120";
           user = "funforgiven";
         };
-        mail-edge = {
-          hostName = "62.238.112.111";
-          user = "funforgiven";
-        };
         pecorino = {
           hostName = "10.21.20.10";
           user = "ubuntu";

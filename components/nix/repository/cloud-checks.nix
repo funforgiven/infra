@@ -179,9 +179,6 @@
               deployments/homelab/cloud/undercloud/83-services-hosts \
               >/dev/null
             kustomize build \
-              deployments/homelab/cloud/undercloud/84-mail-edge \
-              >/dev/null
-            kustomize build \
               deployments/homelab/cloud/undercloud/84-mail-aws \
               >/dev/null
             kustomize build \
@@ -232,8 +229,6 @@
                         "HERMES_BACKUP_B2_APPLICATION_KEY",
                         "HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID",
                         "HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY",
-                        "MAIL_EDGE_BACKUP_B2_APPLICATION_KEY_ID",
-                        "MAIL_EDGE_BACKUP_B2_APPLICATION_KEY",
                     },
                 ),
                 "telegram-infrastructure": (
@@ -247,15 +242,11 @@
                         "HERMES_TELEGRAM_HOME_CHANNEL",
                     },
                 ),
-                "operator-network": (
-                    "reconcile-services-operator-network",
-                    {"MAIL_MANAGEMENT_CIDRS_JSON"},
-                ),
                 "aws-mail-auth": (
                     "enroll-aws-mail-auth",
                     {"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"},
                 ),
-                "resend-mail-edge": (
+                "resend-mail-aws": (
                     "reconcile-services-resend",
                     {"STALWART_RESEND_API_KEY"},
                 ),
@@ -356,30 +347,6 @@
             for oidc_output in ("sftpgo_client_id", "sftpgo_client_secret"):
                 if oidc_output not in reconcile_script:
                     raise SystemExit("SFTPGo OIDC output is not reconciled")
-
-            mail_tofu = yaml.safe_load(
-                (root / "undercloud/84-mail-edge/tofu.yaml").read_text()
-            )
-            if mail_tofu["spec"].get("varsFrom") != [
-                {
-                    "kind": "Secret",
-                    "name": "mail-edge-tofu-inputs",
-                    "varsKeys": ["management_cidrs_json"],
-                }
-            ]:
-                raise SystemExit("mail-edge Terraform input is not interface-scoped")
-            mail_runner_environment = {
-                item["name"]
-                for item in mail_tofu["spec"]["runnerPodTemplate"]["spec"]["env"]
-            }
-            if any(name.startswith("TF_VAR_") for name in mail_runner_environment):
-                raise SystemExit("mail-edge Terraform bypasses the varsFrom interface")
-            if (
-                "--from-file=management_cidrs_json="
-                "/runtime-bootstrap/MAIL_MANAGEMENT_CIDRS_JSON"
-                not in reconcile_script
-            ):
-                raise SystemExit("mail-edge Terraform input is not reconciled in memory")
 
             aws_mail_root = pathlib.Path("components/cloud/services/mail-aws")
             aws_mail_tofu = yaml.safe_load(
@@ -622,8 +589,6 @@
                     / "undercloud/81-services-foundation/kustomization.yaml"
                 ).read_text()
             )
-            if "mail-edge-tofu-input.yaml" not in foundation["resources"]:
-                raise SystemExit("mail-edge Terraform input target is not predeclared")
             if "share-quota.yaml" not in foundation["resources"]:
                 raise SystemExit("Manila quota reconciliation is not predeclared")
             share_quota = yaml.safe_load(
@@ -656,7 +621,6 @@
                         f"Manila quota reconciliation lacks {quota_fragment!r}"
                     )
             interface_placeholders = (
-                "mail-edge-tofu-input.yaml",
                 "resend-domain-output.yaml",
                 "service-dns-input.yaml",
             )
@@ -683,22 +647,6 @@
                     (root / "undercloud/82-services-cluster/rbac.yaml").read_text()
                 )
             )
-            mail_input_role = next(
-                document
-                for document in reconcile_rbac
-                if document["kind"] == "Role"
-                and document["metadata"]["name"] == "mail-edge-tofu-input-writer"
-            )
-            if mail_input_role["rules"] != [
-                {
-                    "apiGroups": [""],
-                    "resources": ["secrets"],
-                    "resourceNames": ["mail-edge-tofu-inputs"],
-                    "verbs": ["get", "patch", "update"],
-                }
-            ]:
-                raise SystemExit("mail-edge Terraform input writer is over-privileged")
-
             runtime = yaml.safe_load(
                 (root / "undercloud/81-services-foundation/runtime.sops.yaml").read_text()
             )
@@ -888,7 +836,6 @@
             expected_restic_passwords = {
                 "hermes": "HERMES_BACKUP_RESTIC_PASSWORD",
                 "home-assistant": "HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD",
-                "mail-edge": "MAIL_EDGE_BACKUP_RESTIC_PASSWORD",
             }
             if {
                 host["host"]: host["resticPasswordField"]
@@ -922,8 +869,6 @@
                 raise SystemExit("AWS mail bootstrap ceremony is undocumented")
             if "smtp-inbound-monitoring-vantage" not in exception_ids:
                 raise SystemExit("SMTP external-monitoring limitation is undocumented")
-            if "hetzner-smtp-port-unblock" in exception_ids:
-                raise SystemExit("completed Hetzner SMTP unblock remains open")
             synthetic_alerts = yaml.safe_load(
                 (root / "services/50-synthetic-monitoring/alerts.yaml").read_text()
             )
@@ -971,48 +916,6 @@
                 "openai-organization-hosted-tool-policy",
             } & exception_ids:
                 raise SystemExit("obsolete OpenAI administration exception remains")
-
-            mail_directory = yaml.safe_load(
-                pathlib.Path(
-                    "components/cloud/services/mail-edge/directory-inventory.yaml"
-                ).read_text()
-            )
-            if mail_directory.get("version") != 1:
-                raise SystemExit("Stalwart directory inventory version is invalid")
-            if mail_directory.get("domains") != [{"name": "fahrican.com"}]:
-                raise SystemExit("Stalwart directory must retain the declared mail domain")
-            if mail_directory.get("accounts") != [
-                {
-                    "address": "fahrican@fahrican.com",
-                    "displayName": "Fahrican",
-                }
-            ]:
-                raise SystemExit("Stalwart initial mailbox inventory drifted")
-            if mail_directory.get("aliases") or mail_directory.get(
-                "applicationPasswords"
-            ):
-                raise SystemExit("Stalwart contains undeclared directory objects")
-            if set(mail_directory) != {
-                "version",
-                "domains",
-                "accounts",
-                "aliases",
-                "applicationPasswords",
-            }:
-                raise SystemExit("Stalwart directory inventory schema drifted")
-            if not all(
-                isinstance(mail_directory[field], list)
-                for field in ("accounts", "aliases", "applicationPasswords")
-            ):
-                raise SystemExit("Stalwart directory objects must be explicit lists")
-            if any(
-                forbidden in entry
-                for field in ("accounts", "aliases", "applicationPasswords")
-                for entry in mail_directory[field]
-                if isinstance(entry, dict)
-                for forbidden in ("password", "secret", "token", "credential")
-            ):
-                raise SystemExit("Stalwart directory inventory contains secret material")
 
             repository_text = "\n".join(
                 path.read_text(errors="ignore")

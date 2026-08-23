@@ -72,7 +72,6 @@
       };
       reconcileServicesTelegram = reconcilerApplication "reconcile-services-telegram" ./activation/reconcile_services_telegram.py;
       reconcileServicesResend = reconcilerApplication "reconcile-services-resend" ./activation/reconcile_services_resend.py;
-      reconcileServicesOperatorNetwork = reconcilerApplication "reconcile-services-operator-network" ./activation/reconcile_services_operator_network.py;
       awsMailCredentials = pkgs.writeShellApplication {
         name = "aws-mail-credentials";
         runtimeInputs = [
@@ -168,11 +167,6 @@
         meta.description = "Create or rotate the domain-scoped Stalwart Resend key into SOPS";
       };
 
-      apps.reconcile-services-operator-network = {
-        program = "${reconcileServicesOperatorNetwork}/bin/reconcile-services-operator-network";
-        meta.description = "Discover and encrypt the operator mail-management host CIDR";
-      };
-
       apps.services-activation-preflight = {
         program = "${servicesActivationPreflight}/bin/services-activation-preflight";
         meta.description = "Verify phase-appropriate credentials, promotions, and signed clean state before activation";
@@ -197,7 +191,6 @@
         initialize-services-restic = initializeServicesRestic;
         reconcile-services-telegram = reconcileServicesTelegram;
         reconcile-services-resend = reconcileServicesResend;
-        reconcile-services-operator-network = reconcileServicesOperatorNetwork;
         services-activation-preflight = servicesActivationPreflight;
         aws-mail-credentials = awsMailCredentials;
       };
@@ -222,7 +215,6 @@
             python -m py_compile ${./activation/initialize_services_restic.py}
             python -m py_compile ${./activation/reconcile_services_telegram.py}
             python -m py_compile ${./activation/reconcile_services_resend.py}
-            python -m py_compile ${./activation/reconcile_services_operator_network.py}
             python -m py_compile ${./activation/sops_credentials.py}
             python -m py_compile ${./activation/aws_mail_credentials.py}
             shellcheck \

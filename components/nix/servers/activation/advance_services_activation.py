@@ -19,13 +19,6 @@ STAGES = {
             "services-hosts",
         ),
     ),
-    "mail": (
-        (UNDERCLOUD_WAVES, "wave84-mail-edge"),
-        (
-            Path("deployments/homelab/cloud/undercloud/84-mail-edge/tofu.yaml"),
-            "mail-edge",
-        ),
-    ),
     "mail-aws": (
         (
             Path("deployments/homelab/cloud/undercloud/84-mail-aws/tofu.yaml"),
