@@ -246,12 +246,18 @@ _: {
                 "admin-account":{
                   "@type":"User","name":"admin","domainId":"#primary-domain",
                   "description":"System administrator","roles":{"@type":"Admin"},
-                  "credentials":[{"@type":"Password","secret":($admin | rtrimstr("\\n"))}]
+                  "credentials":{"0":{
+                    "@type":"Password","credentialId":"a",
+                    "secret":($admin | rtrimstr("\\n"))
+                  }}
                 },
                 "primary-mailbox":{
                   "@type":"User","name":"fahrican","domainId":"#primary-domain",
                   "description":"Fahrican","roles":{"@type":"User"},
-                  "credentials":[{"@type":"Password","secret":($mailbox | rtrimstr("\\n"))}]
+                  "credentials":{"0":{
+                    "@type":"Password","credentialId":"a",
+                    "secret":($mailbox | rtrimstr("\\n"))
+                  }}
                 }
               }},
               {"@type":"reconcile","object":"NetworkListener","matchOn":["name"],"value":{

@@ -295,6 +295,13 @@
               ${./mail-aws.nix}
             test "$(rg --count '^[[:space:]]+start_server$' \
               ${./mail-aws.nix})" = 2
+            test "$(rg --count '\"credentialId\":\"a\"' \
+              ${./mail-aws.nix})" = 2
+            if rg --fixed-strings --quiet '"credentials":[' \
+              ${./mail-aws.nix}; then
+              echo 'Stalwart registry list fields must use numeric-keyed objects.' >&2
+              exit 1
+            fi
             if rg --fixed-strings --quiet '"allowInvalidCerts":true' \
               ${./mail-aws.nix}; then
               echo 'Stalwart contains a TLS certificate-validation bypass.' >&2
