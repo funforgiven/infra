@@ -19,9 +19,6 @@ _: {
 
       syncSecrets = pkgs.writeShellApplication {
         name = "sync-stalwart-aws-secrets";
-        # The file is intentionally materialized by EC2 user data, outside the
-        # Nix store, and therefore cannot be followed during the build check.
-        excludeShellChecks = [ "SC1091" ];
         runtimeInputs = [
           pkgs.awscli2
           pkgs.coreutils
@@ -31,7 +28,6 @@ _: {
         ];
         text = ''
           set -euo pipefail
-          source ${deploymentEnvironment}
 
           install -d -m 0700 -o stalwart -g stalwart ${runtimeDirectory}
           changed=0
@@ -90,9 +86,6 @@ _: {
 
       bootstrap = pkgs.writeShellApplication {
         name = "bootstrap-stalwart-aws";
-        # The file is intentionally materialized by EC2 user data, outside the
-        # Nix store, and therefore cannot be followed during the build check.
-        excludeShellChecks = [ "SC1091" ];
         runtimeInputs = [
           pkgs.awscli2
           pkgs.coreutils
@@ -102,7 +95,6 @@ _: {
         ];
         text = ''
           set -euo pipefail
-          source ${deploymentEnvironment}
           umask 077
 
           config_file=${stateDirectory}/config.json
@@ -339,14 +331,14 @@ _: {
       # retaining hostname and certificate validation.
       security.pki.certificateFiles = [ rdsCaBundle ];
 
-      # EC2 user data must create the deployment environment before the
-      # stalwart account exists.  On activation, tmpfiles narrows access to
-      # root and that service group before the unprivileged bootstrap runs.
-      # It also owns the shared tmpfs boundary so one unit stopping cannot
-      # remove credentials still in use by another unit.
+      # EC2 user data materializes only non-secret deployment metadata.
+      # systemd reads this root-only file before applying each service's user
+      # boundary, so scripts depend on an injected environment rather than
+      # filesystem access.  Tmpfiles also owns the shared runtime boundary so
+      # one unit stopping cannot remove credentials still used by another.
       systemd.tmpfiles.rules = [
-        "d /etc/stalwart-bootstrap 0750 root stalwart -"
-        "z ${deploymentEnvironment} 0640 root stalwart -"
+        "d /etc/stalwart-bootstrap 0750 root root -"
+        "z ${deploymentEnvironment} 0600 root root -"
         "d ${runtimeDirectory} 0700 stalwart stalwart -"
       ];
 
@@ -362,6 +354,7 @@ _: {
           unitConfig.ConditionPathExists = deploymentEnvironment;
           serviceConfig = {
             Type = "oneshot";
+            EnvironmentFile = deploymentEnvironment;
             ExecStart = "${syncSecrets}/bin/sync-stalwart-aws-secrets";
             UMask = "0077";
           };
@@ -382,6 +375,7 @@ _: {
             Type = "oneshot";
             User = "stalwart";
             Group = "stalwart";
+            EnvironmentFile = deploymentEnvironment;
             ExecStart = "${bootstrap}/bin/bootstrap-stalwart-aws";
             StateDirectory = "stalwart";
             StateDirectoryMode = "0700";
