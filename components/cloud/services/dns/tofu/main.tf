@@ -52,6 +52,8 @@ locals {
     "autoconfig",
     "autodiscover",
     "mail",
+    "mta-sts",
+    "ua-auto-config",
   ])
   resend_records = {
     for index, record in jsondecode(var.resend_records_json) :

@@ -947,6 +947,25 @@
             ).read_text()
             if "mail.fahrican.com:25" not in synthetic_probes:
                 raise SystemExit("SMTP-25 diagnostic probe series was removed")
+            dns_tofu = pathlib.Path(
+                "components/cloud/services/dns/tofu/main.tf"
+            ).read_text()
+            mail_hosts_match = re.search(
+                r"mail_hosts\s*=\s*toset\(\[(.*?)\]\)", dns_tofu, re.DOTALL
+            )
+            expected_mail_hosts = {
+                "autoconfig",
+                "autodiscover",
+                "mail",
+                "mta-sts",
+                "ua-auto-config",
+            }
+            if mail_hosts_match is None or set(
+                re.findall(r'"([^"]+)"', mail_hosts_match.group(1))
+            ) != expected_mail_hosts:
+                raise SystemExit(
+                    "service DNS must publish every automatic Stalwart TLS hostname"
+                )
             if {
                 "openai-admin-key-bootstrap",
                 "openai-organization-hosted-tool-policy",
