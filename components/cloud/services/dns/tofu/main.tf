@@ -58,6 +58,10 @@ locals {
     "${lower(record.type)}-${index}" => record
     if contains(["CNAME", "MX", "TXT"], record.type)
   }
+  stalwart_dkim_records = {
+    "v1-ed25519-20260823" = "v=DKIM1; k=ed25519; h=sha256; p=gSs541DU7F8OPrKAXEIMScEpz22TQw2TXysIjurJXPI="
+    "v1-rsa-20260823"     = "v=DKIM1; k=rsa; h=sha256; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqvXkBsulmdXskGapqEpB8uMBjd1j6FvDRp8PeQf9rDXY5L1PeEi/2nA0T7EVRTSgydEzFgnCkhNARx6qEO2lozFNXU6omb6Up8aWQXCZod/kccx0K968mK5KNsyMFef8DoxsoeQkVwzRD4gsr4Sc9K0T0WkIM/pIEsot/mnism4WyhuCSpDO0bZWGc918Irrogx/8XIbV0pEMOp2ze29Wk5WI2a/J9ZasPWewbnFzLdRrxocZm8v3f3UV9SFElkXPaJygQCds4mvsizcDYT9quOcORqrnazimQc4ODZ34S1m5J5VYsJq2TbilPko7qCXHu3zSliJuhgKFuQkWEhSbQIDAQAB"
+  }
 }
 
 resource "cloudflare_dns_record" "private_services" {
@@ -101,6 +105,35 @@ resource "cloudflare_dns_record" "dmarc" {
   content = "v=DMARC1; p=quarantine; rua=mailto:dmarc@fahrican.com; adkim=s; aspf=s; pct=100"
   ttl     = 300
   comment = "Git-managed DMARC policy"
+}
+
+resource "cloudflare_dns_record" "stalwart_dkim" {
+  for_each = local.stalwart_dkim_records
+
+  zone_id = data.cloudflare_zone.fahrican.zone_id
+  name    = "${each.key}._domainkey.fahrican.com"
+  type    = "TXT"
+  content = each.value
+  ttl     = 300
+  comment = "Git-managed Stalwart DKIM public key"
+}
+
+resource "cloudflare_dns_record" "mail_spf" {
+  zone_id = data.cloudflare_zone.fahrican.zone_id
+  name    = "mail.fahrican.com"
+  type    = "TXT"
+  content = "v=spf1 a -all"
+  ttl     = 300
+  comment = "Git-managed Stalwart host SPF policy"
+}
+
+resource "cloudflare_dns_record" "apex_spf" {
+  zone_id = data.cloudflare_zone.fahrican.zone_id
+  name    = "fahrican.com"
+  type    = "TXT"
+  content = "v=spf1 mx -all"
+  ttl     = 300
+  comment = "Git-managed Stalwart domain SPF policy"
 }
 
 resource "cloudflare_dns_record" "resend_verification" {
