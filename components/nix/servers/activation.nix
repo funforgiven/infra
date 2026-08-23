@@ -272,7 +272,12 @@
               ${./activation/aws_mail_credentials.py}
             rg --fixed-strings --quiet 'stdout=subprocess.DEVNULL' \
               ${./activation/aws_mail_credentials.py}
-            test "$(rg --count 'excludeShellChecks = \[ "SC1091" \];' \
+            if rg --fixed-strings --quiet 'excludeShellChecks' \
+              ${./mail-aws.nix}; then
+              echo 'Stalwart shell checks must not be suppressed.' >&2
+              exit 1
+            fi
+            test "$(rg --count 'EnvironmentFile = deploymentEnvironment;' \
               ${./mail-aws.nix})" = 2
             rg --fixed-strings --quiet 'STALWART_PASSWORD="$(<' \
               ${./mail-aws.nix}
@@ -333,7 +338,7 @@
             test ${toString (builtins.length awsMailConfiguration.security.pki.certificateFiles)} = 1
             test ${
               if
-                builtins.elem "d /etc/stalwart-bootstrap 0750 root stalwart -" awsMailConfiguration.systemd.tmpfiles.rules
+                builtins.elem "d /etc/stalwart-bootstrap 0750 root root -" awsMailConfiguration.systemd.tmpfiles.rules
               then
                 "1"
               else
@@ -341,7 +346,7 @@
             } = 1
             test ${
               if
-                builtins.elem "z /etc/stalwart-bootstrap/aws.env 0640 root stalwart -" awsMailConfiguration.systemd.tmpfiles.rules
+                builtins.elem "z /etc/stalwart-bootstrap/aws.env 0600 root root -" awsMailConfiguration.systemd.tmpfiles.rules
               then
                 "1"
               else

@@ -19,7 +19,6 @@ if ! grep -q "^$swap_file"'[[:space:]]' /proc/swaps; then
 fi
 
 install -d -m 0750 -o root -g root /etc/stalwart-bootstrap
-umask 0027
 
 printf '%s\n' \
   'AWS_REGION=eu-central-1' \
@@ -30,6 +29,7 @@ printf '%s\n' \
   'STALWART_MAILBOX_SECRET_ARN=${mailbox_secret_arn}' \
   'STALWART_RESEND_SECRET_ARN=${resend_secret_arn}' \
   > /etc/stalwart-bootstrap/aws.env
+chmod 0600 /etc/stalwart-bootstrap/aws.env
 
 source_path="$(
   nix --extra-experimental-features 'nix-command flakes verified-fetches' \
