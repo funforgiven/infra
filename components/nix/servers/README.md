@@ -3,7 +3,8 @@
 Hermes and the legacy Home Assistant installation are NixOS closures built from
 this repository. Home Assistant is migrating to the official HAOS appliance;
 its version and archive digest are pinned by the same signed image-promotion
-gate. The Hetzner mail host remains the rollback source until AWS mail cutover.
+gate. Mail runs on the dedicated AWS Frankfurt NixOS appliance declared under
+`components/cloud/services/mail-aws`.
 The operator account authenticates only with the pinned SSH key and has
 passwordless sudo because service hosts intentionally have no login password.
 
@@ -63,9 +64,8 @@ backup unit remains condition-gated until three root-only files exist:
   the least-privilege object-store writer credential
 
 All repositories use the existing `fahrican-cloud-recovery` Backblaze B2
-bucket. Hermes, legacy Home Assistant, and legacy mail-edge are confined respectively to
-`services/hosts/hermes/`, `services/hosts/home-assistant/`, and
-`services/hosts/mail-edge/`. The pinned Backblaze reconciler creates an
+bucket. Hermes and legacy Home Assistant are confined respectively to
+`services/hosts/hermes/` and `services/hosts/home-assistant/`. The pinned Backblaze reconciler creates an
 independent B2 application key restricted to each prefix so Restic can back
 up, restore, and prune without crossing a host boundary. Returned material is
 written directly to the admin-only SOPS document, and the master bootstrap pair
@@ -83,9 +83,7 @@ cannot report a missing object to that caller. Scheduled operations use the
 same key and remain confined to their host prefix.
 
 The declarative Restic timer runs daily with randomized delay and retains 14 daily,
-8 weekly, 12 monthly, and 3 yearly snapshots. Provider snapshots and Hetzner
-server backups are secondary recovery aids; they do not replace the encrypted
-off-site Restic copy.
+8 weekly, 12 monthly, and 3 yearly snapshots.
 
 After HAOS cutover, Home Assistant uses its native encrypted automatic-backup
 manager and native Backblaze B2 backup-location integration with the same
@@ -94,12 +92,12 @@ isolated restore passes and the retained NixOS root is retired.
 
 ## Host alert enrollment
 
-The two OpenStack service hosts export node and systemd metrics on TCP 9100
+The OpenStack service hosts export node and systemd metrics on TCP 9100
 only to the services subnet. A successful Restic unit writes an atomic
 textfile metric; the post-activation synthetic wave alerts when either
 exporter is unavailable or its last success is older than 26 hours. The
-Internet-facing mail edge is instead covered by public protocol probes and its
-local failure notifier; its exporter is not exposed across the Internet.
+AWS mail appliance is instead covered by public protocol probes and CloudWatch
+alarms.
 
 Critical units also use a local systemd `OnFailure` notifier. Its profile reads
 the dedicated infrastructure bot token and chat identifier from the central
@@ -112,19 +110,8 @@ do not put either value in an SSH command, Nix option, shell history, or
 temporary file. The notifier supplies the token to curl through standard input,
 so it is absent from the process list.
 
-Hermes additionally needs its separate OpenAI and Telegram runtime files. Mail
-needs Stalwart/Resend bootstrap files. Those service-specific
-credentials must not reuse the infrastructure or media bots.
-
-## Stalwart directory enrollment
-
-The mail server configuration, listeners, relay routing, TLS, firewall, and
-backup policy are declarative. Stalwart 0.15 remains pinned because the current
-NixOS module is not compatible with 0.16; its legacy principal API cannot
-safely reconcile deletions without risking mail-state detachment. Domain and
-account bootstrap is consequently a documented temporary manual exception.
-Create directory objects only after an isolated restore succeeds, make changes
-additively, and take an encrypted backup after each accepted change. Passwords
-and application-password values remain exclusively in the password manager and
-Stalwart state. The exception expires when the supported declarative apply
-workflow can be deployed with the NixOS module.
+Hermes additionally needs its separate OpenAI and Telegram runtime files.
+Those credentials must not reuse the infrastructure or media bots. AWS mail
+generates its administrator and mailbox credentials on the instance, stores
+them in Secrets Manager, and reconciles the domain and account plan through
+`stalwart-cli apply`.

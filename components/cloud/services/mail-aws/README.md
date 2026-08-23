@@ -1,6 +1,6 @@
 # AWS Stalwart mail platform
 
-This is the prepared replacement for the legacy Hetzner mail host. It is fixed
+This is the production mail platform. It is fixed
 to `eu-central-1` and deliberately favors the smallest simple durable design:
 
 - one Graviton `t4g.micro` EC2 instance running the signed NixOS `mail-aws`
@@ -81,43 +81,20 @@ EC2 role. Systems Manager inspection is Frankfurt-only, and Run Command is
 limited to the AWS shell document and EC2 instances tagged
 `Service=stalwart-mail`.
 
-## Safe activation and migration
+## Safe operation
 
-1. Finish and sign the implementation commit. Pin that commit as
-   `source_revision` in the suspended Terraform object. The EC2 bootstrap
-   accepts only that exact commit and verifies its SSH signature against the
-   repository signing key using Nix verified fetches.
-2. Put the temporary AWS bootstrap pair in the declared intake files and run
-   `nix run .#enroll-aws-mail-auth`. Verify that both files are empty, review
-   the dedicated identity and policy, confirm the temporary key was revoked,
-   review the OpenTofu plan, and unsuspend only `mail-aws`. Do not change
-   `active-mail-origin`; Hetzner remains the live MX and rollback source.
-3. Confirm the SNS email subscription. Through Session Manager, require the
-   bootstrap marker, a healthy Stalwart unit, RDS connectivity, an S3 write/read
-   probe, and generated administrator and mailbox secret versions.
-4. Run `nix run .#publish-aws-mail-resend` to stream the existing domain-scoped
-   Resend sending key directly from its
-   admin-only SOPS document into `fahrican/stalwart/resend` without printing it.
-   Require the `stalwart-resend-reconcile` unit to converge.
-5. Export the AWS domain's public DNS zone through the authenticated CLI, add
-   its generated DKIM records to the Git-managed DNS root, and validate SPF,
-   DKIM, DMARC, autoconfiguration records, listeners, and the outbound Resend
-   route against the AWS EIP before cutover. TLS-ALPN certificate issuance must
-   wait until the public mail names resolve to that EIP.
-6. Make a final encrypted backup of the Hetzner server. Copy the mailbox with a
-   standard IMAP migration tool using credential files or no-echo prompts, run a
-   second delta pass during the maintenance window, and compare message and
-   folder counts. No password may appear in an argument or log.
-7. Change `active-mail-origin` from `hetzner` to `aws`. The existing reconciler
-   selects the AWS output in memory and the Cloudflare root moves the A/MX-facing
-   mail names without changing any workload secret. After forward DNS has
-   propagated, require TLS-ALPN certificate issuance and validate HTTPS, IMAPS,
-   and submission hostname verification. Then set `enable_reverse_dns` to true
-   and verify the EIP PTR.
-8. Repeat the independent Resend-to-MX acceptance test and authenticated IMAPS
-   read. Retain the protected Hetzner server and backup for at least 14 days.
-   Remove it only in a later explicit, reviewed change after RDS point-in-time
-   recovery and S3 version recovery have both been exercised.
+The Git-pinned EC2 bootstrap accepts only the declared signed source revision.
+After infrastructure changes, require the bootstrap marker, a healthy Stalwart
+unit, RDS connectivity, the S3 read/write probe, and all declared CloudWatch
+alarms. Confirm the SNS subscription remains active.
+
+Rotate the domain-scoped Resend sending key with
+`reconcile-services-resend apply`, then run `publish-aws-mail-resend` to stream
+it from its admin-only SOPS document into `fahrican/stalwart/resend` without
+printing it. Require `stalwart-resend-reconcile` to converge. For DNS changes,
+validate DKIM, SPF, DMARC, autoconfiguration records, TLS hostname verification,
+the EIP PTR, an independent Resend-to-MX delivery, and an authenticated IMAPS
+read.
 
 ## Migration completion evidence
 
@@ -125,9 +102,9 @@ The production migration completed on 2026-08-23. The signed origin change in
 `9d55a44ad7326b2821aedfb9723462c11a278fc3` moved the Git-managed mail names to
 the AWS EIP only after the following recovery and data checks succeeded:
 
-- the final encrypted Hetzner Restic snapshot is `256760a1`, created at
-  2026-08-23 01:20:29 UTC from `/var/lib/acme/mail.fahrican.com` and
-  `/var/lib/stalwart` with 5.627 MiB captured;
+- the final encrypted source snapshot was created before cutover and used for
+  qualification; after explicit approval, its Backblaze repository and every
+  Hetzner provider backup were permanently erased on 2026-08-23;
 - the source contained five folders and three INBOX messages. The initial
   standard IMAP copy transferred all three messages and 4,538 bytes. The final
   maintenance-window delta compared all five folders and reported no source-
@@ -153,10 +130,10 @@ remains. All three declared CloudWatch alarms were `OK`. Forward DNS resolves
 `mail.fahrican.com` to the EIP, its PTR resolves back to `mail.fahrican.com`,
 and public hostname verification passed on HTTPS, submissions, and IMAPS.
 
-The Hetzner Stalwart unit is stopped. Keep that protected host and snapshot
-intact through at least 2026-09-06 as the bounded rollback source. Removing it,
-its recovery data, or the pre-cutover RDS snapshot requires a later explicit,
-reviewed change; migration completion does not authorize their destruction.
+The former Hetzner server, retained IPv4, firewall, SSH key, provider backups,
+and Backblaze Restic repository were explicitly approved for destruction and
+retired on 2026-08-23. AWS is the sole mail origin. The pre-cutover RDS snapshot
+remains an independent AWS recovery artifact.
 
 RDS point-in-time recovery and S3 versions form one recovery procedure: restore
 RDS to the selected time, remove any later S3 delete markers needed by the

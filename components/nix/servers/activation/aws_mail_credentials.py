@@ -33,7 +33,7 @@ GITOPS_POLICY = "fahrican-mail-gitops"
 GITOPS_POLICY_FILE = Path(
     "components/cloud/services/mail-aws/bootstrap-iam-policy.json"
 )
-RESEND_FILE = Path("deployments/homelab/cloud/host-runtime/mail-edge.sops.yaml")
+RESEND_FILE = Path("deployments/homelab/cloud/undercloud/84-mail-aws/resend.sops.yaml")
 RESEND_KEY = "STALWART_RESEND_API_KEY"
 RESEND_SECRET_ID = "fahrican/stalwart/resend"
 AWS_REGION = "eu-central-1"

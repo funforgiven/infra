@@ -30,26 +30,6 @@ exceptions:
     drift_probe: Compare domain settings, verification status, DNS records, and non-secret key metadata through the API.
     review_interval: monthly
     exit_criterion: Remove when an approved provider can issue keys directly into the secret store without state exposure.
-  - id: stalwart-directory-bootstrap
-    resource: Stalwart mail domain, initial mailbox, aliases, and application passwords
-    owner: funforgiven
-    rationale: The pinned NixOS-compatible Stalwart 0.15 release lacks the safe declarative apply interface available in Stalwart 0.16, while destructive reconciliation through its legacy principal API can orphan existing mail state.
-    procedure: After the encrypted backup has passed an isolated restore, create only the objects declared in components/cloud/services/mail-edge/directory-inventory.yaml through the private management interface; update that non-secret desired inventory before every additive change and take an immediate encrypted backup after every accepted change.
-    secret_handling: Passwords and application-password values go directly from the password manager into Stalwart and never enter Nix, Git, shell history, command arguments, OpenTofu state, screenshots, or documentation.
-    backup: The encrypted Stalwart state backup is the authoritative recovery copy; retain a verified pre-change snapshot before any rename or deletion.
-    drift_probe: Compare the redacted domain, account, alias, and application-password metadata with components/cloud/services/mail-edge/directory-inventory.yaml monthly without retrieving hashes or secret values.
-    review_interval: monthly
-    exit_criterion: Migrate to the supported Stalwart declarative apply workflow when a compatible NixOS module is available, then remove this exception after a restore-tested migration.
-  - id: hcloud-api-token-issuance
-    resource: Hetzner Cloud token used by the mail-edge OpenTofu controller
-    owner: funforgiven
-    rationale: Hetzner Cloud API tokens must be issued through project account controls before the declarative provider can authenticate.
-    procedure: Issue a dedicated read-write token in the mail-edge project and ingest it directly as HCLOUD_TOKEN in the controller's SOPS-managed runtime Secret.
-    secret_handling: The token is never entered as an OpenTofu variable, committed as plaintext, printed, or placed in command arguments.
-    backup: SOPS ciphertext preserves the active token; the Hetzner project remains the revocation and rotation authority.
-    drift_probe: Verify the dedicated token inventory and last rotation date monthly without retrieving or displaying its value.
-    review_interval: monthly
-    exit_criterion: Remove when Hetzner supports a workload identity flow that the controller can use without a long-lived token.
   - id: aws-mail-bootstrap-credential-issuance
     resource: AWS provisioning credential and SNS email subscription for the independent mail platform
     owner: funforgiven
@@ -63,11 +43,11 @@ exceptions:
   - id: smtp-inbound-monitoring-vantage
     resource: Continuous SMTP port 25 reachability from an independent Internet vantage
     owner: funforgiven
-    rationale: The services-cluster network cannot establish outbound TCP port 25 to the mail edge even though its other mail probes pass, the live Hetzner and NixOS firewalls admit port 25, Stalwart listens on it, and an external Resend delivery through public MX reaches the mailbox. A credentialed mail-loop exporter or another custom monitoring service is not justified for this personal deployment.
-    procedure: Retain the non-paging mail.fahrican.com:25 probe series for diagnosis. After mail-edge, DNS, or provider changes, send one idempotent acceptance message from Resend through the public MX, require Resend's delivered state, and verify the exact subject over authenticated IMAPS. Ports 465, 587, and 993 and every HTTP endpoint remain continuously paging from the services cluster.
+    rationale: The services-cluster network cannot establish outbound TCP port 25 to the AWS mail appliance even though its other mail probes pass, the AWS security group admits SMTP, Stalwart listens on it, and an external Resend delivery through public MX reaches the mailbox. A credentialed mail-loop exporter or another custom monitoring service is not justified for this personal deployment.
+    procedure: Retain the non-paging mail.fahrican.com:25 probe series for diagnosis. After mail, DNS, or provider changes, send one idempotent acceptance message from Resend through the public MX, require Resend's delivered state, and verify the exact subject over authenticated IMAPS. Ports 465, 587, and 993 and every HTTP endpoint remain continuously paging from the services cluster.
     secret_handling: Resend administration and mailbox credentials are read only from their existing SOPS or mode-0600 runtime boundaries into process memory; they are never printed, committed, passed as command arguments, or copied into the monitoring cluster.
-    backup: The encrypted Stalwart state backup remains the recovery artifact; the acceptance message contains no secret or operational state.
-    drift_probe: Review the retained port 25 series and repeat the external MX-to-IMAP acceptance monthly without displaying message content or credentials. OpenTofu and NixOS independently detect server and firewall drift.
+    backup: RDS point-in-time recovery and S3 object versions preserve Stalwart state; the acceptance message contains no secret or operational state.
+    drift_probe: Review the retained port 25 series and repeat the external MX-to-IMAP acceptance monthly without displaying message content or credentials. OpenTofu and NixOS independently detect EC2 and security-group drift.
     review_interval: monthly
     exit_criterion: Remove this exception when a trustworthy external TCP vantage can feed the existing alert path without a new long-lived credential or custom service, or when the services-cluster source network can reach port 25 reliably.
   - id: offsite-backup-credential-issuance

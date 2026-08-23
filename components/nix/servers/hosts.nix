@@ -18,7 +18,6 @@ in
   dendritic.hosts = {
     hermes = mkServer "services-openstack-guest" "services-hermes";
     home-assistant = mkServer "services-openstack-guest" "services-home-assistant";
-    mail-edge = mkServer "services-hetzner-guest" "services-mail-edge";
     mail-aws = {
       system = "aarch64-linux";
       stateVersion = "26.05";

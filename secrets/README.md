@@ -68,13 +68,12 @@ cluster rebuild; rotate them only as an explicit recipient migration.
 Ignored `*.key` files are a one-way intake boundary, not a secret store. Keep
 each file mode `0600`, put exactly one key in it, and never paste a value into a
 command, chat, commit, or log. The credential-final services workflow accepts
-only these nine externally issued keys:
+these externally issued keys:
 
 | Intake file | Issuer and purpose |
 | --- | --- |
 | `B2_MASTER_APPLICATION_KEY_ID.key` | Backblaze master key ID; ephemeral scoped-key bootstrap |
 | `B2_MASTER_APPLICATION_KEY.key` | Backblaze master key; ephemeral scoped-key bootstrap |
-| `HCLOUD_TOKEN.key` | Dedicated Hetzner mail-edge project token |
 | `INFRA_TELEGRAM_BOT_TOKEN.key` | Infrastructure-alert bot token |
 | `HERMES_TELEGRAM_BOT_TOKEN.key` | Private Hermes bot token |
 | `ND_LASTFM_APIKEY.key` | Navidrome Last.fm application key |
@@ -86,10 +85,9 @@ only these nine externally issued keys:
 
 The enrollment and provider reconcilers clear an intake file only after its
 value has been successfully encrypted or consumed. Backblaze's master pair
-creates four prefix-restricted application keys and is then cleared. Resend's
+creates three prefix-restricted application keys and is then cleared. Resend's
 admin key later creates the domain-scoped Stalwart sending key. Telegram chat
-and user IDs are discovered from exact `/activate` updates. The operator mail
-CIDR is independently discovered. Stalwart and backup passwords are generated
+and user IDs are discovered from exact `/activate` updates. Stalwart and backup passwords are generated
 locally. The operator owns the OpenAI project permissions and hard spend limit
 in the OpenAI dashboard; the generic enrollment app writes `OPENAI_API_KEY`
 directly from its one-way intake file into the admin-only Hermes SOPS document.

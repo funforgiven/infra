@@ -14,7 +14,7 @@ SPEC = ResendKeySpec(
     domain="fahrican.com",
     administration_file=Path("runtime.sops.yaml"),
     administration_credential="RESEND_ADMIN_API_KEY",
-    output_file=Path("mail-edge.sops.yaml"),
+    output_file=Path("resend.sops.yaml"),
     output_credential="STALWART_RESEND_API_KEY",
 )
 

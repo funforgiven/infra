@@ -9,9 +9,6 @@ resources:
   - resource: magnum-services-cluster-and-flux-bootstrap
     owner: pinned-api-reconciler
     state: Desired topology in Git; kubeconfig exists only on a memory-backed reconciliation volume
-  - resource: hetzner-smtp-edge-and-public-address
-    owner: opentofu
-    state: OpenTofu state and reviewed configuration in Git
   - resource: aws-mail-vpc-compute-rds-s3-secrets-and-monitoring
     owner: opentofu
     state: OpenTofu state and reviewed configuration in Git; runtime secret versions are produced only by RDS, the appliance IAM role, or the no-echo enrollment boundary

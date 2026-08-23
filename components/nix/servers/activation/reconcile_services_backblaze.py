@@ -128,13 +128,13 @@ class BackupContract:
             raise ReconcileError("operator bootstrap credentials must be cleared on success")
         if self.s3_endpoint != f"https://s3.{self.region}.backblazeb2.com":
             raise ReconcileError("Backblaze S3 endpoint and region diverge")
-        if len(self.keys) != 4:
-            raise ReconcileError("exactly four services backup keys must be declared")
+        if len(self.keys) != 3:
+            raise ReconcileError("exactly three services backup keys must be declared")
         restic_specs = [
             spec for spec in self.keys if spec.restic_password_credential is not None
         ]
-        if len(restic_specs) != 3:
-            raise ReconcileError("exactly three host Restic repositories must be declared")
+        if len(restic_specs) != 2:
+            raise ReconcileError("exactly two host Restic repositories must be declared")
         names = [spec.name for spec in self.keys]
         prefixes = [spec.prefix for spec in self.keys]
         credentials = [
