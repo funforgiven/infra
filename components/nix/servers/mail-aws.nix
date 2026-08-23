@@ -287,11 +287,11 @@ _: {
                 } + if $mailbox_exists then {} else {"credentials":password($mailbox)} end)
               }},
               {"@type":"reconcile","object":"NetworkListener","matchOn":["name"],"value":{
-                "smtp":{"name":"smtp","protocol":"smtp","bind":["[::]:25"],"useTls":true,"tlsImplicit":false},
-                "submission":{"name":"submission","protocol":"smtp","bind":["[::]:587"],"useTls":true,"tlsImplicit":false},
-                "submissions":{"name":"submissions","protocol":"smtp","bind":["[::]:465"],"useTls":true,"tlsImplicit":true},
-                "imaptls":{"name":"imaptls","protocol":"imap","bind":["[::]:993"],"useTls":true,"tlsImplicit":true},
-                "https":{"name":"https","protocol":"http","bind":["[::]:443"],"useTls":true,"tlsImplicit":true}
+                "smtp":{"name":"smtp","protocol":"smtp","bind":{"0":"[::]:25"},"useTls":true,"tlsImplicit":false},
+                "submission":{"name":"submission","protocol":"smtp","bind":{"0":"[::]:587"},"useTls":true,"tlsImplicit":false},
+                "submissions":{"name":"submissions","protocol":"smtp","bind":{"0":"[::]:465"},"useTls":true,"tlsImplicit":true},
+                "imaptls":{"name":"imaptls","protocol":"imap","bind":{"0":"[::]:993"},"useTls":true,"tlsImplicit":true},
+                "https":{"name":"https","protocol":"http","bind":{"0":"[::]:443"},"useTls":true,"tlsImplicit":true}
               }}
             ' | ${cliPackage}/bin/stalwart-cli apply --stdin --json --quiet >/dev/null
 
@@ -335,7 +335,7 @@ _: {
               }
             }},
             {"@type":"update","object":"MtaOutboundStrategy","value":{
-              "route":{"match":[{"if":"is_local_domain(rcpt_domain)","then":"\u0027local\u0027"}],"else":"\u0027resend\u0027"}
+              "route":{"match":{"0":{"if":"is_local_domain(rcpt_domain)","then":"\u0027local\u0027"}},"else":"\u0027resend\u0027"}
             }}
           ' | ${cliPackage}/bin/stalwart-cli apply --insecure --stdin --json --quiet >/dev/null
           unset STALWART_PASSWORD
