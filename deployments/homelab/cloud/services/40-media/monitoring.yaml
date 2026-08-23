@@ -29,3 +29,16 @@ spec:
           annotations:
             summary: Navidrome metrics are unavailable
             description: Navidrome has not been scrapeable for ten minutes.
+        - alert: BeetsImporterStalled
+          expr: >-
+            time() - kube_cronjob_status_last_successful_time{
+              namespace="media",cronjob="beets-import"
+            } > 1800
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Beets has not completed an import check recently
+            description: >-
+              The five-minute Beets importer has not completed successfully
+              for at least thirty minutes.

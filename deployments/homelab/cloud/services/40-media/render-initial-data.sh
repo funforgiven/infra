@@ -9,12 +9,15 @@ case "$admin_password" in
 esac
 test "${#admin_password}" -ge 32
 
-mkdir -p /srv/sftpgo/data/media/library
+mkdir -p \
+  /srv/sftpgo/data/media/inbox \
+  /srv/sftpgo/data/media/library \
+  /srv/sftpgo/data/media/quarantine
 
 {
   printf '{"users":[{'
   printf '"status":1,"username":"fahricanelidemir@gmail.com",'
-  printf '"home_dir":"/srv/sftpgo/data/media/library",'
+  printf '"home_dir":"/srv/sftpgo/data/media/inbox",'
   printf '"uid":1000,"gid":1000,'
   printf '"permissions":{"/":["*"]},'
   printf '"filters":{"denied_protocols":["SSH","FTP","DAV"],'

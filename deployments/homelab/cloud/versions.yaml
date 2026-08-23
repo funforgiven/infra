@@ -1,6 +1,6 @@
 schemaVersion: 1
 document: homelab-cloud-version-selection
-lastReviewed: "2026-08-14"
+lastReviewed: "2026-08-23"
 
 selfHosted:
   infrastructure:
@@ -13,6 +13,9 @@ selfHosted:
     commit: f80f453ae0679347e38abc917c7f94f717bf96c5
     deployment: dedicated-nixos-vm
   media:
+    beets:
+      version: 2.13.1
+      image: lscr.io/linuxserver/beets:2.13.1-ls348@sha256:90b1404e962dfc09c1926f4d8dca8920fc90d71369df5398340a12eb8ce7328c
     navidrome:
       version: 0.61.2
       image: docker.io/deluan/navidrome:0.61.2@sha256:9fa40b3d8dec43ceb2213d1fa551da3dcfef6ac6d19c2e534efb92527c2bafd2

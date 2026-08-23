@@ -1,0 +1,88 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: beets-import
+  namespace: media
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: beets-import
+            app.kubernetes.io/part-of: media
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: beets
+              image: lscr.io/linuxserver/beets:2.13.1-ls348@sha256:90b1404e962dfc09c1926f4d8dca8920fc90d71369df5398340a12eb8ce7328c
+              command:
+                - /bin/sh
+                - /opt/beets/import.sh
+              env:
+                - name: BEETSDIR
+                  value: /config
+                - name: HOME
+                  value: /tmp
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: PYTHONDONTWRITEBYTECODE
+                  value: "1"
+                - name: XDG_CACHE_HOME
+                  value: /state/cache
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: "2"
+                  memory: 2Gi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+                readOnlyRootFilesystem: true
+                runAsGroup: 1000
+                runAsNonRoot: true
+                runAsUser: 1000
+              volumeMounts:
+                - name: config
+                  mountPath: /config
+                  readOnly: true
+                - name: config
+                  mountPath: /opt/beets
+                  readOnly: true
+                - name: media
+                  mountPath: /media
+                - name: state
+                  mountPath: /state
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: config
+              configMap:
+                name: beets-config
+                defaultMode: 0555
+            - name: media
+              persistentVolumeClaim:
+                claimName: media-library
+            - name: state
+              persistentVolumeClaim:
+                claimName: beets-data
+            - name: tmp
+              emptyDir: {}
