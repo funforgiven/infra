@@ -136,7 +136,7 @@ data:
     set -eu
 
     cluster=services-v1
-    template=services-kubernetes-v1.36.2-v1
+    template=services-kubernetes-v1.36.2-v2
     undercloud_kubeconfig=/tmp/undercloud-kubeconfig
     kubeconfig=/tmp/kube/config
     kubectl=/tmp/bin/kubectl
@@ -182,7 +182,7 @@ data:
         --network-driver calico \
         --volume-driver cinder \
         --flavor services.worker \
-        --master-flavor services.master \
+        --master-flavor services.master.v2 \
         --dns-nameserver 10.21.40.1 \
         --master-lb-enabled \
         --floating-ip-enabled \
@@ -367,6 +367,9 @@ data:
         '        - receiver: "null"' \
         '          matchers:' \
         '            - alertname = "Watchdog"' \
+        '        - receiver: "null"' \
+        '          matchers:' \
+        '            - alertname = "InfoInhibitor"' \
         '    receivers:' \
         '      - name: "null"' \
         '      - name: infrastructure-telegram' \
