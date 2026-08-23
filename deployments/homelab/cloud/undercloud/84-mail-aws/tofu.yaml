@@ -22,7 +22,7 @@ spec:
     - name: nixos_ami_id
       value: "ami-019a83797574d9161"
     - name: enable_reverse_dns
-      value: "false"
+      value: "true"
     - name: enable_restore_qualification
       value: "false"
   runnerPodTemplate:
