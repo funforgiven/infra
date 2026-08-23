@@ -45,10 +45,6 @@ resource "hcloud_primary_ip" "mail_edge" {
   location    = "hel1"
   auto_delete = false
   labels      = local.labels
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "hcloud_firewall" "mail_edge" {
@@ -150,9 +146,9 @@ resource "hcloud_server" "mail_edge" {
     hcloud_firewall.mail_edge.id,
   ]
   labels                   = local.labels
-  backups                  = true
-  delete_protection        = true
-  rebuild_protection       = true
+  backups                  = false
+  delete_protection        = false
+  rebuild_protection       = false
   shutdown_before_deletion = true
 
   public_net {
@@ -161,9 +157,6 @@ resource "hcloud_server" "mail_edge" {
     ipv6_enabled = false
   }
 
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "hcloud_rdns" "mail_edge" {

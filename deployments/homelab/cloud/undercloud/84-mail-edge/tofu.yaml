@@ -8,7 +8,7 @@ spec:
   interval: 10m
   retryInterval: 1m
   approvePlan: auto
-  destroyResourcesOnDeletion: false
+  destroyResourcesOnDeletion: true
   path: ./components/cloud/services/mail-edge/tofu
   sourceRef:
     kind: GitRepository
