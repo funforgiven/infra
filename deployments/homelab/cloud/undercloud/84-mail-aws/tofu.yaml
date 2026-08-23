@@ -18,7 +18,9 @@ spec:
     name: services-tofu-source
   vars:
     - name: source_revision
-      value: "b43a4dd297a3928a19927b03281b170b2359cbb0"
+      value: "3be111603e9cb931cd9b8f24ed2d38a30a32a5d3"
+    - name: nixos_ami_id
+      value: "ami-019a83797574d9161"
     - name: enable_reverse_dns
       value: "false"
   runnerPodTemplate:
