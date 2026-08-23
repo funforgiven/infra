@@ -395,6 +395,13 @@
             )
             if not re.fullmatch(r"[0-9a-f]{40}", aws_source_revision):
                 raise SystemExit("AWS mail source revision must be an exact commit")
+            aws_nixos_ami_id = next(
+                item["value"]
+                for item in aws_mail_tofu["spec"]["vars"]
+                if item["name"] == "nixos_ami_id"
+            )
+            if not re.fullmatch(r"ami-[0-9a-f]{17}", aws_nixos_ami_id):
+                raise SystemExit("AWS mail NixOS AMI must be pinned exactly")
             if aws_mail_tofu["spec"]["runnerPodTemplate"]["spec"].get("envFrom") != [
                 {"secretRef": {"name": "aws-mail-provisioning"}}
             ]:
@@ -407,6 +414,7 @@
             required_aws_contract = (
                 'region = "eu-central-1"',
                 'instance_type        = "t4g.micro"',
+                'values = [var.nixos_ami_id]',
                 'instance_class = "db.t4g.micro"',
                 'engine_version = "17.10"',
                 "manage_master_user_password = true",
@@ -432,6 +440,8 @@
                 fragment in aws_tofu_text for fragment in forbidden_aws_state
             ) or re.search(r"^\s*password\s*=", aws_tofu_text, re.M):
                 raise SystemExit("AWS mail would put credentials or SSH state in OpenTofu")
+            if "most_recent = true" in aws_tofu_text:
+                raise SystemExit("AWS mail appliance AMI must not drift during reconciliation")
             if "master_user_secret_kms_key_id" in aws_tofu_text:
                 raise SystemExit("AWS mail bypasses the managed Secrets Manager key default")
             if "from_port   = 22" in aws_tofu_text:

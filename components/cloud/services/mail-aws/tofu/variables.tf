@@ -11,6 +11,16 @@ variable "source_revision" {
   }
 }
 
+variable "nixos_ami_id" {
+  description = "Pinned official NixOS aarch64 AMI in eu-central-1"
+  type        = string
+
+  validation {
+    condition     = can(regex("^ami-[0-9a-f]{17}$", var.nixos_ami_id))
+    error_message = "nixos_ami_id must be an exact AWS AMI ID."
+  }
+}
+
 variable "enable_reverse_dns" {
   description = "Create the EIP PTR only after forward DNS has propagated to the AWS address"
   type        = bool
