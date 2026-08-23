@@ -349,6 +349,53 @@ _: {
           unset STALWART_PASSWORD
         '';
       };
+
+      reconcileAcme = pkgs.writeShellApplication {
+        name = "reconcile-stalwart-acme";
+        runtimeInputs = [
+          pkgs.coreutils
+          pkgs.jq
+        ];
+        text = ''
+          set -euo pipefail
+          export STALWART_URL=https://127.0.0.1:443
+          export STALWART_USER=admin@fahrican.com
+          STALWART_PASSWORD="$(< ${runtimeDirectory}/admin-password)"
+          export STALWART_PASSWORD
+
+          domain=
+          for _ in $(seq 1 60); do
+            if domain="$(${cliPackage}/bin/stalwart-cli \
+              --insecure query Domain --where name=fahrican.com \
+              --fields id,certificateManagement --json 2>/dev/null)"; then
+              break
+            fi
+            sleep 2
+          done
+
+          domain_id="$(jq --exit-status --raw-output '.id' <<< "$domain")"
+          provider_id="$(
+            jq --exit-status --raw-output \
+              '.certificateManagement.acmeProviderId' <<< "$domain"
+          )"
+          provider="$(${cliPackage}/bin/stalwart-cli \
+            --insecure get AcmeProvider "$provider_id" \
+            --fields challengeType --json)"
+
+          if [[ "$(jq --raw-output '.challengeType' <<< "$provider")" \
+            != DnsPersist01 ]]; then
+            jq --compact-output --null-input --arg id "$provider_id" '
+              {"@type":"update","object":"AcmeProvider","id":$id,"value":{
+                "challengeType":"DnsPersist01"
+              }}
+            ' | ${cliPackage}/bin/stalwart-cli \
+              --insecure apply --stdin --json --quiet >/dev/null
+          fi
+
+          test -n "$domain_id"
+          unset STALWART_PASSWORD
+        '';
+      };
     in
     {
       # The EC2 bootstrap creates this exact file before its first Nix
@@ -479,6 +526,24 @@ _: {
             User = "stalwart";
             Group = "stalwart";
             ExecStart = "${reconcileRelay}/bin/reconcile-stalwart-resend";
+            UMask = "0077";
+          };
+        };
+
+        stalwart-acme-reconcile = {
+          description = "Reconcile pre-cutover Stalwart ACME authorization";
+          after = [
+            "stalwart.service"
+            "stalwart-secrets.service"
+          ];
+          requires = [ "stalwart.service" ];
+          wantedBy = [ "multi-user.target" ];
+          unitConfig.ConditionPathExists = "${runtimeDirectory}/admin-password";
+          serviceConfig = {
+            Type = "oneshot";
+            User = "stalwart";
+            Group = "stalwart";
+            ExecStart = "${reconcileAcme}/bin/reconcile-stalwart-acme";
             UMask = "0077";
           };
         };

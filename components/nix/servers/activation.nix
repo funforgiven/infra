@@ -347,6 +347,10 @@
               ${./mail-aws.nix}
             rg --fixed-strings --quiet \
               '"route/else":"\u0027resend\u0027"' ${./mail-aws.nix}
+            rg --fixed-strings --quiet \
+              '"challengeType":"DnsPersist01"' ${./mail-aws.nix}
+            rg --fixed-strings --quiet \
+              'wantedBy = [ "multi-user.target" ];' ${./mail-aws.nix}
             if rg --fixed-strings --quiet '"allowInvalidCerts":true' \
               ${./mail-aws.nix}; then
               echo 'Stalwart contains a TLS certificate-validation bypass.' >&2
