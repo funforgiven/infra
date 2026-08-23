@@ -40,5 +40,5 @@ spec:
           annotations:
             summary: Beets has not completed an import check recently
             description: >-
-              The five-minute Beets importer has not completed successfully
+              The one-minute Beets importer has not completed successfully
               for at least thirty minutes.
