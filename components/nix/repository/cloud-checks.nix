@@ -1118,6 +1118,35 @@
                 for fragment in required_sftpgo_oidc
             ):
                 raise SystemExit("SFTPGo native ZITADEL OIDC contract drifted")
+            sftpgo_documents = list(yaml.safe_load_all(sftpgo))
+            sftpgo_statefulset = next(
+                document
+                for document in sftpgo_documents
+                if document.get("kind") == "StatefulSet"
+            )
+            sftpgo_container = next(
+                container
+                for container in sftpgo_statefulset["spec"]["template"]["spec"][
+                    "containers"
+                ]
+                if container["name"] == "sftpgo"
+            )
+            sftpgo_environment = {
+                variable["name"]: variable.get("value")
+                for variable in sftpgo_container["env"]
+            }
+            required_sftpgo_proxy = {
+                "SFTPGO_HTTPD__BINDINGS__0__PROXY_ALLOWED": "172.16.0.0/13",
+                "SFTPGO_HTTPD__BINDINGS__0__CLIENT_IP_PROXY_HEADER": "X-Forwarded-For",
+                "SFTPGO_HTTPD__BINDINGS__0__CLIENT_IP_HEADER_DEPTH": "0",
+            }
+            if any(
+                sftpgo_environment.get(name) != value
+                for name, value in required_sftpgo_proxy.items()
+            ):
+                raise SystemExit(
+                    "SFTPGo must derive a stable client IP from the trusted Envoy proxy pool"
+                )
             for atomic_upload_fragment in (
                 "SFTPGO_COMMON__UPLOAD_MODE",
                 'value: "1"',
