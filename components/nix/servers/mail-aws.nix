@@ -291,11 +291,11 @@ _: {
                 }
               }},
               {"@type":"reconcile","object":"NetworkListener","matchOn":["name"],"value":{
-                "smtp":{"name":"smtp","protocol":"smtp","bind":{"0":"[::]:25"},"useTls":true,"tlsImplicit":false},
-                "submission":{"name":"submission","protocol":"smtp","bind":{"0":"[::]:587"},"useTls":true,"tlsImplicit":false},
-                "submissions":{"name":"submissions","protocol":"smtp","bind":{"0":"[::]:465"},"useTls":true,"tlsImplicit":true},
-                "imaptls":{"name":"imaptls","protocol":"imap","bind":{"0":"[::]:993"},"useTls":true,"tlsImplicit":true},
-                "https":{"name":"https","protocol":"http","bind":{"0":"[::]:443"},"useTls":true,"tlsImplicit":true}
+                "smtp":{"name":"smtp","protocol":"smtp","bind":{"[::]:25":true},"useTls":true,"tlsImplicit":false},
+                "submission":{"name":"submission","protocol":"smtp","bind":{"[::]:587":true},"useTls":true,"tlsImplicit":false},
+                "submissions":{"name":"submissions","protocol":"smtp","bind":{"[::]:465":true},"useTls":true,"tlsImplicit":true},
+                "imaptls":{"name":"imaptls","protocol":"imap","bind":{"[::]:993":true},"useTls":true,"tlsImplicit":true},
+                "https":{"name":"https","protocol":"http","bind":{"[::]:443":true},"useTls":true,"tlsImplicit":true}
               }}
             ' | ${cliPackage}/bin/stalwart-cli apply --stdin --json --quiet >/dev/null
 

@@ -318,11 +318,16 @@
               echo 'Stalwart registry list fields must use numeric-keyed objects.' >&2
               exit 1
             fi
-            test "$(rg --count '"bind":\{"0":"\[::\]:' \
+            test "$(rg --count '"bind":\{"\[::\]:[0-9]+":true\}' \
               ${./mail-aws.nix})" = 5
+            if rg --fixed-strings --quiet '"bind":{"0"' \
+              ${./mail-aws.nix}; then
+              echo 'Stalwart map fields must use values as keys.' >&2
+              exit 1
+            fi
             if rg --fixed-strings --quiet '"bind":[' \
               ${./mail-aws.nix}; then
-              echo 'Stalwart listener bind fields must use numeric-keyed objects.' >&2
+              echo 'Stalwart listener bind fields must use address-keyed objects.' >&2
               exit 1
             fi
             rg --fixed-strings --quiet \
