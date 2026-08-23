@@ -1280,6 +1280,9 @@
                 'inbox=$media_root/inbox',
                 'quarantine=$media_root/quarantine',
                 '-mmin -2',
+                "-name '????????T??????Z-beets-import-*'",
+                '-mmin +1440',
+                '-exec rm -rf -- {} +',
                 '"$beet" import --noautotag "$library"',
                 'mv "$candidate" "$review/"',
             ):
