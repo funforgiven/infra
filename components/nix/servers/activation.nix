@@ -331,13 +331,13 @@
               exit 1
             fi
             rg --fixed-strings --quiet \
-              '"match":{"0":{"if":"is_local_domain(rcpt_domain)"' \
+              '"route/match/0/if":"is_local_domain(rcpt_domain)"' \
               ${./mail-aws.nix}
-            if rg --fixed-strings --quiet '"route":{"match":[' \
-              ${./mail-aws.nix}; then
-              echo 'Stalwart expression match fields must use numeric-keyed objects.' >&2
-              exit 1
-            fi
+            rg --fixed-strings --quiet \
+              '"route/match/0/then":"\u0027local\u0027"' \
+              ${./mail-aws.nix}
+            rg --fixed-strings --quiet \
+              '"route/else":"\u0027resend\u0027"' ${./mail-aws.nix}
             if rg --fixed-strings --quiet '"allowInvalidCerts":true' \
               ${./mail-aws.nix}; then
               echo 'Stalwart contains a TLS certificate-validation bypass.' >&2

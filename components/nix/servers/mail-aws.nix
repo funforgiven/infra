@@ -339,7 +339,9 @@ _: {
               }
             }},
             {"@type":"update","object":"MtaOutboundStrategy","value":{
-              "route":{"match":{"0":{"if":"is_local_domain(rcpt_domain)","then":"\u0027local\u0027"}},"else":"\u0027resend\u0027"}
+              "route/match/0/if":"is_local_domain(rcpt_domain)",
+              "route/match/0/then":"\u0027local\u0027",
+              "route/else":"\u0027resend\u0027"
             }}
           ' | ${cliPackage}/bin/stalwart-cli apply --insecure --stdin --json --quiet >/dev/null
           unset STALWART_PASSWORD
