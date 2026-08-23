@@ -71,7 +71,10 @@ key. The master-secret key override remains absent so AWS does not interpret it
 as a request for customer-managed-key grant permissions.
 
 The same identity cannot retrieve any Secrets Manager value. Its lifecycle
-access is limited to containers below `fahrican/stalwart/`, and its only
+access is limited to containers below `fahrican/stalwart/`; the only exception
+is `CreateSecret` and `TagResource` on AWS's `rds!db-*` namespace, which RDS
+requires when it creates a service-managed master credential. That exception
+cannot read, change, or delete a secret value. The identity's only
 secret-version mutation is `PutSecretValue` on the Resend container. Runtime
 reads and the generated administrator/mailbox writes remain exclusive to the
 EC2 role. Systems Manager inspection is Frankfurt-only, and Run Command is

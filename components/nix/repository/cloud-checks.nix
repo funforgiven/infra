@@ -480,7 +480,7 @@
             iam_policy_text = (
                 aws_mail_root / "bootstrap-iam-policy.json"
             ).read_text()
-            if iam_policy_text.count("ACCOUNT_ID") != 8:
+            if iam_policy_text.count("ACCOUNT_ID") != 9:
                 raise SystemExit("AWS bootstrap policy account scoping drifted")
             iam_policy = json.loads(iam_policy_text.replace("ACCOUNT_ID", "123456789012"))
             policy_statements = {
@@ -530,6 +530,22 @@
                 "secretsmanager:UntagResource",
             }:
                 raise SystemExit("AWS GitOps secret container actions drifted")
+            if policy_statements["CreateRdsManagedCredentials"] != {
+                "Sid": "CreateRdsManagedCredentials",
+                "Effect": "Allow",
+                "Action": [
+                    "secretsmanager:CreateSecret",
+                    "secretsmanager:TagResource",
+                ],
+                "Resource": (
+                    "arn:aws:secretsmanager:eu-central-1:123456789012:"
+                    "secret:rds!db-*"
+                ),
+                "Condition": {
+                    "StringEquals": {"aws:RequestedRegion": "eu-central-1"}
+                },
+            }:
+                raise SystemExit("AWS RDS credential creation escaped its boundary")
             if policy_statements["PublishResendRuntimeCredential"] != {
                 "Sid": "PublishResendRuntimeCredential",
                 "Effect": "Allow",
@@ -558,6 +574,7 @@
                 "ReadProvisionedState",
                 "ManageFrankfurtMailServices",
                 "ManageMailSecretContainers",
+                "CreateRdsManagedCredentials",
                 "PublishResendRuntimeCredential",
                 "InspectMailManagedNode",
                 "UseMailRunCommandDocument",
