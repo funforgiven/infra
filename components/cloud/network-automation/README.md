@@ -23,6 +23,8 @@ resets, adoption, or undeclared controller objects.
   internal CoreDNS VIP `10.21.20.129`; and
 - the CCR2004 `wg-admin` interface and its narrowly scoped management
   firewall rules; and
+- the fail-closed Mullvad Osaka WireGuard egress used only for OTOTOY from
+  trusted VLAN 10; and
 - the TCP and QUIC Syncthing WAN forwards to the reserved admin workstation;
   and
 - the VLAN-40 provider gateway, Omada trunk, WAN NAT membership, and scoped
@@ -64,16 +66,23 @@ ansible-playbook reconcile-routeros.yaml --limit core_switch --tags apply
 ansible-playbook reconcile-routeros.yaml --limit core_router --tags apply
 ```
 
+The Mullvad OTOTOY objects additionally carry a dedicated mutation tag, so
+they can be reconciled without selecting any unrelated CCR writes:
+
+```sh
+ansible-playbook reconcile-routeros.yaml --limit core_router --tags mullvad
+```
+
 Credential loading and semantic preflight tasks are tagged `always`. Apply
 paths assert the link, VLAN, lease, and private DNS objects for which the
 playbook defines exact postconditions. Carrier, LACP member failure, MTU, and
 end-to-end traffic are separate supervised qualifications; all three current
 hosts and all six LACP members have passed them.
 
-Each device login password and the CCR WireGuard private key are read from
-user-owned `0400` sops-nix files. Inventory contains only runtime paths and the
-non-secret WireGuard public key. Do not pass credentials in arguments,
-inventory, or environment variables.
+Each device login password and both CCR WireGuard private keys are read from
+user-owned `0400` sops-nix files. Inventory contains only runtime paths,
+public peer metadata, and tunnel addresses. Do not pass credentials in
+arguments, inventory, or environment variables.
 
 SSH identity has one authority: public keys in
 `deployments/homelab/ssh-host-keys.json`. The NixOS

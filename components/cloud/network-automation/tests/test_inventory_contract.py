@@ -170,6 +170,67 @@ class NetworkInventoryTests(unittest.TestCase):
             self.playbook,
         )
 
+    def test_mullvad_routes_only_ototoy_from_trusted_vlan(self) -> None:
+        mullvad = self.router["routeros_mullvad"]
+        routing = mullvad["routing"]
+        peer = mullvad["peer"]
+        provider = self.router["routeros_provider_network"]
+
+        self.assertEqual("wg-mullvad-jp", mullvad["name"])
+        self.assertEqual("10.66.16.158/32", mullvad["address"])
+        self.assertEqual(51821, mullvad["listen_port"])
+        self.assertEqual(1420, mullvad["mtu"])
+        self.assertEqual(
+            "/run/secrets/homelab-routeros-ccr2004-mullvad-private-key",
+            mullvad["private_key_file"],
+        )
+        self.assertEqual("jp-osa-wg-102", peer["name"])
+        self.assertEqual("194.127.166.81", peer["endpoint_address"])
+        self.assertEqual(51820, peer["endpoint_port"])
+        self.assertEqual("0.0.0.0/0", peer["allowed_address"])
+        self.assertEqual("mullvad-ototoy", routing["table"])
+        self.assertEqual(provider["trusted_interface"], routing["source_interface"])
+        self.assertEqual("10.21.10.0/24", routing["source_network"])
+        self.assertEqual("ototoy.jp", routing["destination_name"])
+        self.assertEqual("210.135.96.195/32", routing["destination"])
+        self.assertEqual("infra-forward", routing["forward_chain"])
+        self.assertIn(
+            "tasks/reconcile-routeros-mullvad.yaml",
+            self.playbook,
+        )
+
+        mullvad_tasks = (
+            ROOT
+            / "components/cloud/network-automation/tasks/reconcile-routeros-mullvad.yaml"
+        ).read_text()
+        self.assertIn("action=lookup-only-in-table", mullvad_tasks)
+        self.assertIn("in-interface={{ routeros_mullvad.routing.source_interface }}", mullvad_tasks)
+        self.assertIn("out-interface={{ routeros_mullvad.name }}", mullvad_tasks)
+        self.assertIn("action=masquerade", mullvad_tasks)
+        self.assertNotIn("action=lookup table=", mullvad_tasks)
+
+        selected = subprocess.run(
+            [
+                "ansible-playbook",
+                "--list-tasks",
+                "--tags",
+                "mullvad",
+                "reconcile-routeros.yaml",
+            ],
+            cwd=PLAYBOOK.parent,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+        self.assertIn("Reconcile the Mullvad WireGuard client interface", selected)
+        self.assertIn("Activate the fail-closed OTOTOY policy rule last", selected)
+        for unrelated_mutation in (
+            "Reconcile the WireGuard admin interface",
+            "Reconcile the external provider network",
+            "Reconcile Git-owned static DHCP leases",
+        ):
+            self.assertNotIn(unrelated_mutation, selected)
+
     def test_internal_management_dns_matches_host_inventory(self) -> None:
         for host in ("pecorino", "taleggio", "asiago"):
             variables = yaml.safe_load(

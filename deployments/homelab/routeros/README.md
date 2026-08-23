@@ -8,8 +8,8 @@ There are two current-state inputs:
 
 - `../cloud/network-inventory.yaml` is the RouterOS inventory: device
   identity, current cloud bonds/VLANs, link policy, provider routing, declared
-  static DHCP leases, private cloud DNS forward, and WireGuard administration
-  boundary.
+  static DHCP leases, private cloud DNS forward, WireGuard administration
+  boundary, and destination-scoped Mullvad egress.
 - `components/cloud/network-automation/reconcile-routeros.yaml` is the
   current convergence owner until the RouterOS Terraform import described
   below is complete.
@@ -58,6 +58,22 @@ Syncthing reaches the primary workstation through Git-owned TCP and QUIC
 destination-NAT rules on port `22000`. The target is the workstation's stable
 VLAN-10 reservation `10.21.10.20`; the Syncthing GUI is not exposed.
 
+## OTOTOY Mullvad egress
+
+The CCR2004 terminates a separate Mullvad WireGuard client interface named
+`wg-mullvad-jp`. Only traffic entering from `vlan10-trusted` with destination
+`210.135.96.195/32`, the declared address of `ototoy.jp`, uses the
+`mullvad-ototoy` routing table and the Osaka `jp-osa-wg-102` exit. DNS and all
+other traffic continue through TurkNet. The routing rule uses
+`lookup-only-in-table`, so loss of the Mullvad route fails closed instead of
+falling back to the direct ISP path.
+
+The Mullvad client private key is a user-owned `0400` sops-nix runtime secret;
+only its path, assigned tunnel address, server public key, and public endpoint
+are declared in inventory. If OTOTOY's public address changes, update the
+inventory destination and requalify DNS, the WireGuard handshake, HTTPS, and
+the observed Japanese exit before applying the new `/32`.
+
 ## Remote administration
 
 The CCR2004 terminates the split-tunnel `wg-admin` network at
@@ -100,6 +116,9 @@ direct rescue path available:
 ansible-playbook reconcile-routeros.yaml --limit core_switch --tags apply
 ansible-playbook reconcile-routeros.yaml --limit core_router --tags apply
 ```
+
+Use `--limit core_router --tags mullvad` to select only the destination-scoped
+Mullvad objects while retaining the standard read-only CCR preflight.
 
 The playbook owns only the inventory-declared subset. It does not infer unknown
 cabling or rewrite unrelated dynamic leases. Static lease activity is runtime

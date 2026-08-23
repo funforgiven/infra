@@ -130,6 +130,28 @@ all:
                 persistent_keepalive: 25s
                 preshared_key_file: >-
                   /run/secrets/homelab-routeros-ccr2004-wireguard-parmigiano-preshared-key
+          routeros_mullvad:
+            name: wg-mullvad-jp
+            address: 10.66.16.158/32
+            listen_port: 51821
+            mtu: 1420
+            private_key_file: >-
+              /run/secrets/homelab-routeros-ccr2004-mullvad-private-key
+            peer:
+              name: jp-osa-wg-102
+              public_key: 4Gl6OMUtsLEDIrg23j/COdpKsCi7W9tzM4zvBPXOy18=
+              endpoint_address: 194.127.166.81
+              endpoint_port: 51820
+              allowed_address: 0.0.0.0/0
+              persistent_keepalive: 25s
+            routing:
+              table: mullvad-ototoy
+              source_interface: vlan10-trusted
+              source_network: 10.21.10.0/24
+              destination_name: ototoy.jp
+              destination: 210.135.96.195/32
+              forward_chain: infra-forward
+              forward_final_drop_comment: "infra: forward final drop"
           routeros_provider_network:
             name: CLOUD-EXTERNAL
             interface: vlan40-external
