@@ -49,7 +49,7 @@ spec:
             - name: ND_BACKUP_SCHEDULE
               value: "0 3 * * *"
             - name: ND_DEFAULTLANGUAGE
-              value: ja
+              value: en
             - name: ND_ENABLEINSIGHTSCOLLECTOR
               value: "false"
             - name: ND_ENABLELOGREDACTING
@@ -62,7 +62,7 @@ spec:
                   name: media-runtime
                   key: ND_LASTFM_APIKEY
             - name: ND_LASTFM_LANGUAGE
-              value: ja
+              value: en
             - name: ND_LASTFM_SECRET
               valueFrom:
                 secretKeyRef:
