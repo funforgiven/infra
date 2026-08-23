@@ -71,6 +71,12 @@ spec:
               value: "8080"
             - name: SFTPGO_HTTPD__BINDINGS__0__DISABLED_LOGIN_METHODS
               value: "168"
+            - name: SFTPGO_HTTPD__BINDINGS__0__PROXY_ALLOWED
+              value: 172.16.0.0/13
+            - name: SFTPGO_HTTPD__BINDINGS__0__CLIENT_IP_PROXY_HEADER
+              value: X-Forwarded-For
+            - name: SFTPGO_HTTPD__BINDINGS__0__CLIENT_IP_HEADER_DEPTH
+              value: "0"
             - name: SFTPGO_HTTPD__BINDINGS__0__OIDC__CLIENT_ID
               valueFrom:
                 secretKeyRef:

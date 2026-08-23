@@ -32,6 +32,13 @@ media to listeners. A failed Beets process leaves the inbox in place for the
 next run. The first run catalogs the pre-existing `library` as-is before it
 processes new uploads, so the database begins with the direct-upload collection.
 
+The WebClient trusts the rightmost `X-Forwarded-For` address only when the
+direct peer is in the services cluster's `172.16.0.0/13` Calico pool. The media
+NetworkPolicy independently limits SFTPGo HTTP ingress to the Envoy Gateway
+namespace. This gives OIDC and CSRF validation a stable browser address when
+successive requests traverse different Envoy replicas without accepting proxy
+headers from other namespaces.
+
 There is no release watcher or media Telegram bot. Picard remains an optional
 desktop repair tool for releases that Beets quarantines or that need a manual
 MusicBrainz choice; upload the corrected album again after repair.
