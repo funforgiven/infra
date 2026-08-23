@@ -402,6 +402,13 @@
             )
             if not re.fullmatch(r"ami-[0-9a-f]{17}", aws_nixos_ami_id):
                 raise SystemExit("AWS mail NixOS AMI must be pinned exactly")
+            aws_restore_qualification = next(
+                item["value"]
+                for item in aws_mail_tofu["spec"]["vars"]
+                if item["name"] == "enable_restore_qualification"
+            )
+            if aws_restore_qualification not in {"true", "false"}:
+                raise SystemExit("AWS restore qualification gate must be explicit")
             if aws_mail_tofu["spec"]["runnerPodTemplate"]["spec"].get("envFrom") != [
                 {"secretRef": {"name": "aws-mail-provisioning"}}
             ]:
@@ -428,6 +435,11 @@
                 "prevent_destroy = true",
                 'http_tokens                 = "required"',
                 'policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"',
+                'identifier = "stalwart-mail-restore-qualification"',
+                "backup_retention_period = 0",
+                "deletion_protection         = false",
+                "skip_final_snapshot         = true",
+                'Ephemeral = "true"',
             )
             if any(fragment not in aws_tofu_text for fragment in required_aws_contract):
                 raise SystemExit("AWS mail durability or least-cost contract drifted")

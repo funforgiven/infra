@@ -27,6 +27,12 @@ variable "enable_reverse_dns" {
   default     = false
 }
 
+variable "enable_restore_qualification" {
+  description = "Create an isolated disposable PostgreSQL target for a controlled logical restore drill"
+  type        = bool
+  default     = false
+}
+
 locals {
   service_name = "stalwart-mail"
   tags = {
