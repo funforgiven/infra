@@ -298,6 +298,10 @@
               ${./mail-aws.nix}
             rg --fixed-strings --quiet 'export STALWART_RECOVERY_MODE=true' \
               ${./mail-aws.nix}
+            rg --fixed-strings --quiet 'PGSSLMODE=verify-full' \
+              ${./mail-aws.nix}
+            rg --fixed-strings --quiet \
+              "SELECT to_regclass('public.s') IS NOT NULL;" ${./mail-aws.nix}
             test "$(rg --count '^[[:space:]]+start_server$' \
               ${./mail-aws.nix})" = 2
             rg --fixed-strings --quiet \
