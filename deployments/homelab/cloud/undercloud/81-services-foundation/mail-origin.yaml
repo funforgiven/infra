@@ -4,6 +4,6 @@ metadata:
   name: active-mail-origin
   namespace: openstack
 data:
-  # The legacy host remains authoritative until AWS delivery, IMAP migration,
-  # TLS, DKIM, restore, and rollback gates have all passed.
-  provider: hetzner
+  # AWS is authoritative after the qualified backup/restore, exact final IMAP
+  # delta, and controlled stop of the retained Hetzner rollback source.
+  provider: aws
