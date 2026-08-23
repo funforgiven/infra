@@ -383,10 +383,10 @@ _: {
             --fields challengeType --json)"
 
           if [[ "$(jq --raw-output '.challengeType' <<< "$provider")" \
-            != DnsPersist01 ]]; then
+            != TlsAlpn01 ]]; then
             jq --compact-output --null-input --arg id "$provider_id" '
               {"@type":"update","object":"AcmeProvider","id":$id,"value":{
-                "challengeType":"DnsPersist01"
+                "challengeType":"TlsAlpn01"
               }}
             ' | ${cliPackage}/bin/stalwart-cli \
               --insecure apply --stdin --json --quiet >/dev/null
@@ -531,7 +531,7 @@ _: {
         };
 
         stalwart-acme-reconcile = {
-          description = "Reconcile pre-cutover Stalwart ACME authorization";
+          description = "Reconcile Stalwart TLS-ALPN ACME challenge";
           after = [
             "stalwart.service"
             "stalwart-secrets.service"
