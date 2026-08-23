@@ -26,10 +26,5 @@ spec:
             secretKeyRef:
               name: services-runtime-bootstrap
               key: HCLOUD_TOKEN
-  writeOutputsToSecret:
-    name: mail-edge-outputs
-    outputs:
-      - ipv4_address
-      - server_id
   remediation:
     retries: 3
