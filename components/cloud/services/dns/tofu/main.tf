@@ -136,6 +136,15 @@ resource "cloudflare_dns_record" "apex_spf" {
   comment = "Git-managed Stalwart domain SPF policy"
 }
 
+resource "cloudflare_dns_record" "stalwart_acme_authorization" {
+  zone_id = data.cloudflare_zone.fahrican.zone_id
+  name    = "_validation-persist.fahrican.com"
+  type    = "TXT"
+  content = "letsencrypt.org; accounturi=https://acme-v02.api.letsencrypt.org/acme/acct/3657234711; policy=wildcard"
+  ttl     = 300
+  comment = "Git-managed persistent ACME authorization for the Stalwart account"
+}
+
 resource "cloudflare_dns_record" "resend_verification" {
   for_each = local.resend_records
 
