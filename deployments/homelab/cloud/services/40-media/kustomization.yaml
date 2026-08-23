@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - storage.yaml
   - sftpgo.yaml
+  - beets.yaml
   - navidrome.yaml
   - routes.yaml
   - monitoring.yaml
@@ -13,3 +14,8 @@ configMapGenerator:
     namespace: media
     files:
       - render.sh=render-initial-data.sh
+  - name: beets-config
+    namespace: media
+    files:
+      - config.yaml=beets-config.yaml
+      - import.sh=import.sh

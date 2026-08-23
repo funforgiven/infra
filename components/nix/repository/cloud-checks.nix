@@ -1053,15 +1053,19 @@
             if set(media_kustomization["resources"]) != {
                 "storage.yaml",
                 "sftpgo.yaml",
+                "beets.yaml",
                 "navidrome.yaml",
                 "routes.yaml",
                 "monitoring.yaml",
                 "network-policy.yaml",
             }:
-                raise SystemExit("media service set must remain the direct upload workflow")
+                raise SystemExit("media service set must retain the Beets import workflow")
             sftpgo = (media_root / "sftpgo.yaml").read_text()
             sftpgo_bootstrap = (media_root / "render-initial-data.sh").read_text()
             media_kustomization = (media_root / "kustomization.yaml").read_text()
+            beets = (media_root / "beets.yaml").read_text()
+            beets_config = (media_root / "beets-config.yaml").read_text()
+            beets_import = (media_root / "import.sh").read_text()
             navidrome = (media_root / "navidrome.yaml").read_text()
             manila_csi_policy = yaml.safe_load(
                 (
@@ -1093,8 +1097,8 @@
                 raise SystemExit(
                     "future Magnum clusters must retain the Manila filesystem-group policy"
                 )
-            if '"home_dir":"/srv/sftpgo/data/media/library"' not in sftpgo_bootstrap:
-                raise SystemExit("SFTPGo must write directly to the Navidrome library")
+            if '"home_dir":"/srv/sftpgo/data/media/inbox"' not in sftpgo_bootstrap:
+                raise SystemExit("SFTPGo must expose only the temporary Beets inbox")
             required_sftpgo_oidc = (
                 '"username":"fahricanelidemir@gmail.com"',
                 'SFTPGO_HTTPD__BINDINGS__0__OIDC__CLIENT_SECRET_FILE',
@@ -1114,6 +1118,15 @@
                 for fragment in required_sftpgo_oidc
             ):
                 raise SystemExit("SFTPGo native ZITADEL OIDC contract drifted")
+            for atomic_upload_fragment in (
+                "SFTPGO_COMMON__UPLOAD_MODE",
+                'value: "1"',
+                "subPath: inbox",
+            ):
+                if atomic_upload_fragment not in sftpgo:
+                    raise SystemExit(
+                        "SFTPGo must publish complete files into the isolated inbox"
+                    )
             if "SFTPGO_USER_PASSWORD" in sftpgo + sftpgo_bootstrap:
                 raise SystemExit("SFTPGo upload identity must not have a local password")
             if '"denied_login_methods"' in sftpgo_bootstrap:
@@ -1178,12 +1191,48 @@
             if (
                 "configMapGenerator:" not in media_kustomization
                 or "render.sh=render-initial-data.sh" not in media_kustomization
+                or "config.yaml=beets-config.yaml" not in media_kustomization
+                or "import.sh=import.sh" not in media_kustomization
             ):
                 raise SystemExit(
-                    "SFTPGo bootstrap changes must trigger a content-hashed rollout"
+                    "media importer configuration must use content-hashed rollouts"
                 )
             if "subPath: library" not in navidrome or "mountPath: /music" not in navidrome:
-                raise SystemExit("Navidrome must read the shared SFTPGo library")
+                raise SystemExit("Navidrome must read only the Beets-managed library")
+            for beets_fragment in (
+                "kind: CronJob",
+                "name: beets-import",
+                'schedule: "*/5 * * * *"',
+                "concurrencyPolicy: Forbid",
+                "claimName: media-library",
+                "claimName: beets-data",
+                "readOnlyRootFilesystem: true",
+                "runAsNonRoot: true",
+                "@sha256:",
+            ):
+                if beets_fragment not in beets:
+                    raise SystemExit("Beets CronJob safety contract drifted")
+            for import_fragment in (
+                "write: yes",
+                "copy: no",
+                "move: yes",
+                "quiet: yes",
+                "quiet_fallback: skip",
+                "duplicate_action: skip",
+                "directory: /media/library",
+            ):
+                if import_fragment not in beets_config:
+                    raise SystemExit("Beets unattended import policy drifted")
+            for inbox_fragment in (
+                'media_root=''${BEETS_MEDIA_ROOT:-/media}',
+                'inbox=$media_root/inbox',
+                'quarantine=$media_root/quarantine',
+                '-mmin -15',
+                '"$beet" import --noautotag "$library"',
+                'mv "$candidate" "$review/"',
+            ):
+                if inbox_fragment not in beets_import:
+                    raise SystemExit("Beets inbox lifecycle policy drifted")
 
             media_restore_modifiers = yaml.safe_load(
                 (
@@ -1283,7 +1332,10 @@
                 "deployments/homelab/cloud/management/bootstrap/$bootstrap_phase" \
                 >/dev/null
             done
-            shellcheck components/cloud/host-automation/build-autoinstall-iso.sh
+            shellcheck \
+              components/cloud/host-automation/build-autoinstall-iso.sh \
+              deployments/homelab/cloud/services/40-media/import.sh \
+              deployments/homelab/cloud/services/40-media/render-initial-data.sh
 
             touch "$out"
           '';

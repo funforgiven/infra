@@ -27,6 +27,19 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
+  name: beets-data
+  namespace: media
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: rbd1
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
   name: sftpgo-data
   namespace: media
 spec:

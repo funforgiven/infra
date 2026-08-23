@@ -94,6 +94,8 @@ spec:
               value: "0"
             - name: SFTPGO_LOG_FILE_PATH
               value: ""
+            - name: SFTPGO_COMMON__UPLOAD_MODE
+              value: "1"
             - name: SFTPGO_SFTPD__BINDINGS__0__PORT
               value: "0"
           ports:
@@ -130,7 +132,8 @@ spec:
             - name: data
               mountPath: /var/lib/sftpgo
             - name: media
-              mountPath: /srv/sftpgo/data/media
+              mountPath: /srv/sftpgo/data/media/inbox
+              subPath: inbox
             - name: oidc
               mountPath: /run/secrets
               readOnly: true

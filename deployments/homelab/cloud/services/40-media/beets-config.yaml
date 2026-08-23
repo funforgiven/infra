@@ -1,0 +1,32 @@
+directory: /media/library
+library: /state/library.db
+statefile: /state/import-state.pickle
+create_backup_before_migrations: yes
+
+plugins:
+  - musicbrainz
+  - fetchart
+
+threaded: yes
+art_filename: cover
+
+import:
+  write: yes
+  copy: no
+  move: yes
+  resume: no
+  incremental: no
+  quiet: yes
+  quiet_fallback: skip
+  autotag: yes
+  duplicate_action: skip
+  log: /state/import.log
+
+paths:
+  default: $albumartist/$album%aunique{}/$track $title
+  singleton: Non-Album/$artist/$title
+  comp: Compilations/$album%aunique{}/$track $title
+
+fetchart:
+  auto: yes
+  cautious: yes

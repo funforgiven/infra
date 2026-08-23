@@ -239,5 +239,6 @@ accepted UI change is followed by an encrypted backup and a drift-record update.
 
 The final synthetic wave probes every private HTTP route, public mail ports,
 Hermes/Home Assistant node exporters, and the last successful host Restic
-timestamp. Purchases and discovery remain manual; purchased albums are uploaded
-directly through SFTPGo and then scanned by Navidrome.
+timestamp. Purchases and discovery remain manual; purchased albums enter the
+temporary SFTPGo inbox, then Beets tags, deduplicates, and organizes accepted
+files for Navidrome.

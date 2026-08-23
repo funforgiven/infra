@@ -10,7 +10,7 @@ and media workloads cannot consume control-plane capacity.
 | Boundary | Placement | Initial workloads |
 | --- | --- | --- |
 | OpenStack control plane | Existing undercloud | Keystone, Magnum, Cinder, Manila, Octavia, Flux controllers |
-| Services Kubernetes | Magnum, three 2-vCPU/4-GiB masters and two 4-vCPU/12-GiB workers | Navidrome, SFTPGo, databases, backup, monitoring |
+| Services Kubernetes | Magnum, three 2-vCPU/4-GiB masters and two 4-vCPU/12-GiB workers | Navidrome, SFTPGo, Beets, databases, backup, monitoring |
 | Agent VM | Dedicated NixOS VM in the `services` project | Hermes Agent, Telegram conversation bot, direct OpenAI API runtime |
 | Home automation VM | Dedicated HAOS appliance in the `services` project (migration is gated while NixOS remains live) | Home Assistant and hardware/LAN integrations |
 | Mail platform | Dedicated AWS Frankfurt appliance with managed PostgreSQL and S3 | Stalwart ingress and Resend-backed outbound delivery |

@@ -64,7 +64,7 @@ exceptions:
     resource: Bandcamp and OTOTOY accounts, payment, and checkout
     owner: funforgiven
     rationale: Storefront purchase and payment flows are human transactions without an appropriate unattended declarative interface.
-    procedure: Choose a store, complete checkout manually, and upload the purchased files directly into the shared music library through the declared SFTPGo WebClient.
+    procedure: Choose a store, complete checkout manually, and upload the purchased files into the temporary SFTPGo inbox; the declared Beets importer tags, deduplicates, and moves accepted audio into the shared Navidrome library.
     secret_handling: Passwords and payment data remain in the personal password manager and are never supplied to Hermes or the media workloads.
     backup: Audio is protected by the declared media-volume backups; retain store receipts and redownload access outside the workload as a second recovery path.
     drift_probe: Review storefront availability and a representative restored album without authenticating an automated service.
