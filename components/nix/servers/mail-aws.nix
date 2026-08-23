@@ -92,6 +92,7 @@ _: {
           pkgs.curl
           pkgs.jq
           pkgs.openssl
+          pkgs.postgresql
         ];
         text = ''
           set -euo pipefail
@@ -120,14 +121,51 @@ _: {
               }'
           }
 
+          write_data_store_config() {
+            render_data_store > "$config_file"
+            chmod 0600 "$config_file"
+          }
+
           # A replacement EC2 root reconstructs the only local Stalwart file
           # from the managed RDS credential; all registry and mail state already
           # lives in RDS and S3.
           if [[ ! -e "$config_file" && -r "$admin_file" ]]; then
-            render_data_store > "$config_file"
-            chmod 0600 "$config_file"
+            write_data_store_config
             touch "$marker"
             exit 0
+          fi
+
+          if [[ ! -e "$config_file" ]]; then
+            PGPASSWORD="$(< ${runtimeDirectory}/rds-password)"
+            export PGPASSWORD
+            registry_initialized="$(
+              PGSSLMODE=verify-full \
+                PGSSLROOTCERT=${rdsCaBundle} \
+                psql \
+                  --host "$STALWART_RDS_HOST" \
+                  --port 5432 \
+                  --dbname stalwart \
+                  --username stalwart \
+                  --tuples-only \
+                  --no-align \
+                  --set ON_ERROR_STOP=1 \
+                  --command "SELECT to_regclass('public.s') IS NOT NULL;"
+            )"
+            unset PGPASSWORD
+
+            case "$registry_initialized" in
+              t)
+                # `s` is the registry table in the pinned Stalwart schema.
+                # Its presence distinguishes an interrupted bootstrap from a
+                # pristine database without relying on human-facing errors.
+                write_data_store_config
+                ;;
+              f) ;;
+              *)
+                echo "Unexpected Stalwart registry probe result." >&2
+                exit 1
+                ;;
+            esac
           fi
 
           for file in \
