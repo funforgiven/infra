@@ -97,11 +97,11 @@ resource "aws_db_instance" "restore_qualification" {
   publicly_accessible    = false
   multi_az               = false
 
-  backup_retention_period = 0
+  backup_retention_period    = 0
   auto_minor_version_upgrade = true
-  deletion_protection         = false
-  skip_final_snapshot         = true
-  apply_immediately           = true
+  deletion_protection        = false
+  skip_final_snapshot        = true
+  apply_immediately          = true
 
   performance_insights_enabled = false
   monitoring_interval          = 0
