@@ -1046,6 +1046,29 @@
                             f"Flux Kustomization {name} owns SOPS resources without decryption"
                         )
 
+            services_gateway = list(
+                yaml.safe_load_all(
+                    (
+                        root / "services/20-platform-gateway/gateway.yaml"
+                    ).read_text()
+                )
+            )
+            services_envoy_proxy = next(
+                document
+                for document in services_gateway
+                if document.get("kind") == "EnvoyProxy"
+            )
+            if (
+                services_envoy_proxy["spec"]["provider"]["kubernetes"][
+                    "envoyService"
+                ].get("externalTrafficPolicy")
+                != "Local"
+            ):
+                raise SystemExit(
+                    "services Envoy must preserve client IPs for "
+                    "session-bound applications"
+                )
+
             media_root = root / "services/40-media"
             media_kustomization = yaml.safe_load(
                 (media_root / "kustomization.yaml").read_text()
