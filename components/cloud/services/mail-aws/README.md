@@ -119,6 +119,45 @@ limited to the AWS shell document and EC2 instances tagged
    Remove it only in a later explicit, reviewed change after RDS point-in-time
    recovery and S3 version recovery have both been exercised.
 
+## Migration completion evidence
+
+The production migration completed on 2026-08-23. The signed origin change in
+`9d55a44ad7326b2821aedfb9723462c11a278fc3` moved the Git-managed mail names to
+the AWS EIP only after the following recovery and data checks succeeded:
+
+- the final encrypted Hetzner Restic snapshot is `256760a1`, created at
+  2026-08-23 01:20:29 UTC from `/var/lib/acme/mail.fahrican.com` and
+  `/var/lib/stalwart` with 5.627 MiB captured;
+- the source contained five folders and three INBOX messages. The initial
+  standard IMAP copy transferred all three messages and 4,538 bytes. The final
+  maintenance-window delta compared all five folders and reported no source-
+  only or target-only messages and no bytes left to transfer;
+- an isolated RDS logical restore reproduced the production schema and registry
+  counts, and the disposable database and security group were removed. The
+  encrypted `stalwart-mail-pre-cutover-20260823` snapshot remains available;
+- an isolated S3 noncurrent-version restore reproduced and compared the selected
+  object, after which the test object, versions, and delete marker were removed;
+- authenticated IMAPS and implicit-TLS SMTP passed against the public hostname,
+  and the submitted local message became visible in the mailbox. An independent
+  Resend API submission then traversed the public MX and was found through
+  authenticated IMAPS. Receipt was verified at the destination rather than
+  broadening the domain-scoped sending key to permit delivery-status reads; and
+- the resulting Stalwart queue was empty and the service remained active.
+
+The accepted production shape is one running `t4g.micro` instance
+`i-026dd3834bd8a5f52` at `18.195.240.25`, one available encrypted
+`db.t4g.micro` PostgreSQL 17.10 database with 14-day recovery and deletion
+protection, and the encrypted, versioned
+`fahrican-stalwart-027355625923-eu-central-1` blob bucket. No restore database
+remains. All three declared CloudWatch alarms were `OK`. Forward DNS resolves
+`mail.fahrican.com` to the EIP, its PTR resolves back to `mail.fahrican.com`,
+and public hostname verification passed on HTTPS, submissions, and IMAPS.
+
+The Hetzner Stalwart unit is stopped. Keep that protected host and snapshot
+intact through at least 2026-09-06 as the bounded rollback source. Removing it,
+its recovery data, or the pre-cutover RDS snapshot requires a later explicit,
+reviewed change; migration completion does not authorize their destruction.
+
 RDS point-in-time recovery and S3 versions form one recovery procedure: restore
 RDS to the selected time, remove any later S3 delete markers needed by the
 restored registry, then attach a replacement EC2 instance to those stores. The
