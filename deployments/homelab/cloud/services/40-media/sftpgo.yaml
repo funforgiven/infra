@@ -102,6 +102,8 @@ spec:
               value: ""
             - name: SFTPGO_COMMON__UPLOAD_MODE
               value: "1"
+            - name: SFTPGO_COMMON__SETSTAT_MODE
+              value: "1"
             - name: SFTPGO_SFTPD__BINDINGS__0__PORT
               value: "0"
           ports:

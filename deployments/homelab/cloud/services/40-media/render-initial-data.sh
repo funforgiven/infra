@@ -21,6 +21,7 @@ mkdir -p \
   printf '"uid":1000,"gid":1000,'
   printf '"permissions":{"/":["*"]},'
   printf '"filters":{"denied_protocols":["SSH","FTP","DAV"],'
+  printf '"file_patterns":[{"path":"/","denied_patterns":[".sftpgo-upload*"],"deny_policy":1}],'
   printf '"web_client":["password-change-disabled","password-reset-disabled","api-key-auth-change-disabled","publickey-change-disabled","tls-cert-change-disabled"]}'
   printf '}],"admins":[{'
   printf '"status":1,"username":"admin",'

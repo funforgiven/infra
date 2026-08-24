@@ -1170,14 +1170,25 @@
                 raise SystemExit(
                     "SFTPGo must derive a stable client IP from the trusted Envoy proxy pool"
                 )
-            for atomic_upload_fragment in (
-                "SFTPGO_COMMON__UPLOAD_MODE",
-                'value: "1"',
-                "subPath: inbox",
+            required_sftpgo_upload = {
+                "SFTPGO_COMMON__UPLOAD_MODE": "1",
+                "SFTPGO_COMMON__SETSTAT_MODE": "1",
+            }
+            if any(
+                sftpgo_environment.get(name) != value
+                for name, value in required_sftpgo_upload.items()
+            ) or "subPath: inbox" not in sftpgo:
+                raise SystemExit(
+                    "SFTPGo must publish server-timestamped complete files into the isolated inbox"
+                )
+            for hidden_atomic_fragment in (
+                '"file_patterns":[{"path":"/",',
+                '"denied_patterns":[".sftpgo-upload*"],',
+                '"deny_policy":1',
             ):
-                if atomic_upload_fragment not in sftpgo:
+                if hidden_atomic_fragment not in sftpgo_bootstrap:
                     raise SystemExit(
-                        "SFTPGo must publish complete files into the isolated inbox"
+                        "SFTPGo must hide and deny its recursive atomic-upload staging names"
                     )
             if "SFTPGO_USER_PASSWORD" in sftpgo + sftpgo_bootstrap:
                 raise SystemExit("SFTPGo upload identity must not have a local password")

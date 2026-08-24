@@ -10,10 +10,15 @@ SFTPGo is a temporary upload inbox; Beets owns the permanent library:
    or directory as received. The predeclared upload account is matched from the
    identity token's verified `email` claim and has no local password or file
    transfer protocol access.
-3. SFTPGo publishes completed files atomically into the `inbox` directory on
-   the shared `media-library` volume. The Beets CronJob runs every minute
-   and waits until the whole inbox has been unchanged for at least two minutes,
-   so a multi-track album is considered as a unit.
+3. SFTPGo uses atomic upload mode: it writes each upload as a same-directory
+   `.sftpgo-upload.*` file on the shared `media-library` volume and renames it
+   to the requested name only after a successful transfer. A recursive hidden
+   file-pattern filter keeps those internal names out of the WebClient and
+   prevents user access to them. Client-requested attribute changes are ignored,
+   so a WebClient-supplied modification time cannot make a completed upload look
+   hours newer than its server arrival. The Beets CronJob runs every minute and
+   waits until the whole inbox has been unchanged for at least two minutes, so a
+   multi-track album is considered as a unit.
 4. Beets accepts only confident MusicBrainz matches without prompting. It
    writes the matched tags and artwork, skips duplicates already represented
    in its persistent catalog, and moves accepted audio into its standard
