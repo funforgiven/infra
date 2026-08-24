@@ -41,8 +41,8 @@ test("desktop-entry units require a bounded stop timeout", () => {
     );
 });
 
-test("desktop entry IDs are normalized exactly once", () => {
-    assert.equal(LaunchCommand.desktopEntryId("org.example.App.desktop"), "org.example.App.desktop");
+test("desktop entry IDs always receive their filename suffix", () => {
+    assert.equal(LaunchCommand.desktopEntryId("org.telegram.desktop"), "org.telegram.desktop.desktop");
     assert.equal(LaunchCommand.desktopEntryId(" org.example.App "), "org.example.App.desktop");
     assert.throws(() => LaunchCommand.desktopEntryId("  "), /desktop entry ID is empty/);
 });

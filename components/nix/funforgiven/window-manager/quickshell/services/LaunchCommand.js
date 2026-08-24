@@ -10,7 +10,10 @@ function desktopEntryId(value) {
     if (id.length === 0) {
         throw new Error("desktop entry ID is empty");
     }
-    return id.endsWith(".desktop") ? id : id + ".desktop";
+    // Quickshell exposes the desktop-entry ID, which is the filename with only
+    // its final ".desktop" suffix removed. Some valid IDs, notably Telegram's
+    // "org.telegram.desktop", therefore still end in ".desktop".
+    return id + ".desktop";
 }
 
 function app2unitService(launcher, id, applicationStopTimeout) {
