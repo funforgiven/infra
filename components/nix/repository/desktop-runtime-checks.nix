@@ -95,10 +95,7 @@
           quickshellUnit = home.systemd.user.services.quickshell;
           sessionShutdown = {
             applicationStopTimeout = "${toString sessionShutdown.applicationStopTimeoutSeconds}s";
-            authorizationTimeout = "${toString sessionShutdown.authorizationTimeoutSeconds}s";
-            inhibitDelayMax = "${toString sessionShutdown.inhibitDelayMaxSeconds}s";
             coordinatorTimeout = "${toString sessionShutdown.coordinatorTimeoutSeconds}s";
-            logindInhibitDelayMax = host.services.logind.settings.Login.InhibitDelayMaxSec;
             userManagerDefaultStop = home.systemd.user.settings.Manager.DefaultTimeoutStopSec;
             inherit (sessionShutdown) actionUnits;
             services = sessionActionServices;
@@ -327,13 +324,14 @@
                 and (.Unit.Wants | index("quickshell.service") != null)
                 and (.Unit.PartOf | index("graphical-session.target") != null)
                 and (.Unit.Requisite | index("graphical-session.target") != null)
+                and .Service.Slice == "app-graphical.slice"
+                and .Service.KillMode == "mixed"
+                and .Service.KillSignal == "SIGTERM"
+                and .Service.SendSIGKILL == true
                 and .Service.TimeoutStopSec == $contract.sessionShutdown.applicationStopTimeout
               )
-              and .sessionShutdown.applicationStopTimeout == "10s"
-              and .sessionShutdown.inhibitDelayMax == "15s"
-              and .sessionShutdown.authorizationTimeout == "60s"
+              and .sessionShutdown.applicationStopTimeout == "20s"
               and .sessionShutdown.coordinatorTimeout == "80s"
-              and .sessionShutdown.logindInhibitDelayMax == .sessionShutdown.inhibitDelayMax
               and .sessionShutdown.userManagerDefaultStop == .sessionShutdown.applicationStopTimeout
               and .sessionShutdown.actionUnits == {
                 logout: "funforgiven-session-logout.service",
@@ -347,8 +345,7 @@
                 and .value.Service.Slice == "session.slice"
                 and .value.Service.TimeoutStartSec == $contract.sessionShutdown.coordinatorTimeout
                 and .value.Service.Environment == [
-                  "APPLICATION_STOP_TIMEOUT_SECONDS=10",
-                  "AUTHORIZATION_TIMEOUT_SECONDS=60"
+                  "APPLICATION_STOP_TIMEOUT_SECONDS=20"
                 ]
                 and ((.value.Unit.PartOf // []) | length) == 0
                 and ((.value.Unit.Requisite // []) | length) == 0
@@ -580,24 +577,19 @@
             shellcheck ${../funforgiven/window-manager/tests/session-shutdown-contract.sh}
             bash ${../funforgiven/window-manager/tests/session-shutdown-contract.sh} \
               ${../funforgiven/window-manager/session-shutdown.sh}
-            grep -Fq 'systemctl --check-inhibitors=no "$action"' \
+            grep -Fq 'systemctl --check-inhibitors=no "$requested_action"' \
               ${../funforgiven/window-manager/session-shutdown.sh}
-            test "$(grep -Fc 'systemctl --user --job-mode=replace-irreversibly stop app.slice' \
+            test "$(grep -Fc 'systemctl --user --job-mode=replace-irreversibly stop app-graphical.slice' \
               ${../funforgiven/window-manager/session-shutdown.sh})" -eq 2
-            grep -Fq 'systemctl --user kill --kill-whom=all --signal=SIGKILL app.slice' \
+            grep -Fq 'systemctl --user kill --kill-whom=all --signal=SIGKILL app-graphical.slice' \
               ${../funforgiven/window-manager/session-shutdown.sh}
             grep -Fq -- '--foreground' \
               ${../funforgiven/window-manager/session-shutdown.sh}
             grep -Fq -- '--kill-after=1s' \
               ${../funforgiven/window-manager/session-shutdown.sh}
-            grep -Fq 'PreparingForShutdown' \
-              ${../funforgiven/window-manager/session-shutdown.sh}
-            grep -Fq 'systemctl --user --no-block --job-mode=replace-irreversibly start niri-shutdown.target' \
-              ${../funforgiven/window-manager/session-shutdown.sh}
             grep -Fq 'systemctl --user --job-mode=replace-irreversibly start niri-shutdown.target' \
               ${../funforgiven/window-manager/session-shutdown.sh}
-            grep -Fq -- '--mode=delay' ${../funforgiven/window-manager/session-shutdown.sh}
-            ! grep -Eq -- '(^|[[:space:]])(pkill|killall|sh -c|--force|--check-inhibitors=yes)([[:space:]]|$)' \
+            ! grep -Eq -- '(^|[[:space:]])(pkill|killall|sh -c|systemd-inhibit|--force|--check-inhibitors=yes)([[:space:]]|$)' \
               ${../funforgiven/window-manager/session-shutdown.sh}
 
             grep -Fq 'BindsTo=graphical-session.target' \

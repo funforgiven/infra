@@ -20,9 +20,7 @@ let
     sessionShutdown = {
       applicationStopTimeout = "${toString sessionShutdown.applicationStopTimeoutSeconds}s";
       applicationStopTimeoutEnvironment = "APPLICATION_STOP_TIMEOUT_SECONDS=${toString sessionShutdown.applicationStopTimeoutSeconds}";
-      authorizationTimeoutEnvironment = "AUTHORIZATION_TIMEOUT_SECONDS=${toString sessionShutdown.authorizationTimeoutSeconds}";
       coordinatorTimeout = "${toString sessionShutdown.coordinatorTimeoutSeconds}s";
-      inhibitDelayMaxUSec = sessionShutdown.inhibitDelayMaxSeconds * 1000000;
       inherit (sessionShutdown) actionUnits;
     };
   };
