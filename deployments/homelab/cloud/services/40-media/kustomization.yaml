@@ -19,3 +19,5 @@ configMapGenerator:
     files:
       - config.yaml=beets-config.yaml
       - import.sh=import.sh
+      - albumclean.py=albumclean.py
+      - albumclean_core.py=albumclean_core.py

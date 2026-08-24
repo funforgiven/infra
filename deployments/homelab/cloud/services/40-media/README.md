@@ -20,9 +20,14 @@ SFTPGo is a temporary upload inbox; Beets owns the permanent library:
    waits until the whole inbox has been unchanged for at least two minutes, so a
    multi-track album is considered as a unit.
 4. Beets accepts only confident MusicBrainz matches without prompting. It
-   writes the matched tags and artwork, skips duplicates already represented
-   in its persistent catalog, and moves accepted audio into its standard
-   artist/album/track hierarchy under `library`.
+   removes non-artistic storefront qualifiers such as sample rate, bit depth,
+   codec, `Hi-Res`, `通常盤`, or `初回プレス` from album presentation metadata,
+   while preserving meaningful variants such as live, acoustic, soundtrack,
+   and remastered releases. It writes the matched tags and artwork, skips
+   duplicates already represented in its persistent catalog, and moves
+   accepted audio into its standard artist/album/track hierarchy under
+   `library`. The same idempotent normalization repairs matching albums already
+   in the catalog whenever the importer runs.
 5. Navidrome mounts only `library` read-only at `/music` and scans it every
    minute. The server-side path from the final completed upload to Navidrome is
    therefore normally no more than four minutes. Symfonium may still need its
