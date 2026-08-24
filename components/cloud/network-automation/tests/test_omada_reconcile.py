@@ -25,7 +25,14 @@ def network(name: str, vlan: int) -> dict[str, object]:
     }
 
 
-def profile(name: str, profile_id: str, native: int, tagged: list[int]) -> dict[str, object]:
+def profile(
+    name: str,
+    profile_id: str,
+    native: int,
+    tagged: list[int],
+    *,
+    edge_port: bool = False,
+) -> dict[str, object]:
     native_id = f"n{native}"
     return {
         "id": profile_id,
@@ -39,6 +46,22 @@ def profile(name: str, profile_id: str, native: int, tagged: list[int]) -> dict[
         "lldpMedEnable": False,
         "bandWidthCtrlType": 0,
         "spanningTreeEnable": True,
+        "spanningTreeSetting": {
+            "priority": 128,
+            "extPathCost": 0,
+            "intPathCost": 0,
+            "edgePort": edge_port,
+            "p2pLink": 0,
+            "mcheck": False,
+            "loopProtect": False,
+            "rootProtect": False,
+            "tcGuard": False,
+            "bpduProtect": edge_port,
+            "bpduFilter": False,
+            "bpduForward": True,
+            "instanceEnable": False,
+            "instances": [],
+        },
         "loopbackDetectEnable": True,
     }
 
@@ -84,7 +107,7 @@ class FakeApi:
             profile("All", "p-all", 1, []),
             profile("infra-ccr-trunk", "p-ccr", 1, [10, 20, 40, 50, 60, 90]),
             profile("infra-crs-trunk", "p-crs", 1, [10, 20, 40, 90]),
-            profile("infra-trusted-access", "p-trusted", 10, []),
+            profile("infra-trusted-access", "p-trusted", 10, [], edge_port=True),
             profile("infra-iot-access", "p-iot", 50, []),
             profile("infra-management-access", "p-management", 90, []),
             profile("infra-ap-trunk", "p-ap", 90, [10, 50]),
@@ -269,6 +292,35 @@ class ReconcilerTests(unittest.TestCase):
         self.assertEqual(mutations, 2)
         self.assertIn(("create_profile", "infra-trusted-access"), self.api.calls)
         self.assertIn(("assign_profile", 2), self.api.calls)
+        self.assertTrue(all(action.operation == "noop" for action in self.plan()))
+
+    def test_workstation_profile_reconciles_edge_and_bpdu_policy(self) -> None:
+        trusted = next(
+            item for item in self.api.profiles if item["name"] == "infra-trusted-access"
+        )
+        spanning_tree = trusted["spanningTreeSetting"]
+        spanning_tree.update(
+            {"edgePort": False, "bpduProtect": False, "bpduFilter": True}
+        )
+
+        actions = self.plan()
+        self.assertTrue(
+            any(
+                action.domain == "profile"
+                and action.target == "infra-trusted-access"
+                and action.operation == "update"
+                for action in actions
+            )
+        )
+
+        mutations = self.reconcile(include_psks=False)
+        self.assertEqual(mutations, 1)
+        spanning_tree = trusted["spanningTreeSetting"]
+        self.assertTrue(trusted["spanningTreeEnable"])
+        self.assertTrue(spanning_tree["edgePort"])
+        self.assertTrue(spanning_tree["bpduProtect"])
+        self.assertFalse(spanning_tree["bpduFilter"])
+        self.assertTrue(spanning_tree["bpduForward"])
         self.assertTrue(all(action.operation == "noop" for action in self.plan()))
 
     def test_network_is_created_before_dependent_profiles(self) -> None:

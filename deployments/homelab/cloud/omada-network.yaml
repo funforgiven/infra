@@ -29,6 +29,11 @@ switch:
     infra-trusted-access:
       nativeVlan: 10
       taggedVlans: []
+      spanningTree:
+        enabled: true
+        edgePort: true
+        bpduProtect: true
+        bpduFilter: false
     infra-iot-access:
       nativeVlan: 50
       taggedVlans: []
