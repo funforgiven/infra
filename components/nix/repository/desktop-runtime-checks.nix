@@ -192,6 +192,17 @@
           ];
           launcherBind = home.programs.niri.settings.binds."Mod+Space";
           logoutBind = home.programs.niri.settings.binds."Mod+Shift+E";
+          hotCornersEnabled = home.programs.niri.settings.gestures.hot-corners.enable;
+          scrollBinds = lib.getAttrs [
+            "Mod+WheelScrollDown"
+            "Mod+WheelScrollUp"
+            "Mod+Ctrl+WheelScrollDown"
+            "Mod+Ctrl+WheelScrollUp"
+            "Mod+Shift+WheelScrollDown"
+            "Mod+Shift+WheelScrollUp"
+            "Mod+Ctrl+Shift+WheelScrollDown"
+            "Mod+Ctrl+Shift+WheelScrollUp"
+          ] home.programs.niri.settings.binds;
           inherit expectedLogoutCommand;
           inherit niriHasLayoutSwitch;
           inherit niriHasDirectQuit;
@@ -362,6 +373,17 @@
               and .launcherBind.action.spawn == .expectedLauncherCommand
               and .logoutBind.repeat == false
               and .logoutBind.action.spawn == .expectedLogoutCommand
+              and .hotCornersEnabled == false
+              and .scrollBinds."Mod+WheelScrollDown".action."focus-column-right" == []
+              and .scrollBinds."Mod+WheelScrollUp".action."focus-column-left" == []
+              and .scrollBinds."Mod+Ctrl+WheelScrollDown".action."move-column-right" == []
+              and .scrollBinds."Mod+Ctrl+WheelScrollUp".action."move-column-left" == []
+              and .scrollBinds."Mod+Shift+WheelScrollDown".action."focus-workspace-down" == []
+              and .scrollBinds."Mod+Shift+WheelScrollDown"."cooldown-ms" == 150
+              and .scrollBinds."Mod+Shift+WheelScrollUp".action."focus-workspace-up" == []
+              and .scrollBinds."Mod+Shift+WheelScrollUp"."cooldown-ms" == 150
+              and .scrollBinds."Mod+Ctrl+Shift+WheelScrollDown".action."move-column-to-workspace-down" == []
+              and .scrollBinds."Mod+Ctrl+Shift+WheelScrollUp".action."move-column-to-workspace-up" == []
               and .niriHasLayoutSwitch == false
               and .niriHasDirectQuit == false
               and ([.idle.events[] | select(. != null)] | length == 0)

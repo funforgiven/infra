@@ -41,6 +41,8 @@ in
             hide-when-typing = true;
           };
 
+          gestures.hot-corners.enable = false;
+
           xwayland-satellite.path = lib.getExe pkgs.xwayland-satellite-unstable;
         };
       };

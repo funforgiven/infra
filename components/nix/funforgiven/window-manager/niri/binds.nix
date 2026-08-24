@@ -102,26 +102,26 @@ in
         "Mod+Shift+U" = niriAction "move-workspace-down";
         "Mod+Shift+I" = niriAction "move-workspace-up";
 
-        "Mod+WheelScrollDown" = (niriAction "focus-workspace-down") // {
-          cooldown-ms = 150;
-        };
-        "Mod+WheelScrollUp" = (niriAction "focus-workspace-up") // {
-          cooldown-ms = 150;
-        };
-        "Mod+Ctrl+WheelScrollDown" = (niriAction "move-column-to-workspace-down") // {
-          cooldown-ms = 150;
-        };
-        "Mod+Ctrl+WheelScrollUp" = (niriAction "move-column-to-workspace-up") // {
-          cooldown-ms = 150;
-        };
+        "Mod+WheelScrollDown" = niriAction "focus-column-right";
+        "Mod+WheelScrollUp" = niriAction "focus-column-left";
+        "Mod+Ctrl+WheelScrollDown" = niriAction "move-column-right";
+        "Mod+Ctrl+WheelScrollUp" = niriAction "move-column-left";
         "Mod+WheelScrollRight" = niriAction "focus-column-right";
         "Mod+WheelScrollLeft" = niriAction "focus-column-left";
         "Mod+Ctrl+WheelScrollRight" = niriAction "move-column-right";
         "Mod+Ctrl+WheelScrollLeft" = niriAction "move-column-left";
-        "Mod+Shift+WheelScrollDown" = niriAction "focus-column-right";
-        "Mod+Shift+WheelScrollUp" = niriAction "focus-column-left";
-        "Mod+Ctrl+Shift+WheelScrollDown" = niriAction "move-column-right";
-        "Mod+Ctrl+Shift+WheelScrollUp" = niriAction "move-column-left";
+        "Mod+Shift+WheelScrollDown" = (niriAction "focus-workspace-down") // {
+          cooldown-ms = 150;
+        };
+        "Mod+Shift+WheelScrollUp" = (niriAction "focus-workspace-up") // {
+          cooldown-ms = 150;
+        };
+        "Mod+Ctrl+Shift+WheelScrollDown" = (niriAction "move-column-to-workspace-down") // {
+          cooldown-ms = 150;
+        };
+        "Mod+Ctrl+Shift+WheelScrollUp" = (niriAction "move-column-to-workspace-up") // {
+          cooldown-ms = 150;
+        };
 
         "Mod+BracketLeft" = niriAction "consume-or-expel-window-left";
         "Mod+BracketRight" = niriAction "consume-or-expel-window-right";
