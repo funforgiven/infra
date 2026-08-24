@@ -2,8 +2,10 @@ directory: /media/library
 library: /state/library.db
 statefile: /state/import-state.pickle
 create_backup_before_migrations: yes
+pluginpath: /config
 
 plugins:
+  - albumclean
   - musicbrainz
   - fetchart
 
