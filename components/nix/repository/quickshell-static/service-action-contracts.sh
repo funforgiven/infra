@@ -45,7 +45,7 @@ rg --quiet --fixed-strings 'desktopEntryId(id)' "$shell_config/services/LaunchCo
 rg --quiet --fixed-strings 'desktop-entry launcher did not complete its start job within 7 seconds' "$app_service"
 rg --quiet --fixed-strings '"app-graphical.slice"' "$shell_config/services/LaunchCommand.js"
 rg --quiet --fixed-strings '"TimeoutStopSec=" + stopTimeout' "$shell_config/services/LaunchCommand.js"
-rg --quiet --fixed-strings '"KillMode=control-group"' "$shell_config/services/LaunchCommand.js"
+rg --quiet --fixed-strings '"KillMode=mixed"' "$shell_config/services/LaunchCommand.js"
 rg --quiet --fixed-strings '"KillSignal=SIGTERM"' "$shell_config/services/LaunchCommand.js"
 rg --quiet --fixed-strings '"SendSIGKILL=yes"' "$shell_config/services/LaunchCommand.js"
 ! rg --quiet --fixed-strings 'entry.execute()' "$app_service"
@@ -95,7 +95,7 @@ rg --quiet \
 rg --quiet \
   'readonly property string systemctl: "/nix/store/.+-systemd-[^"]+/bin/systemctl"' \
   "$shell_config/generated/ShellConfig.qml"
-rg --quiet --fixed-strings 'readonly property string applicationStopTimeout: "10s"' \
+rg --quiet --fixed-strings 'readonly property string applicationStopTimeout: "20s"' \
   "$shell_config/generated/ShellConfig.qml"
 rg --quiet --fixed-strings \
   'readonly property var sessionActionUnits: ({"logout":"funforgiven-session-logout.service","poweroff":"funforgiven-session-poweroff.service","reboot":"funforgiven-session-reboot.service"})' \
@@ -140,8 +140,8 @@ app2unit_output="$(
     app2unit --test \
       -t service \
       -s app-graphical.slice \
-      -p TimeoutStopSec=10s \
-      -p KillMode=control-group \
+      -p TimeoutStopSec=20s \
+      -p KillMode=mixed \
       -p KillSignal=SIGTERM \
       -p SendSIGKILL=yes \
       -- firefox.desktop
@@ -152,8 +152,8 @@ rg --quiet --fixed-strings '>--working-directory=/tmp<' <<<"$app2unit_output"
 rg --quiet --fixed-strings '>--property=After=graphical-session.target<' <<<"$app2unit_output"
 rg --quiet --fixed-strings '>--property=PartOf=graphical-session.target<' <<<"$app2unit_output"
 rg --quiet --fixed-strings '>--property=SourcePath=' <<<"$app2unit_output"
-rg --quiet --fixed-strings '>--property=TimeoutStopSec=10s<' <<<"$app2unit_output"
-rg --quiet --fixed-strings '>--property=KillMode=control-group<' <<<"$app2unit_output"
+rg --quiet --fixed-strings '>--property=TimeoutStopSec=20s<' <<<"$app2unit_output"
+rg --quiet --fixed-strings '>--property=KillMode=mixed<' <<<"$app2unit_output"
 rg --quiet --fixed-strings '>--property=KillSignal=SIGTERM<' <<<"$app2unit_output"
 rg --quiet --fixed-strings '>--property=SendSIGKILL=yes<' <<<"$app2unit_output"
 rg --quiet --fixed-strings '>--slice=app-graphical.slice<' <<<"$app2unit_output"

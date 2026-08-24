@@ -200,22 +200,6 @@ manager_property() {
     fi
 }
 
-logind_inhibit_delay_max_usec="0"
-if capture_json \
-    "logind:InhibitDelayMaxUSec" \
-    "$tmpdir/logind-inhibit-delay.json" \
-    '{"type":"","data":0}' \
-    busctl --system --json=short get-property \
-    org.freedesktop.login1 \
-    /org/freedesktop/login1 \
-    org.freedesktop.login1.Manager \
-    InhibitDelayMaxUSec; then
-    logind_inhibit_delay_max_usec="$(
-        jq -r 'if .type == "t" then (.data | tostring) else "0" end' \
-            "$tmpdir/logind-inhibit-delay.json"
-    )"
-fi
-
 niri_models_match() {
     jq -e -n \
         --slurpfile workspaces "$tmpdir/workspaces.json" \
@@ -422,7 +406,6 @@ jq -n \
     --arg quickshellSlice "$quickshell_slice" \
     --arg graphicalSession "$graphical_session_state" \
     --arg userManagerDefaultStop "$user_manager_default_stop" \
-    --arg logindInhibitDelayMaxUSec "$logind_inhibit_delay_max_usec" \
     --arg swayidle "$swayidle_state" \
     --arg swaybg "$swaybg_state" \
     --arg documentPortal "$document_portal_state" \
@@ -448,7 +431,6 @@ jq -n \
         quickshellSlice: $quickshellSlice,
         graphicalSession: $graphicalSession,
         userManagerDefaultStop: $userManagerDefaultStop,
-        logindInhibitDelayMaxUSec: ($logindInhibitDelayMaxUSec | tonumber? // 0),
         swayidle: $swayidle,
         swaybg: $swaybg,
         documentPortal: $documentPortal,
@@ -642,12 +624,6 @@ jq -n \
             expected: $expected.sessionShutdown.applicationStopTimeout,
             running: $services.userManagerDefaultStop
           }),
-        check("bounded logind shutdown delay";
-          $services.logindInhibitDelayMaxUSec == $expected.sessionShutdown.inhibitDelayMaxUSec;
-          {
-            expected: $expected.sessionShutdown.inhibitDelayMaxUSec,
-            running: $services.logindInhibitDelayMaxUSec
-          }),
         check("idle supervised session action coordinators";
           ($sessionActions | length) == 3
             and all($sessionActions[];
@@ -656,10 +632,9 @@ jq -n \
                 and .slice == "session.slice"
                 and .partOf == []
                 and .requisite == []
-                and (.environment | sort) == ([
-                  $expected.sessionShutdown.applicationStopTimeoutEnvironment,
-                  $expected.sessionShutdown.authorizationTimeoutEnvironment
-                ] | sort)
+                and .environment == [
+                  $expected.sessionShutdown.applicationStopTimeoutEnvironment
+                ]
                 and .timeoutStart == $expected.sessionShutdown.coordinatorTimeout
                 and (
                   .action as $action

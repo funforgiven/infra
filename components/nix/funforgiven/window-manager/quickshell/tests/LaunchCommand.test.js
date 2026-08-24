@@ -19,7 +19,7 @@ test("desktop entries launch through app2unit as one typed argv", () => {
         "-p",
         "TimeoutStopSec=10s",
         "-p",
-        "KillMode=control-group",
+        "KillMode=mixed",
         "-p",
         "KillSignal=SIGTERM",
         "-p",

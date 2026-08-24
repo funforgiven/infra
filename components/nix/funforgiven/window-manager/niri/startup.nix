@@ -24,7 +24,10 @@ in
           };
           Service = {
             ExecStart = command;
-            Slice = "app.slice";
+            Slice = "app-graphical.slice";
+            KillMode = "mixed";
+            KillSignal = "SIGTERM";
+            SendSIGKILL = true;
             TimeoutStopSec = applicationStopTimeout;
           };
           Install.WantedBy = [ "graphical-session.target" ];

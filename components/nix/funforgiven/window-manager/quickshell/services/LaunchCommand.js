@@ -31,7 +31,7 @@ function app2unitService(launcher, id, applicationStopTimeout) {
         "-p",
         "TimeoutStopSec=" + stopTimeout,
         "-p",
-        "KillMode=control-group",
+        "KillMode=mixed",
         "-p",
         "KillSignal=SIGTERM",
         "-p",
