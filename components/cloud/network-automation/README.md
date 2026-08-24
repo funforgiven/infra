@@ -21,8 +21,8 @@ resets, adoption, or undeclared controller objects.
 - the inventory-declared CCR2004 static leases; and
 - the single private-zone DNS forward from `cloud.fahrican.com` to the
   internal CoreDNS VIP `10.21.20.129`; and
-- the CCR2004 `wg-admin` interface and its narrowly scoped management
-  firewall rules; and
+- the CCR2004 `wg-admin` interface and its narrowly scoped management and
+  personal-services firewall rules; and
 - the fail-closed Mullvad Osaka WireGuard egress used only for OTOTOY from
   trusted VLAN 10; and
 - the TCP and QUIC Syncthing WAN forwards to the reserved admin workstation;
