@@ -101,6 +101,9 @@ the RouterOS Terraform import is complete.
 identities. It owns only the switch-only networks, profiles, port assignments,
 and `Rooftrollen` SSIDs declared in
 `deployments/homelab/cloud/omada-network.yaml`.
+Every declared switch profile owns its VLAN membership. An optional
+`spanningTree` block also owns only the declared STP enable, edge-port, BPDU
+Protect, and BPDU Filter values while preserving every other profile policy.
 The same file records the switch management interface, which remains a
 controller-UI setting because the public OpenAPI does not expose it.
 `wireless.policy: standard` expands to the one qualified WPA2/AES policy.

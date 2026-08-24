@@ -9,6 +9,7 @@ arguments or environment variables.
 from __future__ import annotations
 
 import argparse
+import copy
 import ipaddress
 import json
 import sys
@@ -31,8 +32,9 @@ POSTFLIGHT_ATTEMPTS = 15
 POSTFLIGHT_DELAY = 2.0
 PAGE = "page=1&pageSize=1000"
 BANDS = {"2.4GHz": 1, "dual": 3}
-# Required policy fields documented by Omada OpenAPI. Network membership is
-# the only profile behavior this reconciler owns.
+# Required profile fields documented by Omada OpenAPI. Every declared profile
+# owns network membership; an optional spanningTree block additionally owns
+# the narrowly selected edge and BPDU safety settings.
 PROFILE_REQUIRED_POLICY_FIELDS = frozenset(
     {
         "poe", "dot1x", "portIsolationEnable", "lldpMedEnable",
@@ -60,10 +62,19 @@ class Network:
 
 
 @dataclass(frozen=True)
+class SpanningTreePolicy:
+    enabled: bool
+    edge_port: bool
+    bpdu_protect: bool
+    bpdu_filter: bool
+
+
+@dataclass(frozen=True)
 class Profile:
     name: str
     native_vlan: int
     tagged_vlans: tuple[int, ...]
+    spanning_tree: SpanningTreePolicy | None
 
 
 @dataclass(frozen=True)
@@ -144,6 +155,12 @@ def _integer(value: Any, label: str) -> int:
     return value
 
 
+def _boolean(value: Any, label: str) -> bool:
+    if not isinstance(value, bool):
+        raise SafeError(f"{label} must be a boolean")
+    return value
+
+
 def normalize_mac(value: Any, label: str = "MAC address") -> str:
     compact = _string(value, label).replace(":", "").replace("-", "").upper()
     if len(compact) != 12 or any(character not in "0123456789ABCDEF" for character in compact):
@@ -168,11 +185,26 @@ def load_desired(path: Path = DEFAULT_DESIRED_STATE) -> Desired:
             Network(str(name), _vlan(vlan, "network VLAN"))
             for name, vlan in switch.get("networks", {}).items()
         )
-        profiles = tuple(
-            Profile(str(name), _vlan(item["nativeVlan"], "profile VLAN"),
-                    tuple(_vlan(vlan, "tagged VLAN") for vlan in item["taggedVlans"]))
-            for name, item in switch["profiles"].items()
-        )
+        profiles = []
+        for name, item in switch["profiles"].items():
+            spanning_tree_data = item.get("spanningTree")
+            spanning_tree = None
+            if spanning_tree_data is not None:
+                spanning_tree = SpanningTreePolicy(
+                    enabled=_boolean(spanning_tree_data["enabled"], "spanning tree enabled"),
+                    edge_port=_boolean(spanning_tree_data["edgePort"], "edge port"),
+                    bpdu_protect=_boolean(spanning_tree_data["bpduProtect"], "BPDU protect"),
+                    bpdu_filter=_boolean(spanning_tree_data["bpduFilter"], "BPDU filter"),
+                )
+            profiles.append(
+                Profile(
+                    str(name),
+                    _vlan(item["nativeVlan"], "profile VLAN"),
+                    tuple(_vlan(vlan, "tagged VLAN") for vlan in item["taggedVlans"]),
+                    spanning_tree,
+                )
+            )
+        profiles = tuple(profiles)
         ports = {int(port): str(profile) for port, profile in switch["ports"].items()}
         interface = ipaddress.IPv4Interface(ap["address"])
         gateway, dns = ipaddress.IPv4Address(ap["gateway"]), ipaddress.IPv4Address(ap["dns"])
@@ -581,6 +613,20 @@ def _profile_signature(profile: Mapping[str, Any], snapshot: Snapshot) -> tuple[
     )
 
 
+def _spanning_tree_matches(profile: Mapping[str, Any], desired: Profile) -> bool:
+    policy = desired.spanning_tree
+    if policy is None:
+        return True
+    setting = profile.get("spanningTreeSetting")
+    return (
+        isinstance(setting, Mapping)
+        and profile.get("spanningTreeEnable") is policy.enabled
+        and setting.get("edgePort") is policy.edge_port
+        and setting.get("bpduProtect") is policy.bpdu_protect
+        and setting.get("bpduFilter") is policy.bpdu_filter
+    )
+
+
 def _profile_payload(source: Mapping[str, Any], desired: Profile, snapshot: Snapshot) -> dict[str, Any]:
     if not PROFILE_REQUIRED_POLICY_FIELDS.issubset(source):
         raise SafeError("the Omada profile template lacks required policy fields")
@@ -588,6 +634,20 @@ def _profile_payload(source: Mapping[str, Any], desired: Profile, snapshot: Snap
     if missing_vlans:
         raise SafeError("a desired profile references a missing LAN network")
     payload = {field: source[field] for field in PROFILE_REQUIRED_POLICY_FIELDS}
+    if "spanningTreeSetting" in source:
+        payload["spanningTreeSetting"] = copy.deepcopy(source["spanningTreeSetting"])
+    if desired.spanning_tree is not None:
+        setting = payload.get("spanningTreeSetting")
+        if not isinstance(setting, dict):
+            raise SafeError("the Omada profile template lacks spanning-tree settings")
+        payload["spanningTreeEnable"] = desired.spanning_tree.enabled
+        setting.update(
+            {
+                "edgePort": desired.spanning_tree.edge_port,
+                "bpduProtect": desired.spanning_tree.bpdu_protect,
+                "bpduFilter": desired.spanning_tree.bpdu_filter,
+            }
+        )
     native_id = _string(snapshot.networks_by_vlan[desired.native_vlan].get("id"), "network ID")
     payload.update(
         {
@@ -687,12 +747,14 @@ def make_plan(desired: Desired, snapshot: Snapshot, *, include_write_only: bool 
         elif actual is None:
             operation = "create" if desired.profile_template in snapshot.profiles_by_name else "blocked"
             detail = "create from the declared template" if operation == "create" else "profile template is absent"
-        elif _profile_signature(actual, snapshot) == (
-            profile.native_vlan, tuple(sorted(profile.tagged_vlans)), (profile.native_vlan,), None
+        elif (
+            _profile_signature(actual, snapshot)
+            == (profile.native_vlan, tuple(sorted(profile.tagged_vlans)), (profile.native_vlan,), None)
+            and _spanning_tree_matches(actual, profile)
         ):
-            operation, detail = "noop", "VLAN membership matches"
+            operation, detail = "noop", "VLAN membership and declared policy match"
         else:
-            operation, detail = "update", "VLAN membership differs"
+            operation, detail = "update", "VLAN membership or declared policy differs"
         actions.append(Action("profile", profile.name, operation, detail))
 
     for port, profile_name in desired.ports.items():
