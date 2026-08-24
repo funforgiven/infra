@@ -49,9 +49,6 @@
 
             python -m unittest discover \
               -s components/cloud/network-automation/tests -p 'test_*.py'
-            python -m unittest discover \
-              -s deployments/homelab/cloud/services/40-media \
-              -p 'test_albumclean_core.py'
 
             python components/cloud/policy/validate_management_policy.py \
               deployments/homelab/cloud/declarative-ownership.yaml \
@@ -1092,8 +1089,6 @@
             beets = (media_root / "beets.yaml").read_text()
             beets_config = (media_root / "beets-config.yaml").read_text()
             beets_import = (media_root / "import.sh").read_text()
-            albumclean = (media_root / "albumclean.py").read_text()
-            albumclean_core = (media_root / "albumclean_core.py").read_text()
             navidrome = (media_root / "navidrome.yaml").read_text()
             manila_csi_policy = yaml.safe_load(
                 (
@@ -1201,40 +1196,6 @@
                 raise SystemExit(
                     "SFTPGo OIDC identity must not deny every valid login method"
                 )
-            for albumclean_fragment in (
-                "pluginpath: /config",
-                "  - albumclean",
-                "albumclean.py=albumclean.py",
-                "albumclean_core.py=albumclean_core.py",
-            ):
-                if albumclean_fragment not in beets_config + media_kustomization:
-                    raise SystemExit(
-                        "Beets must load the declarative album metadata normalizer"
-                    )
-            if '"$beet" albumclean' not in beets_import:
-                raise SystemExit(
-                    "Beets must idempotently normalize albums already in its catalog"
-                )
-            for albumclean_fragment in (
-                'register_listener("import_task_choice"',
-                'register_listener("import_task_apply"',
-                "album.albumdisambig = \"\"",
-                "item.try_sync(write=True, move=True)",
-            ):
-                if albumclean_fragment not in albumclean:
-                    raise SystemExit(
-                        "Beets album normalization must cover future and existing files"
-                    )
-            for albumclean_core_fragment in (
-                "def is_non_title_qualifier",
-                "def normalize_album_title",
-                "ハイレゾ",
-                "初回",
-            ):
-                if albumclean_core_fragment not in albumclean_core:
-                    raise SystemExit(
-                        "Beets album normalization must cover generic quality and retail labels"
-                    )
 
             identity_tofu = pathlib.Path(
                 "components/cloud/identity/tofu/main.tf"

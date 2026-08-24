@@ -2,10 +2,8 @@ directory: /media/library
 library: /state/library.db
 statefile: /state/import-state.pickle
 create_backup_before_migrations: yes
-pluginpath: /config
 
 plugins:
-  - albumclean
   - musicbrainz
   - fetchart
 
@@ -21,7 +19,13 @@ import:
   quiet: yes
   quiet_fallback: skip
   autotag: yes
+  duplicate_keys:
+    album: mb_releasegroupid
+    item: artist title
   duplicate_action: skip
+  set_fields:
+    album: "$release_group_title"
+    albumdisambig: ""
   log: /state/import.log
 
 paths:
