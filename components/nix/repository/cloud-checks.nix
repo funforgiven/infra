@@ -1365,19 +1365,19 @@
             prometheus_spec = observability_release["spec"]["values"]["prometheus"][
                 "prometheusSpec"
             ]
-            if prometheus_spec.get("serviceDiscoveryRole") != "EndpointSlice":
+            if prometheus_spec.get("serviceDiscoveryRole") != "Endpoints":
                 raise SystemExit(
-                    "Prometheus must discover services through EndpointSlice"
+                    "Prometheus must use Endpoints until prometheus-operator#7678 is fixed"
                 )
             operator_values = observability_release["spec"]["values"][
                 "prometheusOperator"
             ]
             if (
-                operator_values.get("kubeletEndpointsEnabled") is not False
-                or operator_values.get("kubeletEndpointSliceEnabled") is not True
+                operator_values.get("kubeletEndpointsEnabled") is not True
+                or operator_values.get("kubeletEndpointSliceEnabled") is not False
             ):
                 raise SystemExit(
-                    "Prometheus Operator must publish only kubelet EndpointSlices"
+                    "Prometheus Operator must use kubelet Endpoints until prometheus-operator#7678 is fixed"
                 )
             for resource in ("podMonitor", "probe", "rule", "serviceMonitor"):
                 if (

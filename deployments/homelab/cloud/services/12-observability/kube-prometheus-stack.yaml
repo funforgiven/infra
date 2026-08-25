@@ -77,8 +77,11 @@ spec:
       enabled: false
 
     prometheusOperator:
-      kubeletEndpointsEnabled: false
-      kubeletEndpointSliceEnabled: true
+      # prometheus-operator#7678 leaves removed Nodes in an EndpointSlice when
+      # EndpointSlice-only kubelet discovery is enabled. Use the deprecated but
+      # correctly reconciled Endpoints path until that upstream bug is fixed.
+      kubeletEndpointsEnabled: true
+      kubeletEndpointSliceEnabled: false
       image:
         sha: a001ed10a3823bbf2410ea347796d0e35ff8decd24fb98acbe7ab9e98d431c39
       prometheusConfigReloader:
@@ -101,7 +104,7 @@ spec:
           sha: 64f71bb84e03c855948418b0fc5dea53e9543d8e3fc9931598f583805507f05e
         externalLabels:
           cluster: services-v1
-        serviceDiscoveryRole: EndpointSlice
+        serviceDiscoveryRole: Endpoints
         persistentVolumeClaimRetentionPolicy:
           whenDeleted: Retain
           whenScaled: Retain
