@@ -1103,7 +1103,9 @@
             audiomuse_config = yaml.safe_load(
                 (media_root / "audiomuse-config.yaml").read_text()
             )["data"]
-            media_routes = (media_root / "routes.yaml").read_text()
+            media_routes_path = media_root / "routes.yaml"
+            media_routes = media_routes_path.read_text()
+            media_route_documents = list(yaml.safe_load_all(media_routes))
             media_network_policy = (media_root / "network-policy.yaml").read_text()
             navidrome_plugins = (
                 media_root / "configure-navidrome-plugins.sh"
@@ -1437,6 +1439,41 @@
                 or "X-Forwarded-Preferred-Username" not in media_routes
             ):
                 raise SystemExit("Navidrome browser and OpenSubsonic route split drifted")
+            navidrome_route = next(
+                document
+                for document in media_route_documents
+                if document.get("kind") == "HTTPRoute"
+                and document.get("metadata", {}).get("name") == "navidrome"
+            )
+            stream_rule = next(
+                (
+                    rule
+                    for rule in navidrome_route["spec"]["rules"]
+                    if {
+                        match.get("path", {}).get("value")
+                        for match in rule.get("matches", [])
+                    }
+                    == {"/rest/stream.view", "/rest/download.view"}
+                ),
+                None,
+            )
+            if (
+                stream_rule is None
+                or stream_rule.get("timeouts")
+                != {"request": "0s", "backendRequest": "0s"}
+                or stream_rule.get("backendRefs")
+                != [{"name": "navidrome", "port": 4533}]
+                or not any(
+                    "X-Forwarded-Preferred-Username"
+                    in stream_filter.get("requestHeaderModifier", {}).get(
+                        "remove", []
+                    )
+                    for stream_filter in stream_rule.get("filters", [])
+                )
+            ):
+                raise SystemExit(
+                    "Navidrome media streams must bypass the gateway transaction timeout"
+                )
 
             expected_audiomuse_config = {
                 "AI_MODEL_PROVIDER": "NONE",
