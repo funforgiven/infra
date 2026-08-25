@@ -1359,6 +1359,22 @@
                 "ignorelist": False,
             }:
                 raise SystemExit("LastGenre must remain an explicit offline normalizer")
+            if beets_configuration.get("replaygain") != {
+                "auto": True,
+                "backend": "ffmpeg",
+                "overwrite": False,
+                "parallel_on_import": False,
+                "threads": 2,
+            }:
+                raise SystemExit("ReplayGain import analysis must remain deterministic")
+            for replaygain_fragment in (
+                'replaygain_backfill="$state/replaygain-album-track-v1"',
+                '"$beet" replaygain -a -f -w',
+                '"$beet" replaygain -f -w "singleton:true"',
+                'touch "$replaygain_backfill"',
+            ):
+                if replaygain_fragment not in beets_import:
+                    raise SystemExit("ReplayGain catalog backfill contract drifted")
             if (
                 "LastGenre attempted a Last.fm request" not in lastgenre_test
                 or "plugin.client.fetch = reject_network" not in lastgenre_test

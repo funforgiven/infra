@@ -47,6 +47,20 @@ if [ ! -e "$release_group_migration" ]; then
   touch "$release_group_migration"
 fi
 
+# ReplayGain was enabled after the original library had already been cataloged.
+# Re-analyze the existing catalog once so every album gets coherent track and
+# album gain/peak values and every standalone track gets track values. The
+# ffmpeg backend writes metadata tags only; it never re-encodes the audio. Force
+# this versioned migration so database-only or partial values cannot cause an
+# on-disk file to be skipped. A failed pass leaves the marker absent and is
+# safely retried by the next CronJob run.
+replaygain_backfill="$state/replaygain-album-track-v1"
+if [ ! -e "$replaygain_backfill" ]; then
+  "$beet" replaygain -a -f -w
+  "$beet" replaygain -f -w "singleton:true"
+  touch "$replaygain_backfill"
+fi
+
 # Normalize only genres already present in the library. The acceptance script
 # replaces LastGenre's network client with a hard failure first, proving this
 # exact cleanup path makes zero Last.fm requests in the deployed Beets image.

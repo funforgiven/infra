@@ -64,6 +64,13 @@ Navidrome is available at https://music.fahrican.com. Last.fm server keys are
 in the media-runtime SOPS Secret. Last.fm and ListenBrainz scrobbling are linked
 per Navidrome user through their upstream interactive authorization flows.
 
+Beets calculates album-aware ReplayGain with the native ffmpeg backend during
+every new import and writes only gain/peak metadata tags, without re-encoding
+the audio. The importer also owns a versioned, resumable one-time backfill for
+the catalog that predates ReplayGain: albums receive track and album values,
+while standalone tracks receive track values. Its completion marker is stored
+on the persistent `beets-data` volume only after both passes succeed.
+
 ## Activation gates
 
 - Enroll the media contract into the central services bootstrap SOPS Secret;
