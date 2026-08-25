@@ -47,6 +47,17 @@ if [ ! -e "$release_group_migration" ]; then
   touch "$release_group_migration"
 fi
 
+# Normalize only genres already present in the library. The acceptance script
+# replaces LastGenre's network client with a hard failure first, proving this
+# exact cleanup path makes zero Last.fm requests in the deployed Beets image.
+lastgenre_maintenance="$state/lastgenre-offline-maintenance"
+if [ ! -e "$lastgenre_maintenance" ] || \
+  find "$lastgenre_maintenance" -mmin +1440 -print -quit | grep -q .; then
+  /opt/beets/verify-lastgenre-offline.py
+  "$beet" lastgenre 'genre::.'
+  touch "$lastgenre_maintenance"
+fi
+
 if ! find "$inbox" -mindepth 1 -print -quit | grep -q .; then
   printf '%s\n' "Beets inbox is empty"
   exit 0

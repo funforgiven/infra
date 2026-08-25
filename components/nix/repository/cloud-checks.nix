@@ -196,8 +196,8 @@
                 (root / "undercloud/82-services-cluster/runtime-contract.yaml").read_text()
             )
             contract = yaml.safe_load(contract_document["data"]["required-keys.yaml"])
-            if contract["schemaVersion"] != 8:
-                raise SystemExit("services runtime contract must use schema version 8")
+            if contract["schemaVersion"] != 9:
+                raise SystemExit("services runtime contract must use schema version 9")
             credentials = {
                 key
                 for group in contract["credentials"].values()
@@ -344,9 +344,16 @@
                 raise SystemExit("Hermes OpenAI key must not enter cluster reconciliation")
             if "SFTPGO_USER_PASSWORD" in reconcile_script:
                 raise SystemExit("SFTPGo local user password must remain retired")
-            for oidc_output in ("sftpgo_client_id", "sftpgo_client_secret"):
+            for oidc_output in (
+                "sftpgo_client_id",
+                "sftpgo_client_secret",
+                "navidrome_client_id",
+                "navidrome_client_secret",
+                "audiomuse_client_id",
+                "audiomuse_client_secret",
+            ):
                 if oidc_output not in reconcile_script:
-                    raise SystemExit("SFTPGo OIDC output is not reconciled")
+                    raise SystemExit(f"{oidc_output} is not reconciled")
 
             aws_mail_root = pathlib.Path("components/cloud/services/mail-aws")
             aws_mail_tofu = yaml.safe_load(
@@ -1078,6 +1085,8 @@
                 "sftpgo.yaml",
                 "beets.yaml",
                 "navidrome.yaml",
+                "audiomuse-config.yaml",
+                "audiomuse.yaml",
                 "routes.yaml",
                 "monitoring.yaml",
                 "network-policy.yaml",
@@ -1090,6 +1099,32 @@
             beets_config = (media_root / "beets-config.yaml").read_text()
             beets_import = (media_root / "import.sh").read_text()
             navidrome = (media_root / "navidrome.yaml").read_text()
+            audiomuse = (media_root / "audiomuse.yaml").read_text()
+            audiomuse_config = yaml.safe_load(
+                (media_root / "audiomuse-config.yaml").read_text()
+            )["data"]
+            media_routes = (media_root / "routes.yaml").read_text()
+            media_network_policy = (media_root / "network-policy.yaml").read_text()
+            navidrome_plugins = (
+                media_root / "configure-navidrome-plugins.sh"
+            ).read_text()
+            lastgenre_test = (
+                media_root / "verify-lastgenre-offline.py"
+            ).read_text()
+            compile(lastgenre_test, "verify-lastgenre-offline.py", "exec")
+            navidrome_service_account = (
+                media_root / "reconcile-navidrome-service-account.py"
+            ).read_text()
+            compile(
+                navidrome_service_account,
+                "reconcile-navidrome-service-account.py",
+                "exec",
+            )
+            compile(
+                (media_root / "reconcile-audiomuse.py").read_text(),
+                "reconcile-audiomuse.py",
+                "exec",
+            )
             manila_csi_policy = yaml.safe_load(
                 (
                     root
@@ -1204,9 +1239,15 @@
                 'redirect_uri = "https://upload.fahrican.com/web/oidc/redirect"',
                 'output "sftpgo_client_id"',
                 'output "sftpgo_client_secret"',
+                'redirect_uri = "https://music.fahrican.com/oauth2/callback"',
+                'redirect_uri = "https://audiomuse.fahrican.com/oauth2/callback"',
+                'output "navidrome_client_id"',
+                'output "navidrome_client_secret"',
+                'output "audiomuse_client_id"',
+                'output "audiomuse_client_secret"',
             ):
                 if identity_fragment not in identity_tofu:
-                    raise SystemExit("SFTPGo ZITADEL application contract drifted")
+                    raise SystemExit("media ZITADEL application contract drifted")
 
             haos_promotion = pathlib.Path(
                 "components/nix/servers/image-promotion.nix"
@@ -1256,6 +1297,11 @@
                 or "render.sh=render-initial-data.sh" not in media_kustomization
                 or "config.yaml=beets-config.yaml" not in media_kustomization
                 or "import.sh=import.sh" not in media_kustomization
+                or "verify-lastgenre-offline.py=verify-lastgenre-offline.py" not in media_kustomization
+                or "install-navidrome-plugins.sh=install-navidrome-plugins.sh" not in media_kustomization
+                or "migrate-navidrome-database.sh=migrate-navidrome-database.sh" not in media_kustomization
+                or "reconcile-navidrome-service-account.py=reconcile-navidrome-service-account.py" not in media_kustomization
+                or "reconcile-audiomuse.py=reconcile-audiomuse.py" not in media_kustomization
             ):
                 raise SystemExit(
                     "media importer configuration must use content-hashed rollouts"
@@ -1286,6 +1332,41 @@
             ):
                 if import_fragment not in beets_config:
                     raise SystemExit("Beets unattended import policy drifted")
+            beets_configuration = yaml.safe_load(beets_config)
+            if set(beets_configuration["plugins"]) != {
+                "musicbrainz",
+                "chroma",
+                "fetchart",
+                "replaygain",
+                "lastgenre",
+                "badfiles",
+            }:
+                raise SystemExit("Beets enrichment plugins must remain native and pinned")
+            if beets_configuration.get("lastgenre") != {
+                "auto": False,
+                "force": False,
+                "cleanup_existing": True,
+                "aliases": True,
+                "canonical": False,
+                "whitelist": False,
+                "keep_existing": False,
+                "count": 3,
+                "fallback": None,
+                "min_weight": 10,
+                "prefer_specific": False,
+                "source": "album",
+                "title_case": True,
+                "ignorelist": False,
+            }:
+                raise SystemExit("LastGenre must remain an explicit offline normalizer")
+            if (
+                "LastGenre attempted a Last.fm request" not in lastgenre_test
+                or "plugin.client.fetch = reject_network" not in lastgenre_test
+                or "plugin.import_stages == []" not in lastgenre_test
+                or '"$beet" lastgenre ' not in beets_import
+                or "genre::." not in beets_import
+            ):
+                raise SystemExit("zero-Last.fm-request acceptance coverage drifted")
             for inbox_fragment in (
                 'media_root=''${BEETS_MEDIA_ROOT:-/media}',
                 'inbox=$media_root/inbox',
@@ -1299,6 +1380,101 @@
             ):
                 if inbox_fragment not in beets_import:
                     raise SystemExit("Beets inbox lifecycle policy drifted")
+
+            for navidrome_fragment in (
+                "docker.io/deluan/navidrome:0.63.2@sha256:",
+                "ND_EXTAUTH_TRUSTEDSOURCES",
+                "value: 127.0.0.1/32,::1/128",
+                "ND_EXTAUTH_USERHEADER",
+                "X-Forwarded-Preferred-Username",
+                "ND_PLUGINS_ENABLED",
+                "ND_LYRICSPRIORITY",
+                "quay.io/oauth2-proxy/oauth2-proxy:v7.15.4@sha256:",
+                "AUDIOMUSE_NAVIDROME_PASSWORD",
+                "reconcile-navidrome-service-account.py",
+            ):
+                if navidrome_fragment not in navidrome + audiomuse:
+                    raise SystemExit("Navidrome SSO or AudioMuse service-account contract drifted")
+            for account_fragment in (
+                'USERNAME = "audiomuse"',
+                '"--set-regular"',
+                "run_password_command(command, password)",
+            ):
+                if account_fragment not in navidrome_service_account:
+                    raise SystemExit("Navidrome service account reconciliation drifted")
+            for plugin_fragment in (
+                "bca0b84ab29359f364a645fba968c4574b9bc81ef58c6f33d03957ae33b50cfc",
+                "a9196e5b4e2c2eb2aaccb9f35c9faf6f488fe9081ff5685b1556901686c7540f",
+                '"writeLyrics": false',
+                '"overwriteLyrics": false',
+                '"provider": "lrclib"',
+                "--no-write-access",
+            ):
+                if plugin_fragment not in navidrome_plugins + (
+                    media_root / "install-navidrome-plugins.sh"
+                ).read_text():
+                    raise SystemExit("Navidrome plugin integrity or lyrics policy drifted")
+            if (
+                "value: /rest" not in media_routes
+                or "port: 4533" not in media_routes
+                or "port: 4180" not in media_routes
+                or "X-Forwarded-Preferred-Username" not in media_routes
+            ):
+                raise SystemExit("Navidrome browser and OpenSubsonic route split drifted")
+
+            expected_audiomuse_config = {
+                "AI_MODEL_PROVIDER": "NONE",
+                "APP_DATA_DIR": "/tmp/audiomuse",
+                "AUTH_ENABLED": "false",
+                "ENABLE_PROXY_FIX": "true",
+                "IVF_DISK_CACHE_DIR": "/tmp/audiomuse/ivf",
+                "LYRICS_API_ENABLE": "false",
+                "LYRICS_ASR_ENABLE": "false",
+                "LYRICS_ENABLED": "true",
+                "MEDIASERVER_TYPE": "navidrome",
+                "MUSICSERVER_LYRICS_TIMEOUT": "20",
+                "NAVIDROME_URL": "http://navidrome.media.svc.cluster.local:4533",
+                "POSTGRES_DB": "audiomusedb",
+                "POSTGRES_HOST": "audiomuse-postgres.media.svc.cluster.local",
+                "POSTGRES_PORT": "5432",
+                "POSTGRES_USER": "audiomuse",
+                "PYTHONDONTWRITEBYTECODE": "1",
+                "TEMP_DIR": "/tmp/audio",
+                "TZ": "Europe/Istanbul",
+            }
+            if audiomuse_config != expected_audiomuse_config:
+                raise SystemExit("AudioMuse deterministic configuration drifted")
+            for audiomuse_fragment in (
+                "ghcr.io/neptunehub/audiomuse-ai:3.4.0@sha256:",
+                "docker.io/library/postgres:15.19-alpine@sha256:",
+                "preferredDuringSchedulingIgnoredDuringExecution",
+                "node-role.kubernetes.io/control-plane",
+                "backup.velero.io/backup-volumes-excludes: data",
+                "AUDIOMUSE_POSTGRES_PASSWORD",
+                "AUDIOMUSE_OAUTH2_COOKIE_SECRET",
+                'schedule: "45 1 * * *"',
+            ):
+                if audiomuse_fragment not in audiomuse:
+                    raise SystemExit("AudioMuse workload contract drifted")
+            if "requiredDuringSchedulingIgnoredDuringExecution:" in audiomuse.split(
+                "podAntiAffinity:", 1
+            )[1].split("securityContext:", 1)[0]:
+                raise SystemExit("AudioMuse pod anti-affinity must remain preferred")
+            for private_fragment in (
+                "kind: SecurityPolicy",
+                "name: audiomuse-private",
+                "defaultAction: Deny",
+                "10.21.10.0/24",
+                "10.21.91.0/24",
+            ):
+                if private_fragment not in media_routes:
+                    raise SystemExit("AudioMuse ingress is not genuinely LAN/WireGuard-only")
+            if (
+                "name: audiomuse-api-ingress" not in media_network_policy
+                or "name: audiomuse-postgres-ingress" not in media_network_policy
+                or "name: navidrome-audiomuse-ingress" not in media_network_policy
+            ):
+                raise SystemExit("AudioMuse east-west ingress is not isolated")
 
             media_restore_modifiers = yaml.safe_load(
                 (
@@ -1401,6 +1577,11 @@
             shellcheck \
               components/cloud/host-automation/build-autoinstall-iso.sh \
               deployments/homelab/cloud/services/40-media/import.sh \
+              deployments/homelab/cloud/services/40-media/install-navidrome-plugins.sh \
+              deployments/homelab/cloud/services/40-media/configure-navidrome-plugins.sh \
+              deployments/homelab/cloud/services/40-media/migrate-navidrome-user.sh \
+              deployments/homelab/cloud/services/40-media/migrate-navidrome-database.sh \
+              deployments/homelab/cloud/services/40-media/postgres-backup.sh \
               deployments/homelab/cloud/services/40-media/render-initial-data.sh
 
             touch "$out"

@@ -5,7 +5,7 @@ metadata:
   namespace: openstack
 data:
   required-keys.yaml: |
-    schemaVersion: 8
+    schemaVersion: 9
     secret: services-runtime-bootstrap
     secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
     credentials:
@@ -28,6 +28,10 @@ data:
         keys:
           - ND_PASSWORDENCRYPTIONKEY
           - SFTPGO_ADMIN_PASSWORD
+          - AUDIOMUSE_NAVIDROME_PASSWORD
+          - AUDIOMUSE_POSTGRES_PASSWORD
+          - NAVIDROME_OAUTH2_COOKIE_SECRET
+          - AUDIOMUSE_OAUTH2_COOKIE_SECRET
       service-hosts:
         secretFile: deployments/homelab/cloud/host-runtime/generated.sops.yaml
         keys:

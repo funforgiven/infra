@@ -117,6 +117,16 @@ locals {
       redirect_uri = "https://upload.fahrican.com/web/oidc/redirect"
       post_logout  = "https://upload.fahrican.com/web/client/logout"
     }
+    navidrome = {
+      name         = "Navidrome"
+      redirect_uri = "https://music.fahrican.com/oauth2/callback"
+      post_logout  = "https://music.fahrican.com/"
+    }
+    audiomuse = {
+      name         = "AudioMuse"
+      redirect_uri = "https://audiomuse.fahrican.com/oauth2/callback"
+      post_logout  = "https://audiomuse.fahrican.com/"
+    }
   }
 }
 
@@ -203,6 +213,26 @@ output "sftpgo_client_id" {
 
 output "sftpgo_client_secret" {
   value     = zitadel_application_oidc.web["sftpgo"].client_secret
+  sensitive = true
+}
+
+output "navidrome_client_id" {
+  value     = zitadel_application_oidc.web["navidrome"].client_id
+  sensitive = true
+}
+
+output "navidrome_client_secret" {
+  value     = zitadel_application_oidc.web["navidrome"].client_secret
+  sensitive = true
+}
+
+output "audiomuse_client_id" {
+  value     = zitadel_application_oidc.web["audiomuse"].client_id
+  sensitive = true
+}
+
+output "audiomuse_client_secret" {
+  value     = zitadel_application_oidc.web["audiomuse"].client_secret
   sensitive = true
 }
 

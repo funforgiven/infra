@@ -44,6 +44,7 @@ data "cloudflare_zone" "fahrican" {
 locals {
   services_gateway_address = "10.21.40.122"
   private_services = toset([
+    "audiomuse",
     "home",
     "music",
     "upload",

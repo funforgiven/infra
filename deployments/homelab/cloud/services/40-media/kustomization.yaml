@@ -5,6 +5,8 @@ resources:
   - sftpgo.yaml
   - beets.yaml
   - navidrome.yaml
+  - audiomuse-config.yaml
+  - audiomuse.yaml
   - routes.yaml
   - monitoring.yaml
   - network-policy.yaml
@@ -19,3 +21,17 @@ configMapGenerator:
     files:
       - config.yaml=beets-config.yaml
       - import.sh=import.sh
+      - verify-lastgenre-offline.py=verify-lastgenre-offline.py
+  - name: navidrome-bootstrap
+    namespace: media
+    files:
+      - migrate-navidrome-user.sh=migrate-navidrome-user.sh
+      - migrate-navidrome-database.sh=migrate-navidrome-database.sh
+      - reconcile-navidrome-service-account.py=reconcile-navidrome-service-account.py
+      - install-navidrome-plugins.sh=install-navidrome-plugins.sh
+      - configure-navidrome-plugins.sh=configure-navidrome-plugins.sh
+  - name: audiomuse-bootstrap
+    namespace: media
+    files:
+      - reconcile-audiomuse.py=reconcile-audiomuse.py
+      - postgres-backup.sh=postgres-backup.sh

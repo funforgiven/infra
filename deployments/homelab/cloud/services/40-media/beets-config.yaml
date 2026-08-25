@@ -5,7 +5,11 @@ create_backup_before_migrations: yes
 
 plugins:
   - musicbrainz
+  - chroma
   - fetchart
+  - replaygain
+  - lastgenre
+  - badfiles
 
 threaded: yes
 art_filename: cover
@@ -36,3 +40,46 @@ paths:
 fetchart:
   auto: yes
   cautious: yes
+
+chroma:
+  auto: yes
+
+replaygain:
+  auto: yes
+  backend: ffmpeg
+  overwrite: no
+  parallel_on_import: no
+  threads: 2
+
+# LastGenre is intentionally an offline normalizer. It cleans aliases in genres
+# which MusicBrainz or the files already supplied, but it must never become a
+# Last.fm metadata source.
+lastgenre:
+  auto: no
+  force: no
+  cleanup_existing: yes
+  aliases: yes
+  # Canonical hierarchy expansion is deliberately disabled: with no whitelist,
+  # Beets replaces known subgenres with their oldest parent (for example,
+  # Alternative Rock becomes Rock). Aliases still normalize spelling safely.
+  canonical: no
+  # Preserve legitimate niche genres which are absent from Beets' bundled
+  # whitelist (for example newer Japanese scenes).
+  whitelist: no
+  keep_existing: no
+  count: 3
+  fallback: null
+  min_weight: 10
+  # With canonicalization disabled, prefer_specific would still load the
+  # bundled tree and drop genres it does not know.
+  prefer_specific: no
+  source: album
+  title_case: yes
+  ignorelist: no
+
+badfiles:
+  check_on_import: yes
+  import_action_on_error: skip
+  import_action_on_warning: continue
+  commands:
+    flac: flac --test --warnings-as-errors --silent
