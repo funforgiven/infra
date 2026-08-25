@@ -13,6 +13,28 @@ spec:
   rules:
     - matches:
         - path:
+            type: Exact
+            value: /rest/stream.view
+        - path:
+            type: Exact
+            value: /rest/download.view
+      filters:
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            remove:
+              - X-Forwarded-Preferred-Username
+              - X-Forwarded-User
+              - X-Forwarded-Email
+              - X-Auth-Request-User
+              - X-Auth-Request-Email
+      timeouts:
+        request: 0s
+        backendRequest: 0s
+      backendRefs:
+        - name: navidrome
+          port: 4533
+    - matches:
+        - path:
             type: PathPrefix
             value: /rest
       filters:
