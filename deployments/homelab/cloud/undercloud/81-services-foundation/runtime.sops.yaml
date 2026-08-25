@@ -9,10 +9,10 @@ data:
     ND_LASTFM_SECRET: ENC[AES256_GCM,data:okSf1EvJud0arP9DAr9IgwWy7vNvZ9B5oucYnI/CGaxYu0XmwFWjWvaIpPs=,iv:eEsIpA+TDkT0iLLzLtvSHLMQFDQzgbA6ZQDmXUip0oE=,tag:ph0MGiSlXepbDFTn1y/zcw==,type:str]
     RESEND_ADMIN_API_KEY: ENC[AES256_GCM,data:QKoLdViqlYqmlttZmobLiSUMM1EM98WOzSe63ryfHj+BxVIIowtwMHgpZRDjY1MK,iv:jen7NaTE9nnz4ja89gRbthcQoldUJ9BksPh72FSUTdk=,tag:XbocqjKRcEjbggWEo0N9CQ==,type:str]
     INFRA_TELEGRAM_CHAT_ID: ENC[AES256_GCM,data:ufFK9BvSURhArLic8yMnIw==,iv:o46rtCSHUrINgtOOYUbpoQK2rjQQkNkgWuKvLax1Tm8=,tag:fV5t3vy4fWHWcjkHH8nHXQ==,type:str]
-    AUDIOMUSE_NAVIDROME_PASSWORD: ENC[AES256_GCM,data:0P68yUwn+7AzlpARICRklAizjkKYQnPPGFf0863t3+4HMAquMSgjZvOhHsAQ+ZhYQpqxDbNFAyICZojPtfTduw==,iv:UkUawX0JJ3SSi8IQi2J9Qo2ShzZ11JA8je+4moLOtkc=,tag:pZeNn2g/WmTutlDZ+wSHTA==,type:str]
-    AUDIOMUSE_POSTGRES_PASSWORD: ENC[AES256_GCM,data:D2hfBGzDsaTuHYbTBCWHYi/VpOsquHKxHT9v1EQ53v6aEF6Ri2ffO/7RmeiMs3HntDJq8Y/C6JK1qCV88sd2Cw==,iv:sicCyuuvToH7KYaAm0x6CszLovDo9HGONHRbKcl2ht8=,tag:icP/dWkst6MHMcbaIYaBYQ==,type:str]
-    NAVIDROME_OAUTH2_COOKIE_SECRET: ENC[AES256_GCM,data:95DPLqvk9mo/mRy8CaCK4g+uY24GSoLCmtNDSmvlMYuOqeiko3OuQLQuFu8=,iv:1UhxIMdjk/hgS8ggz92qweTXses1nzZnnUKf5j8NWAA=,tag:OlXSdxA2omAL30ZV/HMMGw==,type:str]
-    AUDIOMUSE_OAUTH2_COOKIE_SECRET: ENC[AES256_GCM,data:gPJdd4NCDxVgzo2GdC4Jo9JtjasbVXyzgSjacrohUN0p9RIPMwsOq6300wY=,iv:6LrvGQExMuxoed+YA/Vvr9hhSakizJS7EMnRLCFj4Uw=,tag:+idPNwl3HNoMMwW9/Vb9GQ==,type:str]
+    AUDIOMUSE_NAVIDROME_PASSWORD: ENC[AES256_GCM,data:KiGgu2flsXKcaHDwspMycig2qmJw77E6joijk82N0j6cT6GQT0GK2cbK0g/5SbvCxFqCHflxdrCY7z24HL3jjcSBfiyBXrqrvehykwzZBX+7ycMrQUJm6w==,iv:ureGe4aHmw9leUZjLlvX/ebo/Uw7zB686C5gIO6WI3E=,tag:k2qmvtp7PLivAonD/OYwJw==,type:str]
+    AUDIOMUSE_POSTGRES_PASSWORD: ENC[AES256_GCM,data:pje1YnTLzJSzcK2MtIUPqStaiJwterwRCQKIx5BoQHar3HN4Yd5ynfqcvAMgZGzs6wqbf8epmdntsh4DieRL5OThC6MsywuvJ9qBeIQRyCV40vAgLb4+Og==,iv:+SrOA3dVRxijhcRTaQyf4J+35elLUv+m3EhRUhtzN0Y=,tag:VH/SEF/tOR2Vbl5yGJ759g==,type:str]
+    NAVIDROME_OAUTH2_COOKIE_SECRET: ENC[AES256_GCM,data:556Bkfi4/R9YhGWcnJRFnvql213xZVidbNkhRVfsPmziy8WwYBkytJFdvP2ccEOzPDFvAAEAUakrVJa+,iv:G2IWGCS/WFzZRN+JQQt8pgPc1Qr810RX6rYx/G+c0Oc=,tag:z+u8siPBvPYJXrDOtViQEA==,type:str]
+    AUDIOMUSE_OAUTH2_COOKIE_SECRET: ENC[AES256_GCM,data:Cz3CSjUgJBvgVUo5P74YJhZNSY8ge3ZUFvAmewVcyUfPvDxI9LQcUPyMyLtvKBaJFuU3nTJpoa4S1nAW,iv:jXMBKKLv7nxgXN8KdWbVxsCbzCOtgxOGQ3uD0mPdJQk=,tag:0YOYhGf3/PXLkPxfcwmieg==,type:str]
 kind: Secret
 metadata:
     name: services-runtime-bootstrap
@@ -38,6 +38,6 @@ sops:
             -----END AGE ENCRYPTED FILE-----
           recipient: age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-08-25T21:07:18Z"
-    mac: ENC[AES256_GCM,data:6dq73yy7RjPFITOkjfzTyJ4XGrYtSTECIr90hNW5JF38BGie13nosA4WenrnTHaV20pp/dqtwpkStPZO/OaPr505CbwSBZNOb170GJcLCYvTHJEsuidd31kHtrWWnqDtkAjgKT6MqLZ5PBiSbuyX4y4nKiJvIEl0Is1XUF3NvHE=,iv:ogDHzbZTRTStWb4oGqC7d7LdOcAUGGOdQLGHbzdTT/Y=,tag:XrjuVuG1P6GcqEFLc19ICw==,type:str]
+    lastmodified: "2026-08-25T21:51:59Z"
+    mac: ENC[AES256_GCM,data:aaBTGmUnpZBbqXF3JxhnSs19359NUzqlzdJsVevQlGxLOVnOkqNk7GqFN+J3xwSL4c3UroLMh8PGvIIXbNgdX2ec1n+7CqexHDYH1C20NU1fBitYMgQNKN4X6RB2aDPVKg0Z3fRUptT8j/tUYan3IfhEDUhy5+OAVHDl1QEF3aA=,iv:DC9JpFII9XIjbK2XKTpS0THZqESdXIYd/ap4yDPIQAQ=,tag:ULeBBoQCrqGUD21Pxm1nzg==,type:str]
     version: 3.13.3
