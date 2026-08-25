@@ -228,7 +228,7 @@ spec:
             - name: ND_ENABLESHARING
               value: "false"
             - name: ND_EXTAUTH_LOGOUTURL
-              value: /oauth2/sign_out
+              value: https://music.fahrican.com/oauth2/sign_out
             - name: ND_EXTAUTH_TRUSTEDSOURCES
               value: 127.0.0.1/32,::1/128
             - name: ND_EXTAUTH_USERHEADER
