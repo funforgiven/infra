@@ -13,3 +13,11 @@ strategy for installs and upgrades so reconciliation waits through the
 Prometheus admission webhook bootstrap race without an operator reset.
 cert-manager owns the webhook serving certificate and CA injection; the
 chart's short-lived patch Jobs remain disabled.
+
+Kubelet discovery intentionally uses the legacy `Endpoints` API. The pinned
+Prometheus Operator's EndpointSlice-only mode retains removed Nodes after a
+replacement (upstream prometheus-operator issue 7678), which produces permanent
+false `TargetDown` alerts and omits the replacement Nodes. Keep
+`kubeletEndpointsEnabled=true`, `kubeletEndpointSliceEnabled=false`, and
+`serviceDiscoveryRole=Endpoints` together until that upstream issue is fixed
+and a node-replacement qualification proves the EndpointSlice is refreshed.
