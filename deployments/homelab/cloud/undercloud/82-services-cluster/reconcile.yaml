@@ -163,6 +163,10 @@ data:
     require_file ND_LASTFM_SECRET '^[A-Za-z0-9_-]+$' 16 256
     require_file ND_PASSWORDENCRYPTIONKEY '^[A-Za-z0-9_-]+$' 32 256
     require_file SFTPGO_ADMIN_PASSWORD '^[A-Za-z0-9_-]+$' 32 256
+    require_file AUDIOMUSE_NAVIDROME_PASSWORD '^[A-Za-z0-9_-]+$' 32 256
+    require_file AUDIOMUSE_POSTGRES_PASSWORD '^[A-Za-z0-9_-]+$' 32 256
+    require_file NAVIDROME_OAUTH2_COOKIE_SECRET '^[A-Za-z0-9/+]+={0,2}$' 43 44
+    require_file AUDIOMUSE_OAUTH2_COOKIE_SECRET '^[A-Za-z0-9/+]+={0,2}$' 43 44
     require_file RESEND_ADMIN_API_KEY '^re_[A-Za-z0-9_-]+$' 23 512
 
     export OS_PROJECT_NAME=services
@@ -270,7 +274,10 @@ data:
         -o "jsonpath={.data.$key}" > "/tmp/$key"
     done
 
-    for key in sftpgo_client_id sftpgo_client_secret; do
+    for key in \
+      sftpgo_client_id sftpgo_client_secret \
+      navidrome_client_id navidrome_client_secret \
+      audiomuse_client_id audiomuse_client_secret; do
       KUBECONFIG="$undercloud_kubeconfig" \
         "$kubectl" -n tofu-system get secret zitadel-identity-outputs \
         -o "jsonpath={.data.$key}" | base64 -d > "/tmp/$key"
@@ -432,8 +439,16 @@ data:
       --from-file=ND_LASTFM_SECRET=/runtime-bootstrap/ND_LASTFM_SECRET \
       --from-file=ND_PASSWORDENCRYPTIONKEY=/runtime-bootstrap/ND_PASSWORDENCRYPTIONKEY \
       --from-file=SFTPGO_ADMIN_PASSWORD=/runtime-bootstrap/SFTPGO_ADMIN_PASSWORD \
+      --from-file=AUDIOMUSE_NAVIDROME_PASSWORD=/runtime-bootstrap/AUDIOMUSE_NAVIDROME_PASSWORD \
+      --from-file=AUDIOMUSE_POSTGRES_PASSWORD=/runtime-bootstrap/AUDIOMUSE_POSTGRES_PASSWORD \
+      --from-file=NAVIDROME_OAUTH2_COOKIE_SECRET=/runtime-bootstrap/NAVIDROME_OAUTH2_COOKIE_SECRET \
+      --from-file=AUDIOMUSE_OAUTH2_COOKIE_SECRET=/runtime-bootstrap/AUDIOMUSE_OAUTH2_COOKIE_SECRET \
       --from-file=SFTPGO_OIDC_CLIENT_ID=/tmp/sftpgo_client_id \
       --from-file=SFTPGO_OIDC_CLIENT_SECRET=/tmp/sftpgo_client_secret \
+      --from-file=NAVIDROME_OIDC_CLIENT_ID=/tmp/navidrome_client_id \
+      --from-file=NAVIDROME_OIDC_CLIENT_SECRET=/tmp/navidrome_client_secret \
+      --from-file=AUDIOMUSE_OIDC_CLIENT_ID=/tmp/audiomuse_client_id \
+      --from-file=AUDIOMUSE_OIDC_CLIENT_SECRET=/tmp/audiomuse_client_secret \
       --dry-run=client -o yaml | "$kubectl" apply -f -
     "$kubectl" apply -f /config/sync.yaml
     "$flux" reconcile source git flux-system --timeout=5m

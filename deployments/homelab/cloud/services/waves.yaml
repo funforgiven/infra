@@ -167,6 +167,18 @@ spec:
       kind: StatefulSet
       name: sftpgo
       namespace: media
+    - apiVersion: apps/v1
+      kind: StatefulSet
+      name: audiomuse-postgres
+      namespace: media
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: audiomuse
+      namespace: media
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: audiomuse-worker
+      namespace: media
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization

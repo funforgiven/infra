@@ -11,9 +11,25 @@ spec:
   hostnames:
     - music.fahrican.com
   rules:
-    - backendRefs:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /rest
+      filters:
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            remove:
+              - X-Forwarded-Preferred-Username
+              - X-Forwarded-User
+              - X-Forwarded-Email
+              - X-Auth-Request-User
+              - X-Auth-Request-Email
+      backendRefs:
         - name: navidrome
           port: 4533
+    - backendRefs:
+        - name: navidrome
+          port: 4180
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -31,3 +47,61 @@ spec:
     - backendRefs:
         - name: sftpgo
           port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: audiomuse
+  namespace: media
+spec:
+  parentRefs:
+    - name: services
+      namespace: services-network
+      sectionName: https
+  hostnames:
+    - audiomuse.fahrican.com
+  rules:
+    - backendRefs:
+        - name: audiomuse
+          port: 4180
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: audiomuse-http
+  namespace: media
+spec:
+  parentRefs:
+    - name: services
+      namespace: services-network
+      sectionName: http
+  hostnames:
+    - audiomuse.fahrican.com
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: audiomuse-private
+  namespace: media
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: audiomuse
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: audiomuse-http
+  authorization:
+    defaultAction: Deny
+    rules:
+      - action: Allow
+        principal:
+          clientCIDRs:
+            - 10.21.10.0/24
+            - 10.21.91.0/24

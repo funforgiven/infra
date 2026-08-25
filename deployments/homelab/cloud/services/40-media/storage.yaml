@@ -49,3 +49,29 @@ spec:
   resources:
     requests:
       storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: audiomuse-postgres
+  namespace: media
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: rbd1
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: audiomuse-postgres-dumps
+  namespace: media
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: rbd1
+  resources:
+    requests:
+      storage: 5Gi

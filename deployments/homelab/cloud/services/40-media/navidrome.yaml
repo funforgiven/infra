@@ -9,9 +9,12 @@ spec:
   selector:
     app.kubernetes.io/name: navidrome
   ports:
-    - name: http
+    - name: native
       port: 4533
-      targetPort: http
+      targetPort: native
+    - name: web
+      port: 4180
+      targetPort: web
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -36,18 +39,124 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
-      containers:
-        - name: navidrome
-          image: docker.io/deluan/navidrome:0.61.2@sha256:9fa40b3d8dec43ceb2213d1fa551da3dcfef6ac6d19c2e534efb92527c2bafd2
+      initContainers:
+        - name: migrate-database
+          image: docker.io/deluan/navidrome:0.63.2@sha256:9012939114fbb1bb641b81cf96dec5ded15f0aafefe8d47a511d7cb919658e40
+          command:
+            - /bin/sh
+            - /config/migrate-navidrome-database.sh
           env:
-            - name: ND_AGENTS
-              value: lastfm,listenbrainz,deezer
-            - name: ND_BACKUP_COUNT
-              value: "7"
-            - name: ND_BACKUP_PATH
-              value: /data/backups
             - name: ND_BACKUP_SCHEDULE
-              value: "0 3 * * *"
+              value: ""
+            - name: ND_MUSICFOLDER
+              value: /music
+            - name: ND_PASSWORDENCRYPTIONKEY
+              valueFrom:
+                secretKeyRef:
+                  name: media-runtime
+                  key: ND_PASSWORDENCRYPTIONKEY
+            - name: ND_PLUGINS_ENABLED
+              value: "false"
+            - name: ND_SCANNER_ENABLED
+              value: "false"
+          securityContext: &navidromeSecurityContext
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsGroup: 1000
+            runAsNonRoot: true
+            runAsUser: 1000
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: media
+              mountPath: /music
+              subPath: library
+              readOnly: true
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: bootstrap-bin
+              mountPath: /bootstrap-bin
+        - name: migrate-user
+          image: docker.io/deluan/navidrome:0.63.2@sha256:9012939114fbb1bb641b81cf96dec5ded15f0aafefe8d47a511d7cb919658e40
+          command:
+            - /bin/sh
+            - /config/migrate-navidrome-user.sh
+          securityContext: *navidromeSecurityContext
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: config
+              mountPath: /config
+              readOnly: true
+        - name: reconcile-service-account
+          image: lscr.io/linuxserver/beets:2.13.1-ls348@sha256:90b1404e962dfc09c1926f4d8dca8920fc90d71369df5398340a12eb8ce7328c
+          command:
+            - /lsiopy/bin/python3
+            - /config/reconcile-navidrome-service-account.py
+          env:
+            - name: AUDIOMUSE_NAVIDROME_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: media-runtime
+                  key: AUDIOMUSE_NAVIDROME_PASSWORD
+            - name: HOME
+              value: /tmp
+            - name: ND_DATAFOLDER
+              value: /data
+            - name: ND_ENABLELOGREDACTING
+              value: "true"
+            - name: ND_LOGLEVEL
+              value: error
+            - name: ND_MUSICFOLDER
+              value: /music
+            - name: ND_PASSWORDENCRYPTIONKEY
+              valueFrom:
+                secretKeyRef:
+                  name: media-runtime
+                  key: ND_PASSWORDENCRYPTIONKEY
+            - name: ND_PLUGINS_ENABLED
+              value: "false"
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+          securityContext: *navidromeSecurityContext
+          volumeMounts:
+            - name: bootstrap-bin
+              mountPath: /bootstrap-bin
+              readOnly: true
+            - name: data
+              mountPath: /data
+            - name: media
+              mountPath: /music
+              subPath: library
+              readOnly: true
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+        - name: install-plugins
+          image: docker.io/deluan/navidrome:0.63.2@sha256:9012939114fbb1bb641b81cf96dec5ded15f0aafefe8d47a511d7cb919658e40
+          command:
+            - /bin/sh
+            - /config/install-navidrome-plugins.sh
+          securityContext: *navidromeSecurityContext
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: config
+              mountPath: /config
+              readOnly: true
+        - name: configure-plugins
+          image: docker.io/deluan/navidrome:0.63.2@sha256:9012939114fbb1bb641b81cf96dec5ded15f0aafefe8d47a511d7cb919658e40
+          command:
+            - /bin/sh
+            - /config/configure-navidrome-plugins.sh
+          env: &navidromeEnvironment
+            - name: ND_AGENTS
+              value: audiomuseai,lastfm,listenbrainz,deezer
             - name: ND_DEFAULTLANGUAGE
               value: en
             - name: ND_ENABLEINSIGHTSCOLLECTOR
@@ -68,8 +177,8 @@ spec:
                 secretKeyRef:
                   name: media-runtime
                   key: ND_LASTFM_SECRET
-            - name: ND_LOGLEVEL
-              value: info
+            - name: ND_LYRICSPRIORITY
+              value: embedded,.lrc,.elrc,.ttml,.srt,.txt,nd-lyrics
             - name: ND_MUSICFOLDER
               value: /music
             - name: ND_PASSWORDENCRYPTIONKEY
@@ -77,6 +186,82 @@ spec:
                 secretKeyRef:
                   name: media-runtime
                   key: ND_PASSWORDENCRYPTIONKEY
+            - name: ND_PLUGINS_AUTORELOAD
+              value: "true"
+            - name: ND_PLUGINS_ENABLED
+              value: "true"
+            - name: ND_PLUGINS_FOLDER
+              value: /data/plugins
+            - name: ND_SEARCH_BACKEND
+              value: fts
+          securityContext: *navidromeSecurityContext
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: media
+              mountPath: /music
+              subPath: library
+              readOnly: true
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      containers:
+        - name: navidrome
+          image: docker.io/deluan/navidrome:0.63.2@sha256:9012939114fbb1bb641b81cf96dec5ded15f0aafefe8d47a511d7cb919658e40
+          env:
+            - name: ND_AGENTS
+              value: audiomuseai,lastfm,listenbrainz,deezer
+            - name: ND_BACKUP_COUNT
+              value: "7"
+            - name: ND_BACKUP_PATH
+              value: /data/backups
+            - name: ND_BACKUP_SCHEDULE
+              value: "0 3 * * *"
+            - name: ND_DEFAULTLANGUAGE
+              value: en
+            - name: ND_ENABLEINSIGHTSCOLLECTOR
+              value: "false"
+            - name: ND_ENABLELOGREDACTING
+              value: "true"
+            - name: ND_ENABLESHARING
+              value: "false"
+            - name: ND_EXTAUTH_LOGOUTURL
+              value: /oauth2/sign_out
+            - name: ND_EXTAUTH_TRUSTEDSOURCES
+              value: 127.0.0.1/32,::1/128
+            - name: ND_EXTAUTH_USERHEADER
+              value: X-Forwarded-Preferred-Username
+            - name: ND_LASTFM_APIKEY
+              valueFrom:
+                secretKeyRef:
+                  name: media-runtime
+                  key: ND_LASTFM_APIKEY
+            - name: ND_LASTFM_LANGUAGE
+              value: en
+            - name: ND_LASTFM_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: media-runtime
+                  key: ND_LASTFM_SECRET
+            - name: ND_LOGLEVEL
+              value: info
+            - name: ND_LYRICSPRIORITY
+              value: embedded,.lrc,.elrc,.ttml,.srt,.txt,nd-lyrics
+            - name: ND_MUSICFOLDER
+              value: /music
+            - name: ND_PASSWORDENCRYPTIONKEY
+              valueFrom:
+                secretKeyRef:
+                  name: media-runtime
+                  key: ND_PASSWORDENCRYPTIONKEY
+            - name: ND_PLUGINS_AUTORELOAD
+              value: "true"
+            - name: ND_PLUGINS_ENABLED
+              value: "true"
+            - name: ND_PLUGINS_FOLDER
+              value: /data/plugins
             - name: ND_PROMETHEUS_ENABLED
               value: "true"
             - name: ND_SCANNER_SCHEDULE
@@ -84,18 +269,18 @@ spec:
             - name: ND_SEARCH_BACKEND
               value: fts
           ports:
-            - name: http
+            - name: native
               containerPort: 4533
           readinessProbe:
             httpGet:
               path: /ping
-              port: http
+              port: native
             initialDelaySeconds: 10
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /ping
-              port: http
+              port: native
             initialDelaySeconds: 30
             periodSeconds: 30
           resources:
@@ -105,14 +290,7 @@ spec:
             limits:
               cpu: "2"
               memory: 2Gi
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-            runAsGroup: 1000
-            runAsNonRoot: true
-            runAsUser: 1000
+          securityContext: *navidromeSecurityContext
           volumeMounts:
             - name: data
               mountPath: /data
@@ -120,10 +298,84 @@ spec:
               mountPath: /music
               subPath: library
               readOnly: true
+        - name: oauth2-proxy
+          image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.4@sha256:b1b2021fe8f4004573e8d690dec6c7bb29cc44364572cf8510a05bf3a0ae2ded
+          args:
+            - --provider=oidc
+            - --oidc-issuer-url=https://auth.cloud.fahrican.com
+            - --redirect-url=https://music.fahrican.com/oauth2/callback
+            - --upstream=http://127.0.0.1:4533
+            - --http-address=0.0.0.0:4180
+            - --email-domain=*
+            - --scope=openid profile email
+            - --pass-user-headers=true
+            - --set-xauthrequest=true
+            - --reverse-proxy=true
+            - --trusted-proxy-ip=172.16.0.0/13
+            - --cookie-secure=true
+            - --cookie-samesite=lax
+            - --cookie-refresh=1h
+            - --cookie-expire=12h
+            - --skip-provider-button=true
+          env:
+            - name: OAUTH2_PROXY_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: media-runtime
+                  key: NAVIDROME_OIDC_CLIENT_ID
+            - name: OAUTH2_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: media-runtime
+                  key: NAVIDROME_OIDC_CLIENT_SECRET
+            - name: OAUTH2_PROXY_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: media-runtime
+                  key: NAVIDROME_OAUTH2_COOKIE_SECRET
+          ports:
+            - name: web
+              containerPort: 4180
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: web
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: web
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
       volumes:
+        - name: bootstrap-bin
+          emptyDir: {}
         - name: data
           persistentVolumeClaim:
             claimName: navidrome-data
         - name: media
           persistentVolumeClaim:
             claimName: media-library
+        - name: config
+          configMap:
+            name: navidrome-bootstrap
+            defaultMode: 0555
+        - name: tmp
+          emptyDir: {}

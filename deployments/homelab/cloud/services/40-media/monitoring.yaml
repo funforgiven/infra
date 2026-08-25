@@ -8,7 +8,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: navidrome
   endpoints:
-    - port: http
+    - port: native
       path: /metrics
       interval: 30s
 ---
@@ -42,3 +42,58 @@ spec:
             description: >-
               The one-minute Beets importer has not completed successfully
               for at least thirty minutes.
+        - alert: AudioMuseUnavailable
+          expr: >-
+            kube_deployment_status_replicas_available{
+              namespace="media",deployment="audiomuse"
+            } < 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: AudioMuse web is unavailable
+            description: AudioMuse has had no available web replica for ten minutes.
+        - alert: AudioMuseWorkerUnavailable
+          expr: >-
+            kube_deployment_status_replicas_available{
+              namespace="media",deployment="audiomuse-worker"
+            } < 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: AudioMuse analysis worker is unavailable
+            description: AudioMuse has had no available analysis worker for fifteen minutes.
+        - alert: AudioMusePostgresUnavailable
+          expr: >-
+            kube_statefulset_status_replicas_ready{
+              namespace="media",statefulset="audiomuse-postgres"
+            } < 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: AudioMuse PostgreSQL is unavailable
+            description: AudioMuse PostgreSQL has had no ready replica for ten minutes.
+        - alert: AudioMuseReconcileStalled
+          expr: >-
+            time() - kube_cronjob_status_last_successful_time{
+              namespace="media",cronjob="audiomuse-reconcile"
+            } > 3600
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: AudioMuse policy reconciliation is stale
+            description: AudioMuse cron policy has not reconciled successfully for an hour.
+        - alert: AudioMusePostgresBackupStalled
+          expr: >-
+            time() - kube_cronjob_status_last_successful_time{
+              namespace="media",cronjob="audiomuse-postgres-backup"
+            } > 129600
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: AudioMuse PostgreSQL logical backup is stale
+            description: No AudioMuse PostgreSQL logical backup completed in the last 36 hours.

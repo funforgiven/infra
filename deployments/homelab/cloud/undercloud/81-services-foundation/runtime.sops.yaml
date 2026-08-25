@@ -9,6 +9,10 @@ data:
     ND_LASTFM_SECRET: ENC[AES256_GCM,data:okSf1EvJud0arP9DAr9IgwWy7vNvZ9B5oucYnI/CGaxYu0XmwFWjWvaIpPs=,iv:eEsIpA+TDkT0iLLzLtvSHLMQFDQzgbA6ZQDmXUip0oE=,tag:ph0MGiSlXepbDFTn1y/zcw==,type:str]
     RESEND_ADMIN_API_KEY: ENC[AES256_GCM,data:QKoLdViqlYqmlttZmobLiSUMM1EM98WOzSe63ryfHj+BxVIIowtwMHgpZRDjY1MK,iv:jen7NaTE9nnz4ja89gRbthcQoldUJ9BksPh72FSUTdk=,tag:XbocqjKRcEjbggWEo0N9CQ==,type:str]
     INFRA_TELEGRAM_CHAT_ID: ENC[AES256_GCM,data:ufFK9BvSURhArLic8yMnIw==,iv:o46rtCSHUrINgtOOYUbpoQK2rjQQkNkgWuKvLax1Tm8=,tag:fV5t3vy4fWHWcjkHH8nHXQ==,type:str]
+    AUDIOMUSE_NAVIDROME_PASSWORD: ENC[AES256_GCM,data:0P68yUwn+7AzlpARICRklAizjkKYQnPPGFf0863t3+4HMAquMSgjZvOhHsAQ+ZhYQpqxDbNFAyICZojPtfTduw==,iv:UkUawX0JJ3SSi8IQi2J9Qo2ShzZ11JA8je+4moLOtkc=,tag:pZeNn2g/WmTutlDZ+wSHTA==,type:str]
+    AUDIOMUSE_POSTGRES_PASSWORD: ENC[AES256_GCM,data:D2hfBGzDsaTuHYbTBCWHYi/VpOsquHKxHT9v1EQ53v6aEF6Ri2ffO/7RmeiMs3HntDJq8Y/C6JK1qCV88sd2Cw==,iv:sicCyuuvToH7KYaAm0x6CszLovDo9HGONHRbKcl2ht8=,tag:icP/dWkst6MHMcbaIYaBYQ==,type:str]
+    NAVIDROME_OAUTH2_COOKIE_SECRET: ENC[AES256_GCM,data:95DPLqvk9mo/mRy8CaCK4g+uY24GSoLCmtNDSmvlMYuOqeiko3OuQLQuFu8=,iv:1UhxIMdjk/hgS8ggz92qweTXses1nzZnnUKf5j8NWAA=,tag:OlXSdxA2omAL30ZV/HMMGw==,type:str]
+    AUDIOMUSE_OAUTH2_COOKIE_SECRET: ENC[AES256_GCM,data:gPJdd4NCDxVgzo2GdC4Jo9JtjasbVXyzgSjacrohUN0p9RIPMwsOq6300wY=,iv:6LrvGQExMuxoed+YA/Vvr9hhSakizJS7EMnRLCFj4Uw=,tag:+idPNwl3HNoMMwW9/Vb9GQ==,type:str]
 kind: Secret
 metadata:
     name: services-runtime-bootstrap
@@ -34,6 +38,6 @@ sops:
             -----END AGE ENCRYPTED FILE-----
           recipient: age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-08-23T14:25:14Z"
-    mac: ENC[AES256_GCM,data:f0xXMODb9EP4i62VgA/BFNlq+/BoEX7Y0wADvyy3UMWd7EcS+KJKJd2LeqY9jQjaD8xs1fTOZ63gpdDlNPgQjkr3UwCa9NbrxMKQwxfz3GKK+HuopATGZDkUNEWIzBg/becP8YOVC0i2/kyvjg7lDpMpYhgucKMPqK+aIFJvSdY=,iv:kk1diELpFbayROjUX426clt+LWrNfOf5WF1XoaPdohY=,tag:DCbgt91Dbx0zQ7TkcuNRFA==,type:str]
+    lastmodified: "2026-08-25T21:07:18Z"
+    mac: ENC[AES256_GCM,data:6dq73yy7RjPFITOkjfzTyJ4XGrYtSTECIr90hNW5JF38BGie13nosA4WenrnTHaV20pp/dqtwpkStPZO/OaPr505CbwSBZNOb170GJcLCYvTHJEsuidd31kHtrWWnqDtkAjgKT6MqLZ5PBiSbuyX4y4nKiJvIEl0Is1XUF3NvHE=,iv:ogDHzbZTRTStWb4oGqC7d7LdOcAUGGOdQLGHbzdTT/Y=,tag:XrjuVuG1P6GcqEFLc19ICw==,type:str]
     version: 3.13.3

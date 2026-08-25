@@ -53,6 +53,7 @@ spec:
     kind: ClusterIssuer
     name: letsencrypt-cloudflare
   dnsNames:
+    - audiomuse.fahrican.com
     - music.fahrican.com
     - upload.fahrican.com
     - home.fahrican.com
