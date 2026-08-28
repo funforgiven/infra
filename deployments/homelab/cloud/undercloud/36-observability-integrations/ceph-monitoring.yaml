@@ -1,8 +1,6 @@
-# Service monitors and alert expressions are selected from Rook 1.20.3 at
-# commit 3b678364c85fcc6380419a467629244c194c5e5c. The complete upstream rules
-# file has SHA-256 0637e1f3249158baf0e841c9f5432252ee03e52cde3dfc88caddd1ee9354ae5b.
-# The CephCluster keeps monitoring.enabled=false so these Git-owned monitors
-# have exactly one owner.
+# Selected from Rook 1.20.3 commit 3b678364c85fcc6380419a467629244c194c5e5c.
+# Upstream rules SHA-256: 0637e1f3249158baf0e841c9f5432252ee03e52cde3dfc88caddd1ee9354ae5b.
+# Rook's dynamic monitoring is disabled so it cannot duplicate these resources.
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:

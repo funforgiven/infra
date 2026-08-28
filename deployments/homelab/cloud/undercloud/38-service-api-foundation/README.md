@@ -1,84 +1,84 @@
-# Service and API foundation
+# Service and API ingress
 
-This wave installs the private service-entry layer used by OpenStack and later
-platform services. It owns cert-manager, Envoy Gateway, the OpenStack API
-Gateway at `10.21.20.130`, the management UI Gateway at `10.21.20.131`, and
-MetalLB. It does not publish public DNS records.
+The active Flux configuration installs cert-manager, Envoy Gateway, and
+MetalLB, then creates two private Envoy gateways. It does not publish public DNS
+records.
 
-## L2 ownership
+| Address | Service | L2 announcer |
+| --- | --- | --- |
+| `10.21.20.129` | private `cloud.fahrican.com` DNS | Cilium |
+| `10.21.20.130` | OpenStack APIs | MetalLB |
+| `10.21.20.131` | dashboard, Grafana, and ZITADEL | MetalLB |
 
-Cilium remains the Kubernetes CNI and owns the internal CoreDNS VIP at
-`10.21.20.129`. MetalLB owns the two Envoy Gateway VIPs at `10.21.20.130` and
-`10.21.20.131`. The address pools and Service selectors are disjoint, so an
-address can never have both announcers. The Services use
-`externalTrafficPolicy: Cluster` so an L2 holder can forward to a healthy
-backend on any node.
+MetalLB advertises the gateway addresses on `bond0.20` from control-plane
+nodes. Its pools and the Cilium DNS pool select different Services, preventing
+both controllers from announcing the same address. All three load-balanced
+Services use `externalTrafficPolicy: Cluster`, so the announcing node can
+forward traffic to a healthy backend elsewhere in the cluster.
 
-cert-manager is ready only after its permanent short-lived certificate canary
-has issued a certificate. The Cloudflare token is scoped to DNS-01 validation;
-it does not create endpoint records. Envoy Gateway is ready only when each
-`GatewayClass` is accepted and each `Gateway` is accepted and programmed at its
-declared VIP. MetalLB uses the `private-gateway` pool and advertises only on
-`bond0.20` from control-plane nodes.
+The private and management gateways each run two Envoy replicas with a
+one-replica disruption budget. HTTP redirects to HTTPS. Routes may attach only
+from namespaces labelled `gateway.fahrican.com/private: allowed` or
+`gateway.fahrican.com/management: allowed` for the corresponding gateway.
 
-DNS-01 self-checks use Cloudflare's public recursive resolvers so the private
-split-horizon zone cannot hide temporary ACME TXT records from cert-manager.
+cert-manager obtains Let's Encrypt certificates through Cloudflare DNS-01. It
+uses Cloudflare's public recursive resolvers for self-checks so the private
+split-horizon zone cannot hide temporary ACME records. The SOPS-encrypted token
+is used only for DNS-01 records and does not publish service endpoints. A
+short-lived self-signed certificate exercises certificate issuance before the
+ACME issuer and gateways are reconciled.
 
-Public Cloudflare DNS remains an allow-list. No private Service or Gateway is
-eligible for automatic public publication. DNS-01 authorization grants access
-only for ACME challenge records and does not change that publication boundary.
+The reconciled paths and readiness checks are defined in
+[`../20-gitops/waves.yaml`](../20-gitops/waves.yaml). Controller images and
+charts are pinned in the manifests that deploy them.
 
-## Changing L2 ownership
+## Internal DNS failover
 
-MetalLB is the qualified rollback implementation, not a second owner for the
-same VIP. Every ownership transition uses separate commits and stops at a
-no-owner boundary; never combine the stages into one change.
+MetalLB is installed for the gateway addresses, while its optional
+`10.21.20.129` pool remains inactive. Move private DNS from Cilium to MetalLB in
+separate commits so there is a period with no announcer and never a period with
+two.
 
-Normal paths in `../20-gitops/waves.yaml` are:
-
-- `wave37-service-network` →
-  `./deployments/homelab/cloud/undercloud/37-service-network`;
-- `wave38-metallb-fallback-controller` →
-  `./deployments/homelab/cloud/undercloud/38-service-api-foundation/metallb-fallback/inactive`.
-
-To move `10.21.20.129` to MetalLB:
-
-1. Change only `wave37-service-network` to
+1. Change the `wave37-service-network` path to
    `./deployments/homelab/cloud/undercloud/38-service-api-foundation/metallb-fallback/withdraw-service-network`.
-   Wait until the Cilium L2 lease is gone and repeated ARP probes receive no
-   reply.
-2. Change that path to
+   Wait for the Cilium L2 lease to disappear and confirm that repeated ARP
+   probes receive no reply.
+2. Change the same path to
    `./deployments/homelab/cloud/undercloud/38-service-api-foundation/metallb-fallback/metallb-service-network`.
-   This replaces the classed Cilium Service with a separately named, classed
-   MetalLB Service, avoiding an update to the immutable `loadBalancerClass`.
-   Require three ready CoreDNS endpoints and no owner for `.129`.
+   This replaces the Cilium-class Service with a separately named
+   MetalLB-class Service because `loadBalancerClass` is immutable. Confirm that
+   all three CoreDNS endpoints are ready and that `.129` still has no announcer.
 3. Change `wave38-metallb-fallback-controller` from
    `./deployments/homelab/cloud/undercloud/38-service-api-foundation/metallb-fallback/inactive`
    to
    `./deployments/homelab/cloud/undercloud/38-service-api-foundation/metallb-fallback/active-internal-dns`.
-   Require one MetalLB `ServiceL2Status`, one ARP MAC, no Cilium lease for
-   `.129`, and successful direct and RouterOS-forwarded UDP and TCP queries.
+   Confirm one MetalLB `ServiceL2Status`, one ARP MAC, no Cilium lease, and
+   successful direct and RouterOS-forwarded UDP and TCP DNS queries.
 
-Abort on overlapping Cilium and MetalLB ownership, multiple ARP MACs, more than
-one MetalLB status, a stale MetalLB configuration, missing endpoints, or a DNS
-failure.
+Stop if Cilium and MetalLB overlap, more than one MAC answers ARP, MetalLB
+reports multiple or stale statuses, CoreDNS lacks ready endpoints, or either
+DNS transport fails.
 
-Restore Cilium in reverse order:
+To restore Cilium, reverse the transition in separate commits:
 
-1. Return the MetalLB path to `metallb-fallback/inactive` and prove `.129` has
-   no owner. Use the complete inactive path shown above.
-2. Return the service-network path to
-   the complete `withdraw-service-network` path shown above; wait for the
-   MetalLB Service to be pruned and the Cilium Service to exist without an L2
-   lease.
-3. Return the service-network path to the complete normal Wave 37 path shown
-   above; require one Cilium lease and ARP MAC, no MetalLB status, and
-   successful UDP/TCP queries.
+1. Return `wave38-metallb-fallback-controller` to
+   `metallb-fallback/inactive` and wait until `.129` has no announcer.
+2. Return `wave37-service-network` to
+   `metallb-fallback/withdraw-service-network`; wait until the MetalLB Service
+   is pruned and the Cilium Service exists without an L2 lease.
+3. Return `wave37-service-network` to
+   `./deployments/homelab/cloud/undercloud/37-service-network`. Confirm one
+   Cilium lease, one ARP MAC, no MetalLB status, and successful UDP and TCP DNS
+   queries.
 
-To return `10.21.20.130` to Cilium, keep the `Gateway`, `GatewayClass`, and
-HTTPRoutes unchanged. First remove the MetalLB advertisement and verify that
-its `ServiceL2Status` and ARP owner are gone. Then enable the Cilium pool,
-restore the Cilium annotation and L2 selector in the EnvoyProxy Service
-template, and recreate the generated Envoy Service because
-`loadBalancerClass` is immutable. Accept the change only after every node can
-reach the VIP and exactly one Cilium lease and ARP MAC exist.
+## Gateway announcer changes
+
+There is no ready-to-apply Cilium transition for `.130` or `.131`. The current
+Cilium `/31` pool is disabled, while one MetalLB pool and advertisement cover
+both gateway addresses. Do not change a generated Envoy Service directly.
+
+Model any announcer change as separate Git paths that withdraw MetalLB before
+enabling Cilium and preserve the gateway that is not being moved.
+`loadBalancerClass` is immutable, so the affected Envoy Service must be
+recreated. Stop if both controllers answer for an address or if more than one
+MAC answers ARP.
