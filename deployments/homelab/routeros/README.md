@@ -9,7 +9,7 @@ There are two current-state inputs:
 - `../cloud/network-inventory.yaml` is the RouterOS inventory: device
   identity, current cloud bonds/VLANs, link policy, provider routing, declared
   static DHCP leases, private cloud DNS forward, WireGuard administration
-  boundary, and destination-scoped Mullvad egress.
+  routes, and destination-scoped Mullvad egress.
 - `components/cloud/network-automation/reconcile-routeros.yaml` is the
   current convergence owner until the RouterOS Terraform import described
   below is complete.
@@ -111,7 +111,7 @@ The default run is read-only:
 ansible-playbook reconcile-routeros.yaml
 ```
 
-`--tags apply` is the mutation boundary. Apply one device at a time with its
+`--tags apply` enables writes. Apply one device at a time with its
 direct rescue path available:
 
 ```sh
@@ -123,9 +123,9 @@ Use `--limit core_router --tags mullvad` to select only the destination-scoped
 Mullvad objects while retaining the standard read-only CCR preflight.
 
 The playbook owns only the inventory-declared subset. It does not infer unknown
-cabling or rewrite unrelated dynamic leases. Static lease activity is runtime
-evidence, not desired state, so an offline workstation or Hue Bridge does not
-create false drift.
+cabling or rewrite unrelated dynamic leases. Static lease activity is not
+configuration, so an offline workstation or Hue Bridge does not create false
+drift.
 
 VLAN 90 reserves `10.21.90.3` for PiKVM `ricotta` through a CCR2004 static
 DHCP lease on a static-only management DHCP server; no dynamic management pool
@@ -140,38 +140,23 @@ terminal filter discards. The small source-local terminal adapter answers that
 observed negotiation while retaining `community.routeros.command`. Delete the
 adapter together with this Ansible owner after the REST provider import.
 
-## Terraform adoption
+## Omada reconciliation
 
-Use the
-[`terraform-routeros/routeros`](https://github.com/terraform-routeros/terraform-provider-routeros)
-provider as the permanent RouterOS owner. It has
-native resources for the bonds, bridge ports/VLANs, addresses, DHCP leases,
-firewall/NAT, DNS, certificates, and users used here. Do not add HCL before it
-can be tested against imported live objects; unimported declarations could
-attempt to create duplicates.
+The Omada adapter plans by default. It receives the API credential on standard
+input from SOPS:
 
-The adoption is one controlled maintenance wave:
+```sh
+set -o pipefail
+nix run .#sops --accept-flake-config -- \
+  decrypt --output-type json secrets/omada.yaml \
+  | nix develop --accept-flake-config -c \
+      python3 components/cloud/network-automation/omada_reconcile.py \
+      --credentials-stdin
+```
 
-1. Export and independently back up both devices and record their current
-   RouterOS resource IDs.
-2. Create a dedicated internal CA and least-privilege automation user. Enable
-   RouterOS HTTPS/REST only on management/rescue interfaces; plain HTTP and
-   `insecure = true` are forbidden.
-3. Pin the provider exactly and keep its credentials in SOPS. Never commit a
-   plan file or pass a password in an argument.
-4. Store state outside Git in an encrypted, backed-up location. HCL remains
-   desired state; Terraform state is replaceable reconciliation metadata, but
-   losing it turns every resource back into an import operation.
-5. Import every object before its first plan. Require a zero-change plan,
-   then test one harmless comment drift and restoration on each device.
-6. Move ownership by complete resource class—leases, then CRS bonds/VLANs,
-   then CCR DNS/firewall—not by having Ansible and Terraform manage the same
-   object simultaneously.
-7. After a full no-op plan and rescue test, remove the RouterOS Ansible
-   playbook, terminal adapter, inventory connection fields, and their tests.
-
-This adoption sequence produces one replacement owner, never two permanent
-controllers.
+After reviewing the plan, add `--apply`. Creating an SSID or intentionally
+rotating its PSK also requires `--include-write-only`, because the controller
+does not return stored PSKs. The adapter never deletes controller objects.
 
 ## Secrets and identity
 
