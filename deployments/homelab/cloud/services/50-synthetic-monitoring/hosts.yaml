@@ -30,11 +30,6 @@ endpoints:
     conditions:
       ready: true
     hostname: home-assistant
-  - addresses:
-      - 192.168.80.11
-    conditions:
-      ready: true
-    hostname: hermes
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor

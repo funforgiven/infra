@@ -26,19 +26,11 @@
       url = "github:cachix/git-hooks.nix";
       flake = false;
     };
-    hermes-agent = {
-      url = "git+https://github.com/NousResearch/hermes-agent.git?rev=f80f453ae0679347e38abc917c7f94f717bf96c5&shallow=1";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     import-tree.url = "github:vic/import-tree";
-    mcp-nixos = {
-      url = "github:utensils/mcp-nixos";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     niri = {
       url = "github:sodiboo/niri-flake";
       inputs.nixpkgs.follows = "nixpkgs";

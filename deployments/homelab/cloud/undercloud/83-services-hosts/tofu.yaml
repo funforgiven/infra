@@ -14,14 +14,12 @@ spec:
     kind: GitRepository
     name: services-tofu-source
   vars:
-    # This is the revision of the protected active NixOS boot volumes. Image
-    # promotion creates candidates but never advances this value implicitly:
-    # doing so would request replacement of retained roots before their
-    # runtime credentials and recovery path were staged.
+    # Active NixOS boot-volume revision. Changing it replaces protected roots,
+    # so prepare credentials and recovery first.
     - name: image_revision
       value: "80ab8bcb18b757363d31317d61d8950b26271a6f"
-    # Keep this on NixOS until the encrypted native-backup restore and HAOS
-    # image-promotion gates have both passed.
+    # Keep NixOS until HAOS can restore the encrypted native backup and its
+    # pinned image is available.
     - name: home_assistant_platform
       value: nixos
   runnerPodTemplate:
@@ -32,8 +30,6 @@ spec:
   writeOutputsToSecret:
     name: services-hosts-outputs
     outputs:
-      - hermes_private_address
-      - hermes_provider_address
       - home_assistant_private_address
       - home_assistant_provider_address
   remediation:

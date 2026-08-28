@@ -7,7 +7,6 @@
 *.tfvars.json
 .env
 .env.*
-/.codex-doc-cache/
 /.direnv/
 /.envrc
 /.pre-commit-config.yaml

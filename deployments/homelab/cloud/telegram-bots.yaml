@@ -1,6 +1,6 @@
 schemaVersion: 1
 document: homelab-cloud-telegram-bots
-lastReviewed: "2026-08-19"
+lastReviewed: "2026-08-29"
 
 bots:
   infrastructure:
@@ -15,15 +15,3 @@ bots:
       chatTitle: Fahrican Infra Alerts
     outputs:
       chatCredential: INFRA_TELEGRAM_CHAT_ID
-  hermes:
-    name: Fahrican Hermes
-    username: fahrican_hermes_bot
-    description: Private conversational access to the Fahrican Hermes assistant.
-    shortDescription: Private Hermes assistant access.
-    tokenCredential: HERMES_TELEGRAM_BOT_TOKEN
-    activation:
-      command: /activate
-      chatType: private
-    outputs:
-      chatCredential: HERMES_TELEGRAM_HOME_CHANNEL
-      allowedUsersCredential: HERMES_TELEGRAM_ALLOWED_USERS

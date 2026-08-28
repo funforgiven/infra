@@ -7,11 +7,11 @@ in
     type = lib.types.listOf lib.types.str;
     default = [ ];
     apply = lib.naturalSort;
+    description = "Patterns written to the generated .gitignore file.";
   };
 
   config = {
     git.ignore = [
-      "/.codex-doc-cache/"
       "/.direnv/"
       ".env"
       ".env.*"

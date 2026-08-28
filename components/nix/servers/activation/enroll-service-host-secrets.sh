@@ -2,9 +2,25 @@
 set -euo pipefail
 umask 077
 
+usage() {
+  cat <<'EOF'
+Usage: enroll-service-host-secrets SSH_TARGET PROFILE
+
+Install one SOPS-backed secret profile on a service host over SSH.
+
+Profiles:
+  monitoring             Infrastructure Telegram alerts
+  home-assistant-backup   Home Assistant Restic repository
+EOF
+}
+
+if [[ "$#" -eq 1 && "$1" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
 if [[ "$#" -ne 2 ]]; then
-  echo 'Usage: enroll-service-host-secrets SSH_TARGET PROFILE' >&2
-  echo 'Profiles: monitoring hermes-openai hermes-telegram hermes-backup home-assistant-backup' >&2
+  usage >&2
   exit 64
 fi
 
@@ -77,33 +93,6 @@ enroll_monitoring() {
   unset bot_token chat_id
 }
 
-enroll_hermes_openai() {
-  local openai_api_key
-  read_sops_value openai_api_key OPENAI_API_KEY '^sk-[A-Za-z0-9_-]+$' 20 1024
-  prepare_directory /var/lib/hermes-bootstrap
-  printf 'OPENAI_API_KEY=%s\n' "$openai_api_key" | \
-    install_stream /var/lib/hermes-bootstrap/openai.env
-  unset openai_api_key
-}
-
-enroll_hermes_telegram() {
-  local bot_token
-  local allowed_users
-  local home_channel
-  read_sops_value bot_token HERMES_TELEGRAM_BOT_TOKEN \
-    '^[0-9]+:[A-Za-z0-9_-]+$' 32 256
-  read_sops_value allowed_users HERMES_TELEGRAM_ALLOWED_USERS \
-    '^[0-9]+(,[0-9]+)*$' 1 512
-  read_sops_value home_channel HERMES_TELEGRAM_HOME_CHANNEL '^-?[0-9]+$' 1 32
-  prepare_directory /var/lib/hermes-bootstrap
-  {
-    printf 'TELEGRAM_BOT_TOKEN=%s\n' "$bot_token"
-    printf 'TELEGRAM_ALLOWED_USERS=%s\n' "$allowed_users"
-    printf 'TELEGRAM_HOME_CHANNEL=%s\n' "$home_channel"
-  } | install_stream /var/lib/hermes-bootstrap/telegram.env
-  unset bot_token allowed_users home_channel
-}
-
 enroll_backup() {
   local prefix="$1"
   local password_key="$2"
@@ -133,19 +122,6 @@ enroll_backup() {
 case "$profile" in
   monitoring)
     enroll_monitoring
-    ;;
-  hermes-openai)
-    enroll_hermes_openai
-    ;;
-  hermes-telegram)
-    enroll_hermes_telegram
-    ;;
-  hermes-backup)
-    enroll_backup \
-      services/hosts/hermes \
-      HERMES_BACKUP_RESTIC_PASSWORD \
-      HERMES_BACKUP_B2_APPLICATION_KEY_ID \
-      HERMES_BACKUP_B2_APPLICATION_KEY
     ;;
   home-assistant-backup)
     enroll_backup \
