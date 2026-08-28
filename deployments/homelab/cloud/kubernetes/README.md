@@ -1,15 +1,19 @@
 # Kubernetes bootstrap
 
 Kubespray owns only the initial three-node Kubernetes, etcd, containerd,
-kube-vip, and Cilium installation. Flux is the continuous owner of the
-platform resources installed after that bootstrap boundary.
+kube-vip, and Cilium installation. Flux manages the platform resources added
+after bootstrap.
 
-The inventory keeps every node address on VLAN 20. kube-vip owns only
-`10.21.20.128:6443`. Cilium owns active Service L2 announcements; MetalLB is an
-inactive, mutually exclusive rollback implementation. Cilium uses native
-routing through `bond0.20`, admits the Manila NFS Service through `br-manila`,
-uses pod MTU 1500, enables socket load balancing, and replaces kube-proxy. It
-must not select VLANs 30-32.
+The inventory keeps every node address on VLAN 20. kube-vip owns the
+`10.21.20.128:6443` API endpoint. Cilium announces the internal CoreDNS address
+at `10.21.20.129`; MetalLB announces the private Gateway addresses at
+`10.21.20.130` and `.131`. Their address pools and `loadBalancerClass` values
+are disjoint. The documented fallback may move `.129` to MetalLB only through a
+controlled no-owner transition.
+
+Cilium uses native routing through `bond0.20`, includes `br-manila` for the
+Manila service path, uses pod MTU 1500, enables socket load balancing, and
+replaces kube-proxy. It must not select VLANs 30-32.
 ConfigMap changes roll the agent DaemonSet with at most one unavailable agent,
 preserving networking on the other two nodes.
 
@@ -38,18 +42,18 @@ runtime file. Kubespray's other generated files are ephemeral under
 bootstrap and recovery. Never mount the whole `/run/secrets` directory or write
 generated credentials into this repository.
 
-The mutation boundary is Kubespray's `cluster.yml`. Before it runs, require the
-pinned container's inventory graph, SSH ping, Ansible syntax check, and an
-unused `10.21.20.128` address. Run with host-key checking explicitly enabled;
+Before running Kubespray's `cluster.yml`, require the pinned container's
+inventory graph, SSH ping, Ansible syntax check, and an unused
+`10.21.20.128` address. Run with host-key checking explicitly enabled;
 the upstream container's relaxed SSH defaults are not accepted here. On an
 existing cluster, pass `-e upgrade_cluster_setup=true` when changing control
 plane configuration so kubeadm rewrites the static pod manifests. A normal
 idempotent `cluster.yml` run renders supporting files but does not replace an
 unchanged-version API server manifest.
 
-## Acceptance
+## Validation
 
-Playbook success alone is insufficient. The wave closes only after:
+After the playbook finishes, verify:
 
 - all three nodes are Ready and all three etcd members are healthy;
 - the API is ready through `https://10.21.20.128:6443`;
