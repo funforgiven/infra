@@ -30,7 +30,7 @@ kube_encrypt_token: >-
 kubernetes_audit: true
 unsafe_show_logs: false
 
-# ZITADEL authenticates people; Kubernetes remains the authorization owner.
+# ZITADEL authenticates people; Kubernetes enforces their permissions.
 # Certificate kubeconfigs continue to provide an independent recovery path.
 kube_apiserver_use_authentication_config_file: true
 kube_apiserver_authentication_config_anonymous:
@@ -98,8 +98,8 @@ loadbalancer_apiserver:
   address: "{{ kube_vip_address }}"
   port: 6443
 
-# Kubespray validates vxlan as tunnelProtocol. routingMode is authoritative and
-# disables encapsulation; the protocol value remains inert in native mode.
+# Kubespray requires a tunnelProtocol value. routingMode disables encapsulation,
+# so vxlan is not used here.
 cilium_version: "1.19.4"
 cilium_mtu: "1500"
 cilium_kube_proxy_replacement: true

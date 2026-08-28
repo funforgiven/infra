@@ -81,10 +81,9 @@ at boot. It does not create or format an ESP.
 ## Network
 
 Netplan renders `bond0` as fast 802.3ad LACP with `min-links=1` and a
-layer-3+4 hash. It renders addressed VLANs 20 and 30–32 plus unnumbered
-`bond0.40` for the Open vSwitch external-provider bridge. VLAN 33 is reserved
-in the architecture and is added during the later Manila wave. The role
-discovers exactly two interfaces using the
+layer-3+4 hash. It assigns host addresses to VLANs 20 and 30–32 and renders
+unnumbered `bond0.33` and `bond0.40` interfaces for the Manila and external
+provider bridges. The role discovers exactly two interfaces using the
 qualified `ice` driver and bonds Netplan's driver-matched group; kernel names,
 PCI slots, and permanent MAC addresses are not inventory identity.
 
