@@ -3,61 +3,70 @@
   perSystem =
     { pkgs, ... }:
     let
+      source = inputs.self;
       python = pkgs.python3.withPackages (pythonPackages: [
         pythonPackages.ansible
         pythonPackages.ansible-core
         pythonPackages.pyyaml
         pythonPackages.requests
       ]);
-    in
-    {
-      checks.cloud-configuration =
-        pkgs.runCommandLocal "cloud-configuration-check"
+
+      pythonTests =
+        pkgs.runCommandLocal "cloud-python-tests"
           {
-            nativeBuildInputs = [
-              python
-              pkgs.kustomize
-              pkgs.opentofu
-              pkgs.ripgrep
-              pkgs.shellcheck
-              pkgs.yamllint
-            ];
+            nativeBuildInputs = [ python ];
           }
           ''
             set -euo pipefail
 
-            mkdir -p \
-              source/components/nix/servers \
-              source/deployments/homelab \
-              source/secrets
-            cp -R ${inputs.self}/components/cloud source/components/cloud
-            cp ${inputs.self}/components/nix/servers/image-promotion.nix \
-              source/components/nix/servers/image-promotion.nix
-            cp -R ${inputs.self}/deployments/homelab/cloud source/deployments/homelab/cloud
-            cp ${inputs.self}/deployments/homelab/ssh-host-keys.json \
+            mkdir -p source/components source/deployments/homelab
+            cp -R ${source}/components/cloud source/components/cloud
+            cp -R ${source}/deployments/homelab/cloud source/deployments/homelab/cloud
+            cp ${source}/deployments/homelab/ssh-host-keys.json \
               source/deployments/homelab/ssh-host-keys.json
-            cp ${inputs.self}/secrets/github-ssh-key.pub \
-              source/secrets/github-ssh-key.pub
             chmod -R u+w source
             cd source
 
             export ANSIBLE_HOME="$TMPDIR/ansible-home"
             export ANSIBLE_LOCAL_TEMP="$TMPDIR/ansible"
             export PYTHONPYCACHEPREFIX="$TMPDIR/pycache"
-            export XDG_CACHE_HOME="$TMPDIR/cache"
-            mkdir -p "$ANSIBLE_HOME" "$ANSIBLE_LOCAL_TEMP" "$XDG_CACHE_HOME"
+            mkdir -p "$ANSIBLE_HOME" "$ANSIBLE_LOCAL_TEMP"
 
             python -m unittest discover \
-              -s components/cloud/network-automation/tests -p 'test_*.py'
+              -s components/cloud/network-automation/tests \
+              -p 'test_*.py'
+            python -m compileall -q \
+              components/cloud \
+              deployments/homelab/cloud/services
 
-            python components/cloud/policy/validate_management_policy.py \
-              deployments/homelab/cloud/declarative-ownership.yaml \
-              deployments/homelab/cloud/manual-exceptions.yaml
+            touch "$out"
+          '';
+
+      ansibleChecks =
+        pkgs.runCommandLocal "cloud-ansible-checks"
+          {
+            nativeBuildInputs = [ python ];
+          }
+          ''
+            set -euo pipefail
+
+            mkdir -p source/components source/deployments/homelab source/secrets
+            cp -R ${source}/components/cloud source/components/cloud
+            cp -R ${source}/deployments/homelab/cloud source/deployments/homelab/cloud
+            cp ${source}/deployments/homelab/ssh-host-keys.json \
+              source/deployments/homelab/ssh-host-keys.json
+            cp ${source}/secrets/github-ssh-key.pub source/secrets/github-ssh-key.pub
+            chmod -R u+w source
+            cd source
+
+            export ANSIBLE_HOME="$TMPDIR/ansible-home"
+            export ANSIBLE_LOCAL_TEMP="$TMPDIR/ansible"
+            export PYTHONPYCACHEPREFIX="$TMPDIR/pycache"
+            mkdir -p "$ANSIBLE_HOME" "$ANSIBLE_LOCAL_TEMP"
 
             (
               cd components/cloud/host-automation
               ansible-inventory --graph >/dev/null
-              ansible-inventory --list > "$TMPDIR/cloud-inventory.json"
               for playbook in playbooks/*.yml; do
                 ansible-playbook --syntax-check "$playbook"
               done
@@ -72,1572 +81,143 @@
                 --extra-vars \
                   "autoinstall_password_file=$TMPDIR/autoinstall-password"
             )
+            ${pkgs.yamllint}/bin/yamllint -d relaxed \
+              "$TMPDIR"/rendered-autoinstall/*.yaml
 
-            yamllint -d relaxed "$TMPDIR"/rendered-autoinstall/*.yaml
-            python - \
-              "$TMPDIR/cloud-inventory.json" \
-              "$TMPDIR/rendered-autoinstall" <<'PY'
-            import json
-            import pathlib
-            import sys
-
-            import yaml
-
-            inventory = json.loads(pathlib.Path(sys.argv[1]).read_text())
-            rendered_directory = pathlib.Path(sys.argv[2])
-            expected = set(inventory["cloud_hosts"]["hosts"])
-            rendered = {
-                path.name.removesuffix("-user-data.yaml"): path
-                for path in rendered_directory.glob("*-user-data.yaml")
-            }
-            if set(rendered) != expected:
-                raise SystemExit(
-                    f"rendered host set {sorted(rendered)} != inventory {sorted(expected)}"
-                )
-
-            hostvars = inventory["_meta"]["hostvars"]
-            forbidden = ("{{", "}}", "{%", "%}", "__PASSWORD_HASH__", "__SSH_PUBLIC_KEY__")
-            for host, path in sorted(rendered.items()):
-                text = path.read_text(encoding="utf-8")
-                if any(token in text for token in forbidden):
-                    raise SystemExit(f"{path.name} contains an unresolved template token")
-                document = yaml.safe_load(text)["autoinstall"]
-                if document["identity"]["hostname"] != host:
-                    raise SystemExit(f"{path.name} has the wrong hostname")
-                variables = hostvars[host]
-                vlans = document["network"]["vlans"]
-                management = vlans[f'{variables["cloud_bond_name"]}.20']
-                address = variables["cloud_vlan_addresses"].get(
-                    "20", variables["cloud_vlan_addresses"].get(20)
-                )
-                expected_address = f'{address}/{variables["cloud_host_prefix_length"]}'
-                if expected_address not in management["addresses"]:
-                    raise SystemExit(f"{path.name} has the wrong management address")
-
-            role = pathlib.Path("components/cloud/host-automation/roles/cloud_host")
-            defaults = yaml.safe_load((role / "defaults/main.yml").read_text())
-            if defaults["cloud_libvirt_qemu_uid"] != 42424:
-                raise SystemExit("containerized QEMU UID contract changed")
-            if "acl" not in defaults["cloud_packages"]:
-                raise SystemExit("KVM access policy requires the acl package")
-            kvm_rule = (role / "templates/cloud-kvm.rules.j2").read_text()
-            expected_acl = "setfacl -m u:{{ cloud_libvirt_qemu_uid }}:rw /dev/kvm"
-            if expected_acl not in kvm_rule or 'MODE="0660"' not in kvm_rule:
-                raise SystemExit("KVM udev policy is not least privilege")
-            kernel_tasks = yaml.safe_load((role / "tasks/kernel.yml").read_text())
-            task_names = {task.get("name") for task in kernel_tasks}
-            required_tasks = {
-                "Check that the containerized QEMU UID is host-local unused",
-                "Persist least-privilege KVM access for containerized QEMU",
-                "Reconcile the active KVM device policy",
-                "Require containerized QEMU access without world-writable KVM",
-            }
-            if not required_tasks <= task_names:
-                raise SystemExit("KVM access reconciliation contract is incomplete")
-            PY
             (
               cd components/cloud/network-automation
               ansible-inventory --graph >/dev/null
               ansible-playbook --syntax-check reconcile-routeros.yaml
             )
+
             (
               cd components/cloud/capi-management
               ansible-inventory --graph >/dev/null
               ansible-playbook --syntax-check playbooks/bootstrap.yml
             )
 
-            yamllint -d relaxed components/cloud deployments/homelab/cloud
-            tofu fmt -check -recursive components/cloud
-            kustomize build deployments/homelab/cloud/undercloud >/dev/null
-            kustomize build deployments/homelab/cloud/management >/dev/null
-            kustomize build deployments/homelab/cloud/services >/dev/null
-            kustomize build \
-              deployments/homelab/cloud/services/12-observability \
-              >/dev/null
-            kustomize build \
-              deployments/homelab/cloud/services/15-backup-controller \
-              >/dev/null
-            kustomize build \
-              deployments/homelab/cloud/services/16-backup-policy \
-              >/dev/null
-            kustomize build \
-              deployments/homelab/cloud/services/25-home-automation \
-              >/dev/null
-            kustomize build \
-              deployments/homelab/cloud/services/40-media \
-              >/dev/null
-            kustomize build \
-              deployments/homelab/cloud/services/50-synthetic-monitoring \
-              >/dev/null
-            kustomize build \
-              deployments/homelab/cloud/undercloud/81-services-foundation \
-              >/dev/null
-            kustomize build \
-              deployments/homelab/cloud/undercloud/82-services-cluster \
-              >/dev/null
-            kustomize build \
-              deployments/homelab/cloud/undercloud/83-services-hosts \
-              >/dev/null
-            kustomize build \
-              deployments/homelab/cloud/undercloud/84-mail-aws \
-              >/dev/null
-            kustomize build \
-              deployments/homelab/cloud/undercloud/85-service-dns \
-              >/dev/null
-            python - <<'PY'
-            import json
-            import pathlib
-            import re
+            touch "$out"
+          '';
 
-            import yaml
+      yamlChecks =
+        pkgs.runCommandLocal "cloud-yaml-checks"
+          {
+            nativeBuildInputs = [ pkgs.yamllint ];
+          }
+          ''
+            set -euo pipefail
 
-            root = pathlib.Path("deployments/homelab/cloud")
-            contract_document = yaml.safe_load(
-                (root / "undercloud/82-services-cluster/runtime-contract.yaml").read_text()
-            )
-            contract = yaml.safe_load(contract_document["data"]["required-keys.yaml"])
-            if contract["schemaVersion"] != 9:
-                raise SystemExit("services runtime contract must use schema version 9")
-            credentials = {
-                key
-                for group in contract["credentials"].values()
-                for key in group
-            }
-            expected_host_credentials = {
-                "hermes": {
-                    "HERMES_TELEGRAM_BOT_TOKEN",
-                    "OPENAI_API_KEY",
-                },
-            }
-            host_credentials = {
-                consumer: set(definition["keys"])
-                for consumer, definition in contract["hostCredentials"].items()
-            }
-            if host_credentials != expected_host_credentials:
-                raise SystemExit("host credentials are not independently routed")
-            generated_definitions = contract["generatedSecrets"]
-            provisioned_definitions = contract["provisionedSecrets"]
-            expected_provisioned = {
-                "backblaze-services": (
-                    "reconcile-services-backblaze",
-                    {"B2_APPLICATION_KEY_ID", "B2_APPLICATION_KEY"},
-                ),
-                "backblaze-hosts": (
-                    "reconcile-services-backblaze",
-                    {
-                        "HERMES_BACKUP_B2_APPLICATION_KEY_ID",
-                        "HERMES_BACKUP_B2_APPLICATION_KEY",
-                        "HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID",
-                        "HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY",
-                    },
-                ),
-                "telegram-infrastructure": (
-                    "reconcile-services-telegram",
-                    {"INFRA_TELEGRAM_CHAT_ID"},
-                ),
-                "telegram-hermes": (
-                    "reconcile-services-telegram",
-                    {
-                        "HERMES_TELEGRAM_ALLOWED_USERS",
-                        "HERMES_TELEGRAM_HOME_CHANNEL",
-                    },
-                ),
-                "aws-mail-auth": (
-                    "enroll-aws-mail-auth",
-                    {"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"},
-                ),
-                "resend-mail-aws": (
-                    "reconcile-services-resend",
-                    {"STALWART_RESEND_API_KEY"},
-                ),
-            }
-            actual_provisioned = {
-                consumer: (definition["provisioner"], set(definition["keys"]))
-                for consumer, definition in provisioned_definitions.items()
-            }
-            if actual_provisioned != expected_provisioned:
-                raise SystemExit("provider-provisioned credentials are not independently routed")
-            cluster_generated = {
-                key
-                for definition in generated_definitions.values()
-                if definition["secretFile"] == contract["secretFile"]
-                for key in definition["keys"]
-            }
-            cluster_provisioned = {
-                key
-                for definition in provisioned_definitions.values()
-                if definition["secretFile"] == contract["secretFile"]
-                for key in definition["keys"]
-            }
-            reconcile_document = yaml.safe_load_all(
-                (root / "undercloud/82-services-cluster/reconcile.yaml").read_text()
-            )
-            reconcile_config = next(
-                document
-                for document in reconcile_document
-                if document["kind"] == "ConfigMap"
-            )
-            reconcile_cronjob = next(
-                document
-                for document in yaml.safe_load_all(
-                    (root / "undercloud/82-services-cluster/reconcile.yaml").read_text()
-                )
-                if document["kind"] == "CronJob"
-            )
-            reconcile_pod = reconcile_cronjob["spec"]["jobTemplate"]["spec"][
-                "template"
-            ]["spec"]
-            reconcile_container = next(
-                container
-                for container in reconcile_pod["containers"]
-                if container["name"] == "reconcile"
-            )
-            reconcile_environment = {
-                item["name"]: item.get("value")
-                for item in reconcile_container["env"]
-            }
-            if reconcile_environment.get("HOME") != "/tmp":
-                raise SystemExit("services reconciler needs a writable home")
-            if reconcile_environment.get("SHELL") != "/bin/sh":
-                raise SystemExit(
-                    "Magnum kubeconfig export needs an explicit shell"
-                )
-            pod_security = reconcile_pod["securityContext"]
-            if pod_security.get("runAsUser") != 65532 or not pod_security.get(
-                "runAsNonRoot"
-            ):
-                raise SystemExit("services reconciler must remain non-root")
-            if pod_security.get("fsGroup") != 65532:
-                raise SystemExit(
-                    "services reconciler needs an explicit filesystem group"
-                )
-            secret_volumes = {
-                volume["name"]: volume["secret"]
-                for volume in reconcile_pod["volumes"]
-                if "secret" in volume
-            }
-            for volume_name in ("bootstrap", "runtime-bootstrap"):
-                if secret_volumes[volume_name].get("defaultMode") != 0o440:
-                    raise SystemExit(
-                        f"{volume_name} must be group-readable by the non-root reconciler"
-                    )
-            reconcile_script = reconcile_config["data"]["reconcile.sh"]
-            compile(
-                reconcile_config["data"]["reconcile-resend.py"],
-                "reconcile-resend.py",
-                "exec",
-            )
-            validated = set(
-                re.findall(r"^\s*require_file ([A-Z0-9_]+) ", reconcile_script, re.M)
-            )
-            expected_validated = (
-                credentials
-                | cluster_generated
-                | cluster_provisioned
-            )
-            if expected_validated != validated:
-                raise SystemExit(
-                    f"runtime credential contract {sorted(expected_validated)} != "
-                    f"reconciler validation {sorted(validated)}"
-                )
-            if "OPENAI_API_KEY" in reconcile_script:
-                raise SystemExit("Hermes OpenAI key must not enter cluster reconciliation")
-            if "SFTPGO_USER_PASSWORD" in reconcile_script:
-                raise SystemExit("SFTPGo local user password must remain retired")
-            for oidc_output in (
-                "sftpgo_client_id",
-                "sftpgo_client_secret",
-                "navidrome_client_id",
-                "navidrome_client_secret",
-                "audiomuse_client_id",
-                "audiomuse_client_secret",
-            ):
-                if oidc_output not in reconcile_script:
-                    raise SystemExit(f"{oidc_output} is not reconciled")
+            yamllint -d relaxed \
+              ${source}/components/cloud \
+              ${source}/deployments/homelab/cloud
+            touch "$out"
+          '';
 
-            aws_mail_root = pathlib.Path("components/cloud/services/mail-aws")
-            aws_mail_tofu = yaml.safe_load(
-                (root / "undercloud/84-mail-aws/tofu.yaml").read_text()
-            )
-            aws_mail_suspended = aws_mail_tofu["spec"].get("suspend")
-            if not isinstance(aws_mail_suspended, bool):
-                raise SystemExit("AWS mail must retain an explicit suspension gate")
-            aws_source_revision = next(
-                item["value"]
-                for item in aws_mail_tofu["spec"]["vars"]
-                if item["name"] == "source_revision"
-            )
-            if not re.fullmatch(r"[0-9a-f]{40}", aws_source_revision):
-                raise SystemExit("AWS mail source revision must be an exact commit")
-            aws_nixos_ami_id = next(
-                item["value"]
-                for item in aws_mail_tofu["spec"]["vars"]
-                if item["name"] == "nixos_ami_id"
-            )
-            if not re.fullmatch(r"ami-[0-9a-f]{17}", aws_nixos_ami_id):
-                raise SystemExit("AWS mail NixOS AMI must be pinned exactly")
-            aws_restore_qualification = next(
-                item["value"]
-                for item in aws_mail_tofu["spec"]["vars"]
-                if item["name"] == "enable_restore_qualification"
-            )
-            if aws_restore_qualification not in {"true", "false"}:
-                raise SystemExit("AWS restore qualification gate must be explicit")
-            if aws_mail_tofu["spec"]["runnerPodTemplate"]["spec"].get("envFrom") != [
-                {"secretRef": {"name": "aws-mail-provisioning"}}
-            ]:
-                raise SystemExit("AWS mail provider auth bypasses its SOPS boundary")
-            aws_tofu_text = "\n".join(
-                path.read_text()
-                for path in sorted((aws_mail_root / "tofu").glob("*"))
-                if path.is_file()
-            )
-            required_aws_contract = (
-                'region = "eu-central-1"',
-                'instance_type        = "t4g.micro"',
-                'values = [var.nixos_ami_id]',
-                'instance_class = "db.t4g.micro"',
-                'engine_version = "17.10"',
-                "manage_master_user_password = true",
-                'data "aws_kms_key" "rds_storage"',
-                'key_id = "alias/aws/rds"',
-                "kms_key_id = data.aws_kms_key.rds_storage.arn",
-                "backup_retention_period = 14",
-                "deletion_protection         = true",
-                'versioning_configuration {\n    status = "Enabled"',
-                'sse_algorithm = "AES256"',
-                "prevent_destroy = true",
-                'http_tokens                 = "required"',
-                'policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"',
-                'identifier = "stalwart-mail-restore-qualification"',
-                "backup_retention_period    = 0",
-                "deletion_protection        = false",
-                "skip_final_snapshot        = true",
-                'Ephemeral = "true"',
-            )
-            if any(fragment not in aws_tofu_text for fragment in required_aws_contract):
-                raise SystemExit("AWS mail durability or least-cost contract drifted")
-            forbidden_aws_state = (
-                "aws_secretsmanager_secret_version",
-                "private_key",
-                "key_name",
-            )
-            if any(
-                fragment in aws_tofu_text for fragment in forbidden_aws_state
-            ) or re.search(r"^\s*password\s*=", aws_tofu_text, re.M):
-                raise SystemExit("AWS mail would put credentials or SSH state in OpenTofu")
-            if "most_recent = true" in aws_tofu_text:
-                raise SystemExit("AWS mail appliance AMI must not drift during reconciliation")
-            aws_monitoring = (
-                aws_mail_root / "tofu/monitoring.tf"
-            ).read_text()
-            instance_status_alarm = re.search(
-                r'resource "aws_cloudwatch_metric_alarm" "instance_status" '
-                r'\{(?P<body>.*?)\n\}',
-                aws_monitoring,
-                re.S,
-            )
-            if (
-                instance_status_alarm is None
-                or 'metric_name         = "StatusCheckFailed"'
-                not in instance_status_alarm.group("body")
-                or 'treat_missing_data  = "notBreaching"'
-                not in instance_status_alarm.group("body")
-            ):
-                raise SystemExit(
-                    "AWS EC2 status alarm must not treat replacement telemetry gaps as failures"
-                )
-            if "master_user_secret_kms_key_id" in aws_tofu_text:
-                raise SystemExit("AWS mail bypasses the managed Secrets Manager key default")
-            if "from_port   = 22" in aws_tofu_text:
-                raise SystemExit("AWS mail exposes SSH instead of Session Manager")
-            if 'var.source_revision != "0000000000000000000000000000000000000000"' not in (
-                aws_mail_root / "tofu/variables.tf"
-            ).read_text():
-                raise SystemExit("AWS appliance must reject the source sentinel")
-            aws_user_data = (
-                aws_mail_root / "tofu/user-data.sh.tftpl"
-            ).read_text()
-            required_bootstrap_swap = (
-                "swap_file=/swapfile",
-                "swap_size_bytes=2147483648",
-                'dd if=/dev/zero of="$swap_file" bs=1M count=2048 status=none',
-                'mkswap "$swap_file"',
-                'swapon "$swap_file"',
-            )
-            if any(
-                fragment not in aws_user_data
-                for fragment in required_bootstrap_swap
-            ):
-                raise SystemExit("AWS mail first boot lacks its low-memory swap boundary")
-            iam_policy_text = (
-                aws_mail_root / "bootstrap-iam-policy.json"
-            ).read_text()
-            if iam_policy_text.count("ACCOUNT_ID") != 9:
-                raise SystemExit("AWS bootstrap policy account scoping drifted")
-            iam_policy = json.loads(iam_policy_text.replace("ACCOUNT_ID", "123456789012"))
-            policy_statements = {
-                statement["Sid"]: statement
-                for statement in iam_policy["Statement"]
-            }
-            if policy_statements["ManageFrankfurtMailServices"]["Condition"] != {
-                "StringEquals": {"aws:RequestedRegion": "eu-central-1"}
-            }:
-                raise SystemExit("AWS GitOps mutation policy is not Frankfurt-scoped")
-            if policy_statements["DescribeAwsManagedMailKeys"] != {
-                "Sid": "DescribeAwsManagedMailKeys",
-                "Effect": "Allow",
-                "Action": "kms:DescribeKey",
-                "Resource": "arn:aws:kms:eu-central-1:123456789012:key/*",
-                "Condition": {
-                    "ForAnyValue:StringEquals": {
-                        "kms:ResourceAliases": [
-                            "alias/aws/rds",
-                            "alias/aws/secretsmanager",
-                        ]
-                    }
-                },
-            }:
-                raise SystemExit("AWS GitOps KMS inspection escaped managed mail keys")
-            if any(
-                action in iam_policy_text
-                for action in (
-                    "secretsmanager:GetSecretValue",
-                    "secretsmanager:UpdateSecret",
-                )
-            ):
-                raise SystemExit("AWS GitOps identity has broad secret-value access")
-            if policy_statements["ManageMailSecretContainers"]["Resource"] != (
-                "arn:aws:secretsmanager:eu-central-1:123456789012:"
-                "secret:fahrican/stalwart/*"
-            ):
-                raise SystemExit("AWS GitOps secret management escaped Stalwart")
-            if set(policy_statements["ManageMailSecretContainers"]["Action"]) != {
-                "secretsmanager:CreateSecret",
-                "secretsmanager:DeleteSecret",
-                "secretsmanager:DescribeSecret",
-                "secretsmanager:GetResourcePolicy",
-                "secretsmanager:PutResourcePolicy",
-                "secretsmanager:RestoreSecret",
-                "secretsmanager:TagResource",
-                "secretsmanager:UntagResource",
-            }:
-                raise SystemExit("AWS GitOps secret container actions drifted")
-            if policy_statements["CreateRdsManagedCredentials"] != {
-                "Sid": "CreateRdsManagedCredentials",
-                "Effect": "Allow",
-                "Action": [
-                    "secretsmanager:CreateSecret",
-                    "secretsmanager:TagResource",
-                ],
-                "Resource": (
-                    "arn:aws:secretsmanager:eu-central-1:123456789012:"
-                    "secret:rds!db-*"
-                ),
-                "Condition": {
-                    "StringEquals": {"aws:RequestedRegion": "eu-central-1"}
-                },
-            }:
-                raise SystemExit("AWS RDS credential creation escaped its boundary")
-            if policy_statements["PublishResendRuntimeCredential"] != {
-                "Sid": "PublishResendRuntimeCredential",
-                "Effect": "Allow",
-                "Action": "secretsmanager:PutSecretValue",
-                "Resource": (
-                    "arn:aws:secretsmanager:eu-central-1:123456789012:"
-                    "secret:fahrican/stalwart/resend-*"
-                ),
-                "Condition": {
-                    "StringEquals": {"aws:RequestedRegion": "eu-central-1"}
-                },
-            }:
-                raise SystemExit("AWS Resend publication is not independently scoped")
-            if policy_statements["RunCommandsOnMailInstance"]["Condition"] != {
-                "StringEquals": {
-                    "aws:RequestedRegion": "eu-central-1",
-                    "aws:ResourceTag/Service": "stalwart-mail",
-                }
-            }:
-                raise SystemExit("AWS SSM commands escaped the tagged mail instance")
-            if policy_statements["UseMailRunCommandDocument"]["Resource"] != (
-                "arn:aws:ssm:eu-central-1::document/AWS-RunShellScript"
-            ):
-                raise SystemExit("AWS SSM command document is not constrained")
-            if set(policy_statements) != {
-                "ReadProvisionedState",
-                "ManageFrankfurtMailServices",
-                "ManageMailSecretContainers",
-                "CreateRdsManagedCredentials",
-                "PublishResendRuntimeCredential",
-                "InspectMailManagedNode",
-                "UseMailRunCommandDocument",
-                "RunCommandsOnMailInstance",
-                "ManageMailBucket",
-                "DescribeAwsManagedMailKeys",
-                "ManageMailRuntimeRole",
-                "CreateRdsServiceRole",
-            }:
-                raise SystemExit("AWS GitOps IAM policy shape drifted")
+      tofuFormat =
+        pkgs.runCommandLocal "cloud-tofu-format"
+          {
+            nativeBuildInputs = [ pkgs.opentofu ];
+          }
+          ''
+            set -euo pipefail
 
-            aws_sops = yaml.safe_load(
-                (root / "undercloud/84-mail-aws/aws.sops.yaml").read_text()
-            )
-            aws_auth_keys = set(aws_sops.get("data", {}))
-            expected_aws_auth_keys = {
-                "AWS_ACCESS_KEY_ID",
-                "AWS_SECRET_ACCESS_KEY",
-            }
-            if aws_auth_keys not in (
-                set(),
-                expected_aws_auth_keys,
-            ):
-                raise SystemExit("AWS provisioning SOPS document has unexpected keys")
-            if not aws_mail_suspended and aws_auth_keys != expected_aws_auth_keys:
-                raise SystemExit(
-                    "AWS mail activation requires complete encrypted provider auth"
-                )
-            if any(
-                not str(value).startswith("ENC[")
-                for value in aws_sops.get("data", {}).values()
-            ):
-                raise SystemExit("AWS provisioning document contains plaintext")
-            aws_recipients = {
-                entry["recipient"] for entry in aws_sops["sops"]["age"]
-            }
-            if aws_recipients != {
-                "age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea",
-                "age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2",
-            }:
-                raise SystemExit("AWS provider auth must be admin/undercloud scoped")
-            foundation = yaml.safe_load(
-                (
-                    root
-                    / "undercloud/81-services-foundation/kustomization.yaml"
-                ).read_text()
-            )
-            if "share-quota.yaml" not in foundation["resources"]:
-                raise SystemExit("Manila quota reconciliation is not predeclared")
-            share_quota = yaml.safe_load(
-                (
-                    root / "undercloud/81-services-foundation/share-quota.yaml"
-                ).read_text()
-            )
-            share_pod = share_quota["spec"]["jobTemplate"]["spec"]["template"]["spec"]
-            share_container = share_pod["containers"][0]
-            if share_pod.get("automountServiceAccountToken") is not False:
-                raise SystemExit("Manila quota reconciler mounts a Kubernetes token")
-            if share_container.get("envFrom") != [
-                {"secretRef": {"name": "magnum-keystone-admin"}}
-            ]:
-                raise SystemExit("Manila quota reconciler uses the wrong credential boundary")
-            if share_container["image"] != (
-                "quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:"
-                "f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676"
-            ):
-                raise SystemExit("Manila quota reconciler image is not pinned")
-            quota_script = share_container["command"][2]
-            for quota_fragment in (
-                "gigabytes=2048",
-                "openstack share quota set",
-                '--per-share-gigabytes "$gigabytes"',
-                'test "$(openstack share quota show',
-            ):
-                if quota_fragment not in quota_script:
-                    raise SystemExit(
-                        f"Manila quota reconciliation lacks {quota_fragment!r}"
-                    )
-            interface_placeholders = (
-                "resend-domain-output.yaml",
-                "service-dns-input.yaml",
-            )
-            for placeholder_name in interface_placeholders:
-                placeholder = yaml.safe_load(
-                    (
-                        root
-                        / "undercloud/81-services-foundation"
-                        / placeholder_name
-                    ).read_text()
-                )
-                if placeholder["metadata"].get("annotations") != {
-                    "kustomize.toolkit.fluxcd.io/ssa": "IfNotPresent"
-                }:
-                    raise SystemExit(
-                        f"{placeholder_name} does not preserve controller-owned data"
-                    )
-                if "data" in placeholder or "stringData" in placeholder:
-                    raise SystemExit(
-                        f"{placeholder_name} declares generated runtime data"
-                    )
-            reconcile_rbac = list(
-                yaml.safe_load_all(
-                    (root / "undercloud/82-services-cluster/rbac.yaml").read_text()
-                )
-            )
-            runtime = yaml.safe_load(
-                (root / "undercloud/81-services-foundation/runtime.sops.yaml").read_text()
-            )
-            expected_runtime_keys = (
-                credentials | cluster_generated | cluster_provisioned
-            )
-            if set(runtime["data"]) != expected_runtime_keys:
-                raise SystemExit("cluster SOPS keys diverge from the runtime contract")
-            if any(
-                not str(value).startswith("ENC[")
-                for value in runtime["data"].values()
-            ):
-                raise SystemExit("runtime Secret contains a non-SOPS data value")
+            tofu fmt -check -recursive ${source}/components/cloud
+            touch "$out"
+          '';
 
-            host_secret_files = {
-                definition["secretFile"]
-                for definition in contract["hostCredentials"].values()
-            } | {
-                definition["secretFile"]
-                for definition in generated_definitions.values()
-                if definition["secretFile"].startswith(
-                    "deployments/homelab/cloud/host-runtime/"
-                )
-            } | {
-                definition["secretFile"]
-                for definition in provisioned_definitions.values()
-                if definition["secretFile"].startswith(
-                    "deployments/homelab/cloud/host-runtime/"
-                )
-            }
-            generated_by_file = {
-                definition["secretFile"]: set(definition["keys"])
-                for definition in generated_definitions.values()
-            }
-            for relative_path in host_secret_files:
-                host_runtime = yaml.safe_load(
-                    (pathlib.Path(relative_path)).read_text()
-                )
-                if host_runtime.get("schemaVersion") != 1:
-                    raise SystemExit(
-                        f"{relative_path} host runtime document has the wrong schema"
-                    )
-                if not generated_by_file.get(relative_path, set()).issubset(
-                    host_runtime["data"]
-                ):
-                    raise SystemExit(
-                        f"{relative_path} is missing generated host secrets"
-                    )
-                if any(
-                    not str(value).startswith("ENC[")
-                    for value in host_runtime["data"].values()
-                ):
-                    raise SystemExit(
-                        f"{relative_path} contains a non-SOPS data value"
-                    )
-                recipients = {
-                    entry["recipient"] for entry in host_runtime["sops"]["age"]
-                }
-                if recipients != {
-                    "age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea"
-                }:
-                    raise SystemExit(
-                        f"{relative_path} must remain admin-recipient-only"
-                    )
+      kustomizeChecks =
+        pkgs.runCommandLocal "cloud-kustomize-checks"
+          {
+            nativeBuildInputs = [
+              pkgs.coreutils
+              pkgs.findutils
+              pkgs.kustomize
+            ];
+          }
+          ''
+            set -euo pipefail
 
-            backup_destination = yaml.safe_load(
-                (root / "backup-destination.yaml").read_text()
-            )
-            services_backup = yaml.safe_load(
-                (root / "undercloud/81-services-foundation/backup.yaml").read_text()
-            )
-            if services_backup["data"] != {
-                "bucket_name": backup_destination["bucket"]["name"],
-                "endpoint": backup_destination["bucket"]["s3Endpoint"],
-                "region": backup_destination["bucket"]["region"],
-                "prefix": "services/kubernetes",
-            }:
-                raise SystemExit("services backup destination diverges from Backblaze B2")
-            if "'        checksumAlgorithm: \"\"'" not in reconcile_script:
-                raise SystemExit("Velero must disable unsupported Backblaze request checksums")
-            velero_documents = yaml.safe_load_all(
-                (root / "services/15-backup-controller/velero.yaml").read_text()
-            )
-            velero_release = next(
-                document
-                for document in velero_documents
-                if document.get("kind") == "HelmRelease"
-            )
-            aws_plugin = next(
-                container
-                for container in velero_release["spec"]["values"]["initContainers"]
-                if container["name"] == "velero-plugin-for-aws"
-            )
-            if aws_plugin["image"] != (
-                "docker.io/velero/velero-plugin-for-aws:main@sha256:"
-                "0f442cf9263b3a579d9b22417501dfef75e83b300b8180b9394c86d0127ec220"
-            ):
-                raise SystemExit("Velero must pin the upstream Backblaze header fix")
-            velero_alerts = {
-                rule["alert"]: rule
-                for rule in velero_release["spec"]["values"]["metrics"][
-                    "prometheusRule"
-                ]["spec"]
-            }
-            recent_backup_expression = velero_alerts["VeleroNoRecentBackup"]["expr"]
-            if "bool" in recent_backup_expression:
-                raise SystemExit(
-                    "Velero age alert must drop false comparison series"
-                )
-            restore_documents = list(
-                yaml.safe_load_all(
-                    (
-                        root
-                        / "services/16-backup-policy/restore-qualification.yaml"
-                    ).read_text()
-                )
-            )
-            restore_modifiers = next(
-                document
-                for document in restore_documents
-                if document.get("kind") == "ConfigMap"
-                and document["metadata"]["name"]
-                == "restore-qualification-modifiers"
-            )
-            modifier_policy = yaml.safe_load(
-                restore_modifiers["data"]["resource-modifiers.yaml"]
-            )
-            if modifier_policy["resourceModifierRules"] != [
-                {
-                    "conditions": {
-                        "groupResource": "persistentvolumeclaims",
-                        "namespaces": ["backup-qualification"],
-                    },
-                    "patches": [
-                        {
-                            "operation": "remove",
-                            "path": "/spec/volumeName",
-                        }
-                    ],
-                }
-            ]:
-                raise SystemExit("restore qualification must clear source PVC bindings")
-            restore_config = next(
-                document
-                for document in restore_documents
-                if document.get("kind") == "ConfigMap"
-                and document["metadata"]["name"] == "restore-qualification"
-            )
-            restore_template = yaml.safe_load(restore_config["data"]["restore.yaml"])
-            if restore_template["spec"].get("resourceModifier") != {
-                "kind": "ConfigMap",
-                "name": "restore-qualification-modifiers",
-            }:
-                raise SystemExit("restore qualification does not reference its PVC modifier")
-            controller_documents = yaml.safe_load_all(
-                (
-                    root
-                    / "services/10-platform-controllers/cert-manager.yaml"
-                ).read_text()
-            )
-            cert_manager_release = next(
-                document
-                for document in controller_documents
-                if document.get("kind") == "HelmRelease"
-            )
-            if cert_manager_release["spec"]["values"].get("extraArgs") != [
-                "--dns01-recursive-nameservers-only",
-                "--dns01-recursive-nameservers=172.24.0.10:53",
-            ]:
-                raise SystemExit(
-                    "cert-manager DNS-01 checks must use the private cluster resolver"
-                )
-            required_b2_capabilities = {
-                "deleteFiles",
-                "listAllBucketNames",
-                "listBuckets",
-                "listFiles",
-                "readBuckets",
-                "readFiles",
-                "writeFiles",
-            }
-            b2_services = backup_destination["services"]
-            if set(b2_services["kubernetes"]["capabilities"]) != required_b2_capabilities:
-                raise SystemExit("Velero B2 key capabilities are not least privilege")
-            if set(b2_services["hostCapabilities"]) != required_b2_capabilities:
-                raise SystemExit("host B2 key capabilities are not least privilege")
-            expected_restic_passwords = {
-                "hermes": "HERMES_BACKUP_RESTIC_PASSWORD",
-                "home-assistant": "HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD",
-            }
-            if {
-                host["host"]: host["resticPasswordField"]
-                for host in b2_services["hosts"]
-            } != expected_restic_passwords:
-                raise SystemExit("host Restic password routes are invalid")
-            if backup_destination["bucket"]["operatorBootstrap"] != {
-                "applicationKeyIdFile": "secrets/B2_MASTER_APPLICATION_KEY_ID.key",
-                "applicationKeyFile": "secrets/B2_MASTER_APPLICATION_KEY.key",
-                "clearAfterSuccess": True,
-            }:
-                raise SystemExit("Backblaze master bootstrap is not ephemeral")
+            mkdir -p source/components/cloud source/deployments/homelab
+            cp -R ${source}/components/cloud/tofu-controller-tenant \
+              source/components/cloud/tofu-controller-tenant
+            cp -R ${source}/deployments/homelab/cloud \
+              source/deployments/homelab/cloud
+            chmod -R u+w source
+            cd source
 
-            telegram = yaml.safe_load((root / "telegram-bots.yaml").read_text())
-            if {
-                definition["username"]
-                for definition in telegram["bots"].values()
-            } != {
-                "fahrican_infra_alerts_bot",
-                "fahrican_hermes_bot",
-            }:
-                raise SystemExit("Telegram bot identity contract drifted")
-
-            exceptions = yaml.safe_load((root / "manual-exceptions.yaml").read_text())
-            exception_ids = {entry["id"] for entry in exceptions["exceptions"]}
-            if "hermes-openai-oauth-enrollment" in exception_ids:
-                raise SystemExit("obsolete Hermes OAuth exception remains declared")
-            if "openai-api-key-issuance" not in exception_ids:
-                raise SystemExit("operator-issued OpenAI runtime key is undocumented")
-            if "aws-mail-bootstrap-credential-issuance" not in exception_ids:
-                raise SystemExit("AWS mail bootstrap ceremony is undocumented")
-            if "smtp-inbound-monitoring-vantage" not in exception_ids:
-                raise SystemExit("SMTP external-monitoring limitation is undocumented")
-            synthetic_alerts = yaml.safe_load(
-                (root / "services/50-synthetic-monitoring/alerts.yaml").read_text()
-            )
-            endpoint_alert = next(
-                rule
-                for group in synthetic_alerts["spec"]["groups"]
-                for rule in group["rules"]
-                if rule["alert"] == "ServicesEndpointDown"
-            )
-            endpoint_expression = endpoint_alert["expr"]
-            if (
-                'job="services-http"' not in endpoint_expression
-                or 'job="mail-tcp"' not in endpoint_expression
-                or 'instance!="mail.fahrican.com:25"' not in endpoint_expression
-            ):
-                raise SystemExit(
-                    "synthetic paging must exclude only the inconclusive SMTP-25 vantage"
-                )
-            synthetic_probes = (
-                root / "services/50-synthetic-monitoring/probes.yaml"
-            ).read_text()
-            if "mail.fahrican.com:25" not in synthetic_probes:
-                raise SystemExit("SMTP-25 diagnostic probe series was removed")
-            dns_tofu = pathlib.Path(
-                "components/cloud/services/dns/tofu/main.tf"
-            ).read_text()
-            mail_hosts_match = re.search(
-                r"mail_hosts\s*=\s*toset\(\[(.*?)\]\)", dns_tofu, re.DOTALL
-            )
-            expected_mail_hosts = {
-                "autoconfig",
-                "autodiscover",
-                "mail",
-                "mta-sts",
-                "ua-auto-config",
-            }
-            if mail_hosts_match is None or set(
-                re.findall(r'"([^"]+)"', mail_hosts_match.group(1))
-            ) != expected_mail_hosts:
-                raise SystemExit(
-                    "service DNS must publish every automatic Stalwart TLS hostname"
-                )
-            if {
-                "openai-admin-key-bootstrap",
-                "openai-organization-hosted-tool-policy",
-            } & exception_ids:
-                raise SystemExit("obsolete OpenAI administration exception remains")
-
-            repository_text = "\n".join(
-                path.read_text(errors="ignore")
-                for path in pathlib.Path(".").rglob("*")
-                if path.is_file() and ".terraform" not in path.parts
-            )
-            openai_intake_name = "OPENAI_API_KEY" + ".key"
-            if openai_intake_name not in repository_text:
-                raise SystemExit("Hermes OpenAI intake contract is undocumented")
-            for aws_intake_name in (
-                "AWS_BOOTSTRAP_ACCESS_KEY_ID" + ".key",
-                "AWS_BOOTSTRAP_SECRET_ACCESS_KEY" + ".key",
-            ):
-                if aws_intake_name not in repository_text:
-                    raise SystemExit("AWS bootstrap intake contract is undocumented")
-            obsolete_openai_control_plane = (
-                "OPENAI_" + "ADMIN_KEY",
-                "reconcile-services-" + "openai",
-                "79-" + "openai-control-plane",
-                "openai/" + "openai",
-            )
-            if any(value in repository_text for value in obsolete_openai_control_plane):
-                raise SystemExit("obsolete OpenAI administration machinery remains")
-            retired_knowledge_stack = (
-                "kara" + "keep",
-                "meili" + "search",
-                "sear" + "xng",
-                "keep." + "fahrican.com",
-                "search." + "fahrican.com",
-                "HERMES_KARA" + "KEEP_API_KEY",
-            )
-            if any(
-                value.lower() in repository_text.lower()
-                for value in retired_knowledge_stack
-            ):
-                raise SystemExit("retired knowledge or search machinery remains")
-
-            primary_controller_documents = yaml.safe_load_all(
-                (
-                    root
-                    / "undercloud/32-identity-controllers/tofu-controller.yaml"
-                ).read_text()
-            )
-            primary_controller = next(
-                document
-                for document in primary_controller_documents
-                if document.get("kind") == "HelmRelease"
-                and document.get("metadata", {}).get("name") == "tofu-controller"
-            )
-            primary_values = primary_controller["spec"]["values"]
-            tenant_controller = yaml.safe_load(
-                pathlib.Path(
-                    "components/cloud/tofu-controller-tenant/controller.yaml"
-                ).read_text()
-            )
-            tenant_values = tenant_controller["spec"]["values"]
-            if primary_values["watchAllNamespaces"] or tenant_values["watchAllNamespaces"]:
-                raise SystemExit("tofu-controller instances must remain namespace scoped")
-            if tenant_values["rbac"]["create"]:
-                raise SystemExit("tenant tofu-controller must use explicit namespaced RBAC")
-            tenant_rbac = list(
-                yaml.safe_load_all(
-                    pathlib.Path(
-                        "components/cloud/tofu-controller-tenant/rbac.yaml"
-                    ).read_text()
-                )
-            )
-            if {document["kind"] for document in tenant_rbac} - {"Role", "RoleBinding"}:
-                raise SystemExit("tenant tofu-controller RBAC must not be cluster scoped")
-
-            terraform_namespaces = set()
-            for path in (root / "undercloud").rglob("*.yaml"):
-                for document in yaml.safe_load_all(path.read_text()):
-                    if isinstance(document, dict) and document.get("kind") == "Terraform":
-                        terraform_namespaces.add(document["metadata"]["namespace"])
-            tenant_overlays = {
-                yaml.safe_load(path.read_text())["namespace"]
-                for path in (root / "undercloud").glob(
-                    "*/tofu-controller/kustomization.yaml"
-                )
-            }
-            controller_namespaces = {"tofu-system"} | tenant_overlays
-            if controller_namespaces != terraform_namespaces:
-                raise SystemExit(
-                    "namespace-scoped tofu-controller coverage "
-                    f"{sorted(controller_namespaces)} != Terraform namespaces "
-                    f"{sorted(terraform_namespaces)}"
-                )
-
-            for path in (root / "undercloud").rglob("*.yaml"):
-                for document in yaml.safe_load_all(path.read_text()):
-                    if not isinstance(document, dict) or document.get("kind") != "Kustomization":
-                        continue
-                    spec = document.get("spec", {})
-                    source_path = spec.get("path")
-                    if not isinstance(source_path, str) or not source_path.startswith("./"):
-                        continue
-                    managed_path = pathlib.Path(source_path.removeprefix("./"))
-                    if not managed_path.is_dir() or not any(
-                        managed_path.rglob("*.sops.yaml")
-                    ):
-                        continue
-                    if spec.get("decryption") != {
-                        "provider": "sops",
-                        "secretRef": {"name": "sops-age"},
-                    }:
-                        name = document.get("metadata", {}).get("name", "<unknown>")
-                        raise SystemExit(
-                            f"Flux Kustomization {name} owns SOPS resources without decryption"
-                        )
-
-            services_gateway = list(
-                yaml.safe_load_all(
-                    (
-                        root / "services/20-platform-gateway/gateway.yaml"
-                    ).read_text()
-                )
-            )
-            services_envoy_proxy = next(
-                document
-                for document in services_gateway
-                if document.get("kind") == "EnvoyProxy"
-            )
-            if (
-                services_envoy_proxy["spec"]["provider"]["kubernetes"][
-                    "envoyService"
-                ].get("externalTrafficPolicy")
-                != "Local"
-            ):
-                raise SystemExit(
-                    "services Envoy must preserve client IPs for "
-                    "session-bound applications"
-                )
-
-            media_root = root / "services/40-media"
-            media_kustomization = yaml.safe_load(
-                (media_root / "kustomization.yaml").read_text()
-            )
-            if set(media_kustomization["resources"]) != {
-                "storage.yaml",
-                "sftpgo.yaml",
-                "beets.yaml",
-                "navidrome.yaml",
-                "audiomuse-config.yaml",
-                "audiomuse.yaml",
-                "routes.yaml",
-                "monitoring.yaml",
-                "network-policy.yaml",
-            }:
-                raise SystemExit("media service set must retain the Beets import workflow")
-            sftpgo = (media_root / "sftpgo.yaml").read_text()
-            sftpgo_bootstrap = (media_root / "render-initial-data.sh").read_text()
-            media_kustomization = (media_root / "kustomization.yaml").read_text()
-            beets = (media_root / "beets.yaml").read_text()
-            beets_config = (media_root / "beets-config.yaml").read_text()
-            beets_import = (media_root / "import.sh").read_text()
-            navidrome = (media_root / "navidrome.yaml").read_text()
-            audiomuse = (media_root / "audiomuse.yaml").read_text()
-            audiomuse_config = yaml.safe_load(
-                (media_root / "audiomuse-config.yaml").read_text()
-            )["data"]
-            media_routes_path = media_root / "routes.yaml"
-            media_routes = media_routes_path.read_text()
-            media_route_documents = list(yaml.safe_load_all(media_routes))
-            media_network_policy = (media_root / "network-policy.yaml").read_text()
-            navidrome_plugins = (
-                media_root / "configure-navidrome-plugins.sh"
-            ).read_text()
-            lastgenre_test = (
-                media_root / "verify-lastgenre-offline.py"
-            ).read_text()
-            compile(lastgenre_test, "verify-lastgenre-offline.py", "exec")
-            navidrome_service_account = (
-                media_root / "reconcile-navidrome-service-account.py"
-            ).read_text()
-            compile(
-                navidrome_service_account,
-                "reconcile-navidrome-service-account.py",
-                "exec",
-            )
-            compile(
-                (media_root / "reconcile-audiomuse.py").read_text(),
-                "reconcile-audiomuse.py",
-                "exec",
-            )
-            manila_csi_policy = yaml.safe_load(
-                (
-                    root
-                    / "services/10-platform-controllers/manila-csi-policy.yaml"
-                ).read_text()
-            )
-            if manila_csi_policy != {
-                "apiVersion": "storage.k8s.io/v1",
-                "kind": "CSIDriver",
-                "metadata": {"name": "nfs.manila.csi.openstack.org"},
-                "spec": {
-                    "attachRequired": False,
-                    "fsGroupPolicy": "File",
-                    "podInfoOnMount": False,
-                    "requiresRepublish": False,
-                    "seLinuxMount": False,
-                    "storageCapacity": False,
-                    "volumeLifecycleModes": ["Persistent"],
-                },
-            }:
-                raise SystemExit(
-                    "Manila NFS must honor the non-root media filesystem group"
-                )
-            magnum_driver_values = (
-                root / "undercloud/71-magnum/driver-values.yaml"
-            ).read_text()
-            if '"values": {"fsGroupPolicy": "File"}' not in magnum_driver_values:
-                raise SystemExit(
-                    "future Magnum clusters must retain the Manila filesystem-group policy"
-                )
-            if '"home_dir":"/srv/sftpgo/data/media/inbox"' not in sftpgo_bootstrap:
-                raise SystemExit("SFTPGo must expose only the temporary Beets inbox")
-            required_sftpgo_oidc = (
-                '"username":"fahricanelidemir@gmail.com"',
-                'SFTPGO_HTTPD__BINDINGS__0__OIDC__CLIENT_SECRET_FILE',
-                'SFTPGO_HTTPD__BINDINGS__0__OIDC__USERNAME_FIELD',
-                'SFTPGO_HTTPD__BINDINGS__0__DISABLED_LOGIN_METHODS',
-                'value: "168"',
-                'value: https://auth.cloud.fahrican.com',
-                'value: https://upload.fahrican.com',
-                '"password-change-disabled"',
-                '"password-reset-disabled"',
-                '"api-key-auth-change-disabled"',
-                '"publickey-change-disabled"',
-                '"tls-cert-change-disabled"',
-            )
-            if any(
-                fragment not in sftpgo + sftpgo_bootstrap
-                for fragment in required_sftpgo_oidc
-            ):
-                raise SystemExit("SFTPGo native ZITADEL OIDC contract drifted")
-            sftpgo_documents = list(yaml.safe_load_all(sftpgo))
-            sftpgo_statefulset = next(
-                document
-                for document in sftpgo_documents
-                if document.get("kind") == "StatefulSet"
-            )
-            sftpgo_container = next(
-                container
-                for container in sftpgo_statefulset["spec"]["template"]["spec"][
-                    "containers"
-                ]
-                if container["name"] == "sftpgo"
-            )
-            sftpgo_environment = {
-                variable["name"]: variable.get("value")
-                for variable in sftpgo_container["env"]
-            }
-            required_sftpgo_proxy = {
-                "SFTPGO_HTTPD__BINDINGS__0__PROXY_ALLOWED": "172.16.0.0/13",
-                "SFTPGO_HTTPD__BINDINGS__0__CLIENT_IP_PROXY_HEADER": "X-Forwarded-For",
-                "SFTPGO_HTTPD__BINDINGS__0__CLIENT_IP_HEADER_DEPTH": "0",
-            }
-            if any(
-                sftpgo_environment.get(name) != value
-                for name, value in required_sftpgo_proxy.items()
-            ):
-                raise SystemExit(
-                    "SFTPGo must derive a stable client IP from the trusted Envoy proxy pool"
-                )
-            required_sftpgo_upload = {
-                "SFTPGO_COMMON__UPLOAD_MODE": "1",
-                "SFTPGO_COMMON__SETSTAT_MODE": "1",
-            }
-            if any(
-                sftpgo_environment.get(name) != value
-                for name, value in required_sftpgo_upload.items()
-            ) or "subPath: inbox" not in sftpgo:
-                raise SystemExit(
-                    "SFTPGo must publish server-timestamped complete files into the isolated inbox"
-                )
-            for hidden_atomic_fragment in (
-                '"file_patterns":[{"path":"/",',
-                '"denied_patterns":[".sftpgo-upload*"],',
-                '"deny_policy":1',
-            ):
-                if hidden_atomic_fragment not in sftpgo_bootstrap:
-                    raise SystemExit(
-                        "SFTPGo must hide and deny its recursive atomic-upload staging names"
-                    )
-            if "SFTPGO_USER_PASSWORD" in sftpgo + sftpgo_bootstrap:
-                raise SystemExit("SFTPGo upload identity must not have a local password")
-            if '"denied_login_methods"' in sftpgo_bootstrap:
-                raise SystemExit(
-                    "SFTPGo OIDC identity must not deny every valid login method"
-                )
-
-            identity_tofu = pathlib.Path(
-                "components/cloud/identity/tofu/main.tf"
-            ).read_text()
-            for identity_fragment in (
-                'redirect_uri = "https://upload.fahrican.com/web/oidc/redirect"',
-                'output "sftpgo_client_id"',
-                'output "sftpgo_client_secret"',
-                'redirect_uri = "https://music.fahrican.com/oauth2/callback"',
-                'redirect_uri = "https://audiomuse.fahrican.com/oauth2/callback"',
-                'output "navidrome_client_id"',
-                'output "navidrome_client_secret"',
-                'output "audiomuse_client_id"',
-                'output "audiomuse_client_secret"',
-            ):
-                if identity_fragment not in identity_tofu:
-                    raise SystemExit("media ZITADEL application contract drifted")
-
-            haos_promotion = pathlib.Path(
-                "components/nix/servers/image-promotion.nix"
-            ).read_text()
-            haos_hosts = pathlib.Path(
-                "components/cloud/services/hosts/tofu/main.tf"
-            ).read_text()
-            haos_activation = yaml.safe_load(
-                (root / "undercloud/83-services-hosts/tofu.yaml").read_text()
-            )
-            haos_platform = next(
-                item["value"]
-                for item in haos_activation["spec"]["vars"]
-                if item["name"] == "home_assistant_platform"
-            )
-            if haos_platform != "nixos":
-                raise SystemExit("HAOS must remain behind the restore-qualified cutover")
-            for haos_fragment in (
-                "haos_ova-$haos_version.qcow2.xz",
-                "254e53f354df0739e3afc09be5431a07df53f0df6b703885404f665c454f254e",
-                "--protected",
-            ):
-                if haos_fragment not in haos_promotion:
-                    raise SystemExit("HAOS official-image promotion contract drifted")
-            if (
-                "83-services-hosts/tofu.yaml" in haos_promotion
-                or "activation_manifest" in haos_promotion
-            ):
-                raise SystemExit(
-                    "image promotion must not mutate an active boot-volume revision"
-                )
-            if (
-                'default     = "nixos"' not in haos_hosts
-                or 'name        = "home-assistant-root-haos-18.2"' not in haos_hosts
-                or haos_hosts.count("prevent_destroy = true") < 3
-            ):
-                raise SystemExit("HAOS cutover or retained-volume protection drifted")
-            if (
-                "IFS= read" in sftpgo_bootstrap
-                or 'admin_password="$(cat ' not in sftpgo_bootstrap
-            ):
-                raise SystemExit(
-                    "SFTPGo must accept generated Secret files without trailing newlines"
-                )
-            if (
-                "configMapGenerator:" not in media_kustomization
-                or "render.sh=render-initial-data.sh" not in media_kustomization
-                or "config.yaml=beets-config.yaml" not in media_kustomization
-                or "import.sh=import.sh" not in media_kustomization
-                or "verify-lastgenre-offline.py=verify-lastgenre-offline.py" not in media_kustomization
-                or "install-navidrome-plugins.sh=install-navidrome-plugins.sh" not in media_kustomization
-                or "migrate-navidrome-database.sh=migrate-navidrome-database.sh" not in media_kustomization
-                or "reconcile-navidrome-service-account.py=reconcile-navidrome-service-account.py" not in media_kustomization
-                or "reconcile-audiomuse.py=reconcile-audiomuse.py" not in media_kustomization
-            ):
-                raise SystemExit(
-                    "media importer configuration must use content-hashed rollouts"
-                )
-            if "subPath: library" not in navidrome or "mountPath: /music" not in navidrome:
-                raise SystemExit("Navidrome must read only the Beets-managed library")
-            for beets_fragment in (
-                "kind: CronJob",
-                "name: beets-import",
-                'schedule: "* * * * *"',
-                "concurrencyPolicy: Forbid",
-                "claimName: media-library",
-                "claimName: beets-data",
-                "readOnlyRootFilesystem: true",
-                "runAsNonRoot: true",
-                "@sha256:",
-            ):
-                if beets_fragment not in beets:
-                    raise SystemExit("Beets CronJob safety contract drifted")
-            for import_fragment in (
-                "write: yes",
-                "copy: no",
-                "move: yes",
-                "quiet: yes",
-                "quiet_fallback: skip",
-                "duplicate_action: skip",
-                "directory: /media/library",
-            ):
-                if import_fragment not in beets_config:
-                    raise SystemExit("Beets unattended import policy drifted")
-            beets_configuration = yaml.safe_load(beets_config)
-            if set(beets_configuration["plugins"]) != {
-                "musicbrainz",
-                "chroma",
-                "fetchart",
-                "replaygain",
-                "lastgenre",
-                "badfiles",
-            }:
-                raise SystemExit("Beets enrichment plugins must remain native and pinned")
-            if beets_configuration.get("lastgenre") != {
-                "auto": False,
-                "force": False,
-                "cleanup_existing": True,
-                "aliases": True,
-                "canonical": False,
-                "whitelist": False,
-                "keep_existing": False,
-                "count": 3,
-                "fallback": None,
-                "min_weight": 10,
-                "prefer_specific": False,
-                "source": "album",
-                "title_case": True,
-                "ignorelist": False,
-            }:
-                raise SystemExit("LastGenre must remain an explicit offline normalizer")
-            if beets_configuration.get("replaygain") != {
-                "auto": True,
-                "backend": "ffmpeg",
-                "overwrite": False,
-                "parallel_on_import": False,
-                "threads": 2,
-            }:
-                raise SystemExit("ReplayGain import analysis must remain deterministic")
-            for replaygain_fragment in (
-                'replaygain_backfill="$state/replaygain-album-track-v1"',
-                '"$beet" replaygain -a -f -w',
-                '"$beet" replaygain -f -w "singleton:true"',
-                'touch "$replaygain_backfill"',
-            ):
-                if replaygain_fragment not in beets_import:
-                    raise SystemExit("ReplayGain catalog backfill contract drifted")
-            if (
-                "LastGenre attempted a Last.fm request" not in lastgenre_test
-                or "plugin.client.fetch = reject_network" not in lastgenre_test
-                or "plugin.import_stages == []" not in lastgenre_test
-                or '"$beet" lastgenre ' not in beets_import
-                or "genre::." not in beets_import
-            ):
-                raise SystemExit("zero-Last.fm-request acceptance coverage drifted")
-            for inbox_fragment in (
-                'media_root=''${BEETS_MEDIA_ROOT:-/media}',
-                'inbox=$media_root/inbox',
-                'quarantine=$media_root/quarantine',
-                '-mmin -2',
-                "-name '????????T??????Z-beets-import-*'",
-                '-mmin +1440',
-                '-exec rm -rf -- {} +',
-                '"$beet" import --noautotag "$library"',
-                'mv "$candidate" "$review/"',
-            ):
-                if inbox_fragment not in beets_import:
-                    raise SystemExit("Beets inbox lifecycle policy drifted")
-
-            for navidrome_fragment in (
-                "docker.io/deluan/navidrome:0.63.2@sha256:",
-                "ND_EXTAUTH_TRUSTEDSOURCES",
-                "value: 127.0.0.1/32,::1/128",
-                "ND_EXTAUTH_USERHEADER",
-                "X-Forwarded-Preferred-Username",
-                "ND_PLUGINS_ENABLED",
-                "ND_LYRICSPRIORITY",
-                "quay.io/oauth2-proxy/oauth2-proxy:v7.15.4@sha256:",
-                "AUDIOMUSE_NAVIDROME_PASSWORD",
-                "reconcile-navidrome-service-account.py",
-            ):
-                if navidrome_fragment not in navidrome + audiomuse:
-                    raise SystemExit("Navidrome SSO or AudioMuse service-account contract drifted")
-            for account_fragment in (
-                'USERNAME = "audiomuse"',
-                '"--set-regular"',
-                "run_password_command(command, password)",
-            ):
-                if account_fragment not in navidrome_service_account:
-                    raise SystemExit("Navidrome service account reconciliation drifted")
-            for plugin_fragment in (
-                "bca0b84ab29359f364a645fba968c4574b9bc81ef58c6f33d03957ae33b50cfc",
-                "a9196e5b4e2c2eb2aaccb9f35c9faf6f488fe9081ff5685b1556901686c7540f",
-                '"writeLyrics": false',
-                '"overwriteLyrics": false',
-                '"provider": "lrclib"',
-                "--no-write-access",
-            ):
-                if plugin_fragment not in navidrome_plugins + (
-                    media_root / "install-navidrome-plugins.sh"
-                ).read_text():
-                    raise SystemExit("Navidrome plugin integrity or lyrics policy drifted")
-            if (
-                "value: /rest" not in media_routes
-                or "port: 4533" not in media_routes
-                or "port: 4180" not in media_routes
-                or "X-Forwarded-Preferred-Username" not in media_routes
-            ):
-                raise SystemExit("Navidrome browser and OpenSubsonic route split drifted")
-            navidrome_route = next(
-                document
-                for document in media_route_documents
-                if document.get("kind") == "HTTPRoute"
-                and document.get("metadata", {}).get("name") == "navidrome"
-            )
-            stream_rule = next(
-                (
-                    rule
-                    for rule in navidrome_route["spec"]["rules"]
-                    if {
-                        match.get("path", {}).get("value")
-                        for match in rule.get("matches", [])
-                    }
-                    == {"/rest/stream.view", "/rest/download.view"}
-                ),
-                None,
-            )
-            if (
-                stream_rule is None
-                or stream_rule.get("timeouts")
-                != {"request": "0s", "backendRequest": "0s"}
-                or stream_rule.get("backendRefs")
-                != [{"name": "navidrome", "port": 4533}]
-                or not any(
-                    "X-Forwarded-Preferred-Username"
-                    in stream_filter.get("requestHeaderModifier", {}).get(
-                        "remove", []
-                    )
-                    for stream_filter in stream_rule.get("filters", [])
-                )
-            ):
-                raise SystemExit(
-                    "Navidrome media streams must bypass the gateway transaction timeout"
-                )
-
-            expected_audiomuse_config = {
-                "AI_MODEL_PROVIDER": "NONE",
-                "APP_DATA_DIR": "/tmp/audiomuse",
-                "AUTH_ENABLED": "false",
-                "ENABLE_PROXY_FIX": "true",
-                "IVF_DISK_CACHE_DIR": "/tmp/audiomuse/ivf",
-                "LYRICS_API_ENABLE": "false",
-                "LYRICS_ASR_ENABLE": "false",
-                "LYRICS_ENABLED": "true",
-                "MEDIASERVER_TYPE": "navidrome",
-                "MUSICSERVER_LYRICS_TIMEOUT": "20",
-                "NAVIDROME_URL": "http://navidrome.media.svc.cluster.local:4533",
-                "POSTGRES_DB": "audiomusedb",
-                "POSTGRES_HOST": "audiomuse-postgres.media.svc.cluster.local",
-                "POSTGRES_PORT": "5432",
-                "POSTGRES_USER": "audiomuse",
-                "PYTHONDONTWRITEBYTECODE": "1",
-                "TEMP_DIR": "/tmp/audio",
-                "TZ": "Europe/Istanbul",
-            }
-            if audiomuse_config != expected_audiomuse_config:
-                raise SystemExit("AudioMuse deterministic configuration drifted")
-            for audiomuse_fragment in (
-                "ghcr.io/neptunehub/audiomuse-ai:3.4.0@sha256:",
-                "docker.io/library/postgres:15.19-alpine@sha256:",
-                "preferredDuringSchedulingIgnoredDuringExecution",
-                "node-role.kubernetes.io/control-plane",
-                "backup.velero.io/backup-volumes-excludes: data",
-                "AUDIOMUSE_POSTGRES_PASSWORD",
-                "AUDIOMUSE_OAUTH2_COOKIE_SECRET",
-                'schedule: "45 1 * * *"',
-            ):
-                if audiomuse_fragment not in audiomuse:
-                    raise SystemExit("AudioMuse workload contract drifted")
-            if "requiredDuringSchedulingIgnoredDuringExecution:" in audiomuse.split(
-                "podAntiAffinity:", 1
-            )[1].split("securityContext:", 1)[0]:
-                raise SystemExit("AudioMuse pod anti-affinity must remain preferred")
-            for private_fragment in (
-                "kind: SecurityPolicy",
-                "name: audiomuse-private",
-                "defaultAction: Deny",
-                "10.21.10.0/24",
-                "10.21.91.0/24",
-            ):
-                if private_fragment not in media_routes:
-                    raise SystemExit("AudioMuse ingress is not genuinely LAN/WireGuard-only")
-            if (
-                "name: audiomuse-api-ingress" not in media_network_policy
-                or "name: audiomuse-postgres-ingress" not in media_network_policy
-                or "name: navidrome-audiomuse-ingress" not in media_network_policy
-            ):
-                raise SystemExit("AudioMuse east-west ingress is not isolated")
-
-            media_restore_modifiers = yaml.safe_load(
-                (
-                    root
-                    / "services/16-backup-policy/media-restore-modifiers.yaml"
-                ).read_text()
-            )
-            modifier_rules = yaml.safe_load(
-                media_restore_modifiers["data"]["resource-modifiers.yaml"]
-            )
-            if modifier_rules != {
-                "version": "v1",
-                "resourceModifierRules": [
-                    {
-                        "conditions": {
-                            "groupResource": "persistentvolumeclaims",
-                            "namespaces": ["media"],
-                        },
-                        "patches": [
-                            {
-                                "operation": "remove",
-                                "path": "/spec/volumeName",
-                            }
-                        ],
-                    }
-                ],
-            }:
-                raise SystemExit(
-                    "isolated media restores must dynamically provision every PVC"
-                )
-
-            observability = (root / "services/12-observability/kube-prometheus-stack.yaml").read_text()
-            velero = (root / "services/15-backup-controller/velero.yaml").read_text()
-            for name, text in (("observability", observability), ("velero", velero)):
-                if "suspend: true" in text:
-                    raise SystemExit(f"{name} retains an inner suspension")
-            observability_release = next(
-                document
-                for document in yaml.safe_load_all(observability)
-                if document.get("kind") == "HelmRelease"
-            )
-            retry_policy = {
-                "name": "RetryOnFailure",
-                "retryInterval": "1m",
-            }
-            for action in ("install", "upgrade"):
-                action_policy = observability_release["spec"][action]
-                if (
-                    action_policy.get("strategy") != retry_policy
-                    or "remediation" in action_policy
-                ):
-                    raise SystemExit(
-                        f"observability {action} must self-retry its admission webhook bootstrap"
-                    )
-            admission_policy = observability_release["spec"]["values"][
-                "prometheusOperator"
-            ]["admissionWebhooks"]
-            if not admission_policy["certManager"]["enabled"] or admission_policy[
-                "patch"
-            ]["enabled"]:
-                raise SystemExit(
-                    "observability admission TLS must use cert-manager instead of patch jobs"
-                )
-            prometheus_spec = observability_release["spec"]["values"]["prometheus"][
-                "prometheusSpec"
-            ]
-            if prometheus_spec.get("serviceDiscoveryRole") != "Endpoints":
-                raise SystemExit(
-                    "Prometheus must use Endpoints until prometheus-operator#7678 is fixed"
-                )
-            operator_values = observability_release["spec"]["values"][
-                "prometheusOperator"
-            ]
-            if (
-                operator_values.get("kubeletEndpointsEnabled") is not True
-                or operator_values.get("kubeletEndpointSliceEnabled") is not False
-            ):
-                raise SystemExit(
-                    "Prometheus Operator must use kubelet Endpoints until prometheus-operator#7678 is fixed"
-                )
-            for resource in ("podMonitor", "probe", "rule", "serviceMonitor"):
-                if (
-                    prometheus_spec.get(f"{resource}SelectorNilUsesHelmValues")
-                    is not False
-                    or prometheus_spec.get(f"{resource}Selector") != {}
-                    or prometheus_spec.get(f"{resource}NamespaceSelector") != {}
-                ):
-                    raise SystemExit(
-                        f"Prometheus must discover every declared {resource} across namespaces"
-                    )
-            forbidden = ("backup.invalid", "replace-before-activation", "chat_id: 0")
-            if any(value in observability + velero for value in forbidden):
-                raise SystemExit("a runtime placeholder remains in a Helm release")
-            PY
-            for bootstrap_phase in components sync; do
+            while IFS= read -r -d "" kustomization; do
+              directory="$(dirname "$kustomization")"
+              rendered="$TMPDIR/$(printf '%s' "$directory" | sha256sum | cut -d ' ' -f 1).yaml"
               kustomize build --load-restrictor LoadRestrictionsNone \
-                "deployments/homelab/cloud/management/bootstrap/$bootstrap_phase" \
-                >/dev/null
-            done
-            shellcheck \
-              components/cloud/host-automation/build-autoinstall-iso.sh \
-              deployments/homelab/cloud/services/40-media/import.sh \
-              deployments/homelab/cloud/services/40-media/install-navidrome-plugins.sh \
-              deployments/homelab/cloud/services/40-media/configure-navidrome-plugins.sh \
-              deployments/homelab/cloud/services/40-media/migrate-navidrome-user.sh \
-              deployments/homelab/cloud/services/40-media/migrate-navidrome-database.sh \
-              deployments/homelab/cloud/services/40-media/postgres-backup.sh \
-              deployments/homelab/cloud/services/40-media/render-initial-data.sh
+                "$directory" > "$rendered"
+            done < <(
+              find \
+                components/cloud \
+                deployments/homelab/cloud \
+                -name kustomization.yaml \
+                -print0 \
+                | sort -z
+            )
 
             touch "$out"
           '';
+
+      shellChecks =
+        pkgs.runCommandLocal "cloud-shell-checks"
+          {
+            nativeBuildInputs = [
+              pkgs.findutils
+              pkgs.shellcheck
+            ];
+          }
+          ''
+            set -euo pipefail
+
+            find \
+              ${source}/components/cloud \
+              ${source}/deployments/homelab/cloud \
+              -type f \
+              -name '*.sh' \
+              -print0 \
+              | xargs -0 -r shellcheck
+            touch "$out"
+          '';
+    in
+    {
+      checks = {
+        cloud-ansible = ansibleChecks;
+        cloud-kustomize = kustomizeChecks;
+        cloud-python = pythonTests;
+        cloud-shell = shellChecks;
+        cloud-tofu-format = tofuFormat;
+        cloud-yaml = yamlChecks;
+
+        cloud-configuration = pkgs.linkFarm "cloud-configuration-check" [
+          {
+            name = "ansible";
+            path = ansibleChecks;
+          }
+          {
+            name = "kustomize";
+            path = kustomizeChecks;
+          }
+          {
+            name = "python";
+            path = pythonTests;
+          }
+          {
+            name = "shell";
+            path = shellChecks;
+          }
+          {
+            name = "tofu-format";
+            path = tofuFormat;
+          }
+          {
+            name = "yaml";
+            path = yamlChecks;
+          }
+        ];
+      };
     };
 }
