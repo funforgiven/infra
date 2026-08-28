@@ -1,60 +1,114 @@
-# Services hosts
+# Home Assistant host
 
-This OpenTofu root creates the persistent OpenStack hosts that need capabilities
-which do not fit the Kubernetes services cluster:
+This OpenTofu root manages the persistent Home Assistant VM, ports, security
+groups, and boot volumes in the OpenStack `services` project. The provider uses
+the existing administrative credential but explicitly scopes requests to that
+project. Credentials and guest secrets are not module inputs or outputs.
 
-- Hermes receives a private services-network port and a fixed provider-LAN
-  floating address for administration.
-- Home Assistant is dual-homed. Its private address is used by the Kubernetes
-  gateway, while its fixed provider-LAN port preserves local discovery traffic.
-  The NixOS root remains rollback media while a separate Home Assistant OS root
-  becomes active only through the explicit `home_assistant_platform` cutover.
-- Persistent volumes, fixed ports, and the Hermes floating address are protected
-  from destruction. The Home Assistant instance is intentionally replaceable so
-  OpenTofu can move those retained ports between retained boot volumes.
+The [deployment controller](../../../../../deployments/homelab/cloud/undercloud/83-services-hosts/tofu.yaml)
+reconciles every 10 minutes, applies plans automatically, and runs after the
+services cluster. It writes the two address outputs below to the
+`services-hosts-outputs` Kubernetes Secret. Deleting the controller does not
+destroy the OpenStack resources.
 
-The root accepts only a full Git revision. The promotion app verifies a clean,
-SSH-signed commit, builds the matching Hermes image, and imports the pinned
-official HAOS 18.2 QCOW2 only after verifying its archive SHA-256. Both artifacts
-are private, protected, and carry their source digests as Glance properties.
+The root currently contains `removed` blocks with `destroy = true` for retired
+service-host resources. Those blocks deliberately make the next matching plan
+destructive. Review that plan before merging a change to the retirement blocks.
 
-Image promotion and host activation are deliberately separate:
+## Inputs and images
 
-1. Merge and sign the NixOS image configuration.
-2. From a services-project OpenStack shell, run
-   nix run .#promote-service-images.
-3. Verify the promoted image and record its full signed revision as a candidate.
-4. Leave wave 83's active image revision unchanged until a separate migration
-   has staged runtime credentials and a recovery-tested retained root.
+| Input | Accepted value | Effect |
+| --- | --- | --- |
+| `image_revision` | Full lowercase 40-character Git commit | Selects the NixOS image and names its root volume |
+| `home_assistant_platform` | `nixos` or `haos`; default `nixos` | Selects the boot volume and whether the VM uses a config drive |
 
-The promotion command never edits the active revision. Changing that value on
-an already provisioned host would ask OpenTofu to replace a protected boot
-volume; it is therefore not an image-publication step and must be implemented as
-an explicit retained-volume migration. HAOS uses its own retained root and the
-platform selector below, so publishing HAOS does not alter the running NixOS VM.
+`image_revision` selects the private
+`nixos-home-assistant-<first 12 revision characters>` image with
+`image_role=home-assistant` and the full `image_source_revision`. The HAOS
+alternative is `haos-18.2`, with `image_role=home-assistant-os` and
+`haos_version=18.2`.
+
+The root reads these images but does not create or delete them. From a clean,
+SSH-signed commit, build and upload the revision-matched NixOS image and import
+the pinned official HAOS image after verifying its archive digest:
+
+```console
+nix run .#promote-service-images
+```
+
+Promotion does not change `image_revision` or the active platform. Changing
+`image_revision` creates a new image-backed NixOS root and replaces resources
+that refer to the old revision; it is not an in-place upgrade. The existing
+root is protected from destruction, so prepare and review an explicit retained-
+volume migration instead of expecting a routine controller apply to replace it.
+
+## Networking and storage
+
+| Address | Use |
+| --- | --- |
+| `192.168.80.10` | Services-network ingress and monitoring |
+| `10.21.40.120`, MAC `fa:16:3e:80:00:10` | Trusted-LAN administration and local discovery |
+
+Both fixed ports are protected from destruction. The NixOS and HAOS boot
+volumes are each 100 GiB and protected from destruction. The VM uses the
+`services.worker` flavor, stops before replacement, and never deletes its boot
+volume on termination.
+
+Security groups allow:
+
+- SSH and ICMP from `10.21.10.0/24`;
+- node-exporter TCP port 9100 from `192.168.80.0/24`;
+- Home Assistant TCP port 8123 from both trusted networks; and
+- mDNS UDP 5353 and SSDP UDP 1900 on the provider-facing port from
+  `10.21.10.0/24`.
+
+The OpenStack `public` network is private provider space; `10.21.40.120` is not
+a directly Internet-routed address.
 
 ## Home Assistant OS cutover
 
-Keep `home_assistant_platform = nixos` while preparing the migration. Create a
-native full encrypted Home Assistant backup, download its emergency kit, and
-restore that backup into an isolated HAOS instance. Run the promotion app and
-verify that the protected `haos-18.2` image has the pinned source digest.
+Changing `home_assistant_platform` from `nixos` to `haos` replaces the VM,
+disables its config drive, and attaches the retained HAOS root. Both ports and
+both boot volumes remain. The plan should replace only the VM attachment.
 
-Only then change the Git variable to `haos`. OpenTofu stops and replaces the VM,
-retains both boot volumes and both fixed ports, and boots HAOS without cloud-init
-or guest credentials. Restore the verified native backup during onboarding. The
-services-network port obtains `192.168.80.10` through Neutron DHCP. Configure the
-provider-LAN NIC once through HAOS with `10.21.40.120/24` and route
-`10.21.10.0/24` through `10.21.40.1`; this unavoidable appliance-state exception
-is tracked in the repository.
+Before switching:
 
-After restore, configure the native Backblaze B2 backup location with bucket
-`fahrican-cloud-recovery`, prefix `services/hosts/home-assistant/`, and the
-existing independently scoped Home Assistant application key. Enable encrypted
-daily automatic backups, retain at least 14, perform another isolated restore,
-and only then retire the NixOS rollback volume and Restic contract in a separate
-reviewed change.
+1. Create a full encrypted native Home Assistant backup and save its emergency
+   kit.
+2. Restore the backup into an isolated HAOS instance and verify the required
+   integrations and history.
+3. Ensure `haos-18.2` has the pinned source digest.
 
-The controller uses the existing administrative runtime Secret, while the
-provider explicitly re-scopes authentication to the services project. No
-credential or generated guest secret is accepted as an OpenTofu variable.
+After switching, restore the tested backup during onboarding. Neutron supplies
+`192.168.80.10` by DHCP. Configure the provider interface as
+`10.21.40.120/24`, add a route to `10.21.10.0/24` through `10.21.40.1`, and
+trust forwarded HTTP headers only from `192.168.80.0/24`.
+
+Configure encrypted daily native backups in `fahrican-cloud-recovery` under
+`services/hosts/home-assistant/`, retain at least 14, and complete another
+isolated restore. Keep the NixOS root until that restore succeeds. The full
+procedure is in the [service operations guide](../../../../../deployments/homelab/cloud/services/ACTIVATION.md#home-assistant-os-cutover).
+
+## Outputs
+
+| Output | Value |
+| --- | --- |
+| `home_assistant_private_address` | `192.168.80.10` |
+| `home_assistant_provider_address` | `10.21.40.120` |
+
+## Validate
+
+Run from the repository root before changing the selected revision:
+
+```console
+nix flake check --no-build --accept-flake-config
+nix build .#home-assistant-openstack-image --no-link --accept-flake-config
+```
+
+Check the module without OpenStack credentials:
+
+```console
+cd components/cloud/services/hosts/tofu
+tofu init -backend=false
+tofu validate
+```
