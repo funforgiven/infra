@@ -1,10 +1,11 @@
-_: {
+{ lib, ... }:
+{
   dendritic.nixpkgs.allowUnfreePackages = [ "hayase" ];
 
   perSystem =
     { pkgs, ... }:
     {
-      packages = {
+      packages = lib.optionalAttrs (lib.meta.availableOn pkgs.stdenv.hostPlatform pkgs.hayase) {
         inherit (pkgs) hayase;
       };
     };
