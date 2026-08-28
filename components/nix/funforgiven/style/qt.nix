@@ -145,11 +145,15 @@ in
         backgroundNormal = "surface";
       };
       kdeColorSchemeSettings = {
-        KDE.contrast = 4;
+        KDE = {
+          contrast = 4;
+          widgetStyle = "kvantum";
+        };
         General = {
           ColorScheme = schemeId;
           Name = "Material You";
         };
+        Icons.Theme = config.stylix.icons.dark;
         "ColorEffects:Disabled" = {
           Color = rgb "on_surface_variant";
           ColorAmount = 0;
@@ -318,7 +322,7 @@ in
       assertions = [
         {
           assertion = !config.stylix.targets.qt.enable;
-          message = "The focused Material Qt module must remain the sole Qt theme owner.";
+          message = "Qt theming must be configured only by the Material Qt module.";
         }
         {
           assertion = config.qt.style.name == null;
@@ -341,6 +345,14 @@ in
         {
           assertion = config.qt.kde.settings.kdeglobals.UiSettings.ColorScheme == schemeId;
           message = "Dolphin and other KDE applications must select the managed Material You KColorScheme.";
+        }
+        {
+          assertion = config.qt.kde.settings.kdeglobals.KDE.widgetStyle == "kvantum";
+          message = "KDE applications and the KDE portal must use the managed Kvantum widget style.";
+        }
+        {
+          assertion = config.qt.kde.settings.kdeglobals.Icons.Theme == config.stylix.icons.dark;
+          message = "KDE applications and the KDE portal must use the managed semantic icon theme.";
         }
       ];
     };
