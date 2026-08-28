@@ -14,4 +14,5 @@ for forwarded headers, and confirm the pending HTTP settings through
 `https://home.fahrican.com`. Enroll Home Assistant's native Backblaze B2 backup
 location with the existing prefix-scoped key, then require encrypted daily
 backups and a post-cutover restore before retiring the legacy volume. These
-appliance-state changes are registered in `manual-exceptions.yaml`.
+appliance settings are covered by the backup and cutover procedure in
+[`../ACTIVATION.md`](../ACTIVATION.md).

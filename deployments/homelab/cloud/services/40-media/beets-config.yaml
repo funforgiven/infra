@@ -51,27 +51,21 @@ replaygain:
   parallel_on_import: no
   threads: 2
 
-# LastGenre is intentionally an offline normalizer. It cleans aliases in genres
-# which MusicBrainz or the files already supplied, but it must never become a
-# Last.fm metadata source.
+# Normalize existing genre aliases without fetching genres from Last.fm.
 lastgenre:
   auto: no
   force: no
   cleanup_existing: yes
   aliases: yes
-  # Canonical hierarchy expansion is deliberately disabled: with no whitelist,
-  # Beets replaces known subgenres with their oldest parent (for example,
-  # Alternative Rock becomes Rock). Aliases still normalize spelling safely.
+  # Hierarchy expansion would replace specific genres with broad parents.
   canonical: no
-  # Preserve legitimate niche genres which are absent from Beets' bundled
-  # whitelist (for example newer Japanese scenes).
+  # Preserve genres which are absent from Beets' bundled list.
   whitelist: no
   keep_existing: no
   count: 3
   fallback: null
   min_weight: 10
-  # With canonicalization disabled, prefer_specific would still load the
-  # bundled tree and drop genres it does not know.
+  # prefer_specific still drops genres missing from the bundled tree.
   prefer_specific: no
   source: album
   title_case: yes
