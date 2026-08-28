@@ -5,6 +5,7 @@ DragAvatar 1.0 DragAvatar.qml
 FocusRing 1.0 FocusRing.qml
 IconButton 1.0 IconButton.qml
 MaterialSlider 1.0 MaterialSlider.qml
+SemanticIcon 1.0 SemanticIcon.qml
 StatusChip 1.0 StatusChip.qml
 Surface 1.0 Surface.qml
 TintedIcon 1.0 TintedIcon.qml

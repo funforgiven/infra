@@ -79,7 +79,10 @@ Scope {
                 readonly property bool shouldShow: runtime.authenticationActive || runtime.registrationFailed
 
                 screen: runtime.selectedScreen
-                visible: shouldShow && screen !== null
+                // PanelWindow may clear its effective screen while unmapping;
+                // visibility must depend on the authoritative selection, not
+                // on that derived window property, or teardown forms a loop.
+                visible: shouldShow && runtime.selectedScreen !== null
                 color: "transparent"
                 exclusionMode: ExclusionMode.Ignore
                 WlrLayershell.namespace: "funforgiven:polkit"

@@ -6,7 +6,6 @@ import Quickshell
 import ".." as Shell
 import "../components" as Components
 import "../services" as Services
-import "OutputSelection.js" as OutputSelection
 
 Rectangle {
     id: root
@@ -182,12 +181,10 @@ Rectangle {
             anchors.rightMargin: Shell.Theme.spacingMedium
             spacing: Shell.Theme.spacingSmall
 
-            Components.AppIcon {
+            Components.SemanticIcon {
                 Layout.preferredWidth: Shell.Theme.iconLargeSize
                 Layout.preferredHeight: Shell.Theme.iconLargeSize
-                iconSize: Shell.Theme.iconMediumSize
                 source: Quickshell.iconPath("audio-input-microphone-symbolic", "audio-input-microphone")
-                accessibleName: "Microphone"
             }
 
             ColumnLayout {
@@ -243,38 +240,12 @@ Rectangle {
         Rectangle {
             id: dropdownSurface
 
-            property string highlightedOutputKey: ""
-
-            function applyHighlightedSelection(selection, ensureVisible) {
-                highlightedOutputKey = selection.key;
-                inputList.currentIndex = selection.index;
-                if (ensureVisible && selection.index >= 0)
-                    inputList.positionViewAtIndex(selection.index, ListView.Contain);
-            }
-
-            function highlightInputAt(index, ensureVisible) {
-                if (index < 0 || index >= root.inputCount)
-                    return;
-                applyHighlightedSelection({
-                    index: index,
-                    key: OutputSelection.outputKey(root.inputs[index]),
-                    rehomed: false
-                }, ensureVisible);
-            }
-
             function reconcileHighlightedOutput() {
-                var previousIndex = inputList.currentIndex;
-                var selection = OutputSelection.reconcileSelection(root.inputs, highlightedOutputKey, root.currentInput);
-                applyHighlightedSelection(selection, selection.rehomed || selection.index !== previousIndex);
+                inputList.reconcileHighlighted();
             }
 
             function focusInitialInput() {
-                var selection = OutputSelection.initialSelection(root.inputs, root.currentInput);
-                applyHighlightedSelection(selection, true);
-                if (selection.index >= 0)
-                    inputList.forceActiveFocus();
-                else
-                    dropdownSurface.forceActiveFocus();
+                inputList.focusInitial();
             }
 
             anchors.fill: parent
@@ -303,170 +274,20 @@ Rectangle {
                 anchors.fill: parent
                 anchors.margins: root.popupContentPadding
 
-                ListView {
+                SelectableDeviceList {
                     id: inputList
 
                     anchors.fill: parent
-                    visible: root.inputCount > 0
-                    clip: true
-                    model: root.inputs
-                    spacing: root.rowSpacing
-                    boundsBehavior: Flickable.StopAtBounds
-                    flickableDirection: Flickable.VerticalFlick
-                    activeFocusOnTab: true
-
-                    Accessible.name: "Microphones"
-                    Accessible.role: Accessible.List
-
-                    TapHandler {
-                        id: inputListTap
-
-                        acceptedButtons: Qt.LeftButton
-                        gesturePolicy: TapHandler.DragThreshold
-                        onPressedChanged: {
-                            if (pressed)
-                                inputList.cancelFlick();
-                        }
-                        onTapped: eventPoint => {
-                            var index = OutputSelection.contentIndexAtGlobalPosition(inputList, eventPoint.globalPosition);
-                            if (index < 0 || index >= root.inputCount)
-                                return;
-                            dropdownSurface.highlightInputAt(index, false);
-                            root.activateInput(root.inputs[index]);
-                        }
+                    candidates: root.inputs
+                    currentDevice: root.currentInput
+                    accent: root.accent
+                    accessibleName: "Microphones"
+                    emptyText: "No microphones available"
+                    statusProvider: function (input) {
+                        return root.statusForInput(input);
                     }
-
-                    Keys.onPressed: event => {
-                        if (event.key === Qt.Key_Escape) {
-                            root.closePopup(true);
-                            event.accepted = true;
-                        } else if (event.key === Qt.Key_Up) {
-                            dropdownSurface.highlightInputAt(Math.max(0, inputList.currentIndex - 1), true);
-                            event.accepted = true;
-                        } else if (event.key === Qt.Key_Down) {
-                            dropdownSurface.highlightInputAt(Math.min(root.inputCount - 1, inputList.currentIndex + 1), true);
-                            event.accepted = true;
-                        } else if (event.key === Qt.Key_Home) {
-                            if (root.inputCount > 0)
-                                dropdownSurface.highlightInputAt(0, true);
-                            event.accepted = true;
-                        } else if (event.key === Qt.Key_End) {
-                            if (root.inputCount > 0)
-                                dropdownSurface.highlightInputAt(root.inputCount - 1, true);
-                            event.accepted = true;
-                        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
-                            if (inputList.currentIndex >= 0 && inputList.currentIndex < root.inputCount)
-                                root.activateInput(root.inputs[inputList.currentIndex]);
-                            event.accepted = true;
-                        }
-                    }
-
-                    delegate: Item {
-                        id: inputRow
-
-                        required property var modelData
-                        required property int index
-
-                        readonly property bool selected: root.matchesCurrentInput(modelData)
-                        readonly property bool available: modelData.available === true
-                        readonly property bool canActivate: available && !selected
-                        readonly property bool keyboardSelected: ListView.isCurrentItem && inputList.activeFocus
-
-                        width: ListView.view.width
-                        height: root.rowHeight
-                        opacity: available || selected ? 1 : Shell.Theme.disabledOpacity
-
-                        function activate() {
-                            if (canActivate)
-                                root.activateInput(modelData);
-                        }
-
-                        Accessible.name: modelData.label
-                        Accessible.description: selected ? "Default microphone" : (available ? "Available microphone; press to select" : "Unavailable microphone")
-                        Accessible.focusable: true
-                        Accessible.focused: keyboardSelected
-                        Accessible.selectable: selected
-                        Accessible.selected: selected
-                        Accessible.role: canActivate ? Accessible.Button : Accessible.StaticText
-                        Accessible.onPressAction: inputRow.activate()
-
-                        Item {
-                            anchors.fill: parent
-                            anchors.margins: root.rowInset
-
-                            Components.Surface {
-                                anchors.fill: parent
-                                interactive: true
-                                hovered: inputHover.hovered || inputRow.keyboardSelected
-                                pressed: inputListTap.pressed && inputList.currentIndex === inputRow.index
-                                selected: inputRow.selected
-                                accent: root.accent
-                                radius: Shell.Theme.radiusSmall
-                                outlineWidth: 0
-                            }
-
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: root.entryHorizontalPadding
-                                anchors.rightMargin: root.entryHorizontalPadding
-                                spacing: Shell.Theme.spacingSmall
-
-                                Rectangle {
-                                    Layout.preferredWidth: root.inputMarkerSize
-                                    Layout.preferredHeight: root.inputMarkerSize
-                                    radius: Shell.Theme.radiusPill
-                                    color: inputRow.available ? (inputRow.selected ? root.accent : Shell.Theme.secondaryText) : Shell.Theme.error
-                                }
-
-                                Text {
-                                    Layout.fillWidth: true
-                                    text: inputRow.modelData.label
-                                    color: Shell.Theme.primaryText
-                                    elide: Text.ElideRight
-                                    font.family: Shell.Theme.sansFont
-                                    font.pixelSize: Shell.Theme.labelFontSize
-                                    font.weight: inputRow.selected ? Font.DemiBold : Font.Normal
-                                }
-
-                                Text {
-                                    visible: root.statusForInput(inputRow.modelData).length > 0
-                                    text: root.statusForInput(inputRow.modelData)
-                                    color: inputRow.available ? (inputRow.selected ? Shell.Theme.primaryText : Shell.Theme.secondaryText) : Shell.Theme.errorText
-                                    font.family: Shell.Theme.sansFont
-                                    font.pixelSize: Shell.Theme.captionFontSize
-                                    font.weight: inputRow.selected ? Font.DemiBold : Font.Normal
-                                }
-                            }
-
-                            Components.FocusRing {
-                                active: inputRow.keyboardSelected
-                                accent: root.accent
-                                ringRadius: Shell.Theme.radiusSmall
-                            }
-
-                            HoverHandler {
-                                id: inputHover
-
-                                cursorShape: inputRow.canActivate ? Qt.PointingHandCursor : Qt.ArrowCursor
-                                onHoveredChanged: {
-                                    if (hovered)
-                                        dropdownSurface.highlightInputAt(inputRow.index, false);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Text {
-                    anchors.centerIn: parent
-                    width: parent.width - Shell.Theme.spacingMedium * 2
-                    visible: root.inputCount === 0
-                    text: "No microphones available"
-                    color: Shell.Theme.errorText
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.Wrap
-                    font.family: Shell.Theme.sansFont
-                    font.pixelSize: Shell.Theme.captionFontSize
+                    onActivated: input => root.activateInput(input)
+                    onDismissRequested: root.closePopup(true)
                 }
             }
         }

@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Widgets
+import "IconPolicy.js" as IconPolicy
 
 Item {
     id: root
@@ -8,6 +9,7 @@ Item {
     property string source: Quickshell.iconPath("application-x-executable")
     property string accessibleName: "Application"
     property real iconSize: Math.min(width, height)
+    readonly property bool preservesSourceColors: IconPolicy.preservesSourceColors("application")
 
     Accessible.name: accessibleName
     Accessible.role: Accessible.Graphic

@@ -119,7 +119,6 @@ ShellRoot {
 
     Bar.Bar {
         onMixerRequested: (anchorItem, screen, topInset) => mixer.toggleAt(anchorItem, screen, topInset)
-        onTrayMenuOpening: mixer.dismissActiveChildPopup(false)
     }
 
     Dock.Dock {}
@@ -130,5 +129,28 @@ ShellRoot {
 
     Idle.AmoledOverlay {
         id: amoled
+    }
+
+    Connections {
+        target: root.polkitOverlay
+
+        function onActiveChanged() {
+            if (root.polkitOverlay.active)
+                Services.PopupCoordinator.closeActive("polkit");
+        }
+
+        function onErrorChanged() {
+            if (root.polkitOverlay.error.length > 0)
+                Services.PopupCoordinator.closeActive("polkit-error");
+        }
+    }
+
+    Connections {
+        target: amoled
+
+        function onActiveChanged() {
+            if (amoled.active)
+                Services.PopupCoordinator.closeActive("idle-overlay");
+        }
     }
 }

@@ -107,6 +107,15 @@ in
         systemAccent = material.primary;
         accentText = material.on_primary;
 
+        symbolicIconForeground = primaryText;
+        symbolicIconMuted = secondaryText;
+        symbolicIconHover = primaryText;
+        symbolicIconPressed = primaryText;
+        symbolicIconActive = material.on_primary_container;
+        symbolicIconDisabled = disabledText;
+        symbolicIconWarning = warning;
+        symbolicIconDestructive = error;
+
         gameAccent = mixColor "#8bd450" primaryText 12;
         voiceAccent = mixColor "#5cadff" primaryText 12;
         musicAccent = mixColor "#f279c6" primaryText 12;
@@ -155,6 +164,15 @@ in
             readonly property color voiceAccent: ${qmlString palette.voiceAccent}
             readonly property color musicAccent: ${qmlString palette.musicAccent}
             readonly property color accentText: ${qmlString palette.accentText}
+
+            readonly property color symbolicIconForeground: ${qmlString palette.symbolicIconForeground}
+            readonly property color symbolicIconMuted: ${qmlString palette.symbolicIconMuted}
+            readonly property color symbolicIconHover: ${qmlString palette.symbolicIconHover}
+            readonly property color symbolicIconPressed: ${qmlString palette.symbolicIconPressed}
+            readonly property color symbolicIconActive: ${qmlString palette.symbolicIconActive}
+            readonly property color symbolicIconDisabled: ${qmlString palette.symbolicIconDisabled}
+            readonly property color symbolicIconWarning: ${qmlString palette.symbolicIconWarning}
+            readonly property color symbolicIconDestructive: ${qmlString palette.symbolicIconDestructive}
 
             readonly property string sansFont: ${qmlString config.stylix.fonts.sansSerif.name}
             readonly property string monoFont: ${qmlString config.stylix.fonts.monospace.name}

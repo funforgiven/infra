@@ -10,10 +10,9 @@ Item {
     id: root
 
     required property var parentWindow
-    signal menuOpening
 
-    property var menuItem: null
-    property Item menuAnchorItem: null
+    readonly property var menuItem: trayMenu.currentItem
+    readonly property Item menuAnchorItem: trayMenu.anchorItem
 
     implicitWidth: trayRow.implicitWidth
     implicitHeight: Shell.Theme.controlCompactSize
@@ -25,37 +24,15 @@ Item {
     function showMenu(item, anchorItem) {
         if (!root.hasUsableMenu(item, anchorItem))
             return;
-
-        if (trayMenu.visible && item === root.menuItem) {
-            trayMenu.dismiss();
-            return;
-        }
-
-        root.menuOpening();
-        root.menuItem = item;
-        root.menuAnchorItem = anchorItem;
-        trayMenu.openAt(item.menu, anchorItem);
+        trayMenu.toggleAt(item, anchorItem);
     }
 
     function clearMenuForAnchor(anchorItem) {
-        if (root.menuAnchorItem !== anchorItem)
-            return;
-        if (trayMenu.visible)
-            trayMenu.dismiss();
-        else {
-            root.menuItem = null;
-            root.menuAnchorItem = null;
-        }
-    }
-
-    function handleMenuDismissed() {
-        root.menuItem = null;
-        root.menuAnchorItem = null;
+        trayMenu.dismissForAnchor(anchorItem);
     }
 
     function dismissMenu() {
-        if (trayMenu.visible)
-            trayMenu.dismiss();
+        trayMenu.dismiss();
     }
 
     TrayMenu {
@@ -63,7 +40,6 @@ Item {
 
         screen: root.parentWindow.screen
         barHeight: root.parentWindow.height
-        onMenuDismissed: root.handleMenuDismissed()
     }
 
     Row {
@@ -134,13 +110,14 @@ Item {
                     mipmap: true
                 }
 
-                Components.TintedIcon {
+                Components.SemanticIcon {
                     visible: trayDelegate.usesFcitxKeyboardSymbol
                     anchors.centerIn: parent
                     width: Shell.Theme.iconMediumSize
                     height: Shell.Theme.iconMediumSize
                     source: trayDelegate.usesFcitxKeyboardSymbol ? trayDelegate.trayItem.icon : ""
-                    tint: Shell.Theme.primaryText
+                    hovered: trayPointer.containsMouse
+                    pressed: trayPointer.pressed
                 }
 
                 Rectangle {

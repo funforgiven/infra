@@ -10,21 +10,40 @@ import Quickshell.Widgets
 import Quickshell.Wayland
 import ".." as Shell
 import "../components" as Components
+import "../services" as Services
+import "TrayMenuState.js" as TrayMenuState
 
 PanelWindow { // qmllint disable uncreatable-type
     id: root
 
     property real barHeight: 0
-    property Item anchorItem: null
-    property var topLevelMenu: null
+    property var _menuState: TrayMenuState.createState()
+    property int _stateRevision: 0
+    property int coordinatorToken: 0
+    property bool suppressLifetimeChange: false
     property var currentMenu: null
     property var menuStack: []
     property string currentTitle: ""
     property int selectedIndex: -1
-    property bool announcedOpen: false
-    property int lifecycleSerial: 0
     property real menuX: Shell.Theme.spacingLarge
     property real menuY: Math.max(barHeight, Shell.Theme.spacingLarge)
+
+    readonly property string phase: {
+        void root._stateRevision;
+        return root._menuState.phase;
+    }
+    readonly property var currentItem: {
+        void root._stateRevision;
+        return root._menuState.item;
+    }
+    readonly property Item anchorItem: {
+        void root._stateRevision;
+        return root._menuState.anchor;
+    }
+    readonly property var topLevelMenu: {
+        void root._stateRevision;
+        return root._menuState.menu;
+    }
 
     readonly property var entries: menuOpener.children ? menuOpener.children.values : []
     readonly property int outerPadding: Shell.Theme.spacingSmall
@@ -46,6 +65,10 @@ PanelWindow { // qmllint disable uncreatable-type
     })
 
     signal menuDismissed
+
+    function publishState() {
+        root._stateRevision += 1;
+    }
 
     function isSelectable(entry) {
         return entry !== null && entry !== undefined && entry.isSeparator !== true && entry.enabled !== false;
@@ -129,33 +152,95 @@ PanelWindow { // qmllint disable uncreatable-type
         }
     }
 
-    function openAt(menuHandle, item) {
-        if (menuHandle === null || menuHandle === undefined || item === null || item === undefined)
+    function toggleAt(trayItem, item) {
+        if (trayItem === null || trayItem === undefined || trayItem.menu === null || trayItem.menu === undefined || item === null || item === undefined)
             return;
 
-        releaseTimer.stop();
-        root.lifecycleSerial += 1;
-        root.anchorItem = item;
-        root.topLevelMenu = menuHandle;
-        root.currentMenu = menuHandle;
+        var transition = TrayMenuState.requestOpen(root._menuState, trayItem, trayItem.menu, item);
+        if (transition.action === "reject")
+            return;
+        if (transition.action === "close") {
+            root.dismiss();
+            return;
+        }
+
+        root.publishState();
+        root.retireMenuOpeners();
+        root.currentMenu = root.topLevelMenu;
         root.currentTitle = "";
         root.menuStack = [];
-        menuOpener.menu = menuHandle;
         root.selectedIndex = -1;
+        root.coordinatorToken = Services.PopupCoordinator.open("tray-menu", root, root.screen);
         root.visible = true;
-        Qt.callLater(root.finishOpen, root.lifecycleSerial);
+        // QsMenuOpener tears down its generated children asynchronously. Keep
+        // detach and attach on adjacent event-loop turns so replacing Steam's
+        // menu with Discord's cannot reuse the previous opener generation.
+        Qt.callLater(root.attachMenuGeneration, transition.token);
     }
 
-    function finishOpen(serial) {
-        if (serial !== root.lifecycleSerial || !root.visible)
+    function attachMenuGeneration(serial) {
+        if (!TrayMenuState.matches(root._menuState, serial) || !root.visible || !TrayMenuState.inputClaimed(root._menuState))
             return;
+        root.attachLifetimeMenu(root.topLevelMenu);
+        menuOpener.menu = root.currentMenu;
+        if (TrayMenuState.markOpen(root._menuState, serial))
+            root.publishState();
         root.updatePlacement();
         root.syncSelection();
         menuList.forceActiveFocus();
+        Services.PopupCoordinator.markOpen(root, root.coordinatorToken);
+    }
+
+    function retireMenuOpeners() {
+        menuOpener.menu = null;
+        root.suppressLifetimeChange = true;
+        menuLifetime.menu = null;
+        root.suppressLifetimeChange = false;
+    }
+
+    function attachLifetimeMenu(menu) {
+        root.suppressLifetimeChange = true;
+        menuLifetime.menu = menu;
+        root.suppressLifetimeChange = false;
     }
 
     function dismiss() {
+        var serial = TrayMenuState.beginClose(root._menuState);
+        if (serial === 0)
+            return;
+        var closingCoordinatorToken = root.coordinatorToken;
+        root.publishState();
+        root.retireMenuOpeners();
+        Services.PopupCoordinator.beginClose(root, closingCoordinatorToken);
         root.visible = false;
+        // Complete state release after the PanelWindow unmap notification.
+        // This is lifecycle ordering, not a time-based input workaround.
+        Qt.callLater(root.finishDismiss, serial, closingCoordinatorToken);
+    }
+
+    function finishDismiss(serial, closingCoordinatorToken) {
+        if (root.visible || !TrayMenuState.finishClose(root._menuState, serial))
+            return;
+        root.publishState();
+        root.currentMenu = null;
+        root.currentTitle = "";
+        root.menuStack = [];
+        root.selectedIndex = -1;
+        Services.PopupCoordinator.finishClose(root, closingCoordinatorToken);
+        if (root.coordinatorToken === closingCoordinatorToken)
+            root.coordinatorToken = 0;
+        root.menuDismissed();
+    }
+
+    function dismissForAnchor(item) {
+        if (TrayMenuState.ownsAnchor(root._menuState, item))
+            root.dismiss();
+    }
+
+    function closeFromCoordinator(token, reason) {
+        void reason;
+        if (token === root.coordinatorToken)
+            root.dismiss();
     }
 
     function enterSubmenu(entry) {
@@ -170,9 +255,9 @@ PanelWindow { // qmllint disable uncreatable-type
         root.menuStack = nextStack;
         root.currentMenu = entry;
         root.currentTitle = entry.text || "";
-        menuOpener.menu = entry;
+        menuOpener.menu = null;
         root.selectedIndex = -1;
-        Qt.callLater(root.syncSelection);
+        Qt.callLater(root.attachCurrentMenu, root._menuState.generation);
     }
 
     function leaveSubmenu() {
@@ -186,9 +271,16 @@ PanelWindow { // qmllint disable uncreatable-type
         root.menuStack = nextStack;
         root.currentMenu = parentMenu.handle;
         root.currentTitle = parentMenu.title;
-        menuOpener.menu = parentMenu.handle;
+        menuOpener.menu = null;
         root.selectedIndex = -1;
-        Qt.callLater(root.syncSelection);
+        Qt.callLater(root.attachCurrentMenu, root._menuState.generation);
+    }
+
+    function attachCurrentMenu(serial) {
+        if (!TrayMenuState.matches(root._menuState, serial) || !root.visible)
+            return;
+        menuOpener.menu = root.currentMenu;
+        root.syncSelection();
     }
 
     function activateEntry(entry) {
@@ -208,17 +300,6 @@ PanelWindow { // qmllint disable uncreatable-type
         root.activateEntry(root.entryAt(root.selectedIndex));
     }
 
-    function releaseIfClosed(serial) {
-        if (serial !== root.lifecycleSerial || root.visible)
-            return;
-        menuOpener.menu = null;
-        root.topLevelMenu = null;
-        root.currentMenu = null;
-        root.currentTitle = "";
-        root.menuStack = [];
-        root.selectedIndex = -1;
-    }
-
     anchors {
         top: true
         right: true
@@ -235,11 +316,7 @@ PanelWindow { // qmllint disable uncreatable-type
     WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     mask: Region {
-        item: Rectangle {
-            y: root.barHeight
-            width: root.width
-            height: Math.max(0, root.height - y)
-        }
+        item: root.visible ? popupInputRegion : null
     }
 
     onEntriesChanged: Qt.callLater(root.syncSelection)
@@ -251,28 +328,21 @@ PanelWindow { // qmllint disable uncreatable-type
         Qt.callLater(root.updatePlacement)
     onHeightChanged: if (visible)
         Qt.callLater(root.updatePlacement)
-    onScreenChanged: if (visible)
-        Qt.callLater(root.updatePlacement)
-    onVisibleChanged: {
-        if (visible) {
-            root.announcedOpen = true;
-            return;
-        }
-        if (!root.announcedOpen)
-            return;
-
-        root.announcedOpen = false;
-        root.lifecycleSerial += 1;
-        root.menuDismissed();
-        releaseTimer.restart();
+    onScreenChanged: {
+        if (!screen && visible)
+            dismiss();
+        else if (visible)
+            Qt.callLater(root.updatePlacement);
     }
 
-    Timer {
-        id: releaseTimer
+    Component.onDestruction: Services.PopupCoordinator.ownerDestroyed(root)
 
-        interval: 0
-        repeat: false
-        onTriggered: root.releaseIfClosed(root.lifecycleSerial)
+    Item {
+        id: popupInputRegion
+
+        y: root.barHeight
+        width: root.width
+        height: Math.max(0, root.height - y)
     }
 
     FontMetrics {
@@ -293,7 +363,14 @@ PanelWindow { // qmllint disable uncreatable-type
     QsMenuOpener {
         id: menuLifetime
 
-        menu: root.topLevelMenu
+        // A tray item may disappear while its menu is open. QsMenuOpener
+        // clears its handle synchronously on QObject destruction; deliberate
+        // detach/reattach is suppressed so only external lifetime loss closes
+        // the authoritative tray state.
+        onMenuChanged: {
+            if (!root.suppressLifetimeChange && menu === null && TrayMenuState.inputClaimed(root._menuState))
+                root.dismiss();
+        }
     }
 
     QsMenuOpener {

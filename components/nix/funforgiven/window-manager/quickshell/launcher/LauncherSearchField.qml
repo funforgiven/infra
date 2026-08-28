@@ -50,13 +50,13 @@ Rectangle {
             radius: Shell.Theme.radiusPill
             color: root.inputFocused ? Qt.rgba(Shell.Theme.systemAccent.r, Shell.Theme.systemAccent.g, Shell.Theme.systemAccent.b, Shell.Theme.selectedOverlayOpacity) : "transparent"
 
-            Components.AppIcon {
+            Components.SemanticIcon {
                 anchors.centerIn: parent
                 width: 22
                 height: 22
-                iconSize: 22
-                source: Quickshell.iconPath("system-search", "edit-find")
-                accessibleName: "Search"
+                source: Quickshell.iconPath("system-search-symbolic", "edit-find-symbolic")
+                active: root.inputFocused
+                hovered: root.hovered
                 Accessible.ignored: true
             }
         }

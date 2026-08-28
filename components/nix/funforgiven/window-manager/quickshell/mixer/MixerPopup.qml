@@ -16,6 +16,7 @@ Scope {
     property var selectedScreen: null
     property int topInset: 56
     property bool opened: false
+    property int coordinatorToken: 0
     property var activeOutputPicker: null
     property var unroutedGroupKeys: []
     readonly property bool visible: mixerWindow.visible
@@ -117,7 +118,9 @@ Scope {
         anchorItem = item;
         selectedScreen = targetScreen;
         topInset = Math.max(0, Number(barInset) || 0);
+        coordinatorToken = Services.PopupCoordinator.open("mixer", root, targetScreen);
         opened = true;
+        Services.PopupCoordinator.markOpen(root, coordinatorToken);
     }
 
     function toggleAt(item, targetScreen, barInset) {
@@ -191,9 +194,22 @@ Scope {
     }
 
     function dismiss() {
+        if (!opened)
+            return;
+        var closingToken = coordinatorToken;
+        Services.PopupCoordinator.beginClose(root, closingToken);
         dismissActiveChildPopup(false);
         mixerDragSession.cancel();
         opened = false;
+        Services.PopupCoordinator.finishClose(root, closingToken);
+        if (coordinatorToken === closingToken)
+            coordinatorToken = 0;
+    }
+
+    function closeFromCoordinator(token, reason) {
+        void reason;
+        if (token === coordinatorToken)
+            dismiss();
     }
 
     onOpenedChanged: {
@@ -202,6 +218,13 @@ Scope {
             mixerDragSession.cancel();
         }
     }
+
+    onSelectedScreenChanged: {
+        if (opened && selectedScreen === null)
+            dismiss();
+    }
+
+    Component.onDestruction: Services.PopupCoordinator.ownerDestroyed(root)
 
     Shortcut {
         sequence: "Escape"

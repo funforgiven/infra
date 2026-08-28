@@ -83,7 +83,15 @@ const materialMappings = {
     warningText: "on_primary_container",
     warningSurface: "primary_container",
     systemAccent: "primary",
-    accentText: "on_primary"
+    accentText: "on_primary",
+    symbolicIconForeground: "on_surface",
+    symbolicIconMuted: "on_surface_variant",
+    symbolicIconHover: "on_surface",
+    symbolicIconPressed: "on_surface",
+    symbolicIconActive: "on_primary_container",
+    symbolicIconDisabled: "outline_variant",
+    symbolicIconWarning: "primary",
+    symbolicIconDestructive: "error"
 };
 for (const [token, role] of Object.entries(materialMappings)) {
     if (!material[role]) {
@@ -108,7 +116,15 @@ const supportingColors = [
     "errorSurface",
     "warningSurface",
     "successSurface",
-    "accentText"
+    "accentText",
+    "symbolicIconForeground",
+    "symbolicIconMuted",
+    "symbolicIconHover",
+    "symbolicIconPressed",
+    "symbolicIconActive",
+    "symbolicIconDisabled",
+    "symbolicIconWarning",
+    "symbolicIconDestructive"
 ];
 
 for (const name of [...textRoles, ...tonalLadder, ...accents, ...supportingColors]) {

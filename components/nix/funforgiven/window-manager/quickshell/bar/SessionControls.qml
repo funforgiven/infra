@@ -39,10 +39,10 @@ Item {
         Components.IconButton {
             activeFocusOnTab: false
             iconSource: Quickshell.iconPath("system-log-out-symbolic", "system-log-out")
-            tintIcon: true
             accessibleName: root.accessibleName("logout", "Log out")
             tooltipText: root.tooltip("logout", "Log out")
             accent: Shell.Theme.error
+            destructive: true
             checked: Services.SessionActions.armedAction === "logout" || Services.SessionActions.activeAction === "logout"
             attention: Services.SessionActions.failedAction === "logout"
             enabled: !Services.SessionActions.busy
@@ -55,10 +55,10 @@ Item {
         Components.IconButton {
             activeFocusOnTab: false
             iconSource: Quickshell.iconPath("system-reboot-symbolic", "system-reboot")
-            tintIcon: true
             accessibleName: root.accessibleName("reboot", "Restart")
             tooltipText: root.tooltip("reboot", "Restart")
             accent: Shell.Theme.error
+            destructive: true
             checked: Services.SessionActions.armedAction === "reboot" || Services.SessionActions.activeAction === "reboot"
             attention: Services.SessionActions.failedAction === "reboot"
             enabled: !Services.SessionActions.busy
@@ -71,10 +71,10 @@ Item {
         Components.IconButton {
             activeFocusOnTab: false
             iconSource: Quickshell.iconPath("system-shutdown-symbolic", "system-shutdown")
-            tintIcon: true
             accessibleName: root.accessibleName("poweroff", "Shut down")
             tooltipText: root.tooltip("poweroff", "Shut down")
             accent: Shell.Theme.error
+            destructive: true
             checked: Services.SessionActions.armedAction === "poweroff" || Services.SessionActions.activeAction === "poweroff"
             attention: Services.SessionActions.failedAction === "poweroff"
             enabled: !Services.SessionActions.busy
