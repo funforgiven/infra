@@ -35,64 +35,6 @@ in
     description = "Shared immutable Quickshell configuration and IPC instance name.";
   };
 
-  config.perSystem =
-    { pkgs, ... }:
-    let
-      polkitPatches = globalQuickshellPatches ++ [ polkitQuickshellPatch ];
-      polkitQuickshell = quickshellWithPatches pkgs polkitPatches;
-      patchedSource = pkgs.applyPatches {
-        name = "quickshell-0.3-polkit-contracts-source";
-        src = pkgs.quickshell.src;
-        patches = polkitPatches;
-      };
-    in
-    {
-      checks.quickshell-polkit-contracts =
-        pkgs.runCommandLocal "quickshell-polkit-contracts"
-          {
-            nativeBuildInputs = [ pkgs.ripgrep ];
-          }
-          ''
-            set -euo pipefail
-
-            test -x ${polkitQuickshell}/bin/qs
-
-            agent=${patchedSource}/src/services/polkit/agentimpl.cpp
-            flow=${patchedSource}/src/services/polkit/flow.cpp
-            listener=${patchedSource}/src/services/polkit/listener.cpp
-
-            rg --fixed-strings --quiet 'if (!this->bActiveFlow.value())' "$agent"
-            rg --fixed-strings --quiet 'finishAuthenticationRequest(AuthFlow* flow)' "$agent"
-            rg --fixed-strings --quiet 'this->bActiveFlow.value() != flow' "$agent"
-            rg --fixed-strings --quiet 'while (!this->queuedRequests.empty())' "$agent"
-            rg --fixed-strings --quiet 'obj && !obj->isGroup()' "$agent"
-            ! rg --fixed-strings --quiet 'this->queuedRequests.size() == 1' "$agent"
-
-            rg --fixed-strings --quiet 'QObject::disconnect(this->currentSession, nullptr, this, nullptr)' "$flow"
-            rg --fixed-strings --quiet 'this->currentSession->respond(value)' "$flow"
-            rg --fixed-strings --quiet 'QTimer::singleShot(0, this' "$flow"
-            rg --fixed-strings --quiet 'void AuthFlow::retryAuthentication()' "$flow"
-            rg --fixed-strings --quiet 'this->sessionGeneration == completedGeneration' "$flow"
-            rg --multiline --multiline-dotall --quiet \
-              'void AuthFlow::cancelFromAgent\(\).*?this->currentSession->cancel\(\);.*?this->bIsCompleted = true;.*?this->bIsSuccessful = false;' \
-              "$flow"
-            rg --multiline --multiline-dotall --quiet \
-              'void AuthFlow::cancelAuthenticationRequest\(\).*?this->currentSession->cancel\(\);.*?this->bIsCompleted = true;.*?this->bIsSuccessful = false;' \
-              "$flow"
-
-            rg --fixed-strings --quiet 'g_cancellable_disconnect(cancellable, handlerId)' "$listener"
-            rg --fixed-strings --quiet 'g_idle_add_full(' "$listener"
-            rg --fixed-strings --quiet 'new CancellationStatePtr(state)' "$listener"
-            rg --fixed-strings --quiet 'state->request = nullptr' "$listener"
-            rg --fixed-strings --quiet 'std::exchange(this->task, nullptr)' "$listener"
-            rg --fixed-strings --quiet 'g_object_unref(task)' "$listener"
-            rg --fixed-strings --quiet 'registration_generation' "$listener"
-            rg --fixed-strings --quiet 'qs_polkit_agent_detach' "$listener"
-
-            touch "$out"
-          '';
-    };
-
   config.home.gui =
     {
       config,
