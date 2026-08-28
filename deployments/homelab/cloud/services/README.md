@@ -1,56 +1,57 @@
-# Self-hosted services platform
+# Self-hosted services
 
-This directory is the Flux root for the Magnum workload cluster named
-`services-v1`. It is intentionally separate from the OpenStack undercloud and
-the CAPI management cluster: application failures, upgrades, browser workloads,
-and media workloads cannot consume control-plane capacity.
+This directory is the Flux root for the `services-v1` Magnum cluster. Application
+workloads are kept outside the OpenStack undercloud and the CAPI management
+cluster so their failures and resource use cannot consume control-plane
+capacity.
 
-## Placement and trust boundaries
+## Placement
 
-| Boundary | Placement | Initial workloads |
+| Location | Workloads |
+| --- | --- |
+| OpenStack undercloud | Keystone, Magnum, Cinder, Manila, Octavia, and undercloud Flux controllers |
+| Services Kubernetes cluster | Media applications, databases, Envoy Gateway, monitoring, and Velero |
+| Home Assistant VM | Current NixOS installation; retained HAOS image and volume for the planned cutover |
+| AWS Frankfurt | Stalwart mail, RDS PostgreSQL, S3 message storage, and CloudWatch monitoring |
+
+The OpenStack `public` network is RFC1918 provider space. Floating addresses
+provide routed LAN access, not direct Internet exposure. Public DNS records are
+explicitly declared; application routes remain reachable only from the LAN and
+administration WireGuard network.
+
+## Service catalog
+
+| Service | Placement | Access and authentication |
 | --- | --- | --- |
-| OpenStack control plane | Existing undercloud | Keystone, Magnum, Cinder, Manila, Octavia, Flux controllers |
-| Services Kubernetes | Magnum, three 2-vCPU/4-GiB masters and two 4-vCPU/12-GiB workers | Navidrome, SFTPGo, Beets, databases, backup, monitoring |
-| Agent VM | Dedicated NixOS VM in the `services` project | Hermes Agent, Telegram conversation bot, direct OpenAI API runtime |
-| Home automation VM | Dedicated HAOS appliance in the `services` project (migration is gated while NixOS remains live) | Home Assistant and hardware/LAN integrations |
-| Mail platform | Dedicated AWS Frankfurt appliance with managed PostgreSQL and S3 | Stalwart ingress and Resend-backed outbound delivery |
+| Navidrome | Services cluster | `https://music.fahrican.com`; native Navidrome/Subsonic accounts |
+| SFTPGo | Services cluster | `https://upload.fahrican.com`; ZITADEL OIDC for the WebClient |
+| Beets | Services cluster | No direct user endpoint; imports accepted uploads into the media library |
+| AudioMuse | Services cluster | `https://audiomuse.fahrican.com`; LAN/WireGuard only, with ZITADEL OIDC |
+| Home Assistant | Dedicated VM | `https://home.fahrican.com`; native local account and MFA |
+| Stalwart mail | AWS appliance | Native mail accounts; public mail protocols and web administration |
+| Prometheus and Alertmanager | Services cluster | Administrative monitoring; Alertmanager uses the infrastructure Telegram bot |
+| Velero | Services cluster | Filesystem backups to the service-specific Backblaze prefix |
 
-The OpenStack `public` network is RFC1918 provider space. Magnum floating IPs
-therefore provide routed LAN reachability, not Internet exposure. Public HTTP
-endpoints are explicit DNS allow-list entries; all other routes remain private.
+ZITADEL is used where an application supports a suitable browser OIDC flow.
+Protocol clients retain their native authentication: Navidrome keeps Subsonic
+credentials, Home Assistant keeps its supported local account, and mail clients
+use Stalwart credentials.
 
-## Search and memory policy
+## Operations
 
-No search engine, external knowledge store, vector database, embeddings, or
-Hindsight service is deployed. Hermes disables its web toolset and autonomous
-memory globally; add a retrieval layer only after a concrete need justifies its
-operational and security cost.
+Flux dependency ordering is declared in [`waves.yaml`](waves.yaml). Do not copy
+that order into a manual activation sequence or use live suspension as lasting
+configuration.
 
-## Human identity policy
+- Credential rotation, provider reconciliation, image promotion, host backup
+  initialization, and HAOS cutover: [service operations](ACTIVATION.md)
+- Telegram alert-bot creation and target enrollment: [Telegram bootstrap](TELEGRAM.md)
+- Purchased-media import and recovery: [media workflow](40-media/README.md)
+- Backup and isolated restore behavior: [backup policy](16-backup-policy/README.md)
+- AWS mail operation and recovery:
+  [mail runbook](../../../../components/cloud/services/mail-aws/README.md)
 
-ZITADEL is the central human identity provider wherever an application offers
-a compatible native OIDC flow. The existing central Grafana at
-`https://grafana.cloud.fahrican.com` uses ZITADEL; the services cluster
-intentionally does not deploy a second Grafana.
-
-Protocol and device clients keep application-native authentication when OIDC
-would break their supported flow. Hermes has no human web login: its private
-Telegram bot admits only the discovered allowed user, while its OpenAI key
-authenticates the model API. Alertmanager sends
-through the separate infrastructure bot and exposes no Telegram login.
-Navidrome keeps native credentials for Subsonic clients such as Symfonium,
-Home Assistant keeps its supported local account and MFA flow, and the pinned
-Stalwart release keeps mail-client and recovery credentials. SFTPGo uses native
-ZITADEL OIDC for its WebClient while its emergency administrator remains a
-separate generated credential. These are deliberate boundaries, not a second IdP;
-reassess native OIDC during application upgrades without placing an auth proxy
-in front of protocol endpoints.
-
-## Activation gates
-
-All mutation waves remain suspended until credentials and immutable artifacts
-pass the machine-checked contract. Follow [ACTIVATION.md](ACTIVATION.md); the
-BotFather-specific identity steps are in [TELEGRAM.md](TELEGRAM.md). The
-cluster reconciler keeps its kubeconfig and rendered credentials on
-memory-backed volumes, discovers provider identifiers from controller outputs,
-and bootstraps Flux only from signed `main` commits.
+The services Gateway, certificate, routes, monitoring, and backup policies are
+reconciled from this Flux root. Provider-created identifiers and credentials are
+written to SOPS documents by their focused reconcilers; they are not hand-edited
+into workload manifests.
