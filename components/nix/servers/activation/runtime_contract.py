@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read and validate the services runtime credential contract."""
+"""Inspect and validate the services credential configuration."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ KEY_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]+$")
 
 
 class ContractError(ValueError):
-    """The runtime contract is invalid or incomplete."""
+    """The credential configuration is invalid or incomplete."""
 
 
 @dataclass(frozen=True)
@@ -100,9 +100,9 @@ class RuntimeContract:
 
     def _host_credentials(self) -> tuple[Credential, ...]:
         section = "hostCredentials"
-        definitions = self.document.get(section)
-        if not isinstance(definitions, dict) or not definitions:
-            raise ContractError(f"{section} must be a non-empty mapping")
+        definitions = self.document.get(section, {})
+        if not isinstance(definitions, dict):
+            raise ContractError(f"{section} must be a mapping when declared")
         credentials: list[Credential] = []
         for consumer, definition in definitions.items():
             if not isinstance(consumer, str) or not isinstance(definition, dict):
@@ -275,38 +275,38 @@ def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
     result.add_argument("--repository-root")
     subparsers = result.add_subparsers(dest="command", required=True)
-    subparsers.add_parser("schema", help="validate the contract schema")
-    subparsers.add_parser("keys", help="list enrollable credential keys")
-    subparsers.add_parser("generated-keys", help="list locally generated secret keys")
+    subparsers.add_parser("schema", help="validate the credential configuration")
+    subparsers.add_parser("keys", help="list credentials enrolled by hand")
+    subparsers.add_parser("generated-keys", help="list locally generated credentials")
     subparsers.add_parser(
-        "provisioned-keys", help="list provider-provisioned secret keys"
+        "provisioned-keys", help="list credentials created by providers"
     )
     key_file = subparsers.add_parser(
-        "key-file", help="print the SOPS document for one credential"
+        "key-file", help="print the SOPS file for one manually enrolled credential"
     )
     key_file.add_argument("key")
     generated_key_file = subparsers.add_parser(
-        "generated-key-file", help="print the SOPS document for one generated key"
+        "generated-key-file", help="print the SOPS file for one generated credential"
     )
     generated_key_file.add_argument("key")
     provisioned_key_file = subparsers.add_parser(
         "provisioned-key-file",
-        help="print the SOPS document for one provider-provisioned key",
+        help="print the SOPS file for one provider-created credential",
     )
     provisioned_key_file.add_argument("key")
     managed_key_file = subparsers.add_parser(
-        "managed-key-file", help="print the SOPS document for any managed key"
+        "managed-key-file", help="print the SOPS file for any managed credential"
     )
     managed_key_file.add_argument("key")
-    subparsers.add_parser("secret-files", help="list contract-managed SOPS documents")
+    subparsers.add_parser("secret-files", help="list SOPS files used by the configuration")
     verify_ciphertext = subparsers.add_parser(
-        "verify-ciphertext", help="require every declared key as SOPS ciphertext"
+        "verify-ciphertext", help="verify that every expected credential is encrypted"
     )
     verify_ciphertext.add_argument(
         "--exclude-provisioner",
         action="append",
         default=[],
-        help="defer keys owned by this provisioner (repeatable)",
+        help="skip credentials created by this provider (repeatable)",
     )
     return result
 
@@ -317,7 +317,7 @@ def main() -> int:
         contract = RuntimeContract.load(repository_root(arguments.repository_root))
         if arguments.command == "schema":
             print(
-                "runtime credential contract is valid "
+                "credential configuration is valid "
                 f"({len(contract.credentials)} external, "
                 f"{len(contract.generated)} generated, "
                 f"{len(contract.provisioned)} provisioned)"
@@ -345,7 +345,7 @@ def main() -> int:
         elif arguments.command == "verify-ciphertext":
             excluded_provisioners = frozenset(arguments.exclude_provisioner)
             contract.verify_ciphertext(excluded_provisioners)
-            print("all runtime credentials are present as SOPS ciphertext")
+            print("all expected credentials are present as SOPS ciphertext")
         else:  # pragma: no cover - argparse enforces the command set.
             raise AssertionError(arguments.command)
     except (ContractError, subprocess.CalledProcessError) as error:

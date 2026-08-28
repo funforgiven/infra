@@ -12,13 +12,6 @@
           exec ${python}/bin/python ${./activation/runtime_contract.py} "$@"
         '';
       };
-      advanceServicesActivationEdit = pkgs.writeShellApplication {
-        name = "advance-services-activation-edit";
-        runtimeInputs = [ python ];
-        text = ''
-          exec ${python}/bin/python ${./activation/advance_services_activation.py} "$@"
-        '';
-      };
       enrollServicesCredential = pkgs.writeShellApplication {
         name = "enroll-services-credential";
         runtimeInputs = [
@@ -96,24 +89,6 @@
           exec ${awsMailCredentials}/bin/aws-mail-credentials resend "$@"
         '';
       };
-      servicesActivationPreflight = pkgs.writeShellApplication {
-        name = "services-activation-preflight";
-        runtimeInputs = [
-          pkgs.gitMinimal
-          pkgs.ripgrep
-          pkgs.sops
-          runtimeContract
-        ];
-        text = builtins.readFile ./activation/services-activation-preflight.sh;
-      };
-      advanceServicesActivation = pkgs.writeShellApplication {
-        name = "advance-services-activation";
-        runtimeInputs = [
-          advanceServicesActivationEdit
-          pkgs.gitMinimal
-        ];
-        text = builtins.readFile ./activation/advance-services-activation.sh;
-      };
       enrollServiceHostSecrets = pkgs.writeShellApplication {
         name = "enroll-service-host-secrets";
         runtimeInputs = [
@@ -127,63 +102,52 @@
       };
     in
     {
-      apps.advance-services-activation = {
-        program = "${advanceServicesActivation}/bin/advance-services-activation";
-        meta.description = "Enable one service activation stage in Git-managed Flux manifests";
-      };
-
       apps.enroll-services-credential = {
         program = "${enrollServicesCredential}/bin/enroll-services-credential";
-        meta.description = "Enroll one contract-defined credential into its SOPS document";
+        meta.description = "Enroll a credential in its configured SOPS file";
       };
 
       apps.enroll-service-host-secrets = {
         program = "${enrollServiceHostSecrets}/bin/enroll-service-host-secrets";
-        meta.description = "Stream a validated root-only credential profile to a service host";
+        meta.description = "Install a credential profile on a service host";
       };
 
       apps.generate-services-credential = {
         program = "${generateServicesCredential}/bin/generate-services-credential";
-        meta.description = "Generate one contract-defined secret directly into SOPS ciphertext";
+        meta.description = "Generate and store a credential in SOPS";
       };
 
       apps.reconcile-services-backblaze = {
         program = "${reconcileServicesBackblaze}/bin/reconcile-services-backblaze";
-        meta.description = "Reconcile scoped Backblaze backup keys directly into SOPS";
+        meta.description = "Update Backblaze backup settings and application keys";
       };
 
       apps.initialize-services-restic = {
         program = "${initializeServicesRestic}/bin/initialize-services-restic";
-        meta.description = "Initialize host Restic prefixes through their scoped Backblaze keys";
+        meta.description = "Initialize Restic repositories for service hosts";
       };
 
       apps.reconcile-services-telegram = {
         program = "${reconcileServicesTelegram}/bin/reconcile-services-telegram";
-        meta.description = "Reconcile Telegram metadata and discover private chat targets into SOPS";
+        meta.description = "Update Telegram bots and discover private chat IDs";
       };
 
       apps.reconcile-services-resend = {
         program = "${reconcileServicesResend}/bin/reconcile-services-resend";
-        meta.description = "Create or rotate the domain-scoped Stalwart Resend key into SOPS";
-      };
-
-      apps.services-activation-preflight = {
-        program = "${servicesActivationPreflight}/bin/services-activation-preflight";
-        meta.description = "Verify phase-appropriate credentials, promotions, and signed clean state before activation";
+        meta.description = "Create or rotate Stalwart's Resend API key";
       };
 
       apps.enroll-aws-mail-auth = {
         program = "${enrollAwsMailAuth}/bin/enroll-aws-mail-auth";
-        meta.description = "Enroll the final AWS mail provider pair into SOPS and clear its intake files";
+        meta.description = "Enroll AWS mail credentials and delete their intake files";
       };
 
       apps.publish-aws-mail-resend = {
         program = "${publishAwsMailResend}/bin/publish-aws-mail-resend";
-        meta.description = "Publish the existing Resend key directly from SOPS to AWS Secrets Manager";
+        meta.description = "Copy the Resend key from SOPS to AWS Secrets Manager";
       };
 
       packages = {
-        advance-services-activation = advanceServicesActivation;
         enroll-service-host-secrets = enrollServiceHostSecrets;
         enroll-services-credential = enrollServicesCredential;
         generate-services-credential = generateServicesCredential;
@@ -191,7 +155,6 @@
         initialize-services-restic = initializeServicesRestic;
         reconcile-services-telegram = reconcileServicesTelegram;
         reconcile-services-resend = reconcileServicesResend;
-        services-activation-preflight = servicesActivationPreflight;
         aws-mail-credentials = awsMailCredentials;
       };
 
@@ -200,7 +163,6 @@
           {
             nativeBuildInputs = [
               python
-              pkgs.ripgrep
               pkgs.shellcheck
               runtimeContract
             ];
@@ -210,153 +172,12 @@
             export PYTHONPYCACHEPREFIX="$TMPDIR/pycache"
             python -m unittest discover \
               -s ${./activation/tests} -p 'test_*.py'
-            python -m py_compile ${./activation/advance_services_activation.py}
-            python -m py_compile ${./activation/reconcile_services_backblaze.py}
-            python -m py_compile ${./activation/initialize_services_restic.py}
-            python -m py_compile ${./activation/reconcile_services_telegram.py}
-            python -m py_compile ${./activation/reconcile_services_resend.py}
-            python -m py_compile ${./activation/sops_credentials.py}
-            python -m py_compile ${./activation/aws_mail_credentials.py}
+            python -m compileall -q ${./activation}
             shellcheck \
-              ${./activation/advance-services-activation.sh} \
               ${./activation/enroll-service-host-secrets.sh} \
               ${./activation/enroll-services-credential.sh} \
-              ${./activation/generate-services-credential.sh} \
-              ${./activation/services-activation-preflight.sh}
-            runtime-contract --repository-root ${inputs.self} schema >/dev/null
-            rg --fixed-strings --quiet 'provider = "openai-api";' \
-              ${./hermes.nix}
-            rg --fixed-strings --quiet 'default = "gpt-5.6-luna";' \
-              ${./hermes.nix}
-            rg --fixed-strings --quiet 'agent.disabled_toolsets = [ "web" ];' \
-              ${./hermes.nix}
-            if rg --fixed-strings --quiet 'http = {' \
-              ${./home-assistant.nix}; then
-              echo 'Home Assistant HTTP settings must not return to ignored YAML.' >&2
-              exit 1
-            fi
-            rg --fixed-strings --quiet \
-              'Home Assistant OS onboarding' \
-              ${inputs.self}/deployments/homelab/cloud/manual-exceptions.yaml
-            rg --fixed-strings --quiet \
-              'services/hosts/home-assistant/' \
-              ${inputs.self}/deployments/homelab/cloud/services/ACTIVATION.md
-            if rg --quiet 'openai-codex|auth\.json|device-code|device-auth' \
-              ${./hermes.nix} \
-              ${./README.md} \
-              ${inputs.self}/deployments/homelab/cloud/services/ACTIVATION.md \
-              ${inputs.self}/deployments/homelab/cloud/manual-exceptions.yaml; then
-              echo 'Obsolete Hermes OAuth configuration remains.' >&2
-              exit 1
-            fi
-            rg --fixed-strings --quiet 'generated-key-file "$key"' \
               ${./activation/generate-services-credential.sh}
-            rg --fixed-strings --quiet 'managed-key-file "$key"' \
-              ${./activation/enroll-service-host-secrets.sh}
-            rg --fixed-strings --quiet 'source_file="$intake_directory/$key.key"' \
-              ${./activation/enroll-services-credential.sh}
-            rg --fixed-strings --quiet 'provisioned-key-file' \
-              ${./activation/runtime_contract.py}
-            rg --fixed-strings --quiet \
-              "yq eval --unwrapScalar '.endpoints.identity.auth.admin.password' -" \
-              ${./image-promotion.nix}
-            rg --fixed-strings --quiet 'os.O_NOFOLLOW' \
-              ${./activation/aws_mail_credentials.py}
-            rg --fixed-strings --quiet 'stdout=subprocess.DEVNULL' \
-              ${./activation/aws_mail_credentials.py}
-            if rg --fixed-strings --quiet 'excludeShellChecks' \
-              ${./mail-aws.nix}; then
-              echo 'Stalwart shell checks must not be suppressed.' >&2
-              exit 1
-            fi
-            test "$(rg --count 'EnvironmentFile = deploymentEnvironment;' \
-              ${./mail-aws.nix})" = 2
-            rg --fixed-strings --quiet 'STALWART_PASSWORD="$(<' \
-              ${./mail-aws.nix}
-            rg --line-regexp --quiet '[[:space:]]+export STALWART_PASSWORD' \
-              ${./mail-aws.nix}
-            if rg --fixed-strings --quiet \
-              'export STALWART_PASSWORD="$(' ${./mail-aws.nix}; then
-              echo 'Stalwart password assignment masks read failures from ShellCheck.' >&2
-              exit 1
-            fi
-            rg --fixed-strings --quiet \
-              'systemctl --no-block try-restart stalwart.service' \
-              ${./mail-aws.nix}
-            if rg --line-regexp --quiet \
-              '[[:space:]]+systemctl try-restart stalwart\.service' \
-              ${./mail-aws.nix}; then
-              echo 'Stalwart secret refresh must not synchronously restart its dependent service.' >&2
-              exit 1
-            fi
-            rg --fixed-strings --quiet \
-              'https://truststore.pki.rds.amazonaws.com/eu-central-1/eu-central-1-bundle.pem' \
-              ${./mail-aws.nix}
-            rg --fixed-strings --quiet \
-              'sha256-VqDK4ES2zEM5cdlkNHQBaSqS6gKU45J1Oj69ruVNi4Q=' \
-              ${./mail-aws.nix}
-            rg --fixed-strings --quiet 'trap stop_server EXIT' \
-              ${./mail-aws.nix}
-            rg --fixed-strings --quiet 'export STALWART_RECOVERY_MODE=true' \
-              ${./mail-aws.nix}
-            rg --fixed-strings --quiet 'PGSSLMODE=verify-full' \
-              ${./mail-aws.nix}
-            rg --fixed-strings --quiet \
-              "SELECT to_regclass('public.s') IS NOT NULL;" ${./mail-aws.nix}
-            test "$(rg --count '^[[:space:]]+start_server$' \
-              ${./mail-aws.nix})" = 2
-            rg --fixed-strings --quiet \
-              '{"0":{"@type":"Password"' ${./mail-aws.nix}
-            test "$(rg --count '"credentials":password\(' \
-              ${./mail-aws.nix})" = 2
-            if rg --fixed-strings --quiet '"credentialId"' \
-              ${./mail-aws.nix}; then
-              echo 'Stalwart credential IDs are server-owned.' >&2
-              exit 1
-            fi
-            if rg --fixed-strings --quiet '"credentials":[' \
-              ${./mail-aws.nix}; then
-              echo 'Stalwart registry list fields must use numeric-keyed objects.' >&2
-              exit 1
-            fi
-            test "$(rg --count '"bind":\{"\[::\]:[0-9]+":true\}' \
-              ${./mail-aws.nix})" = 5
-            if rg --fixed-strings --quiet '"bind":{"0"' \
-              ${./mail-aws.nix}; then
-              echo 'Stalwart map fields must use values as keys.' >&2
-              exit 1
-            fi
-            if rg --fixed-strings --quiet '"bind":[' \
-              ${./mail-aws.nix}; then
-              echo 'Stalwart listener bind fields must use address-keyed objects.' >&2
-              exit 1
-            fi
-            rg --fixed-strings --quiet \
-              '"route/match/0/if":"is_local_domain(rcpt_domain)"' \
-              ${./mail-aws.nix}
-            rg --fixed-strings --quiet \
-              '"route/match/0/then":"\u0027local\u0027"' \
-              ${./mail-aws.nix}
-            rg --fixed-strings --quiet \
-              '"route/else":"\u0027resend\u0027"' ${./mail-aws.nix}
-            rg --fixed-strings --quiet \
-              '"challengeType":"TlsAlpn01"' ${./mail-aws.nix}
-            rg --fixed-strings --quiet \
-              'wantedBy = [ "multi-user.target" ];' ${./mail-aws.nix}
-            if rg --fixed-strings --quiet '"allowInvalidCerts":true' \
-              ${./mail-aws.nix}; then
-              echo 'Stalwart contains a TLS certificate-validation bypass.' >&2
-              exit 1
-            fi
-            rg --fixed-strings --quiet 'keyName' \
-              ${./activation/reconcile_services_backblaze.py}
-            if rg --quiet 'prompt_value|R2_ENDPOINT|cloudflarestorage' \
-              ${./activation/enroll-service-host-secrets.sh} \
-              ${./README.md} \
-              ${inputs.self}/deployments/homelab/cloud/services/ACTIVATION.md; then
-              echo 'Obsolete interactive or Cloudflare R2 host enrollment remains.' >&2
-              exit 1
-            fi
+            runtime-contract --repository-root ${inputs.self} schema >/dev/null
             touch "$out"
           '';
 

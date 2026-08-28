@@ -1,28 +1,104 @@
 from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
 
-from reconcile_services_telegram import BotSpec, TelegramReconcileError, _select_activation
+import yaml
+
+from reconcile_services_telegram import (
+    TELEGRAM_CONTRACT_PATH,
+    BotSpec,
+    TelegramContract,
+    TelegramReconcileError,
+    _select_activation,
+)
+from runtime_contract import CONTRACT_PATH
 
 
 def bot_spec(chat_type: str = "private") -> BotSpec:
     return BotSpec(
-        identifier="hermes",
-        name="Fahrican Hermes",
-        username="fahrican_hermes_bot",
-        description="Private assistant.",
-        short_description="Private assistant.",
-        token_file=Path("hermes.sops.yaml"),
-        token_credential="HERMES_TELEGRAM_BOT_TOKEN",
+        identifier="service",
+        name="Fahrican Service",
+        username="fahrican_service_bot",
+        description="Private service bot.",
+        short_description="Private service bot.",
+        token_file=Path("service.sops.yaml"),
+        token_credential="SERVICE_TELEGRAM_BOT_TOKEN",
         command="/activate",
         chat_type=chat_type,
         chat_title="Fahrican Infra Alerts" if chat_type == "group" else None,
-        output_file=Path("hermes.sops.yaml"),
-        chat_credential="HERMES_TELEGRAM_HOME_CHANNEL",
-        allowed_users_credential="HERMES_TELEGRAM_ALLOWED_USERS",
+        output_file=Path("service.sops.yaml"),
+        chat_credential="SERVICE_TELEGRAM_HOME_CHANNEL",
+        allowed_users_credential="SERVICE_TELEGRAM_ALLOWED_USERS",
     )
 
 
 class TelegramActivationSelectionTest(unittest.TestCase):
+    def test_contract_accepts_a_declaratively_named_bot(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime_path = root / CONTRACT_PATH
+            runtime_path.parent.mkdir(parents=True)
+            runtime = {
+                "schemaVersion": 9,
+                "secretFile": "runtime.sops.yaml",
+                "credentials": {"telegram": ["SERVICE_TELEGRAM_BOT_TOKEN"]},
+                "generatedSecrets": {
+                    "local": {
+                        "secretFile": "generated.sops.yaml",
+                        "keys": ["GENERATED_KEY"],
+                    }
+                },
+                "provisionedSecrets": {
+                    "telegram-service": {
+                        "provisioner": "reconcile-services-telegram",
+                        "secretFile": "runtime.sops.yaml",
+                        "keys": [
+                            "SERVICE_TELEGRAM_CHAT_ID",
+                            "SERVICE_TELEGRAM_ALLOWED_USERS",
+                        ],
+                    }
+                },
+            }
+            runtime_path.write_text(
+                yaml.safe_dump(
+                    {"data": {"required-keys.yaml": yaml.safe_dump(runtime)}}
+                ),
+                encoding="utf-8",
+            )
+            telegram_path = root / TELEGRAM_CONTRACT_PATH
+            telegram_path.parent.mkdir(parents=True, exist_ok=True)
+            telegram_path.write_text(
+                yaml.safe_dump(
+                    {
+                        "schemaVersion": 1,
+                        "bots": {
+                            "service": {
+                                "name": "Fahrican Service",
+                                "username": "fahrican_service_bot",
+                                "description": "Private service bot.",
+                                "shortDescription": "Private service bot.",
+                                "tokenCredential": "SERVICE_TELEGRAM_BOT_TOKEN",
+                                "activation": {
+                                    "command": "/activate",
+                                    "chatType": "private",
+                                },
+                                "outputs": {
+                                    "chatCredential": "SERVICE_TELEGRAM_CHAT_ID",
+                                    "allowedUsersCredential": (
+                                        "SERVICE_TELEGRAM_ALLOWED_USERS"
+                                    ),
+                                },
+                            }
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            contract = TelegramContract.load(root)
+
+        self.assertEqual([bot.identifier for bot in contract.bots], ["service"])
+
     def test_selects_one_declared_private_activation_without_exposing_content(self) -> None:
         update = {
             "update_id": 17,

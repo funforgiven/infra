@@ -2,6 +2,20 @@
 set -euo pipefail
 umask 077
 
+usage() {
+  cat <<'EOF'
+Usage: generate-services-credential [--rotate] KEY
+
+Generate one repository-owned secret directly into its declared SOPS file.
+Use --rotate to replace an existing value.
+EOF
+}
+
+if [[ "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
 rotate=false
 if [[ "${1:-}" == "--rotate" ]]; then
   rotate=true
@@ -9,7 +23,7 @@ if [[ "${1:-}" == "--rotate" ]]; then
 fi
 
 if [[ "$#" -ne 1 ]]; then
-  echo 'Usage: generate-services-credential [--rotate] KEY' >&2
+  usage >&2
   exit 64
 fi
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Initialize declared host Restic repositories through their scoped B2 keys."""
+"""Initialize Restic repositories for service hosts."""
 
 from __future__ import annotations
 
@@ -239,7 +239,7 @@ def main() -> int:
             suffix = "Check completed without changing Backblaze or repository state."
         else:
             reports = initializer.apply()
-            suffix = "Repository initialization completed through scoped B2 keys."
+            suffix = "Restic repository initialization complete."
         for report in reports:
             print(report)
         print(suffix)

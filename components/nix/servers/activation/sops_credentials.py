@@ -1,9 +1,10 @@
-"""Narrow, no-echo access to base64-encoded values in SOPS Secret documents."""
+"""Read and write base64 values in SOPS Secret documents without printing them."""
 
 from __future__ import annotations
 
 import base64
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -11,7 +12,7 @@ import yaml
 
 
 class SopsCredentialError(RuntimeError):
-    """A safe-to-display SOPS credential error."""
+    """An error that can be printed without exposing credentials."""
 
 
 class SopsCredentialStore:
@@ -77,19 +78,73 @@ class SopsCredentialStore:
         if result.returncode != 0:
             raise SopsCredentialError(f"cannot remove partial {credential} ciphertext")
 
-    def write(self, secret_file: Path, values: dict[str, str]) -> None:
-        path = self._path(secret_file)
-        previous = {credential: self.read(secret_file, credential) for credential in values}
-        completed: list[str] = []
+    @staticmethod
+    def _sync(path: Path) -> None:
         try:
-            for credential, value in values.items():
-                self._set(path, credential, value)
-                completed.append(credential)
-        except SopsCredentialError:
-            for credential in reversed(completed):
-                old_value = previous[credential]
-                if old_value is None:
+            descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+            try:
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
+            directory_descriptor = os.open(
+                path.parent,
+                os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+            )
+            try:
+                os.fsync(directory_descriptor)
+            finally:
+                os.close(directory_descriptor)
+        except OSError as error:
+            raise SopsCredentialError(
+                f"cannot durably persist SOPS destination {path.name}"
+            ) from error
+
+    def _restore(
+        self,
+        path: Path,
+        secret_file: Path,
+        previous: dict[str, str | None],
+        attempted: list[str],
+    ) -> None:
+        for credential in reversed(attempted):
+            old_value = previous[credential]
+            if old_value is None:
+                try:
+                    current_value = self.read(secret_file, credential)
+                except SopsCredentialError:
                     self._unset(path, credential)
                 else:
-                    self._set(path, credential, old_value)
+                    if current_value is not None:
+                        self._unset(path, credential)
+            else:
+                self._set(path, credential, old_value)
+        self._sync(path)
+        for credential in attempted:
+            if self.read(secret_file, credential) != previous[credential]:
+                raise SopsCredentialError(
+                    f"cannot verify rollback of {credential} in its SOPS destination"
+                )
+
+    def write(self, secret_file: Path, values: dict[str, str]) -> None:
+        """Persist and decrypt-verify all values, restoring prior values on failure."""
+        path = self._path(secret_file)
+        previous = {credential: self.read(secret_file, credential) for credential in values}
+        attempted: list[str] = []
+        try:
+            for credential, value in values.items():
+                attempted.append(credential)
+                self._set(path, credential, value)
+            self._sync(path)
+            for credential, value in values.items():
+                if self.read(secret_file, credential) != value:
+                    raise SopsCredentialError(
+                        f"cannot verify encrypted {credential} in its SOPS destination"
+                    )
+        except SopsCredentialError:
+            try:
+                self._restore(path, secret_file, previous, attempted)
+            except SopsCredentialError as rollback_error:
+                raise SopsCredentialError(
+                    f"cannot restore SOPS destination {secret_file} after a failed update"
+                ) from rollback_error
             raise

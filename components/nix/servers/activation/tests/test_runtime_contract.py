@@ -8,7 +8,7 @@ from runtime_contract import CONTRACT_PATH, ContractError, RuntimeContract
 
 
 CLUSTER_FILE = Path("cluster-runtime.sops.yaml")
-HERMES_FILE = Path("hermes-runtime.sops.yaml")
+HOST_FILE = Path("host-runtime.sops.yaml")
 GENERATED_FILE = Path("generated-runtime.sops.yaml")
 PROVISIONED_FILE = Path("provisioned-runtime.sops.yaml")
 
@@ -19,9 +19,9 @@ def contract_document() -> dict:
         "secretFile": str(CLUSTER_FILE),
         "credentials": {"initial": ["CLUSTER_KEY"]},
         "hostCredentials": {
-            "hermes": {
-                "secretFile": str(HERMES_FILE),
-                "keys": ["HERMES_TELEGRAM_BOT_TOKEN", "OPENAI_API_KEY"],
+            "service-host": {
+                "secretFile": str(HOST_FILE),
+                "keys": ["HOST_TOKEN", "HOST_API_KEY"],
             }
         },
         "generatedSecrets": {
@@ -66,16 +66,16 @@ class RuntimeContractTest(unittest.TestCase):
         contract = RuntimeContract.load(self.root)
         self.assertEqual(contract.credential("CLUSTER_KEY").secret_file, CLUSTER_FILE)
         self.assertEqual(
-            contract.credential("HERMES_TELEGRAM_BOT_TOKEN").secret_file,
-            HERMES_FILE,
+            contract.credential("HOST_TOKEN").secret_file,
+            HOST_FILE,
         )
         self.assertEqual(
-            contract.credential("OPENAI_API_KEY").secret_file,
-            HERMES_FILE,
+            contract.credential("HOST_API_KEY").secret_file,
+            HOST_FILE,
         )
         self.assertEqual(
-            contract.credential("OPENAI_API_KEY").consumer,
-            "hermes",
+            contract.credential("HOST_API_KEY").consumer,
+            "service-host",
         )
         self.assertEqual(
             contract.generated_credential("GENERATED_KEY").secret_file,
@@ -94,9 +94,16 @@ class RuntimeContractTest(unittest.TestCase):
         with self.assertRaisesRegex(ContractError, "unknown services credential"):
             contract.credential("PROVISIONED_KEY")
 
+    def test_host_credentials_are_optional(self) -> None:
+        payload = contract_document()
+        del payload["hostCredentials"]
+        self.write_contract(payload)
+        contract = RuntimeContract.load(self.root)
+        self.assertEqual([item.name for item in contract.credentials], ["CLUSTER_KEY"])
+
     def test_rejects_duplicate_keys(self) -> None:
         payload = contract_document()
-        payload["hostCredentials"]["hermes"]["keys"] = ["CLUSTER_KEY"]
+        payload["hostCredentials"]["service-host"]["keys"] = ["CLUSTER_KEY"]
         self.write_contract(payload)
         with self.assertRaisesRegex(ContractError, "duplicate credential"):
             RuntimeContract.load(self.root)
@@ -107,14 +114,14 @@ class RuntimeContractTest(unittest.TestCase):
             CLUSTER_FILE,
             ["CLUSTER_KEY"],
         )
-        self.write_secret(HERMES_FILE, [])
+        self.write_secret(HOST_FILE, [])
         self.write_secret(GENERATED_FILE, ["GENERATED_KEY"])
         self.write_secret(PROVISIONED_FILE, ["PROVISIONED_KEY"])
-        with self.assertRaisesRegex(ContractError, "OPENAI_API_KEY"):
+        with self.assertRaisesRegex(ContractError, "HOST_API_KEY"):
             contract.verify_ciphertext()
         self.write_secret(
-            HERMES_FILE,
-            ["HERMES_TELEGRAM_BOT_TOKEN", "OPENAI_API_KEY"],
+            HOST_FILE,
+            ["HOST_TOKEN", "HOST_API_KEY"],
         )
         contract.verify_ciphertext()
 
@@ -122,8 +129,8 @@ class RuntimeContractTest(unittest.TestCase):
         contract = RuntimeContract.load(self.root)
         self.write_secret(CLUSTER_FILE, ["CLUSTER_KEY"])
         self.write_secret(
-            HERMES_FILE,
-            ["HERMES_TELEGRAM_BOT_TOKEN", "OPENAI_API_KEY"],
+            HOST_FILE,
+            ["HOST_TOKEN", "HOST_API_KEY"],
         )
         self.write_secret(GENERATED_FILE, ["GENERATED_KEY"])
         self.write_secret(PROVISIONED_FILE, [])
@@ -138,7 +145,7 @@ class RuntimeContractTest(unittest.TestCase):
 
     def test_rejects_paths_outside_repository(self) -> None:
         payload = contract_document()
-        payload["hostCredentials"]["hermes"]["secretFile"] = "../secret.yaml"
+        payload["hostCredentials"]["service-host"]["secretFile"] = "../secret.yaml"
         self.write_contract(payload)
         with self.assertRaisesRegex(ContractError, "inside the repository"):
             RuntimeContract.load(self.root)

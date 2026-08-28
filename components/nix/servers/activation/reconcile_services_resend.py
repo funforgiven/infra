@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create and rotate domain-scoped Resend sending keys directly into SOPS."""
+"""Create or rotate the Resend API key used by Stalwart."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ API_BASE = "https://api.resend.com"
 
 
 class ResendReconcileError(RuntimeError):
-    """A safe-to-display Resend reconciliation error."""
+    """An error that can be printed without exposing credentials."""
 
 
 @dataclass(frozen=True)
@@ -167,7 +167,7 @@ class ResendKeyReconciler:
         if len(named) == 1 and stored is not None and not rotate:
             return f"{self.spec.name}: current"
         if not apply:
-            return f"{self.spec.name}: reconciliation required"
+            return f"{self.spec.name}: changes required"
         if (named or stored is not None) and not rotate:
             raise ResendReconcileError(
                 f"{self.spec.name} has existing or partial state; inspect it and rerun with --rotate"
@@ -200,7 +200,7 @@ def argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--rotate",
         action="store_true",
-        help="create and switch to a new sending key before revoking matching old keys",
+        help="store a replacement before revoking old matching keys",
     )
     return parser
 

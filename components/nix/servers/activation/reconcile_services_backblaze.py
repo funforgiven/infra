@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reconcile the services Backblaze bucket policy and scoped application keys."""
+"""Check or update Backblaze backup settings and application keys."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ REQUIRED_CAPABILITIES = frozenset(
 
 
 class ReconcileError(RuntimeError):
-    """A safe-to-display reconciliation error."""
+    """An error that can be printed without exposing credentials."""
 
 
 @dataclass(frozen=True)
@@ -95,14 +95,17 @@ class BackupContract:
         if not isinstance(hosts, list) or not hosts:
             raise ReconcileError("services.hosts must be a non-empty list")
         for index, host in enumerate(hosts):
-            specs.append(
-                _key_spec(
-                    _mapping(host, f"services.hosts[{index}]"),
-                    host_capabilities,
-                    f"host {index}",
-                    runtime,
-                )
+            host_spec = _key_spec(
+                _mapping(host, f"services.hosts[{index}]"),
+                host_capabilities,
+                f"host {index}",
+                runtime,
             )
+            if host_spec.restic_password_credential is None:
+                raise ReconcileError(
+                    f"services.hosts[{index}] must declare resticPasswordField"
+                )
+            specs.append(host_spec)
         lifecycle_rules = bucket.get("lifecycleRules")
         if not isinstance(lifecycle_rules, list) or not lifecycle_rules:
             raise ReconcileError("bucket.lifecycleRules must be a non-empty list")
@@ -128,13 +131,6 @@ class BackupContract:
             raise ReconcileError("operator bootstrap credentials must be cleared on success")
         if self.s3_endpoint != f"https://s3.{self.region}.backblazeb2.com":
             raise ReconcileError("Backblaze S3 endpoint and region diverge")
-        if len(self.keys) != 3:
-            raise ReconcileError("exactly three services backup keys must be declared")
-        restic_specs = [
-            spec for spec in self.keys if spec.restic_password_credential is not None
-        ]
-        if len(restic_specs) != 2:
-            raise ReconcileError("exactly two host Restic repositories must be declared")
         names = [spec.name for spec in self.keys]
         prefixes = [spec.prefix for spec in self.keys]
         credentials = [
@@ -386,22 +382,21 @@ class ServicesBackblazeReconciler:
                 reports.append(f"{spec.name}: current")
                 continue
             if not apply:
-                reports.append(f"{spec.name}: reconciliation required")
+                reports.append(f"{spec.name}: changes required")
                 continue
+            old_key_ids: set[str] = set()
             if named or stored_id is not None or stored_key is not None:
                 if not rotate:
                     raise ReconcileError(
                         f"{spec.name} has existing or partial state; inspect it and rerun with --rotate"
                     )
-                ids = {
+                old_key_ids = {
                     item.get("applicationKeyId")
                     for item in named
                     if isinstance(item.get("applicationKeyId"), str)
                 }
                 if stored_id and any(item.get("applicationKeyId") == stored_id for item in inventory):
-                    ids.add(stored_id)
-                for key_id in ids:
-                    self.client.delete_key(key_id)
+                    old_key_ids.add(stored_id)
             key_id, application_key = self.client.create_key(bucket_id, spec)
             try:
                 self.store.write(
@@ -416,6 +411,9 @@ class ServicesBackblazeReconciler:
                     self.client.delete_key(key_id)
                 finally:
                     raise
+            for old_key_id in sorted(old_key_ids):
+                if old_key_id != key_id:
+                    self.client.delete_key(old_key_id)
             reports.append(f"{spec.name}: created and encrypted")
         return reports
 
@@ -553,7 +551,7 @@ def argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--rotate",
         action="store_true",
-        help="replace conflicting or partial declared application keys",
+        help="replace conflicting or incomplete application keys",
     )
     return parser
 
