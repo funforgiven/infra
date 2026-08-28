@@ -68,6 +68,9 @@ kubeletEndpointSliceEnabled: false
 serviceDiscoveryRole: Endpoints
 ```
 
+The discovery role applies to every `ServiceMonitor`, so its manually managed
+targets must also use `v1/Endpoints` while this workaround remains enabled.
+
 Helm retries failed installs and upgrades to tolerate the admission-webhook
 startup race. cert-manager owns the webhook certificate and CA injection; the
 chart's patch Jobs remain disabled.

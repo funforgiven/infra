@@ -12,24 +12,19 @@ spec:
       port: 9100
       targetPort: 9100
 ---
-apiVersion: discovery.k8s.io/v1
-kind: EndpointSlice
+apiVersion: v1
+kind: Endpoints
 metadata:
   name: services-host-node-exporters
   namespace: services-observability
-  labels:
-    kubernetes.io/service-name: services-host-node-exporters
-addressType: IPv4
-ports:
-  - name: metrics
-    protocol: TCP
-    port: 9100
-endpoints:
+subsets:
   - addresses:
-      - 192.168.80.10
-    conditions:
-      ready: true
-    hostname: home-assistant
+      - hostname: home-assistant
+        ip: 192.168.80.10
+    ports:
+      - name: metrics
+        port: 9100
+        protocol: TCP
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
