@@ -2,10 +2,26 @@
 set -euo pipefail
 umask 077
 
+usage() {
+  cat <<'EOF'
+Usage: enroll-services-credential [--from-file] [--intake-directory DIR] KEY
+
+Store one provider-issued credential in its declared SOPS file.
+
+Without --from-file, the command prompts twice without echoing the value.
+With --from-file, it reads DIR/KEY.key (default: secrets/KEY.key) and clears the
+file after successful enrollment.
+EOF
+}
+
 from_file=false
 intake_directory=''
 while [[ "${1:-}" == --* ]]; do
   case "$1" in
+    --help)
+      usage
+      exit 0
+      ;;
     --from-file)
       from_file=true
       shift
@@ -26,7 +42,7 @@ while [[ "${1:-}" == --* ]]; do
 done
 
 if [[ "$#" -ne 1 ]]; then
-  echo "Usage: enroll-services-credential [--from-file] [--intake-directory DIR] KEY" >&2
+  usage >&2
   exit 64
 fi
 if [[ -n "$intake_directory" && "$from_file" != true ]]; then

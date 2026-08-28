@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reconcile Telegram bot metadata and discover declared private chat targets."""
+"""Update Telegram bot settings and discover private chat IDs."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ TELEGRAM_CONTRACT_PATH = Path("deployments/homelab/cloud/telegram-bots.yaml")
 
 
 class TelegramReconcileError(RuntimeError):
-    """A safe-to-display Telegram reconciliation error."""
+    """An error that can be printed without exposing credentials."""
 
 
 @dataclass(frozen=True)
@@ -56,11 +56,8 @@ class TelegramContract:
         if not isinstance(document, dict) or document.get("schemaVersion") != 1:
             raise TelegramReconcileError("Telegram contract must use schema version 1")
         definitions = document.get("bots")
-        if not isinstance(definitions, dict) or set(definitions) != {
-            "infrastructure",
-            "hermes",
-        }:
-            raise TelegramReconcileError("Telegram contract must declare the two service bots")
+        if not isinstance(definitions, dict) or not definitions:
+            raise TelegramReconcileError("Telegram contract must declare at least one bot")
         runtime = RuntimeContract.load(repository_root)
         bots: list[BotSpec] = []
         for identifier, value in definitions.items():
@@ -287,7 +284,7 @@ def argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--rediscover",
         action="store_true",
-        help="replace previously encrypted target IDs from fresh activation messages",
+        help="replace stored chat IDs using new activation messages",
     )
     return parser
 

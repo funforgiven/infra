@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -14,6 +15,7 @@ from reconcile_services_backblaze import (
 )
 from initialize_services_restic import ResticRunner, ServicesResticInitializer
 from runtime_contract import CONTRACT_PATH
+from sops_credentials import SopsCredentialError
 
 
 RUNTIME_FILE = "runtime.sops.yaml"
@@ -33,7 +35,6 @@ def runtime_document() -> dict:
                 "secretFile": "generated.sops.yaml",
                 "keys": [
                     "GENERATED_KEY",
-                    "HERMES_BACKUP_RESTIC_PASSWORD",
                     "HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD",
                 ],
             }
@@ -48,8 +49,6 @@ def runtime_document() -> dict:
                 "provisioner": "reconcile-services-backblaze",
                 "secretFile": BACKUPS_FILE,
                 "keys": [
-                    "HERMES_BACKUP_B2_APPLICATION_KEY_ID",
-                    "HERMES_BACKUP_B2_APPLICATION_KEY",
                     "HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID",
                     "HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY",
                 ],
@@ -100,10 +99,7 @@ def backup_document() -> dict:
                     "valueField": f"{prefix}_BACKUP_B2_APPLICATION_KEY",
                     "resticPasswordField": f"{prefix}_BACKUP_RESTIC_PASSWORD",
                 }
-                for name, prefix in (
-                    ("hermes", "HERMES"),
-                    ("home-assistant", "HOME_ASSISTANT"),
-                )
+                for name, prefix in (("home-assistant", "HOME_ASSISTANT"),)
             ],
             "hostCapabilities": capabilities,
         },
@@ -111,26 +107,43 @@ def backup_document() -> dict:
 
 
 class FakeStore:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        events: list[str] | None = None,
+        fail_writes: bool = False,
+    ) -> None:
         self.values: dict[tuple[Path, str], str] = {}
         self.writes: list[tuple[str, str, str]] = []
+        self.events = events
+        self.fail_writes = fail_writes
 
     def read(self, secret_file: Path, credential: str) -> str | None:
         return self.values.get((secret_file, credential))
 
     def write(self, secret_file: Path, values: dict[str, str]) -> None:
+        if self.events is not None:
+            self.events.append("sops:write-and-verify")
+        if self.fail_writes:
+            raise SopsCredentialError("simulated SOPS write failure")
         for credential, value in values.items():
             self.values[(secret_file, credential)] = value
         self.writes.append((str(secret_file), *values.values()))
 
 
 class FakeClient:
-    def __init__(self, contract: BackupContract) -> None:
+    def __init__(
+        self,
+        contract: BackupContract,
+        *,
+        events: list[str] | None = None,
+    ) -> None:
         self.contract = contract
         self.inventory: list[dict] = []
         self.created: list[str] = []
         self.deleted: list[str] = []
         self.policy_updated = False
+        self.events = events
 
     def bucket(self, name: str) -> dict:
         assert name == self.contract.bucket_name
@@ -151,10 +164,16 @@ class FakeClient:
     def create_key(self, bucket_id: str, spec) -> tuple[str, str]:
         assert bucket_id == "bucket-id"
         self.created.append(spec.name)
-        return f"id-{len(self.created)}", f"secret-{len(self.created)}"
+        key_id = f"id-{len(self.created)}"
+        if self.events is not None:
+            self.events.append(f"backblaze:create:{key_id}")
+        return key_id, f"secret-{len(self.created)}"
 
     def delete_key(self, key_id: str) -> None:
+        if self.events is not None:
+            self.events.append(f"backblaze:delete:{key_id}")
         self.deleted.append(key_id)
+
 
 class FakeRunner:
     def __init__(self, *, fail: bool = False) -> None:
@@ -194,9 +213,9 @@ class ServicesBackblazeReconcilerTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
 
-    def test_contract_routes_three_independent_least_privilege_keys(self) -> None:
-        self.assertEqual(len(self.contract.keys), 3)
-        self.assertEqual(len({spec.prefix for spec in self.contract.keys}), 3)
+    def test_contract_routes_independent_least_privilege_keys(self) -> None:
+        self.assertEqual(len(self.contract.keys), 2)
+        self.assertEqual(len({spec.prefix for spec in self.contract.keys}), 2)
         self.assertEqual(
             {spec.secret_file for spec in self.contract.keys},
             {Path(RUNTIME_FILE), Path(BACKUPS_FILE)},
@@ -208,6 +227,16 @@ class ServicesBackblazeReconcilerTest(unittest.TestCase):
             )
         )
 
+    def test_each_declared_host_requires_a_restic_password(self) -> None:
+        document = backup_document()
+        del document["services"]["hosts"][0]["resticPasswordField"]
+        (self.root / BACKUP_CONTRACT_PATH).write_text(
+            yaml.safe_dump(document), encoding="utf-8"
+        )
+
+        with self.assertRaisesRegex(ReconcileError, "resticPasswordField"):
+            BackupContract.load(self.root)
+
     def test_apply_creates_and_encrypts_without_reporting_material(self) -> None:
         client = FakeClient(self.contract)
         store = FakeStore()
@@ -215,7 +244,7 @@ class ServicesBackblazeReconcilerTest(unittest.TestCase):
             self.contract, client, store
         ).reconcile(apply=True, rotate=False)
         self.assertEqual(client.created, [spec.name for spec in self.contract.keys])
-        self.assertEqual(len(store.writes), 3)
+        self.assertEqual(len(store.writes), 2)
         output = "\n".join(reports)
         self.assertNotIn("secret-", output)
         self.assertNotIn("id-", output)
@@ -232,6 +261,77 @@ class ServicesBackblazeReconcilerTest(unittest.TestCase):
             ServicesBackblazeReconciler(
                 self.contract, client, FakeStore()
             ).reconcile(apply=True, rotate=False)
+
+    def test_rotation_persists_replacement_before_revoking_old_key(self) -> None:
+        spec = self.contract.keys[0]
+        contract = replace(self.contract, keys=(spec,))
+        events: list[str] = []
+        client = FakeClient(contract, events=events)
+        client.inventory.append(
+            {
+                "keyName": spec.name,
+                "applicationKeyId": "old-id",
+                "bucketIds": ["bucket-id"],
+                "namePrefix": "wrong-prefix/",
+                "capabilities": list(spec.capabilities),
+            }
+        )
+        store = FakeStore(events=events)
+        store.values[(spec.secret_file, spec.id_credential)] = "old-id"
+        store.values[(spec.secret_file, spec.key_credential)] = "old-secret"
+
+        ServicesBackblazeReconciler(contract, client, store).reconcile(
+            apply=True, rotate=True
+        )
+
+        self.assertEqual(
+            events,
+            [
+                "backblaze:create:id-1",
+                "sops:write-and-verify",
+                "backblaze:delete:old-id",
+            ],
+        )
+        self.assertEqual(
+            store.values[(spec.secret_file, spec.id_credential)], "id-1"
+        )
+        self.assertEqual(client.deleted, ["old-id"])
+
+    def test_rotation_rolls_back_new_key_when_sops_write_fails(self) -> None:
+        spec = self.contract.keys[0]
+        contract = replace(self.contract, keys=(spec,))
+        events: list[str] = []
+        client = FakeClient(contract, events=events)
+        client.inventory.append(
+            {
+                "keyName": spec.name,
+                "applicationKeyId": "old-id",
+            }
+        )
+        store = FakeStore(events=events, fail_writes=True)
+        store.values[(spec.secret_file, spec.id_credential)] = "old-id"
+        store.values[(spec.secret_file, spec.key_credential)] = "old-secret"
+
+        with self.assertRaisesRegex(SopsCredentialError, "simulated SOPS write failure"):
+            ServicesBackblazeReconciler(contract, client, store).reconcile(
+                apply=True, rotate=True
+            )
+
+        self.assertEqual(
+            events,
+            [
+                "backblaze:create:id-1",
+                "sops:write-and-verify",
+                "backblaze:delete:id-1",
+            ],
+        )
+        self.assertEqual(
+            store.values[(spec.secret_file, spec.id_credential)], "old-id"
+        )
+        self.assertEqual(
+            store.values[(spec.secret_file, spec.key_credential)], "old-secret"
+        )
+        self.assertNotIn("old-id", client.deleted)
 
     def _restic_store(self) -> FakeStore:
         store = FakeStore()
@@ -250,7 +350,7 @@ class ServicesBackblazeReconcilerTest(unittest.TestCase):
         reports = ServicesResticInitializer(
             self.contract, self._restic_store(), runner
         ).apply()
-        self.assertEqual(len(runner.initialized), 2)
+        self.assertEqual(len(runner.initialized), 1)
         self.assertNotIn("scoped-secret", "\n".join(reports))
         self.assertNotIn("restic-password", "\n".join(reports))
 
@@ -294,7 +394,7 @@ class ServicesBackblazeReconcilerTest(unittest.TestCase):
                 "--repo",
                 (
                     "s3:https://s3.test-region.backblazeb2.com/test-recovery/"
-                    "services/hosts/hermes"
+                    "services/hosts/home-assistant"
                 ),
             ],
         )

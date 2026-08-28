@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Move AWS mail credentials across narrow, no-echo runtime boundaries."""
+"""Enroll AWS mail credentials or publish the Resend key without printing it."""
 
 from __future__ import annotations
 
@@ -40,12 +40,12 @@ AWS_REGION = "eu-central-1"
 
 
 class AwsMailCredentialError(RuntimeError):
-    """A credential error whose message is safe to display."""
+    """An error that can be printed without exposing credentials."""
 
 
 @dataclass(frozen=True)
 class ProvisioningIdentity:
-    """Verified identities needed to complete or resume one enrollment."""
+    """AWS identities used during credential enrollment."""
 
     credentials: dict[str, str]
     bootstrap_user: str
@@ -53,7 +53,7 @@ class ProvisioningIdentity:
 
 
 class IntakeFiles:
-    """Hold validated descriptors so enrollment cannot follow a replaced path."""
+    """Keep validated intake files open during enrollment."""
 
     def __init__(self, repository_root: Path):
         self.repository_root = repository_root
