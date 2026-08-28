@@ -29,10 +29,13 @@ switch:
     infra-trusted-access:
       nativeVlan: 10
       taggedVlans: []
+      # Disable STP only for workstation port 2 to avoid its observed 33-second
+      # link-up delay. Switch links retain STP.
       spanningTree:
-        enabled: true
-        edgePort: true
-        bpduProtect: true
+        enabled: false
+        # Omada clears these settings when spanning tree is disabled.
+        edgePort: false
+        bpduProtect: false
         bpduFilter: false
     infra-iot-access:
       nativeVlan: 50

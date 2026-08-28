@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Plan or apply the active Git-declared Omada configuration.
+"""Compare the Omada controller with the repository configuration.
 
-The default is read-only. Secrets are accepted only as one bounded SOPS JSON
-document on standard input and are never printed, persisted, or accepted in
-arguments or environment variables.
+The command only reports changes unless --apply is given. Credentials must be
+supplied as SOPS JSON on standard input; they are not printed or stored.
 """
 
 from __future__ import annotations
@@ -32,9 +31,8 @@ POSTFLIGHT_ATTEMPTS = 15
 POSTFLIGHT_DELAY = 2.0
 PAGE = "page=1&pageSize=1000"
 BANDS = {"2.4GHz": 1, "dual": 3}
-# Required profile fields documented by Omada OpenAPI. Every declared profile
-# owns network membership; an optional spanningTree block additionally owns
-# the narrowly selected edge and BPDU safety settings.
+# Port profile fields managed through the Omada API. A spanningTree block also
+# manages the edge-port and BPDU settings.
 PROFILE_REQUIRED_POLICY_FIELDS = frozenset(
     {
         "poe", "dot1x", "portIsolationEnable", "lldpMedEnable",
@@ -44,7 +42,7 @@ PROFILE_REQUIRED_POLICY_FIELDS = frozenset(
 
 
 class SafeError(RuntimeError):
-    """An operator-facing error guaranteed not to contain secret material."""
+    """An error that can be printed without exposing credentials."""
 
 
 @dataclass(frozen=True)
@@ -812,7 +810,7 @@ def _wait(
             pass
         if attempt + 1 < attempts:
             sleeper(delay)
-    raise SafeError("Omada mutations did not reach semantic readiness")
+    raise SafeError("Omada did not match the requested configuration after applying changes")
 
 
 def apply(
@@ -937,25 +935,34 @@ def apply(
 
 
 def render(actions: Sequence[Action]) -> None:
-    print("Omada identity preflight: exact site, switch, and access point verified")
+    print("Connected to the configured Omada site, switch, and access point")
     for action in actions:
-        suffix = " (requires write-only PSK)" if action.domain == "wireless" and action.mutates else ""
+        suffix = " (SSID password required)" if action.domain == "wireless" and action.mutates else ""
         print(f"  {action.domain} {action.target}: {action.operation} - {action.detail}{suffix}")
     print(
-        f"Summary: {sum(action.mutates for action in actions)} mutation(s), "
+        f"Summary: {sum(action.mutates for action in actions)} change(s), "
         f"{sum(action.blocked for action in actions)} blocker(s)"
     )
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--desired", type=Path, default=DEFAULT_DESIRED_STATE)
-    parser.add_argument("--credentials-stdin", action="store_true", help="read SOPS JSON from stdin")
-    parser.add_argument("--apply", action="store_true", help="apply the reviewed plan")
+    parser.add_argument(
+        "--desired",
+        type=Path,
+        default=DEFAULT_DESIRED_STATE,
+        help="desired-state YAML file",
+    )
+    parser.add_argument(
+        "--credentials-stdin",
+        action="store_true",
+        help="read credentials as SOPS JSON from standard input",
+    )
+    parser.add_argument("--apply", action="store_true", help="make the planned changes")
     parser.add_argument(
         "--include-write-only",
         action="store_true",
-        help="include SSID PSKs in the plan; required for SSID create/update/rotation",
+        help="include SSID passwords; required to create, update, or rotate SSIDs",
     )
     args = parser.parse_args(argv)
     if not args.credentials_stdin:
@@ -979,7 +986,7 @@ def run(
     actions = make_plan(desired, snapshot, include_write_only=args.include_write_only)
     render(actions)
     if not args.apply:
-        print("Read-only plan complete; no controller mutation was requested")
+        print("Read-only plan complete; no changes were made")
         return 0
     mutations = apply(
         api,
@@ -989,7 +996,7 @@ def run(
         secret_document,
         include_write_only=args.include_write_only,
     )
-    print(f"Semantic postflight passed after {mutations} mutation(s)")
+    print(f"Verified controller state after {mutations} change(s)")
     return 0
 
 

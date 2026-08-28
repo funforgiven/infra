@@ -31,6 +31,7 @@ def profile(
     native: int,
     tagged: list[int],
     *,
+    spanning_tree_enabled: bool = True,
     edge_port: bool = False,
 ) -> dict[str, object]:
     native_id = f"n{native}"
@@ -45,7 +46,7 @@ def profile(
         "portIsolationEnable": False,
         "lldpMedEnable": False,
         "bandWidthCtrlType": 0,
-        "spanningTreeEnable": True,
+        "spanningTreeEnable": spanning_tree_enabled,
         "spanningTreeSetting": {
             "priority": 128,
             "extPathCost": 0,
@@ -107,7 +108,10 @@ class FakeApi:
             profile("All", "p-all", 1, []),
             profile("infra-ccr-trunk", "p-ccr", 1, [10, 20, 40, 50, 60, 90]),
             profile("infra-crs-trunk", "p-crs", 1, [10, 20, 40, 90]),
-            profile("infra-trusted-access", "p-trusted", 10, [], edge_port=True),
+            profile(
+                "infra-trusted-access", "p-trusted", 10, [],
+                spanning_tree_enabled=False,
+            ),
             profile("infra-iot-access", "p-iot", 50, []),
             profile("infra-management-access", "p-management", 90, []),
             profile("infra-ap-trunk", "p-ap", 90, [10, 50]),
@@ -294,10 +298,11 @@ class ReconcilerTests(unittest.TestCase):
         self.assertIn(("assign_profile", 2), self.api.calls)
         self.assertTrue(all(action.operation == "noop" for action in self.plan()))
 
-    def test_workstation_profile_reconciles_edge_and_bpdu_policy(self) -> None:
+    def test_workstation_profile_disables_stp_and_clears_subordinate_policy(self) -> None:
         trusted = next(
             item for item in self.api.profiles if item["name"] == "infra-trusted-access"
         )
+        trusted["spanningTreeEnable"] = True
         spanning_tree = trusted["spanningTreeSetting"]
         spanning_tree.update(
             {"edgePort": False, "bpduProtect": False, "bpduFilter": True}
@@ -316,9 +321,9 @@ class ReconcilerTests(unittest.TestCase):
         mutations = self.reconcile(include_psks=False)
         self.assertEqual(mutations, 1)
         spanning_tree = trusted["spanningTreeSetting"]
-        self.assertTrue(trusted["spanningTreeEnable"])
-        self.assertTrue(spanning_tree["edgePort"])
-        self.assertTrue(spanning_tree["bpduProtect"])
+        self.assertFalse(trusted["spanningTreeEnable"])
+        self.assertFalse(spanning_tree["edgePort"])
+        self.assertFalse(spanning_tree["bpduProtect"])
         self.assertFalse(spanning_tree["bpduFilter"])
         self.assertTrue(spanning_tree["bpduForward"])
         self.assertTrue(all(action.operation == "noop" for action in self.plan()))
