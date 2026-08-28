@@ -1,125 +1,60 @@
-# Repository Secrets
+# Secrets
 
-Commit secret values only as SOPS ciphertext. Recipients are declared in
-`../.sops.yaml`.
+Commit secret values only as SOPS ciphertext. Recipient rules live in
+[`../.sops.yaml`](../.sops.yaml). Never decrypt a secret into a tracked path,
+pass it as a command argument, or print it during validation.
 
-## Inventory
+This directory holds workstation, host, network, and offline recovery material.
+Kubernetes workload secrets are generally stored beside the deployment that
+consumes them. The Nix modules, runtime credential schemas, and SOPS documents
+are the inventory; this README does not duplicate every key.
 
-| SOPS file and key | Purpose |
-| --- | --- |
-| `github-ssh-key.sops` | GitHub SSH/signing and physical-host automation |
-| `api-tokens.yaml` → `codex/anwa_github_mcp_token` | Anwa workspace GitHub MCP server |
-| `api-tokens.yaml` → `codex/github_mcp_token` | GitHub MCP server |
-| `api-tokens.yaml` → `codex/context7_api_key` | Context7 MCP server |
-| `omada.yaml` → `omada/api_base` | Omada Cloud API endpoint |
-| `omada.yaml` → `omada/id` | Omada controller identifier |
-| `omada.yaml` → `omada/client_id` | Omada API client identifier |
-| `omada.yaml` → `omada/client_secret` | Omada API client secret |
-| `omada.yaml` → `wireless/psks/personal` | `Rooftrollen` WPA2-PSK |
-| `omada.yaml` → `wireless/psks/iot` | `Rooftrollen_IoT` WPA2-PSK |
-| `backblaze.yaml` → `undercloud/etcd_recovery/age_identity` | Cluster-external etcd backup decryption identity |
-| `backblaze.yaml` → `undercloud/etcd_restore_reader/application_key_id` | Read-only B2 recovery key identifier |
-| `backblaze.yaml` → `undercloud/etcd_restore_reader/application_key` | Read-only B2 recovery key secret |
-| `backblaze.yaml` → `undercloud/openstack_restore_reader/application_key_id` | Read-only OpenStack B2 recovery key identifier |
-| `backblaze.yaml` → `undercloud/openstack_restore_reader/application_key` | Read-only OpenStack B2 recovery key secret |
-| `backblaze.yaml` → `management/etcd_recovery/age_identity` | Cluster-external management-etcd backup decryption identity |
-| `backblaze.yaml` → `management/etcd_restore_reader/application_key_id` | Read-only management B2 recovery key identifier |
-| `backblaze.yaml` → `management/etcd_restore_reader/application_key` | Read-only management B2 recovery key secret |
-| `capi-management-kubeconfig.sops` | Encrypted administrative kubeconfig for management-cluster recovery |
-| `../deployments/homelab/cloud/undercloud/20-backup/writer.sops.yaml` | Flux-managed, upload-only B2 credential |
-| `../deployments/homelab/cloud/undercloud/50-openstack-core/compute/openstack-backup-writer.sops.yaml` | Flux-managed, upload-only OpenStack B2 credential |
-| `../deployments/homelab/cloud/management/30-backup/writer.sops.yaml` | Flux-managed, upload-only management B2 credential |
-| `routeros.yaml` → `routeros/pppoe_username` | TurkNet PPPoE username |
-| `routeros.yaml` → `routeros/pppoe_password` | TurkNet PPPoE password |
-| `routeros.yaml` → `routeros/ccr2004_login_password` | CCR2004 `admin` login password |
-| `routeros.yaml` → `routeros/crs510_login_password` | CRS510 `admin` login password |
-| `cloud-hosts.yaml` → `cloud_hosts/taleggio/ubuntu_console_password` | Taleggio local-console and sudo recovery password |
-| `cloud-hosts.yaml` → `cloud_hosts/asiago/ubuntu_console_password` | Asiago local-console and sudo recovery password |
-| `cloud-hosts.yaml` → `cloud_hosts/pecorino/ubuntu_console_password` | Pecorino local-console and sudo recovery password |
-| `kubernetes.yaml` → `undercloud/kube_encrypt_token` | Stable Kubernetes API secret-at-rest encryption key |
-| `kubernetes.yaml` → `undercloud/flux_age_identity` | Stable Flux SOPS age identity for undercloud reconciliation |
-| `kubernetes.yaml` → `management/k3s_token` | Stable k3s join and recovery token for the management cluster |
-| `kubernetes.yaml` → `management/flux_age_identity` | Stable Flux SOPS age identity for the management cluster |
-| `password-hashes.yaml` → `users/funforgiven/password_hash` | NixOS account password hash |
-| `zitadel.yaml` → `iam_owner_pat` | Admin-only offline ZITADEL recovery credential |
+## Recovery keys
 
-## Recovery
+Back up the complete personal age identity at:
 
-Back up the complete personal age identity at
-`~/.config/sops/age/keys.txt`. It can decrypt and rekey every current secret.
-
-NixOS also derives a recipient from `/etc/ssh/ssh_host_ed25519_key` for
-secrets consumed during unattended activation. Backing up that host key is
-optional; it preserves the host identity and avoids updating those recipient
-sets. `omada.yaml` deliberately excludes the host because it has no deployed
-unattended runtime-file consumer. The manual Omada reconciler receives a
-personal-recipient decryption stream on standard input and does not require a
-host recipient. When replacing the host key, derive the new recipient, add it
-to `../.sops.yaml`, and update every host-consumed SOPS file before
-`nixos-install`.
-
-The undercloud and management Flux age identities are stable recovery assets. sops-nix
-materializes them only on the controller, and bootstrap injects each as
-`flux-system/sops-age`. Do not regenerate them during a workstation, host, or
-cluster rebuild; rotate them only as an explicit recipient migration.
-
-## Service credential intake
-
-Ignored `*.key` files are a one-way intake boundary, not a secret store. Keep
-each file mode `0600`, put exactly one key in it, and never paste a value into a
-command, chat, commit, or log. The credential-final services workflow accepts
-these externally issued keys:
-
-| Intake file | Issuer and purpose |
-| --- | --- |
-| `B2_MASTER_APPLICATION_KEY_ID.key` | Backblaze master key ID; ephemeral scoped-key bootstrap |
-| `B2_MASTER_APPLICATION_KEY.key` | Backblaze master key; ephemeral scoped-key bootstrap |
-| `INFRA_TELEGRAM_BOT_TOKEN.key` | Infrastructure-alert bot token |
-| `HERMES_TELEGRAM_BOT_TOKEN.key` | Private Hermes bot token |
-| `ND_LASTFM_APIKEY.key` | Navidrome Last.fm application key |
-| `ND_LASTFM_SECRET.key` | Navidrome Last.fm application secret |
-| `OPENAI_API_KEY.key` | Independently revocable project key used only by Hermes |
-| `RESEND_ADMIN_API_KEY.key` | Resend administration key used by the pinned reconcilers |
-| `AWS_BOOTSTRAP_ACCESS_KEY_ID.key` | Temporary AWS bootstrap identity used once to create the narrower mail GitOps identity |
-| `AWS_BOOTSTRAP_SECRET_ACCESS_KEY.key` | Temporary AWS bootstrap secret used only in process memory and cleared after successful SOPS enrollment |
-
-The enrollment and provider reconcilers clear an intake file only after its
-value has been successfully encrypted or consumed. Backblaze's master pair
-creates three prefix-restricted application keys and is then cleared. Resend's
-admin key later creates the domain-scoped Stalwart sending key. Telegram chat
-and user IDs are discovered from exact `/activate` updates. Stalwart and backup passwords are generated
-locally. The operator owns the OpenAI project permissions and hard spend limit
-in the OpenAI dashboard; the generic enrollment app writes `OPENAI_API_KEY`
-directly from its one-way intake file into the admin-only Hermes SOPS document.
-No OpenAI Admin credential enters this repository. None of the provider-derived
-or locally generated values has or needs a hand-filled intake file.
-
-Enroll an external contract key from an intake directory without echoing it:
-
-```sh
-nix run .#enroll-services-credential -- \
-  --from-file --intake-directory /absolute/path/to/secrets KEY
+```text
+~/.config/sops/age/keys.txt
 ```
 
-Never put a derived application-key placeholder back into this directory.
+It can decrypt and rekey every current SOPS document. Store its backup outside
+the workstation and test that the backup is readable.
 
-## Editing
+NixOS also derives a recipient from `/etc/ssh/ssh_host_ed25519_key` for secrets
+needed during unattended activation. Backing up that host key preserves the
+machine identity and avoids a recipient migration. If the key is replaced, add
+the new recipient and update every host-consumed SOPS document before
+installation.
 
-Edit the structured files with the repository-pinned CLI:
+The undercloud and management Flux age identities are stable cluster-recovery
+assets. Do not regenerate them during a workstation, host, or cluster rebuild.
+Rotate them only as a planned recipient migration.
+
+The management kubeconfig, Backblaze restore readers, backup decryption
+identities, and the ZITADEL break-glass credential are administrator recovery
+material. They are not deployed by sops-nix or injected into application
+clusters.
+
+## Edit a secret
+
+Use the repository-pinned SOPS CLI:
 
 ```sh
-nix run .#sops --accept-flake-config -- secrets/api-tokens.yaml
-nix run .#sops --accept-flake-config -- secrets/backblaze.yaml
-nix run .#sops --accept-flake-config -- secrets/cloud-hosts.yaml
-nix run .#sops --accept-flake-config -- secrets/kubernetes.yaml
-nix run .#sops --accept-flake-config -- secrets/omada.yaml
-nix run .#sops --accept-flake-config -- secrets/password-hashes.yaml
 nix run .#sops --accept-flake-config -- secrets/routeros.yaml
-nix run .#sops --accept-flake-config -- secrets/zitadel.yaml
+nix run .#sops --accept-flake-config -- path/to/workload-secrets.sops.yaml
 ```
 
-Replace the binary SSH key by encrypting a new private key directly. Do not
-copy the plaintext key into this repository:
+Generate a replacement account password hash with `mkpasswd -m yescrypt`, then
+update `users/funforgiven/password_hash` in `password-hashes.yaml`.
+
+Cloud-host console passwords are stored as unique high-entropy plaintext values
+inside the encrypted `cloud-hosts.yaml` document. Do not precompute and commit a
+host hash: the controller sends only a salted one-way hash during enrollment.
+Password SSH login remains disabled; the original value is for supervised sudo
+and PiKVM console recovery.
+
+Replace the binary GitHub SSH private key without first copying it into the
+repository:
 
 ```sh
 nix run .#sops --accept-flake-config -- encrypt \
@@ -130,7 +65,7 @@ nix run .#sops --accept-flake-config -- encrypt \
   /secure/path/github_ed25519
 ```
 
-Use the management kubeconfig without leaving a plaintext copy behind:
+Use the encrypted management kubeconfig without creating a plaintext copy:
 
 ```sh
 nix run .#sops --accept-flake-config -- exec-file \
@@ -138,108 +73,110 @@ nix run .#sops --accept-flake-config -- exec-file \
   'kubectl --kubeconfig={} get nodes'
 ```
 
-Generate a replacement password hash with `mkpasswd -m yescrypt`, then update
-`users/funforgiven/password_hash` in `password-hashes.yaml`.
-
-Cloud-host console secrets are different: store a unique high-entropy
-plaintext value per host inside `cloud-hosts.yaml`; never commit a precomputed
-host hash. sops-nix materializes only the selected value on the controller,
-while the Ubuntu host receives only a salted one-way hash during supervised
-enrollment. OpenSSH password authentication stays disabled; the runtime value
-is used solely for password-required sudo over an SSH-key-authenticated
-connection and for PiKVM console recovery.
-
-After changing a secret, activate the NixOS configuration and restart its
-consumer:
+After changing a secret consumed by the NixOS controller, apply the host
+configuration so sops-nix refreshes its runtime file:
 
 ```sh
 sudo nixos-rebuild switch --flake .#parmigiano --accept-flake-config
 ```
 
-## Controller Runtime Files
+Restart or reconcile the affected consumer after the new value is present.
 
-sops-nix decrypts selected keys from `routeros.yaml`, `cloud-hosts.yaml`, and
-`kubernetes.yaml` during system activation and materializes them as separate
-files owned by `funforgiven` with mode `0400`:
+## External credential intake
 
-| Runtime path | Consumer |
+Ignored `*.key` files are one-way intake files, not a secret store. Each file
+must be a non-symlink with mode `0600` and contain exactly one value. The current
+external intake names are:
+
+| File | Issuer and use |
 | --- | --- |
-| `/run/secrets/homelab-routeros-ccr2004-login-password` | CCR2004 Ansible network automation |
-| `/run/secrets/homelab-routeros-crs510-login-password` | CRS510 Ansible network automation |
-| `/run/secrets/cloud-host-taleggio-ubuntu-console-password` | Taleggio Ansible sudo and PiKVM console recovery |
-| `/run/secrets/cloud-host-asiago-ubuntu-console-password` | Asiago Ansible sudo and PiKVM console recovery |
-| `/run/secrets/cloud-host-pecorino-ubuntu-console-password` | Pecorino Ansible sudo and PiKVM console recovery |
-| `/run/secrets/undercloud-kube-encrypt-token` | Kubespray secret-at-rest encryption configuration |
-| `/run/secrets/undercloud-flux-age-identity` | Flux `flux-system/sops-age` bootstrap and recovery |
-| `/run/secrets/management-k3s-token` | Management k3s bootstrap and recovery |
-| `/run/secrets/management-flux-age-identity` | Management Flux `flux-system/sops-age` bootstrap and recovery |
+| `B2_MASTER_APPLICATION_KEY_ID.key` | Temporary Backblaze key ID used to create scoped writers |
+| `B2_MASTER_APPLICATION_KEY.key` | Temporary Backblaze key used to create scoped writers |
+| `INFRA_TELEGRAM_BOT_TOKEN.key` | Infrastructure alert bot token |
+| `ND_LASTFM_APIKEY.key` | Navidrome Last.fm application key |
+| `ND_LASTFM_SECRET.key` | Navidrome Last.fm application secret |
+| `RESEND_ADMIN_API_KEY.key` | Resend administration key used to create a scoped sending key |
+| `AWS_BOOTSTRAP_ACCESS_KEY_ID.key` | Temporary AWS identity used to create the mail provisioning identity |
+| `AWS_BOOTSTRAP_SECRET_ACCESS_KEY.key` | Temporary AWS bootstrap secret |
 
-The two login passwords are independent URL-safe encodings of 32 random bytes:
-exactly 43 characters from `A-Z`, `a-z`, `0-9`, `_`, and `-`. Ansible checks
-the shape without printing a value. Rotate one device at a time through its
-direct console or WinBox, then update the matching SOPS value before the next
-automation run.
+Enroll a declared value without echoing it:
 
-The PPPoE values remain encrypted in `routeros.yaml` as the recovery source for
-future Terraform/REST adoption. They have no runtime files while there is no
-declarative consumer. The Omada reconciler documented under
-`components/cloud/network-automation/` accepts the complete decrypted JSON
-document only through standard input for manual runs. `omada.yaml` remains
-encrypted only to the personal recovery recipient: its values are not
-decryptable by the host, materialized as runtime files, or exported into an
-environment. Add a narrowly scoped host recipient and runtime declarations
-only when an unattended consumer exists.
+```sh
+nix run .#enroll-services-credential -- \
+  --from-file --intake-directory /absolute/path/to/intake KEY
+```
 
-`backblaze.yaml` is likewise an admin-only recovery source. It contains the
-separate offline age identity for each cluster and the application keys that
-can only list and read their corresponding etcd or OpenStack backup versions.
-None is materialized by sops-nix or injected into a cluster. Each upload-only
-credential has exactly one Flux-managed ciphertext source and cannot read,
-list, delete, or administer the bucket. The regenerated B2 master key is never
-committed.
+The enrollment tool truncates the intake file only after successful SOPS
+encryption. Provider reconcilers may also consume a temporary bootstrap value to
+create narrower credentials; they clear it only after the returned credentials
+are encrypted and verified.
 
-`zitadel.yaml` is the identity-plane break-glass credential. It is encrypted
-only to the personal age recipient and is not materialized by sops-nix, Flux,
-or any cluster. Normal reconciliation uses the `tofu-identity-controller`
-machine account with `ORG_OWNER`; use the offline PAT only when that account or
-its key must be recovered. The local `iam-breakglass` human and Kubernetes
-certificate kubeconfigs remain independent interactive recovery paths.
+Generated passwords and provider-derived identifiers do not have intake files.
+See the [service operations guide](../deployments/homelab/cloud/services/ACTIVATION.md)
+for Backblaze, Telegram, Resend, AWS mail, and host enrollment.
 
-A root `.env` is forbidden; its ignore rule is defense in depth, not a secret
-storage mechanism. Use the SOPS editor above rather than
-redirecting decrypted output into a repository or temporary file. Never
-decrypt a secret into a committed path, pass a secret value in a command
-argument, or print it in validation output.
+## Runtime files
 
-## Recipient Changes
+sops-nix decrypts only values declared by the active NixOS configuration. Files
+are owned by their consumer account and use mode `0400` unless the service
+requires a different mode.
 
-Derive a recipient from a host public key with:
+RouterOS automation currently receives five files:
+
+| Runtime path | Use |
+| --- | --- |
+| `/run/secrets/homelab-routeros-ccr2004-login-password` | CCR2004 login |
+| `/run/secrets/homelab-routeros-crs510-login-password` | CRS510 login |
+| `/run/secrets/homelab-routeros-ccr2004-wireguard-private-key` | Administration WireGuard interface |
+| `/run/secrets/homelab-routeros-ccr2004-wireguard-parmigiano-preshared-key` | Workstation WireGuard peer |
+| `/run/secrets/homelab-routeros-ccr2004-mullvad-private-key` | Destination-scoped Mullvad tunnel |
+
+Other controller runtime files include the per-host Ubuntu console passwords,
+the Kubernetes API encryption token, and stable undercloud/management Flux and
+k3s bootstrap identities. Their exact declarations live in the Nix secret
+module and the cloud inventory.
+
+PPPoE credentials remain encrypted recovery material because there is no
+declarative runtime consumer. Omada credentials are decrypted only for a manual
+reconciliation stream on standard input. Neither is exported to an environment
+or written to a runtime file.
+
+## Change recipients
+
+Derive an age recipient from an SSH public key:
 
 ```sh
 nix run .#ssh-to-age --accept-flake-config \
   < /path/to/ssh_host_ed25519_key.pub
 ```
 
-After changing `../.sops.yaml`, update every encrypted file:
+After editing `.sops.yaml`, update each affected encrypted document:
 
 ```sh
-nix run .#sops --accept-flake-config -- updatekeys secrets/api-tokens.yaml
-nix run .#sops --accept-flake-config -- updatekeys secrets/backblaze.yaml
-nix run .#sops --accept-flake-config -- updatekeys secrets/cloud-hosts.yaml
-nix run .#sops --accept-flake-config -- updatekeys secrets/kubernetes.yaml
-nix run .#sops --accept-flake-config -- updatekeys secrets/github-ssh-key.sops
-nix run .#sops --accept-flake-config -- updatekeys secrets/omada.yaml
-nix run .#sops --accept-flake-config -- updatekeys secrets/password-hashes.yaml
-nix run .#sops --accept-flake-config -- updatekeys secrets/routeros.yaml
-nix run .#sops --accept-flake-config -- updatekeys secrets/zitadel.yaml
+nix run .#sops --accept-flake-config -- updatekeys PATH
 ```
 
-If a recipient is compromised, remove it, run `updatekeys`, and rotate each
-affected file's SOPS data key:
+Review the recipient diff and verify that both the retained recovery identity
+and every required host or cluster identity can still decrypt their documents.
+
+If a recipient is compromised, remove it and rotate the SOPS data key in every
+affected file:
 
 ```sh
-nix run .#sops --accept-flake-config -- rotate --in-place FILE
+nix run .#sops --accept-flake-config -- rotate --in-place PATH
 ```
 
-Also rotate every affected API token, SSH key, or password. Old ciphertext
-remains available in Git history.
+Then rotate the underlying API token, SSH key, password, or provider credential.
+Re-encryption cannot remove old ciphertext from Git history.
+
+## Plaintext safety
+
+- Do not use a root `.env` as secret storage.
+- Do not redirect decrypted output into the repository or a predictable
+  temporary file.
+- Do not place credentials in command arguments, environment variables, plan
+  files, screenshots, chat, or logs.
+- Keep recovery readers and decryption identities separate from upload-only
+  cluster credentials.
+- Verify ciphertext and structure in reviews; do not reveal values to prove that
+  an update succeeded.
