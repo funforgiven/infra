@@ -29,7 +29,7 @@ variable "image_revision" {
 }
 
 variable "home_assistant_platform" {
-  description = "Home Assistant boot platform; switch to haos only after the migration gate passes"
+  description = "Home Assistant boot platform; switch to haos only after testing backup restore and recovery"
   type        = string
   default     = "nixos"
 
@@ -66,15 +66,6 @@ data "openstack_networking_subnet_v2" "public" {
 
 data "openstack_compute_flavor_v2" "services" {
   name = "services.worker"
-}
-
-data "openstack_images_image_v2" "hermes" {
-  name = "nixos-hermes-${local.image_revision_short}"
-
-  properties = {
-    image_role            = "hermes"
-    image_source_revision = var.image_revision
-  }
 }
 
 data "openstack_images_image_v2" "home_assistant" {
@@ -199,23 +190,6 @@ resource "openstack_networking_secgroup_rule_v2" "home_assistant_provider_icmp" 
   security_group_id = openstack_networking_secgroup_v2.home_assistant_provider.id
 }
 
-resource "openstack_networking_port_v2" "hermes" {
-  name               = "hermes-services"
-  network_id         = data.openstack_networking_network_v2.services.id
-  admin_state_up     = true
-  security_group_ids = [openstack_networking_secgroup_v2.service_ssh.id]
-  tags               = local.tags
-
-  fixed_ip {
-    subnet_id  = data.openstack_networking_subnet_v2.services.id
-    ip_address = "192.168.80.11"
-  }
-
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
 resource "openstack_networking_port_v2" "home_assistant_services" {
   name           = "home-assistant-services"
   network_id     = data.openstack_networking_network_v2.services.id
@@ -247,23 +221,6 @@ resource "openstack_networking_port_v2" "home_assistant_provider" {
   fixed_ip {
     subnet_id  = data.openstack_networking_subnet_v2.public.id
     ip_address = "10.21.40.120"
-  }
-
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
-resource "openstack_blockstorage_volume_v3" "hermes_root" {
-  name        = "hermes-root-${local.image_revision_short}"
-  description = "Retained NixOS root for Hermes"
-  size        = 80
-  image_id    = data.openstack_images_image_v2.hermes.id
-
-  metadata = {
-    image_source_revision = var.image_revision
-    managed_by            = "opentofu"
-    service               = "hermes"
   }
 
   lifecycle {
@@ -305,35 +262,6 @@ resource "openstack_blockstorage_volume_v3" "home_assistant_os_root" {
   }
 }
 
-resource "openstack_compute_instance_v2" "hermes" {
-  name                = "hermes"
-  flavor_id           = data.openstack_compute_flavor_v2.services.id
-  config_drive        = true
-  stop_before_destroy = true
-
-  block_device {
-    uuid                  = openstack_blockstorage_volume_v3.hermes_root.id
-    source_type           = "volume"
-    destination_type      = "volume"
-    boot_index            = 0
-    delete_on_termination = false
-  }
-
-  network {
-    port = openstack_networking_port_v2.hermes.id
-  }
-
-  metadata = {
-    image_source_revision = var.image_revision
-    managed_by            = "opentofu"
-    service               = "hermes"
-  }
-
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
 resource "openstack_compute_instance_v2" "home_assistant" {
   name                = "home-assistant"
   flavor_id           = data.openstack_compute_flavor_v2.services.id
@@ -365,30 +293,6 @@ resource "openstack_compute_instance_v2" "home_assistant" {
   }
 }
 
-resource "openstack_networking_floatingip_v2" "hermes" {
-  pool        = data.openstack_networking_network_v2.public.name
-  subnet_id   = data.openstack_networking_subnet_v2.public.id
-  address     = "10.21.40.121"
-  port_id     = openstack_networking_port_v2.hermes.id
-  fixed_ip    = "192.168.80.11"
-  description = "Hermes administration from the trusted operator LAN"
-  tags        = local.tags
-
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
-output "hermes_private_address" {
-  description = "Hermes address on the services network"
-  value       = "192.168.80.11"
-}
-
-output "hermes_provider_address" {
-  description = "Hermes floating address reachable from the trusted operator LAN"
-  value       = openstack_networking_floatingip_v2.hermes.address
-}
-
 output "home_assistant_private_address" {
   description = "Home Assistant address used by in-cluster ingress"
   value       = "192.168.80.10"
@@ -397,4 +301,38 @@ output "home_assistant_private_address" {
 output "home_assistant_provider_address" {
   description = "Home Assistant direct address for local discovery"
   value       = "10.21.40.120"
+}
+
+# Hermes is retired. These blocks explicitly destroy its cloud resources when
+# the reviewed services-hosts plan is applied.
+removed {
+  from = openstack_compute_instance_v2.hermes
+
+  lifecycle {
+    destroy = true
+  }
+}
+
+removed {
+  from = openstack_networking_floatingip_v2.hermes
+
+  lifecycle {
+    destroy = true
+  }
+}
+
+removed {
+  from = openstack_networking_port_v2.hermes
+
+  lifecycle {
+    destroy = true
+  }
+}
+
+removed {
+  from = openstack_blockstorage_volume_v3.hermes_root
+
+  lifecycle {
+    destroy = true
+  }
 }

@@ -1,6 +1,5 @@
 schemaVersion: 1
 data:
-    HERMES_BACKUP_RESTIC_PASSWORD: ENC[AES256_GCM,data:isTyts9Q16r9agmZlsUYjbgcgxgogQx4j/iuZMXQQR+JHTGIZGLKCAR2d3f5iTkmxsvzj3F1Lx7qVghc07Jx6lh3vaHgv3PY/+f+VoauIglBILhWqfzLuw==,iv:2syneyEDcoU7Oa8S0783hYTXr35Q4lXiBQY/xHo2NoQ=,tag:QpXGN016PrLwc1zMJgJs1A==,type:str]
     HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD: ENC[AES256_GCM,data:DXVCNrM+Cs/rt0KgXTx52kfXt3VqQPWF/xKBiCMhcoW5jPNG9Lpqhg7t0mONbmbdFd8Ln3CdXcUIOm07Fw5oXzmIp3YQ3RC/+2US0CrFLmz5vHY/t+yOlQ==,iv:XmojhzjZBlGf3rvgfeU/ZxYczoiqWk1CmrLKQglU1rg=,tag:1j8Tg+WhY0Rvx9MJ2JUFLw==,type:str]
 sops:
     age:
@@ -14,6 +13,6 @@ sops:
             -----END AGE ENCRYPTED FILE-----
           recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-08-23T14:25:14Z"
-    mac: ENC[AES256_GCM,data:gKOldmdmWTakyPG3wGZdA9JmQRk0Zj2xc1HOtz2EqwH6LXTAW5FCrayUURHFwusqxMWqoMK455bO+XHJ6altMbYfGhcz2bRRKjy3W5f06gKLIe04OCRqCAZmV11Bfto0mHZH+CKYkAuQBfNUFZIC4cGyLpDbwblc545ID6/G/ck=,iv:koqRewIy8BZWu0zVBcu99fGukuHh9xKxs0WN/iAtVU4=,tag:hSiGLrOtMb6SprKG+ywshA==,type:str]
+    lastmodified: "2026-08-28T21:36:56Z"
+    mac: ENC[AES256_GCM,data:GEjFptC35wW9HNZ2dnvGddRYpnWfOWG+7YvgjvbBQDa/4/ETrcTUMCdyWE2SN2r96HLo3Ey4j+Nlq04mtfif7NUw87Rtm0MjWMBqsEfy7rqsqQ/RJpTDnCF6G1icS0iuuSL3fkc1Q0AV5IHHNL6pQJPTlzO8ek9AIsBnMiuMm2I=,iv:w4UQlOlq/RHtkCIhQga9irPHQktX/Ann6TKBrUfqnKM=,tag:LKl8DE+SYuzNlmZx8kZ6gQ==,type:str]
     version: 3.13.3

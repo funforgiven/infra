@@ -16,7 +16,6 @@ let
 in
 {
   dendritic.hosts = {
-    hermes = mkServer "services-openstack-guest" "services-hermes";
     home-assistant = mkServer "services-openstack-guest" "services-home-assistant";
     mail-aws = {
       system = "aarch64-linux";

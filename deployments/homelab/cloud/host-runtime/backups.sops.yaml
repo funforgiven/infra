@@ -1,7 +1,5 @@
 schemaVersion: 1
 data:
-    HERMES_BACKUP_B2_APPLICATION_KEY_ID: ENC[AES256_GCM,data:wWEZw31d9OsW3nvKUBG3LYW7xV4vuplOC9B7vD5+3UttjtYR,iv:qyGMJIhbmGEZjInuGXtlwueMuFLgRYYXNX0tUWR9H7Q=,tag:uDSQvGT/zExQvp0CegloSA==,type:str]
-    HERMES_BACKUP_B2_APPLICATION_KEY: ENC[AES256_GCM,data:uGzGQEyGVAPXA629y6qdEC0BHynOkUfEwCO+j5lkmqhDr66Yd4+Lj1U1SH8=,iv:/lKDJ0bEWnfkjjzyNUhhV6GyLPodZ4HXZLDMRgtjd6U=,tag:6rWIoJqQzrimazOE4h4Rhg==,type:str]
     HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID: ENC[AES256_GCM,data:mW96hgb5QiCVG91/7zqUPfSrlCwID2LjFXbn87lbwFy8ZWwe,iv:rsgCU7iHOf12VbAUY68/vChgEomBIxvb4KlryU7MJL0=,tag:p6knhv0ob0pX+gvQipFK0Q==,type:str]
     HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY: ENC[AES256_GCM,data:3Hhnfkfd+uqv1wo0mGkhkgrxB/UnG9ln6aZhaD0tesg1JBmmWicVgIlh/wk=,iv:KsU6riQGzSIfriY6BqAES2JvLqnVH8rBjZEvVRp4Tkw=,tag:Q8abEYFXqvNpFD2qqOtdcw==,type:str]
 sops:
@@ -16,6 +14,6 @@ sops:
             -----END AGE ENCRYPTED FILE-----
           recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-08-23T14:25:14Z"
-    mac: ENC[AES256_GCM,data:Xj5uig313lu13ZebFPr1YD9lB/k3UsrY8N/TUA1vpkIG1mYkHJPyAYcEu7L8i1kht1Thf8pXPXGzjNNDKzdxonU2Oisop08JhEu0z7ZeHV+JTH6zpCCWzl1RPBAmF0Z0wZui0tMSN7kr5jsvu/sk4PIvPp+v6MKuq05EMtwZkZ4=,iv:a+CjR3UXwCltzD7EpedImIHppIu23Fj04bnruvG1GbY=,tag:4XsK3g73M9VbjXTul0GNoQ==,type:str]
+    lastmodified: "2026-08-28T21:36:59Z"
+    mac: ENC[AES256_GCM,data:NnGyxllAab1KyBsNOC/PR8NpkBS48oK3eAsxGiUeVeLTPjrzzBdWy+zXdSP2W05zDDq6OyX8Gu+t8IsmsY5IZB83VDhYoddl6CcTPdd9NsYkbnOn0ijc5aftS8da7LWZGhNLZGdiTE0TThncxo3qqOy1iELG6oOxR3oPva8E50Q=,iv:5jJS9uHN0o4Gts1lnXMy0nvi4rTBaK4CCOX6IsXRbq4=,tag:xudb3QX/G5qN2k1RRqMZQg==,type:str]
     version: 3.13.3

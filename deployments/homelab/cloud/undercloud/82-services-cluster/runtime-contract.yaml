@@ -16,12 +16,6 @@ data:
         - ND_LASTFM_SECRET
       mailProvisioning:
         - RESEND_ADMIN_API_KEY
-    hostCredentials:
-      hermes:
-        secretFile: deployments/homelab/cloud/host-runtime/hermes.sops.yaml
-        keys:
-          - HERMES_TELEGRAM_BOT_TOKEN
-          - OPENAI_API_KEY
     generatedSecrets:
       services-cluster:
         secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
@@ -35,7 +29,6 @@ data:
       service-hosts:
         secretFile: deployments/homelab/cloud/host-runtime/generated.sops.yaml
         keys:
-          - HERMES_BACKUP_RESTIC_PASSWORD
           - HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD
     provisionedSecrets:
       backblaze-services:
@@ -48,8 +41,6 @@ data:
         provisioner: reconcile-services-backblaze
         secretFile: deployments/homelab/cloud/host-runtime/backups.sops.yaml
         keys:
-          - HERMES_BACKUP_B2_APPLICATION_KEY_ID
-          - HERMES_BACKUP_B2_APPLICATION_KEY
           - HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID
           - HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY
       telegram-infrastructure:
@@ -57,12 +48,6 @@ data:
         secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
         keys:
           - INFRA_TELEGRAM_CHAT_ID
-      telegram-hermes:
-        provisioner: reconcile-services-telegram
-        secretFile: deployments/homelab/cloud/host-runtime/hermes.sops.yaml
-        keys:
-          - HERMES_TELEGRAM_ALLOWED_USERS
-          - HERMES_TELEGRAM_HOME_CHANNEL
       aws-mail-auth:
         provisioner: enroll-aws-mail-auth
         secretFile: deployments/homelab/cloud/undercloud/84-mail-aws/aws.sops.yaml

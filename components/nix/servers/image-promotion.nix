@@ -1,7 +1,12 @@
-{ inputs, ... }:
+{
+  config,
+  inputs,
+  lib,
+  ...
+}:
 {
   perSystem =
-    { pkgs, ... }:
+    { pkgs, system, ... }:
     let
       promoteServiceImages = pkgs.writeShellApplication {
         name = "promote-service-images";
@@ -72,7 +77,7 @@
           temporary_directory="$(mktemp --directory)"
           trap 'rm -rf "$temporary_directory"' EXIT
 
-          host=hermes
+          host=home-assistant
           image_name="nixos-$host-''${revision:0:12}"
 
           nix build \
@@ -197,7 +202,8 @@
           fi
 
           printf '%s\n' \
-            "Promoted Hermes candidate $image_name for $revision and HAOS $haos_version." \
+            "Promoted the Home Assistant NixOS image at $revision." \
+            "Verified HAOS $haos_version." \
             'Active boot-volume revisions were intentionally left unchanged.'
         '';
       };
@@ -205,14 +211,16 @@
     {
       apps.promote-service-images = {
         program = "${promoteServiceImages}/bin/promote-service-images";
-        meta.description = "Promote signed-revision NixOS service images into Glance";
+        meta.description = "Build and upload pinned service images to OpenStack Glance";
       };
 
       packages = {
-        hermes-openstack-image =
-          inputs.self.nixosConfigurations.hermes.config.system.build.images.openstack;
-        nixos-anywhere = inputs.nixos-anywhere.packages.${pkgs.stdenv.hostPlatform.system}.nixos-anywhere;
+        nixos-anywhere = inputs.nixos-anywhere.packages.${system}.nixos-anywhere;
         promote-service-images = promoteServiceImages;
+      }
+      // lib.optionalAttrs (system == config.dendritic.hosts.home-assistant.system) {
+        home-assistant-openstack-image =
+          inputs.self.nixosConfigurations.home-assistant.config.system.build.images.openstack;
       };
     };
 }
