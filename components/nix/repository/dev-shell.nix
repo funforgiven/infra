@@ -10,6 +10,7 @@ _: {
       options.repository.devShell.shellHook = lib.mkOption {
         type = lib.types.lines;
         default = "";
+        description = "Commands run when entering the default development shell.";
       };
 
       config = {
@@ -34,6 +35,7 @@ _: {
             pkgs.shellcheck
             pkgs.skopeo
             pkgs.sops
+            pkgs.velero
             pkgs.xorriso
             pkgs.yamllint
           ];
