@@ -1,117 +1,65 @@
-# Declarative service hosts
+# Service hosts
 
-Hermes and the legacy Home Assistant installation are NixOS closures built from
-this repository. Home Assistant is migrating to the official HAOS appliance;
-its version and archive digest are pinned by the same signed image-promotion
-gate. Mail runs on the dedicated AWS Frankfurt NixOS appliance declared under
-`components/cloud/services/mail-aws`.
-The operator account authenticates only with the pinned SSH key and has
-passwordless sudo because service hosts intentionally have no login password.
+This component defines the NixOS service hosts and their shared backup and
+alerting modules. The current Home Assistant host is built from this flake.
+Mail uses the separate AWS configuration under
+`components/cloud/services/mail-aws/`.
 
-Use the no-echo enrollment app for every declared host profile:
+The service accounts use the pinned SSH key and have no login password.
 
-```console
+## Deploy host secrets
+
+Provider credentials are first stored as SOPS ciphertext. Locally generated
+passwords are written directly to SOPS. To install one declared profile on a
+host, run:
+
+```sh
 nix run .#enroll-service-host-secrets -- SSH_TARGET PROFILE
 ```
 
-It decrypts only the contract keys for the selected profile in memory and
-streams root-only mode-0400 files through SSH standard input. Provider-issued
-values are enrolled into workload-specific, admin-recipient-only SOPS
-documents first; locally owned passwords are generated directly as ciphertext.
+The command decrypts only the selected profile and streams mode-`0400` files to
+the host over SSH. It does not put values in command arguments. Available
+profiles and credential-rotation procedures are documented in the
+[service operations guide](../../../deployments/homelab/cloud/services/ACTIVATION.md).
 
-## Hermes enrollment
+## Off-site backups
 
-Hermes uses the direct `openai-api` provider with `gpt-5.6-luna` as its default
-model. The operator creates and constrains its independently revocable project
-key in the OpenAI dashboard, then the generic credential enrollment app moves
-`OPENAI_API_KEY` from its ignored mode-0600 one-way intake file into the
-admin-recipient-only `deployments/homelab/cloud/host-runtime/hermes.sops.yaml`
-document. No OpenAI Admin credential, project policy, budget, or identifier is
-managed here. The
-`hermes-openai` host profile decrypts that one value in memory and streams a
-root-only `/var/lib/hermes-bootstrap/openai.env` file over SSH standard input.
-The model remains declarative because Hermes must name a model in each API
-request; an API key authenticates the request but does not select its model.
+Each stateful NixOS host declares its Restic paths and retention in Nix. The
+backup unit starts only when these root-owned files exist:
 
-The separate `hermes-telegram` profile reads the independently routed Telegram
-values and creates `/var/lib/hermes-bootstrap/telegram.env` with
-`TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USERS`, and `TELEGRAM_HOME_CHANNEL`.
-This split permits OpenAI and Telegram rotation without re-enrolling the other
-credential boundary. Hermes remains condition-gated until both files exist. Apply the
-NixOS closure again after enrollment so the Hermes module reseeds its
-service-owned `.env`; no interactive provider authentication is required.
+- `/var/lib/backup-bootstrap/repository`
+- `/var/lib/backup-bootstrap/password`
+- `/var/lib/backup-bootstrap/environment`
 
-If ciphertext is lost or the key must rotate, issue a replacement project key,
-enroll and deploy it, verify Hermes, and then revoke the old key in OpenAI.
+Every host has a separate Backblaze application key restricted to its own
+prefix in the `fahrican-cloud-recovery` bucket. Initialize a new empty prefix
+once, then run and restore the first backup before placing important data on the
+host:
 
-Only the Hermes bot token is externally enrolled. The pinned Telegram
-reconciler derives the allowlisted user and home-channel identifiers from the
-single declared private `/activate` update and writes them directly as SOPS
-ciphertext. Those derived values have no intake files.
+```sh
+nix run .#initialize-services-restic -- check
+nix run .#initialize-services-restic -- apply
+```
 
-The Telegram bot is polling-only and defaults to deny; never enable the global
-allow-all setting. Hermes globally disables its web toolset, autonomous memory,
-embeddings, Hindsight, and external retrieval integrations.
+The timer runs daily and retains 14 daily, 8 weekly, 12 monthly, and 3 yearly
+snapshots.
 
-## Off-site host backups
+After the HAOS migration, Home Assistant uses its native encrypted backups.
+Keep the old Restic path and NixOS root volume until an isolated HAOS restore has
+succeeded.
 
-Each stateful host declares its Restic paths and retention policy in Nix. The
-backup unit remains condition-gated until three root-only files exist:
+## Alerts
 
-- /var/lib/backup-bootstrap/repository: one repository or host-specific prefix
-- /var/lib/backup-bootstrap/password: the repository encryption password
-- /var/lib/backup-bootstrap/environment: systemd EnvironmentFile entries for
-  the least-privilege object-store writer credential
+Service hosts expose node and systemd metrics on TCP 9100 to the services
+subnet. A successful Restic run updates a node-exporter textfile metric; the
+services cluster alerts if the exporter is unavailable or the last successful
+backup is older than 26 hours.
 
-All repositories use the existing `fahrican-cloud-recovery` Backblaze B2
-bucket. Hermes and legacy Home Assistant are confined respectively to
-`services/hosts/hermes/` and `services/hosts/home-assistant/`. The pinned Backblaze reconciler creates an
-independent B2 application key restricted to each prefix so Restic can back
-up, restore, and prune without crossing a host boundary. Returned material is
-written directly to the admin-only SOPS document, and the master bootstrap pair
-is cleared only after the complete reconciliation. The repository password is
-locally generated directly into SOPS.
+Critical units also have a local `OnFailure` Telegram notifier. Its dedicated
+profile installs the infrastructure bot token and chat ID at:
 
-Materialize these files with the host enrollment app after the host is
-reachable through its pinned SSH identity. Never pass values as command
-arguments or write plaintext into the repository. The operator must initialize an empty
-repository with `initialize-services-restic apply`, run the first backup, and
-perform a restore into an isolated temporary host before enabling a production
-service. The initializer creates the encrypted repository locally and uploads
-only its initial files through the already prefix-bound key because Backblaze
-cannot report a missing object to that caller. Scheduled operations use the
-same key and remain confined to their host prefix.
+- `/var/lib/monitoring-bootstrap/bot-token`
+- `/var/lib/monitoring-bootstrap/chat-id`
 
-The declarative Restic timer runs daily with randomized delay and retains 14 daily,
-8 weekly, 12 monthly, and 3 yearly snapshots.
-
-After HAOS cutover, Home Assistant uses its native encrypted automatic-backup
-manager and native Backblaze B2 backup-location integration with the same
-prefix-scoped application key. Restic stays in the contract only until a native
-isolated restore passes and the retained NixOS root is retired.
-
-## Host alert enrollment
-
-The OpenStack service hosts export node and systemd metrics on TCP 9100
-only to the services subnet. A successful Restic unit writes an atomic
-textfile metric; the post-activation synthetic wave alerts when either
-exporter is unavailable or its last success is older than 26 hours. The
-AWS mail appliance is instead covered by public protocol probes and CloudWatch
-alarms.
-
-Critical units also use a local systemd `OnFailure` notifier. Its profile reads
-the dedicated infrastructure bot token and chat identifier from the central
-SOPS contract and writes mode-0400 files at
-`/var/lib/monitoring-bootstrap/bot-token` and
-`/var/lib/monitoring-bootstrap/chat-id`. Enroll only the token; the Telegram
-reconciler discovers and encrypts the group identifier. Then materialize the
-profile through encrypted SSH standard input;
-do not put either value in an SSH command, Nix option, shell history, or
-temporary file. The notifier supplies the token to curl through standard input,
-so it is absent from the process list.
-
-Hermes additionally needs its separate OpenAI and Telegram runtime files.
-Those credentials must not reuse the infrastructure or media bots. AWS mail
-generates its administrator and mailbox credentials on the instance, stores
-them in Secrets Manager, and reconciles the domain and account plan through
-`stalwart-cli apply`.
+The AWS mail appliance uses public protocol probes and CloudWatch alarms instead
+of this host profile.

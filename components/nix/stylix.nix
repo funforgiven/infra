@@ -11,7 +11,7 @@ in
   options.dendritic.stylix.commonModule = lib.mkOption {
     type = lib.types.deferredModule;
     default = { };
-    description = "Shared Stylix configuration evaluated by NixOS and standalone Home Manager.";
+    description = "Stylix settings shared by NixOS and Home Manager.";
   };
 
   config = {

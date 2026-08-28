@@ -11,10 +11,12 @@ let
     options = {
       username = lib.mkOption {
         type = lib.types.singleLineStr;
+        description = "Login name of the primary user.";
       };
 
       homeDirectory = lib.mkOption {
         type = lib.types.strMatching "/.*";
+        description = "Absolute home directory of the primary user.";
       };
     };
   };
@@ -29,29 +31,49 @@ let
     options = {
       connector = lib.mkOption {
         type = lib.types.strMatching "[A-Za-z0-9][A-Za-z0-9-]*";
+        description = "Connector name reported by Niri, such as DP-1.";
       };
 
       identifier = lib.mkOption {
         type = lib.types.addCheck lib.types.singleLineStr (value: value != "");
+        description = "Stable make, model, and serial identifier used by Niri.";
       };
 
       mode = lib.mkOption {
         type = lib.types.submodule {
           options = {
-            width = lib.mkOption { type = lib.types.ints.positive; };
-            height = lib.mkOption { type = lib.types.ints.positive; };
-            refresh = lib.mkOption { type = positiveNumber; };
+            width = lib.mkOption {
+              type = lib.types.ints.positive;
+              description = "Horizontal pixel count.";
+            };
+            height = lib.mkOption {
+              type = lib.types.ints.positive;
+              description = "Vertical pixel count.";
+            };
+            refresh = lib.mkOption {
+              type = positiveNumber;
+              description = "Refresh rate in hertz.";
+            };
           };
         };
       };
 
-      scale = lib.mkOption { type = positiveNumber; };
+      scale = lib.mkOption {
+        type = positiveNumber;
+        description = "Niri output scale factor.";
+      };
 
       position = lib.mkOption {
         type = lib.types.submodule {
           options = {
-            x = lib.mkOption { type = lib.types.int; };
-            y = lib.mkOption { type = lib.types.int; };
+            x = lib.mkOption {
+              type = lib.types.int;
+              description = "Horizontal position in Niri's logical coordinate space.";
+            };
+            y = lib.mkOption {
+              type = lib.types.int;
+              description = "Vertical position in Niri's logical coordinate space.";
+            };
           };
         };
       };
@@ -65,6 +87,7 @@ let
               180
               270
             ];
+            description = "Clockwise output rotation in degrees.";
           };
         };
       };
@@ -74,9 +97,13 @@ let
           lib.types.bool
           (lib.types.enum [ "on-demand" ])
         ];
+        description = "Variable-refresh-rate setting passed to Niri.";
       };
 
-      focusAtStartup = lib.mkOption { type = lib.types.bool; };
+      focusAtStartup = lib.mkOption {
+        type = lib.types.bool;
+        description = "Whether Niri focuses this output when the session starts.";
+      };
     };
   };
 
@@ -86,32 +113,39 @@ let
     options = {
       system = lib.mkOption {
         type = lib.types.singleLineStr;
+        description = "Nix system used to build this host, such as x86_64-linux.";
       };
 
       stateVersion = lib.mkOption {
         type = lib.types.singleLineStr;
+        description = "NixOS and Home Manager state version for this host.";
       };
 
       user = lib.mkOption {
         type = lib.types.singleLineStr;
+        description = "Name of the user record assigned to this host.";
       };
 
       features = lib.mkOption {
         type = lib.types.listOf lib.types.singleLineStr;
+        description = "Named NixOS feature modules enabled on this host.";
       };
 
       homeProfiles = lib.mkOption {
         type = lib.types.listOf lib.types.singleLineStr;
+        description = "Home Manager profiles enabled for this host's user.";
       };
 
       niri.outputs = lib.mkOption {
         type = lib.types.nullOr niriOutputsType;
         default = null;
+        description = "Niri output settings, or null for a host without the desktop.";
       };
 
       polkit.agent = lib.mkOption {
         type = polkitAgentType;
         default = "kde";
+        description = "Authentication agent used in the Niri session.";
       };
     };
   });
@@ -257,7 +291,7 @@ let
 
           options.dendritic.primaryUser = lib.mkOption {
             type = primaryUserType;
-            description = "Primary user facts for this evaluated NixOS host.";
+            description = "Login name and home directory of this host's primary user.";
           };
 
           options.dendritic.polkit.agent = lib.mkOption {
@@ -272,14 +306,14 @@ let
                 assertion = builtins.hasAttr user.username config.users.users;
                 message = ''
                   Host '${hostname}' selects '${user.username}' as its primary
-                  user, but no selected NixOS feature declares that account.
+                  user, but no enabled NixOS feature declares that account.
                 '';
               }
               {
                 assertion =
                   !(builtins.hasAttr user.username config.users.users)
                   || config.users.users.${user.username}.home == user.homeDirectory;
-                message = "The primary NixOS account home must match the top-level user fact.";
+                message = "The primary NixOS account and user record must use the same home directory.";
               }
             ];
 
@@ -346,19 +380,19 @@ in
     nixos.modules = lib.mkOption {
       type = lib.types.lazyAttrsOf lib.types.deferredModule;
       default = { };
-      description = "Named NixOS modules produced by top-level dendritic modules.";
+      description = "Named NixOS feature modules available to hosts.";
     };
 
     homeManager.standaloneModules = lib.mkOption {
       type = lib.types.lazyAttrsOf lib.types.deferredModule;
       default = { };
-      description = "Named Home Manager modules imported only by standalone Home Manager configurations.";
+      description = "Home Manager modules needed only by standalone configurations.";
     };
 
     home = lib.mkOption {
       type = lib.types.lazyAttrsOf lib.types.deferredModule;
       default = { };
-      description = "Named Home Manager profiles assembled by user modules.";
+      description = "Named Home Manager profiles available to users.";
     };
 
     users = lib.mkOption {
@@ -370,36 +404,41 @@ in
               username = lib.mkOption {
                 type = lib.types.singleLineStr;
                 default = name;
+                description = "Login name.";
               };
 
               name = lib.mkOption {
                 type = lib.types.singleLineStr;
                 default = name;
+                description = "Full name.";
               };
 
               email = lib.mkOption {
                 type = lib.types.singleLineStr;
+                description = "Email address used by Git and account tools.";
               };
 
               homeDirectory = lib.mkOption {
                 type = lib.types.strMatching "/.*";
                 default = "/home/${config.username}";
+                description = "Absolute home directory.";
               };
 
               home = lib.mkOption {
                 type = lib.types.lazyAttrsOf lib.types.deferredModule;
                 default = { };
-                description = "Home Manager profiles for this user.";
+                description = "Home Manager profiles available to this user.";
               };
 
               accounts.github = {
                 username = lib.mkOption {
                   type = lib.types.singleLineStr;
+                  description = "GitHub account name.";
                 };
 
                 sshPublicKey = lib.mkOption {
                   type = lib.types.addCheck lib.types.singleLineStr (value: lib.hasPrefix "ssh-ed25519 " value);
-                  description = "Public SSH key used for GitHub authentication and signing.";
+                  description = "Ed25519 public key used for GitHub SSH and commit signing.";
                 };
               };
             };
@@ -407,7 +446,7 @@ in
         )
       );
       default = { };
-      description = "Top-level user facts and Home Manager profiles.";
+      description = "User accounts and their Home Manager profiles.";
     };
 
     dendritic = {
@@ -428,7 +467,7 @@ in
       hosts = lib.mkOption {
         type = lib.types.lazyAttrsOf hostType;
         default = { };
-        description = "Top-level host facts and lower-level module selections.";
+        description = "Host build settings and enabled modules.";
       };
     };
   };

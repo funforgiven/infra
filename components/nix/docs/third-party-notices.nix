@@ -3,7 +3,7 @@
   options.repository.thirdPartyNotices = lib.mkOption {
     type = lib.types.lines;
     readOnly = true;
-    description = "Third-party attribution text shared by generated repository and shell artifacts.";
+    description = "Text used for THIRD_PARTY_NOTICES.md and the shell's bundled notices.";
   };
 
   config.repository.thirdPartyNotices = ''

@@ -126,23 +126,23 @@
           schemeType = lib.mkOption {
             type = lib.types.enum [ materialSchemeType ];
             readOnly = true;
-            description = "Matugen Material You scheme used by the desktop.";
+            description = "Matugen color-scheme type used by the desktop.";
           };
           contrast = lib.mkOption {
             type = lib.types.float;
             readOnly = true;
-            description = "Matugen contrast level used by the desktop.";
+            description = "Matugen contrast value used by the desktop.";
           };
           generatedJson = lib.mkOption {
             type = lib.types.package;
             readOnly = true;
             internal = true;
-            description = "Build-time Matugen Material You role document.";
+            description = "Generated Matugen palette in JSON format.";
           };
           colors = lib.mkOption {
             type = materialColorsType;
             readOnly = true;
-            description = "Dark Material You semantic color roles.";
+            description = "Dark Material You colors keyed by role.";
           };
         };
 
@@ -165,12 +165,12 @@
             }
             {
               assertion = config.dendritic.materialYou.schemeType == "scheme-tonal-spot";
-              message = "The desktop must use DMS's readable tonal-spot Material You scheme.";
+              message = "The desktop must use the tonal-spot Material You scheme.";
             }
             {
               assertion =
                 config.stylix.base16Scheme.base00 == withoutHash config.dendritic.materialYou.colors.surface;
-              message = "Stylix must bridge from the generated Material surface instead of its genetic wallpaper palette.";
+              message = "Stylix base00 must use the generated Material surface color.";
             }
           ];
 
@@ -264,7 +264,7 @@
                 config.stylix.targets.firefox.enable
                 && config.stylix.targets.firefox.colorTheme.enable
                 && config.stylix.targets.firefox.profileNames == [ "default" ];
-              message = "Firefox must receive the Stylix color theme on its declarative default profile.";
+              message = "Stylix must theme the Firefox profile named default.";
             }
             {
               assertion =
