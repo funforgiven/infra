@@ -7,5 +7,6 @@ InputGain 1.0 InputGain.qml
 MixerPopup 1.0 MixerPopup.qml
 MicrophonePicker 1.0 MicrophonePicker.qml
 OutputPicker 1.0 OutputPicker.qml
+SelectableDeviceList 1.0 SelectableDeviceList.qml
 StreamCard 1.0 StreamCard.qml
 StreamChildren 1.0 StreamChildren.qml

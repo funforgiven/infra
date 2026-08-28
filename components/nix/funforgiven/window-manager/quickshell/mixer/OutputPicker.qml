@@ -10,7 +10,6 @@ import Quickshell
 import ".." as Shell
 import "../components" as Components
 import "../services" as Services
-import "OutputSelection.js" as OutputSelection
 
 Rectangle {
     id: root
@@ -209,12 +208,10 @@ Rectangle {
                 anchors.rightMargin: Shell.Theme.spacingMedium
                 spacing: Shell.Theme.spacingSmall
 
-                Components.AppIcon {
+                Components.SemanticIcon {
                     Layout.preferredWidth: Shell.Theme.iconLargeSize
                     Layout.preferredHeight: Shell.Theme.iconLargeSize
-                    iconSize: Shell.Theme.iconMediumSize
                     source: Quickshell.iconPath("audio-card-symbolic", "audio-card")
-                    accessibleName: "Output"
                 }
 
                 ColumnLayout {
@@ -274,38 +271,12 @@ Rectangle {
         Rectangle {
             id: dropdownSurface
 
-            property string highlightedOutputKey: ""
-
-            function applyHighlightedSelection(selection, ensureVisible) {
-                highlightedOutputKey = selection.key;
-                deviceList.currentIndex = selection.index;
-                if (ensureVisible && selection.index >= 0)
-                    deviceList.positionViewAtIndex(selection.index, ListView.Contain);
-            }
-
-            function highlightOutputAt(index, ensureVisible) {
-                if (index < 0 || index >= root.outputCount)
-                    return;
-                applyHighlightedSelection({
-                    index: index,
-                    key: OutputSelection.outputKey(root.outputs[index]),
-                    rehomed: false
-                }, ensureVisible);
-            }
-
             function reconcileHighlightedOutput() {
-                var previousIndex = deviceList.currentIndex;
-                var selection = OutputSelection.reconcileSelection(root.outputs, highlightedOutputKey, root.channel.output);
-                applyHighlightedSelection(selection, selection.rehomed || selection.index !== previousIndex);
+                deviceList.reconcileHighlighted();
             }
 
             function focusInitialOutput() {
-                var selection = OutputSelection.initialSelection(root.outputs, root.channel.output);
-                applyHighlightedSelection(selection, true);
-                if (selection.index >= 0)
-                    deviceList.forceActiveFocus();
-                else
-                    dropdownSurface.forceActiveFocus();
+                deviceList.focusInitial();
             }
 
             anchors.fill: parent
@@ -375,188 +346,21 @@ Rectangle {
                     Layout.fillHeight: true
                     Layout.preferredHeight: root.desiredListHeight
 
-                    ListView {
+                    SelectableDeviceList {
                         id: deviceList
 
                         anchors.fill: parent
-                        visible: root.outputCount > 0
-                        clip: true
-                        model: root.outputs
-                        spacing: root.rowSpacing
-                        boundsBehavior: Flickable.StopAtBounds
-                        flickableDirection: Flickable.VerticalFlick
-                        activeFocusOnTab: true
-
-                        Accessible.name: "Hardware outputs"
-                        Accessible.role: Accessible.List
-
-                        TapHandler {
-                            id: outputListTap
-
-                            acceptedButtons: Qt.LeftButton
-                            gesturePolicy: TapHandler.DragThreshold
-                            onPressedChanged: {
-                                if (pressed)
-                                    deviceList.cancelFlick();
-                            }
-                            onTapped: eventPoint => {
-                                var index = OutputSelection.contentIndexAtGlobalPosition(deviceList, eventPoint.globalPosition);
-                                if (index < 0 || index >= root.outputCount)
-                                    return;
-                                dropdownSurface.highlightOutputAt(index, false);
-                                root.activateOutput(root.outputs[index]);
-                            }
+                        candidates: root.outputs
+                        currentDevice: root.channel.output
+                        accent: root.accent
+                        busy: root.actionState.pending !== null
+                        accessibleName: "Hardware outputs"
+                        emptyText: "No outputs available"
+                        statusProvider: function (output) {
+                            return root.statusForOutput(output);
                         }
-
-                        Keys.onPressed: event => {
-                            if (event.key === Qt.Key_Escape) {
-                                root.closePopup(true);
-                                event.accepted = true;
-                            } else if (event.key === Qt.Key_Up) {
-                                dropdownSurface.highlightOutputAt(Math.max(0, deviceList.currentIndex - 1), true);
-                                event.accepted = true;
-                            } else if (event.key === Qt.Key_Down) {
-                                dropdownSurface.highlightOutputAt(Math.min(root.outputCount - 1, deviceList.currentIndex + 1), true);
-                                event.accepted = true;
-                            } else if (event.key === Qt.Key_Home) {
-                                if (root.outputCount > 0)
-                                    dropdownSurface.highlightOutputAt(0, true);
-                                event.accepted = true;
-                            } else if (event.key === Qt.Key_End) {
-                                if (root.outputCount > 0)
-                                    dropdownSurface.highlightOutputAt(root.outputCount - 1, true);
-                                event.accepted = true;
-                            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
-                                if (deviceList.currentIndex >= 0 && deviceList.currentIndex < root.outputCount)
-                                    root.activateOutput(root.outputs[deviceList.currentIndex]);
-                                event.accepted = true;
-                            }
-                        }
-
-                        delegate: Item {
-                            id: outputRow
-
-                            required property var modelData
-                            required property int index
-
-                            readonly property bool selected: root.matchesCurrentOutput(modelData)
-                            readonly property bool available: modelData.available === true
-                            readonly property bool canActivate: available && !selected && root.actionState.pending === null
-                            readonly property bool keyboardSelected: ListView.isCurrentItem && deviceList.activeFocus
-
-                            width: ListView.view.width
-                            height: root.rowHeight
-                            opacity: available || selected ? 1 : Shell.Theme.disabledOpacity
-
-                            function activate() {
-                                if (canActivate)
-                                    root.activateOutput(modelData);
-                            }
-
-                            Item {
-                                anchors.fill: parent
-                                visible: outputRow.canActivate
-
-                                Accessible.name: outputRow.modelData.label
-                                Accessible.description: "Available hardware output; press to select"
-                                Accessible.focusable: true
-                                Accessible.focused: outputRow.keyboardSelected
-                                Accessible.role: Accessible.Button
-                                Accessible.onPressAction: outputRow.activate()
-                            }
-
-                            Item {
-                                anchors.fill: parent
-                                visible: !outputRow.canActivate
-
-                                Accessible.name: outputRow.modelData.label
-                                Accessible.description: outputRow.selected ? "Selected current hardware output" : "Unavailable hardware output"
-                                Accessible.focusable: true
-                                Accessible.focused: outputRow.keyboardSelected
-                                Accessible.selectable: outputRow.selected
-                                Accessible.selected: outputRow.selected
-                                Accessible.role: Accessible.StaticText
-                            }
-
-                            Item {
-                                id: rowVisual
-
-                                anchors.fill: parent
-                                anchors.margins: root.rowInset
-
-                                Components.Surface {
-                                    anchors.fill: parent
-                                    interactive: true
-                                    hovered: candidateHover.hovered || outputRow.keyboardSelected
-                                    pressed: outputListTap.pressed && deviceList.currentIndex === outputRow.index
-                                    selected: outputRow.selected
-                                    accent: root.accent
-                                    radius: Shell.Theme.radiusSmall
-                                    outlineWidth: 0
-                                }
-
-                                RowLayout {
-                                    anchors.fill: parent
-                                    anchors.leftMargin: root.entryHorizontalPadding
-                                    anchors.rightMargin: root.entryHorizontalPadding
-                                    spacing: Shell.Theme.spacingSmall
-
-                                    Rectangle {
-                                        Layout.preferredWidth: root.outputMarkerSize
-                                        Layout.preferredHeight: root.outputMarkerSize
-                                        radius: Shell.Theme.radiusPill
-                                        color: outputRow.available ? (outputRow.selected ? root.accent : Shell.Theme.secondaryText) : Shell.Theme.error
-                                    }
-
-                                    Text {
-                                        Layout.fillWidth: true
-                                        text: outputRow.modelData.label
-                                        color: Shell.Theme.primaryText
-                                        elide: Text.ElideRight
-                                        font.family: Shell.Theme.sansFont
-                                        font.pixelSize: Shell.Theme.labelFontSize
-                                        font.weight: outputRow.selected ? Font.DemiBold : Font.Normal
-                                    }
-
-                                    Text {
-                                        visible: root.statusForOutput(outputRow.modelData).length > 0
-                                        text: root.statusForOutput(outputRow.modelData)
-                                        color: outputRow.available ? (outputRow.selected ? Shell.Theme.primaryText : Shell.Theme.secondaryText) : Shell.Theme.errorText
-                                        font.family: Shell.Theme.sansFont
-                                        font.pixelSize: Shell.Theme.captionFontSize
-                                        font.weight: outputRow.selected ? Font.DemiBold : Font.Normal
-                                    }
-                                }
-
-                                Components.FocusRing {
-                                    active: outputRow.keyboardSelected
-                                    accent: root.accent
-                                    ringRadius: Shell.Theme.radiusSmall
-                                }
-
-                                HoverHandler {
-                                    id: candidateHover
-
-                                    cursorShape: outputRow.canActivate ? Qt.PointingHandCursor : Qt.ArrowCursor
-                                    onHoveredChanged: {
-                                        if (hovered)
-                                            dropdownSurface.highlightOutputAt(outputRow.index, false);
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Text {
-                        anchors.centerIn: parent
-                        width: parent.width - Shell.Theme.spacingMedium * 2
-                        visible: root.outputCount === 0
-                        text: "No outputs available"
-                        color: Shell.Theme.errorText
-                        horizontalAlignment: Text.AlignHCenter
-                        wrapMode: Text.Wrap
-                        font.family: Shell.Theme.sansFont
-                        font.pixelSize: Shell.Theme.captionFontSize
+                        onActivated: output => root.activateOutput(output)
+                        onDismissRequested: root.closePopup(true)
                     }
                 }
 

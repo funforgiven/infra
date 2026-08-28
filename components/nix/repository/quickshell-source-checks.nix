@@ -1,7 +1,7 @@
-{ config, ... }:
+{ config, lib, ... }:
 {
   perSystem =
-    { pkgs, ... }:
+    { pkgs, system, ... }:
     let
       hostName = "parmigiano";
       hostModel = config.dendritic.hosts.${hostName};
@@ -27,9 +27,13 @@
         "-importPath"
         path
       ]) qtQmlPaths;
+      testImportArgs = builtins.concatMap (path: [
+        "-import"
+        path
+      ]) qtQmlPaths;
     in
     {
-      checks = {
+      checks = lib.mkIf (system == hostModel.system) {
         quickshell-theme-contrast =
           pkgs.runCommandLocal "quickshell-theme-contrast"
             {
@@ -124,6 +128,25 @@
                 ' "$out/imports.json" >&2
                 exit 1
               fi
+            '';
+        quickshell-qml-interactions =
+          pkgs.runCommandLocal "quickshell-qml-interactions"
+            {
+              nativeBuildInputs = [ pkgs.qt6.qtdeclarative ];
+            }
+            ''
+              set -euo pipefail
+              export HOME="$TMPDIR/home"
+              export XDG_RUNTIME_DIR="$TMPDIR/runtime"
+              export QT_QPA_PLATFORM=offscreen
+              export QT_QUICK_BACKEND=software
+              mkdir -p "$HOME" "$XDG_RUNTIME_DIR"
+              chmod 0700 "$XDG_RUNTIME_DIR"
+
+              ${pkgs.qt6.qtdeclarative}/bin/qmltestrunner \
+                -input ${shellConfig}/tests \
+                ${pkgs.lib.escapeShellArgs testImportArgs}
+              touch "$out"
             '';
       };
     };

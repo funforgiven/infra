@@ -10,7 +10,6 @@ Scope {
     id: root
 
     signal mixerRequested(var anchorItem, var screen, real topInset)
-    signal trayMenuOpening
 
     Variants {
         model: Quickshell.screens
@@ -86,7 +85,6 @@ Scope {
                         height: parent.height
                         width: implicitWidth
                         parentWindow: barWindow
-                        onMenuOpening: root.trayMenuOpening()
                     }
 
                     MixerButton {
@@ -95,7 +93,6 @@ Scope {
                         height: parent.height
                         width: implicitWidth
                         onRequested: {
-                            tray.dismissMenu();
                             root.mixerRequested(mixerButton, barWindow.screen, barWindow.height);
                         }
                     }

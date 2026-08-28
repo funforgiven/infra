@@ -21,11 +21,11 @@ Scope {
 
     property bool opened: false
     property bool openRequested: false
+    property int coordinatorToken: 0
     property alias query: launcherSearch.text
     property int selectedIndex: -1
     property string requestedDesktopId: ""
     property var pointerAnchor: null
-    property bool pointerGuardReady: false
 
     readonly property int appRevision: Services.AppService.revision
     readonly property var applications: Services.AppService.launcherApplications(appRevision)
@@ -43,7 +43,10 @@ Scope {
                 return screen;
             }
         }
-        return null;
+        // Keep the launcher usable while the configured dock output is being
+        // reconfigured or has been unplugged. The screen list is authoritative
+        // and the first remaining screen is deterministic.
+        return Quickshell.screens.length > 0 ? Quickshell.screens[0] : null;
     }
 
     function focusSearchWhenMapped(): void {
@@ -63,7 +66,7 @@ Scope {
         }
         root.openRequested = false;
         root.opened = true;
-        pointerGuardTimer.restart();
+        Services.PopupCoordinator.markOpen(root, root.coordinatorToken);
         root.focusSearchWhenMapped();
     }
 
@@ -75,24 +78,39 @@ Scope {
         if (root.openRequested) {
             return;
         }
+        if (root.selectedScreen === null)
+            return;
 
         root.query = "";
         root.requestedDesktopId = "";
         root.selectedIndex = root.results.length > 0 ? 0 : -1;
         root.pointerAnchor = null;
-        root.pointerGuardReady = false;
+        root.coordinatorToken = Services.PopupCoordinator.open("launcher", root, root.selectedScreen);
         root.openRequested = true;
 
-        if (!Services.NiriService.focusMonitor(Shell.ShellConfig.dockOutput)) {
+        if (!Services.NiriService.focusMonitor(root.selectedScreen.name)) {
             root.showAfterOutputFocus();
         }
     }
 
     function close(): void {
+        var closingToken = root.coordinatorToken;
+        if (closingToken !== 0)
+            Services.PopupCoordinator.beginClose(root, closingToken);
         root.openRequested = false;
         root.opened = false;
-        root.pointerGuardReady = false;
-        pointerGuardTimer.stop();
+        root.pointerAnchor = null;
+        if (closingToken !== 0) {
+            Services.PopupCoordinator.finishClose(root, closingToken);
+            if (root.coordinatorToken === closingToken)
+                root.coordinatorToken = 0;
+        }
+    }
+
+    function closeFromCoordinator(token, reason): void {
+        void reason;
+        if (token === root.coordinatorToken)
+            root.close();
     }
 
     function toggle(): void {
@@ -165,7 +183,7 @@ Scope {
             x: x,
             y: y
         };
-        if (root.pointerAnchor === null || !root.pointerGuardReady) {
+        if (root.pointerAnchor === null) {
             root.pointerAnchor = current;
             return;
         }
@@ -269,12 +287,12 @@ Scope {
         }
     }
 
-    Timer {
-        id: pointerGuardTimer
-
-        interval: 180
-        onTriggered: root.pointerGuardReady = true
+    onSelectedScreenChanged: {
+        if ((root.opened || root.openRequested) && root.selectedScreen === null)
+            root.close();
     }
+
+    Component.onDestruction: Services.PopupCoordinator.ownerDestroyed(root)
 
     PanelWindow { // qmllint disable uncreatable-type
         id: launcherWindow
@@ -517,13 +535,12 @@ Scope {
                             border.width: Shell.Theme.outlineWidth
                             border.color: Shell.Theme.outlineStrong
 
-                            Components.AppIcon {
+                            Components.SemanticIcon {
                                 anchors.centerIn: parent
                                 width: 30
                                 height: 30
-                                iconSize: 30
                                 source: Quickshell.iconPath("edit-find-symbolic", "system-search")
-                                accessibleName: "No applications found"
+                                muted: true
                                 Accessible.ignored: true
                             }
                         }

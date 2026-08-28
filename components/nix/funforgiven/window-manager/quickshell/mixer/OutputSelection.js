@@ -60,20 +60,28 @@ function reconcileSelection(outputs, rememberedKey, currentOutput) {
     return selectionAt(outputs, fallbackIndex(outputs, currentOutput), true);
 }
 
-function contentIndexAtGlobalPosition(view, globalPosition) {
-    if (!view || !globalPosition || typeof view.mapFromGlobal !== "function" || typeof view.indexAt !== "function")
-        return -1;
+function activationCandidate(outputs, pressedKey, delegateKey, currentOutput, busy) {
+    pressedKey = text(pressedKey);
+    delegateKey = text(delegateKey);
+    if (busy === true || pressedKey === "" || pressedKey !== delegateKey)
+        return null;
 
-    var viewportPosition = view.mapFromGlobal(globalPosition.x, globalPosition.y);
-    return view.indexAt(
-        viewportPosition.x + Number(view.contentX || 0),
-        viewportPosition.y + Number(view.contentY || 0)
-    );
+    var index = indexForKey(outputs, pressedKey);
+    if (index < 0)
+        return null;
+    var candidate = outputs[index];
+    if (!candidate || candidate.available !== true || outputKey(candidate) === outputKey(currentOutput))
+        return null;
+    return {
+        index: index,
+        key: pressedKey,
+        device: candidate
+    };
 }
 
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
-        contentIndexAtGlobalPosition: contentIndexAtGlobalPosition,
+        activationCandidate: activationCandidate,
         fallbackIndex: fallbackIndex,
         indexForKey: indexForKey,
         initialSelection: initialSelection,

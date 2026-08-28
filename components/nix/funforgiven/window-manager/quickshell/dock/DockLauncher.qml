@@ -49,13 +49,14 @@ Item {
             }
         }
 
-        Components.AppIcon {
+        Components.SemanticIcon {
             anchors.centerIn: parent
             width: 32
             height: 32
-            iconSize: 32
             source: Quickshell.iconPath("view-app-grid-symbolic", "system-search-symbolic")
-            accessibleName: "Applications"
+            hovered: root.hovered
+            pressed: root.pressed
+            active: Launcher.Launcher.opened
         }
 
         Rectangle {

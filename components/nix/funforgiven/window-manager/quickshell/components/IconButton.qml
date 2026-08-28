@@ -10,10 +10,11 @@ Item {
     property string accessibleName: label
     property string tooltipText: accessibleName
     property color accent: Shell.Theme.systemAccent
-    property color iconColor: Shell.Theme.primaryText
-    property bool tintIcon: false
+    property bool tintIcon: true
     property bool checked: false
     property bool attention: false
+    property bool warningIcon: false
+    property bool destructive: false
     property bool hovered: pointer.containsMouse
     property int iconSize: Shell.Theme.iconMediumSize
     property bool keyboardPressed: false
@@ -117,20 +118,19 @@ Item {
         }
     }
 
-    TintedIcon {
+    SemanticIcon {
         visible: root.iconSource.length > 0 && root.tintIcon
         anchors.centerIn: parent
         width: root.iconSize
         height: root.iconSize
         source: root.tintIcon ? root.iconSource : ""
-        tint: root.iconColor
-        opacity: root.enabled ? 1 : Shell.Theme.disabledOpacity
-
-        Behavior on opacity {
-            NumberAnimation {
-                duration: Shell.Theme.animationFast
-            }
-        }
+        enabled: root.enabled
+        hovered: root.hovered
+        pressed: root.pressed
+        checked: root.checked
+        attention: root.attention
+        warning: root.warningIcon
+        destructive: root.destructive || root.attention
     }
 
     Text {

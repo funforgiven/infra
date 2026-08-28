@@ -54,24 +54,25 @@ test("requires both id and serial for stable identity", () => {
     assert.notEqual(OutputSelection.outputKey(output(10, 100)), OutputSelection.outputKey(output(10, 101)));
 });
 
-test("converts a global tap to scrolled list content coordinates exactly once", () => {
-    const calls = [];
-    const view = {
-        contentX: 0,
-        contentY: 112,
-        mapFromGlobal(x, y) {
-            calls.push(["map", x, y]);
-            return { x: x - 600, y: y - 200 };
-        },
-        indexAt(x, y) {
-            calls.push(["index", x, y]);
-            return y === 212 ? 5 : -1;
-        }
-    };
+test("activates the pressed stable device after insertion or reordering", () => {
+    const pressed = output(20, 200);
+    const pressedKey = OutputSelection.outputKey(pressed);
+    const refreshed = [output(5, 50), output(30, 300), pressed, output(10, 100)];
 
-    assert.equal(OutputSelection.contentIndexAtGlobalPosition(view, { x: 640, y: 300 }), 5);
-    assert.deepEqual(calls, [
-        ["map", 640, 300],
-        ["index", 40, 212]
-    ]);
+    assert.deepEqual(
+        OutputSelection.activationCandidate(refreshed, pressedKey, pressedKey, refreshed[3], false),
+        { index: 2, key: pressedKey, device: pressed }
+    );
+});
+
+test("does not activate a removed, recycled, busy, unavailable, or current row", () => {
+    const pressed = output(20, 200);
+    const pressedKey = OutputSelection.outputKey(pressed);
+    const otherKey = OutputSelection.outputKey(output(30, 300));
+
+    assert.equal(OutputSelection.activationCandidate([output(10, 100)], pressedKey, pressedKey, null, false), null);
+    assert.equal(OutputSelection.activationCandidate([pressed], pressedKey, otherKey, null, false), null);
+    assert.equal(OutputSelection.activationCandidate([pressed], pressedKey, pressedKey, null, true), null);
+    assert.equal(OutputSelection.activationCandidate([output(20, 200, false)], pressedKey, pressedKey, null, false), null);
+    assert.equal(OutputSelection.activationCandidate([pressed], pressedKey, pressedKey, pressed, false), null);
 });
