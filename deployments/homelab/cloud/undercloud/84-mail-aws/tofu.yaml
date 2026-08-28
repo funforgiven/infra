@@ -4,9 +4,8 @@ metadata:
   name: mail-aws
   namespace: openstack
 spec:
-  # Credentials are the final activation touch. This gate was enabled only
-  # after the scoped provider pair was verified, encrypted, committed, and
-  # accepted by the signed activation preflight.
+  # This controller uses only the scoped SOPS-encrypted mail provisioning
+  # identity. Temporary AWS bootstrap credentials are not deployed.
   suspend: false
   interval: 10m
   retryInterval: 1m
