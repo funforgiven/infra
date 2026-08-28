@@ -32,6 +32,11 @@ Usage:
   funforgiven-audioctl move-bridge BRIDGE_ID BRIDGE_SERIAL CHANNEL_ID TARGET_ID TARGET_SERIAL
   funforgiven-audioctl forget-bridge-target BRIDGE_ID BRIDGE_SERIAL CHANNEL_ID
 
+Actions:
+  move-stream           Move one application stream to a logical channel.
+  move-bridge           Send a logical channel to one physical output.
+  forget-bridge-target  Forget a channel's saved physical output.
+
 CHANNEL_ID must be one of: system, game, voice, music.
 
 The IDs and object.serial values must come from the current PipeWire graph.
@@ -94,7 +99,7 @@ validate_global_id_argument() {
   local value=$2
 
   if ! is_global_id "$value"; then
-    usage_error "$label must be a canonical PipeWire global ID (0-$max_global_id); got '$value'"
+    usage_error "$label must be a decimal PipeWire global ID from 0 to $max_global_id without leading zeros; got '$value'"
   fi
 }
 
@@ -103,7 +108,7 @@ validate_serial_argument() {
   local value=$2
 
   if ! is_object_serial "$value"; then
-    usage_error "$label must be a canonical PipeWire object.serial (0-$max_object_serial); got '$value'"
+    usage_error "$label must be a decimal PipeWire object.serial from 0 to $max_object_serial without leading zeros; got '$value'"
   fi
 }
 

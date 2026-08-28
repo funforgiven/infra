@@ -30,7 +30,7 @@ in
   options.dendritic.quickshell.configName = lib.mkOption {
     type = lib.types.strMatching "[A-Za-z0-9][A-Za-z0-9._-]*";
     default = "funforgiven-shell";
-    description = "Shared immutable Quickshell configuration and IPC instance name.";
+    description = "Name used to load the Quickshell configuration and address its IPC service.";
   };
 
   config.home.gui =
@@ -275,7 +275,7 @@ in
       assertions = [
         {
           assertion = lib.getVersion pkgs.quickshell == "0.3.0";
-          message = "The repository-owned shell is validated against Quickshell 0.3.0.";
+          message = "This shell requires Quickshell 0.3.0.";
         }
         {
           assertion = !config.services.mako.enable;
@@ -287,16 +287,16 @@ in
         }
         {
           assertion = !(builtins.hasAttr "dank-material-shell" config.programs);
-          message = "The DMS Home Manager module must remain absent after the Quickshell cutover.";
+          message = "DankMaterialShell cannot be enabled with this Quickshell configuration.";
         }
         {
           assertion = !(builtins.hasAttr "DMS_DEFAULT_LAUNCH_PREFIX" config.home.sessionVariables);
-          message = "DMS_DEFAULT_LAUNCH_PREFIX must remain absent after the Quickshell cutover.";
+          message = "DMS_DEFAULT_LAUNCH_PREFIX must be unset when Quickshell is enabled.";
         }
         {
           assertion =
             !lib.hasInfix "dms" (lib.toLower (builtins.toJSON config.programs.niri.settings.spawn-at-startup));
-          message = "Niri must not start DMS after the supervised Quickshell cutover.";
+          message = "Niri must not start DankMaterialShell when Quickshell is enabled.";
         }
       ];
 

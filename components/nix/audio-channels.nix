@@ -19,33 +19,33 @@ let
     options = {
       id = lib.mkOption {
         type = lib.types.enum expectedChannelIds;
-        description = "Stable logical audio channel identifier.";
+        description = "Name used in generated PipeWire and WirePlumber configuration.";
       };
 
       label = lib.mkOption {
         type = nonEmptySingleLineStr;
-        description = "Human-facing logical audio channel label.";
+        description = "Channel name shown in the mixer.";
       };
 
       sinkName = lib.mkOption {
         type = stableId;
-        description = "Stable PipeWire node.name for the logical sink.";
+        description = "PipeWire node.name of the logical sink.";
       };
 
       bridgeName = lib.mkOption {
         type = stableId;
-        description = "Stable PipeWire node.name for the aggregate output bridge.";
+        description = "PipeWire node.name of the stream that sends this channel to hardware.";
       };
 
       isDefault = lib.mkOption {
         type = lib.types.bool;
         default = false;
-        description = "Whether this is the one logical sink preferred for unmatched streams.";
+        description = "Route new streams here when WirePlumber has no saved route.";
       };
 
       initialGain = lib.mkOption {
         type = unitGain;
-        description = "First-use linear bridge gain before WirePlumber has saved properties.";
+        description = "Bridge volume used until WirePlumber saves one.";
       };
     };
   };
@@ -54,12 +54,12 @@ let
     options = {
       matches = lib.mkOption {
         type = lib.types.listOf (lib.types.attrsOf nonEmptySingleLineStr);
-        description = "WirePlumber property matches identifying a stream with unstable identity.";
+        description = "WirePlumber properties used to recognize an application whose ID changes.";
       };
 
       persistentId = lib.mkOption {
         type = stableId;
-        description = "Stable application.id assigned for WirePlumber stream persistence.";
+        description = "application.id assigned so WirePlumber can restore the application's route.";
       };
     };
   };
@@ -69,15 +69,15 @@ let
       channels = lib.mkOption {
         type = lib.types.listOf channelType;
         default = [ ];
-        description = "The fixed, ordered logical audio channel topology.";
+        description = "Logical audio channels in display and routing order.";
       };
 
       identityNormalizations = lib.mkOption {
         type = lib.types.listOf identityNormalizationType;
         default = [ ];
         description = ''
-          Identity-only WirePlumber stream rules. These rules may normalize
-          application.id, but never assign an application to a channel.
+          Rules that give applications with changing IDs a consistent
+          application.id. These rules do not choose a channel.
         '';
       };
     };
@@ -113,7 +113,7 @@ let
 
         ${audioctlSource}
       '';
-      meta.description = "Validated one-shot controller for the funforgiven PipeWire channels";
+      meta.description = "Move PipeWire streams and logical channels";
     };
 
   mkChannelPolicy =
@@ -139,14 +139,14 @@ let
       audio = lib.mkOption {
         type = audioType;
         readOnly = true;
-        description = "Evaluated immutable audio topology shared with generated consumers.";
+        description = "Audio channel settings used by PipeWire, WirePlumber, and Quickshell.";
       };
 
       audioControllerPackage = lib.mkOption {
         type = lib.types.package;
         readOnly = true;
         internal = true;
-        description = "Validated controller generated for the evaluated audio topology.";
+        description = "funforgiven-audioctl configured for these channels.";
       };
     };
 
@@ -158,9 +158,8 @@ in
     type = audioType;
     default = { };
     description = ''
-      Shared declarative audio topology and optional stream identity
-      normalization. Hardware targets and application routes are deliberately
-      absent because WirePlumber owns those choices at runtime.
+      Logical playback channels and optional application identity rules.
+      WirePlumber stores hardware targets and per-application routes.
     '';
   };
 
@@ -384,29 +383,29 @@ in
           }
           {
             assertion = map (channel: channel.id) defaultChannels == [ "system" ];
-            message = "System must be the one declarative default audio channel.";
+            message = "System must be the only default audio channel.";
           }
           {
             assertion = lib.all normalizationMatchesAreValid cfg.identityNormalizations;
             message = ''
-              Audio identity normalizations must have non-empty matches using
-              only stable stream identity properties.
+              Audio identity rules need at least one match and may use only
+              stable stream properties.
             '';
           }
           {
             assertion =
               normalizationTargetsAreValid && identityRulesOnlySetApplicationId && identityRulesArePlaybackOnly;
             message = ''
-              Audio identity normalizations may target only application.id and
-              playback streams outside the generated channel graph, and must
-              not reuse a reserved channel, sink, or bridge identity.
+              Audio identity rules may change only application.id on playback
+              streams outside the channel graph. They cannot reuse a channel,
+              sink, or bridge ID.
             '';
           }
           {
             assertion = restoreTargetRulesAreBridgeOnly;
             message = ''
-              state.restore-target may be disabled only by the exact four
-              generated bridge rules; application stream restore must remain enabled.
+              Only the four bridge rules may disable state.restore-target.
+              Application stream restore must stay enabled.
             '';
           }
           {
@@ -424,8 +423,8 @@ in
               !(containsUnsafeDeclarativeTarget loopbackModules)
               && lib.all (module: module.args."playback.props"."target.object" == "-1") loopbackModules;
             message = ''
-              Audio loopbacks may declare only the target.object = -1 safety
-              sentinel. Live physical output selection belongs to WirePlumber policy.
+              Audio loopbacks may set target.object only to -1. WirePlumber
+              chooses physical outputs at runtime.
             '';
           }
         ];

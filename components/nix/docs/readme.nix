@@ -137,6 +137,8 @@ in
     - [Cloud topology and operations](deployments/homelab/cloud/README.md)
     - [Service catalog](deployments/homelab/cloud/services/README.md)
     - [Secret recovery and rotation](secrets/README.md)
+    - [Audio routing](components/nix/audio-channels/README.md)
+    - [Quickshell behavior and manual tests](components/nix/funforgiven/window-manager/quickshell/README.md)
 
     ## Credits
 
