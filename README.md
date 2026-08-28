@@ -1,255 +1,120 @@
 # infra
 
-Infrastructure configuration for the NixOS host `parmigiano`, the
-surrounding homelab network, and a three-node OpenStack private cloud.
+NixOS, desktop, network, and private-cloud configuration for this homelab.
+Nix, OpenTofu, Flux, Kustomize, and SOPS hold desired state. Imperative tools
+are limited to hardware changes, credential issuance, provider APIs without a
+suitable provider, and recovery operations.
 
-`parmigiano` is built on NixOS unstable with Home Manager and the dendritic
-module pattern. Git-controlled automation covers the current RouterOS
-fabric. All three private-cloud hosts now pass the automated physical
-baseline and supervised failure of each LACP member. Independent
-OS-disk boot acceptance is a deferred resilience exercise. Kubernetes,
-Flux, Ceph, observability, private service ingress, MariaDB Galera, RabbitMQ,
-and the installed OpenStack services are qualified. The separate HA CAPI
-management cluster is recoverable, and Magnum has completed create, scale,
-worker-replacement, upgrade, Cinder/Manila storage, and clean-deletion
-qualification with a five-node Kubernetes canary.
+## Repository map
 
-This is a concrete environment, not a reusable distribution. It can still
-serve as a reference for a dendritic flake, a Niri desktop, declarative
-PipeWire routing, SOPS secret delivery, or a device-oriented RouterOS layout.
+- `components/nix/` contains NixOS and Home Manager modules, packages, checks,
+  and generated-file sources.
+- `components/cloud/` contains reusable host, network, identity, DNS, and
+  service infrastructure.
+- `deployments/homelab/routeros/` contains the physical-network runbook.
+- `deployments/homelab/cloud/` contains the OpenStack, Kubernetes, Flux, and
+  service-cluster desired state.
+- `secrets/` contains SOPS ciphertext and the secret-recovery runbook.
 
-## What It Configures Today
+`outputs.nix` loads every Nix module below `components/nix/`. The generated
+`flake.nix` declares inputs; host and feature selection lives in
+`components/nix/computers/`.
 
-- AMD Ryzen desktop with an NVIDIA GPU
-- Niri with a repository-owned Quickshell bar, dock, launcher, and mixer
-- Fish for interactive use, with Bash available for scripts
-- Home Manager profiles for command-line and graphical applications
-- Four logical PipeWire/WirePlumber audio channels
-- Turkish and Japanese input through Fcitx5 and Mozc
-- Btrfs on NVMe through disko, with systemd-boot
-- Wallpaper-derived colors shared through Matugen and Stylix
-- SOPS/age for the account password hash, machine credentials, and
-  homelab API/network credentials, with 1Password retained for desktop
-  and browser password management
-- RouterOS desired state and reconciliation for a CCR2004 router and
-  CRS510 switch
-- A three-node OpenStack cloud foundation with declarative physical
-  networking and Ubuntu host automation
+## Common commands
 
-## Repository Layout
+Enter the development shell and install the repository pre-commit hook:
 
-- `flake.nix` is generated; `outputs.nix` loads the Nix component tree.
-- `components/nix/computers/` contains host facts and disk layout.
-- `components/nix/funforgiven/` contains personal applications and desktop settings.
-- `components/nix/hardware/` contains reusable hardware features.
-- `components/nix/packages/` contains local packages and overlays.
-- `components/nix/repository/` contains checks, formatting, and generated-file support.
-- `components/nix/docs/` contains the sources for generated documentation.
-- `components/cloud/` contains the current Ubuntu host and physical-network
-  automation.
-- `deployments/homelab/routeros/` contains the RouterOS runbook;
-  `deployments/homelab/ssh-host-keys.json` pins managed-device identities.
-- `deployments/homelab/cloud/` contains the cloud architecture, exact
-  version selections, host inventory, and network desired state.
-- `secrets/` contains SOPS-encrypted machine and homelab credentials and
-  their documentation.
-
-`parmigiano` is assembled in `components/nix/computers/parmigiano.nix` by
-selecting focused features and the user's Home Manager profiles.
-
-Deployment identities and entry points belong under `deployments/`.
-Implementations and reusable features remain under `components/`.
-Directories are added only with their first real configuration.
-
-## Dendritic Pattern
-
-The Nix implementation follows the dendritic pattern from
-`mightyiam/dendritic`: every Nix file under `components/nix/` is a top-level
-flake-parts module, and feature modules register named NixOS and Home Manager
-modules instead of importing distant paths directly.
-
-## Homelab Network
-
-RouterOS desired state lives in the cloud network inventory and is
-reconciled by one Ansible playbook:
-
-```text
-deployments/homelab/cloud/network-inventory.yaml
-components/cloud/network-automation/reconcile-routeros.yaml
+```sh
+nix develop --accept-flake-config
 ```
 
-Its default run is read-only. Validate the current inventories, tests, and
-Ansible syntax without contacting a device with:
+Format and evaluate the repository:
+
+```sh
+nix fmt --accept-flake-config
+nix flake check --no-build --accept-flake-config
+```
+
+Build all checks before merging a change:
+
+```sh
+nix flake check --accept-flake-config
+```
+
+Cloud checks are split by tool and can be built together or separately:
 
 ```sh
 nix build .#checks.x86_64-linux.cloud-configuration \
   --no-link --accept-flake-config
-```
-
-RouterOS login passwords are SOPS ciphertext and sops-nix materializes
-only the two values consumed by Ansible as user-owned `0400` files. PPPoE
-values remain encrypted for future Terraform/REST adoption and have no
-runtime file or bespoke installer. Omada secrets are streamed to its manual
-reconciler only through standard input. Plaintext credentials, exports,
-historical command snapshots, plan files, and binary backups are not
-committed.
-
-The network plan, physical map, firewall policy, reconciled endpoint
-state, recovery paths, and remaining qualifications are documented in
-the [RouterOS deployment runbook](deployments/homelab/routeros/README.md).
-This public repository treats internal addressing, device identities,
-and port assignments as non-secret operational documentation; all
-authentication material remains encrypted or outside Git.
-
-## OpenStack Private Cloud
-
-The target is a three-node hyperconverged cloud based on Ubuntu Noble,
-Kubespray, Cilium, Flux, Rook-Ceph, and upstream OpenStack-Helm. All three
-hosts are installed, managed, and pass automated host and network
-qualification, including failure of each LACP member. Kubernetes, Flux,
-Rook-Ceph, observability, service ingress, and the OpenStack-Helm
-MariaDB and RabbitMQ infrastructure charts are running. Keystone,
-Glance, Cinder, Placement, Nova, Neutron, Heat, Octavia, Manila, and
-Barbican are running. The three-node CAPI management cluster, its Flux root,
-CAPI/CAPO controllers, encrypted off-site etcd recovery, and Magnum are also
-running. Magnum's initial five-node canary passed its complete lifecycle
-through clean deletion. The initial production acceptance waves are complete.
-Physical boot with either OS disk absent remains an explicitly accepted,
-unverified resilience risk.
-
-The current repository records:
-
-- a 2×25Gbps LACP trunk per node and isolated Ceph, migration, Geneve,
-  and Manila service VLANs on the CRS510;
-- Ansible for unavoidable Ubuntu host state and RouterOS reconciliation;
-- a narrow Omada compatibility adapter for the controller API currently in use;
-- exact selected component versions and immutable Ceph image identity;
-- one OpenStack-Helm owner each for MariaDB Galera and RabbitMQ;
-- Cilium L2 service announcements with a mutually exclusive MetalLB
-  rollback profile;
-- internal split-horizon CoreDNS and explicitly opt-in public Cloudflare
-  records;
-- six NVMe Rook-Ceph OSDs and dedicated OpenStack/CephFS pools;
-- installation and major-upgrade ordering with semantic readiness gates;
-- a separately recoverable HA CAPI management cluster for Magnum;
-- backup requirements and destructive-operation boundaries.
-
-Start with the
-[cloud deployment runbook](deployments/homelab/cloud/README.md). Architecture
-records and version selections are desired state, not installation evidence.
-
-Validate the executable host/network automation and current inventories with:
-
-```sh
-nix build .#checks.x86_64-linux.cloud-configuration \
+nix build .#checks.x86_64-linux.cloud-kustomize \
   --no-link --accept-flake-config
 ```
 
-## Local Files
+Scan the working tree and Git history for plaintext secrets:
 
-The configuration relies on these files and identities outside Git:
+```sh
+nix run .#repository-secret-scan --accept-flake-config
+```
 
-- The wallpaper is expected at `/home/funforgiven/Pictures/Wallpapers/current.png`. Refresh its locked
-  content after replacing it with:
+Apply the desktop host configuration:
 
-  ```sh
-  nix flake update wallpaper --accept-flake-config
-  ```
+```sh
+sudo nixos-rebuild switch --flake .#parmigiano --accept-flake-config
+```
 
-- The complete personal age identity at
-  `/home/funforgiven/.config/sops/age/keys.txt` is the recovery key
-  for every SOPS secret and must be backed up securely.
+## Local state and secrets
 
-- NixOS uses `/etc/ssh/ssh_host_ed25519_key` for unattended decryption.
-  Backing it up is optional, but a replacement host key must be added as
-  a recipient before installation.
+The personal age identity at
+`/home/funforgiven/.config/sops/age/keys.txt` can decrypt every SOPS file
+in this repository. Keep an offline backup.
 
-See [`secrets/README.md`](secrets/README.md) for editing, recovery, and
-rotation.
+NixOS uses `/etc/ssh/ssh_host_ed25519_key` for unattended decryption. Before
+replacing that key, add its new age recipient to `.sops.yaml` and rekey the
+affected files. See [secrets/README.md](secrets/README.md) for recovery,
+editing, and rotation.
 
-## Generated Files
+The wallpaper is expected at
+`/home/funforgiven/Pictures/Wallpapers/current.png`. After replacing it,
+refresh the locked content with:
+
+```sh
+nix flake update wallpaper --accept-flake-config
+```
+
+## Generated files
 
 `flake.nix`, `.gitignore`, `README.md`, `LICENSE`, and
-`THIRD_PARTY_NOTICES.md` are generated. Edit their source modules, then run:
+`THIRD_PARTY_NOTICES.md` are generated. Edit their Nix sources and then run:
 
 ```sh
 nix run .#write-flake --accept-flake-config
 nix run .#write-files --accept-flake-config
 ```
 
-The flake checks fail when a committed generated file is stale.
+Do not edit generated files by hand.
 
-## Day-to-Day Use
+## Fresh installation
 
-Enter the development shell to install the checkout's pre-commit hook:
+The disko command below destroys the disk selected in
+`components/nix/computers/parmigiano-disko.nix`. Verify that path first.
 
-```sh
-nix develop --accept-flake-config
-```
-
-Format and validate before rebuilding:
-
-```sh
-nix fmt --accept-flake-config
-nix flake check --no-build --accept-flake-config
-nix run .#repository-secret-scan --accept-flake-config
-```
-
-The secret scan redacts findings and examines both the working tree and Git
-history. Run it before every push. Commit secret values only as SOPS
-ciphertext and never print decrypted values during validation.
-
-Apply the host configuration with:
-
-```sh
-sudo nixos-rebuild switch --flake .#parmigiano --accept-flake-config
-```
-
-A compositor update takes effect after logging out and back in. Once inside
-the new Niri session, the deployed desktop and audio contracts can be checked
-without changing state:
-
-```sh
-funforgiven-runtime-check
-```
-
-## Fresh Installation
-
-The disko command below destroys the configured target disk. Read
-`components/nix/computers/parmigiano-disko.nix` and verify the device path
-first.
-
-1. Provide the local wallpaper file described above.
-
-2. Partition and mount the verified disk:
+1. Partition and mount the target disk:
 
    ```sh
-   sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko -- \
+   sudo nix run .#disko --accept-flake-config -- \
      --mode destroy,format,mount --flake .#parmigiano
    ```
 
-3. Restore the existing SSH host private key, or add a new host recipient
-   as described in [`secrets/README.md`](secrets/README.md).
+2. Restore the existing SSH host private key, or add the replacement host as
+   a SOPS recipient.
 
-4. Install NixOS:
+3. Install NixOS:
 
    ```sh
    sudo nixos-install --flake .#parmigiano
    ```
 
-## Validation
-
-Run the full flake evaluation and build the host and Home Manager outputs:
-
-```sh
-nix flake check --no-build --accept-flake-config
-nix build \
-  .#checks.x86_64-linux.parmigiano-home \
-  .#checks.x86_64-linux.parmigiano-toplevel \
-  --no-link --accept-flake-config
-```
-
-Useful targeted evaluations are:
+Useful non-destructive evaluations are:
 
 ```sh
 nix eval .#diskoConfigurations.parmigiano.disko.devices.disk.main.device
@@ -257,16 +122,16 @@ nix eval .#nixosConfigurations.parmigiano.config.system.build.toplevel.drvPath
 nix eval .#homeConfigurations."funforgiven@parmigiano".activationPackage.drvPath
 ```
 
+## Operations
+
+- [RouterOS topology and recovery](deployments/homelab/routeros/README.md)
+- [Cloud topology and operations](deployments/homelab/cloud/README.md)
+- [Service catalog](deployments/homelab/cloud/services/README.md)
+- [Secret recovery and rotation](secrets/README.md)
+
 ## Credits
 
-The Nix component architecture follows
-[mightyiam's dendritic pattern](https://github.com/mightyiam/dendritic),
-with [mightyiam/infra](https://github.com/mightyiam/infra) as its primary
-reference configuration.
-
-The Quickshell design draws on
-[Noctalia v4](https://github.com/noctalia-dev/noctalia/tree/legacy-v4)
-and [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell).
-
-Exact snapshots and licenses for adapted source are recorded in
-`THIRD_PARTY_NOTICES.md`.
+The Nix module layout follows
+[mightyiam's dendritic pattern](https://github.com/mightyiam/dendritic).
+Quickshell work draws on Noctalia v4 and DankMaterialShell. Exact adapted
+snapshots and licenses are recorded in `THIRD_PARTY_NOTICES.md`.
