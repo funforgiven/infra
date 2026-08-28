@@ -5,29 +5,27 @@ function text(value) {
     return String(value).trim();
 }
 
-function sessionAction(executable, actionUnits, action) {
-    var binary = text(executable);
+function absoluteExecutable(value, label) {
+    var binary = text(value);
     if (binary.length === 0) {
-        throw new Error("systemctl executable is empty");
+        throw new Error(label + " executable is empty");
     }
     if (!binary.startsWith("/")) {
-        throw new Error("systemctl executable must be absolute");
+        throw new Error(label + " executable must be absolute");
     }
+    return binary;
+}
+
+function sessionAction(uwsmExecutable, systemctlExecutable, action) {
     if (action !== "logout" && action !== "reboot" && action !== "poweroff") {
         throw new Error("unsupported system action: " + text(action));
     }
 
-    if (actionUnits === null || typeof actionUnits !== "object") {
-        throw new Error("session action unit map is missing");
+    if (action === "logout") {
+        return [absoluteExecutable(uwsmExecutable, "UWSM"), "stop"];
     }
 
-    var expectedUnit = "funforgiven-session-" + action + ".service";
-    var unit = text(actionUnits[action]);
-    if (unit !== expectedUnit) {
-        throw new Error("invalid session action unit for " + action);
-    }
-
-    return [binary, "--user", "start", unit];
+    return [absoluteExecutable(systemctlExecutable, "systemctl"), action];
 }
 
 if (typeof module !== "undefined" && module.exports) {

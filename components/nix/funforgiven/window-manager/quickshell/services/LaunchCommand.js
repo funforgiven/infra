@@ -16,26 +16,23 @@ function desktopEntryId(value) {
     return id + ".desktop";
 }
 
-function app2unitService(launcher, id, applicationStopTimeout) {
-    var stopTimeout = text(applicationStopTimeout);
-    if (!/^[1-9][0-9]*s$/.test(stopTimeout)) {
-        throw new Error("application stop timeout must be a positive whole number of seconds");
+function uwsmAppService(launcher, id) {
+    var binary = text(launcher);
+    if (binary.length === 0) {
+        throw new Error("UWSM application launcher is empty");
+    }
+    if (!binary.startsWith("/")) {
+        throw new Error("UWSM application launcher must be absolute");
     }
 
     return [
-        text(launcher),
+        binary,
         "-t",
         "service",
         "-s",
-        "app-graphical.slice",
-        "-p",
-        "TimeoutStopSec=" + stopTimeout,
+        "a",
         "-p",
         "KillMode=mixed",
-        "-p",
-        "KillSignal=SIGTERM",
-        "-p",
-        "SendSIGKILL=yes",
         "--",
         desktopEntryId(id)
     ];
@@ -43,7 +40,7 @@ function app2unitService(launcher, id, applicationStopTimeout) {
 
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
-        app2unitService: app2unitService,
+        uwsmAppService: uwsmAppService,
         desktopEntryId: desktopEntryId
     };
 }

@@ -23,6 +23,19 @@ in
         enable = true;
         package = niriPackage pkgs;
       };
+
+      programs.uwsm = {
+        enable = true;
+        waylandCompositors.niri = {
+          prettyName = "Niri";
+          comment = "Niri managed by UWSM";
+          binPath = "/run/current-system/sw/bin/niri";
+          # UWSM owns the process and target lifecycle. Niri still needs its
+          # session mode to export compositor environment and provide its
+          # org.freedesktop.ScreenSaver idle-inhibit bridge for portals.
+          extraArgs = [ "--session" ];
+        };
+      };
     };
 
   home.gui =
@@ -34,6 +47,17 @@ in
         package = niriPackage pkgs;
 
         settings = {
+          # UWSM owns the graphical-session targets, while Niri supplies the
+          # compositor-created Wayland and IPC variables at readiness.
+          spawn-at-startup = [
+            {
+              argv = [
+                (lib.getExe pkgs.uwsm)
+                "finalize"
+              ];
+            }
+          ];
+
           prefer-no-csd = true;
           screenshot-path = "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png";
 

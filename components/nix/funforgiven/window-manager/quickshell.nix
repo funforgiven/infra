@@ -5,8 +5,6 @@
 }:
 let
   shellConfigName = config.dendritic.quickshell.configName;
-  sessionShutdown = config.dendritic.sessionShutdown;
-  applicationStopTimeout = "${toString sessionShutdown.applicationStopTimeoutSeconds}s";
   quickshellWithPatches =
     pkgs: patches:
     pkgs.quickshell.overrideAttrs (previous: {
@@ -211,10 +209,9 @@ in
             readonly property string dockOutput: ${qmlString primaryOutput.connector}
             readonly property string dockMode: "always-visible"
             readonly property string audioController: ${qmlString (lib.getExe' audioControllerPackage "funforgiven-audioctl")}
-            readonly property string appLauncher: ${qmlString (lib.getExe pkgs.app2unit)}
+            readonly property string appLauncher: ${qmlString (lib.getExe' pkgs.uwsm "uwsm-app")}
+            readonly property string uwsm: ${qmlString (lib.getExe pkgs.uwsm)}
             readonly property string systemctl: ${qmlString (lib.getExe' pkgs.systemd "systemctl")}
-            readonly property string applicationStopTimeout: ${qmlString applicationStopTimeout}
-            readonly property var sessionActionUnits: (${builtins.toJSON sessionShutdown.actionUnits})
             readonly property bool nativePolkitEnabled: ${
               if polkitAgent == "quickshell" then "true" else "false"
             }
@@ -302,10 +299,9 @@ in
             "WAYLAND_DISPLAY"
             "NIRI_SOCKET"
           ];
-          After = [ "graphical-session.target" ];
+          Before = [ "app-graphical.slice" ];
           PartOf = [ "graphical-session.target" ];
           Requisite = [ "graphical-session.target" ];
-          Wants = [ "swayidle.service" ];
           X-Restart-Triggers = [ "${shellSource}" ];
         };
 
@@ -325,8 +321,7 @@ in
           ];
           Restart = "on-failure";
           RestartSec = 1;
-          Slice = "session.slice";
-          TimeoutStopSec = applicationStopTimeout;
+          Slice = "session-graphical.slice";
         };
       };
     };

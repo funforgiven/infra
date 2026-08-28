@@ -1,12 +1,8 @@
-{ config, ... }:
-let
-  applicationStopTimeout = "${toString config.dendritic.sessionShutdown.applicationStopTimeoutSeconds}s";
-in
-{
+_: {
   home.gui =
     { lib, pkgs, ... }:
     let
-      niriSessionService =
+      graphicalApplicationService =
         {
           command,
           description,
@@ -15,6 +11,10 @@ in
           Unit = {
             Description = description;
             PartOf = [ "graphical-session.target" ];
+            ConditionEnvironment = [
+              "WAYLAND_DISPLAY"
+              "NIRI_SOCKET"
+            ];
             After = [
               "graphical-session.target"
               "quickshell.service"
@@ -24,33 +24,33 @@ in
           };
           Service = {
             ExecStart = command;
-            Slice = "app-graphical.slice";
+            # Signal the application leader first so multi-process clients can
+            # flush state and retire their children before systemd's bounded
+            # final cgroup cleanup.
             KillMode = "mixed";
-            KillSignal = "SIGTERM";
-            SendSIGKILL = true;
-            TimeoutStopSec = applicationStopTimeout;
+            Slice = "app-graphical.slice";
           };
           Install.WantedBy = [ "graphical-session.target" ];
         };
     in
     {
       systemd.user.services = {
-        discord = niriSessionService {
+        discord = graphicalApplicationService {
           description = "Discord";
           command = lib.getExe pkgs.discord;
         };
 
-        telegram = niriSessionService {
+        telegram = graphicalApplicationService {
           description = "Telegram Desktop";
           command = lib.getExe pkgs.telegram-desktop;
         };
 
-        "1password" = niriSessionService {
+        "1password" = graphicalApplicationService {
           description = "1Password";
           command = "${lib.getExe pkgs._1password-gui} --silent";
         };
 
-        steam = niriSessionService {
+        steam = graphicalApplicationService {
           description = "Steam";
           command = "${lib.getExe pkgs.steam} -silent";
         };

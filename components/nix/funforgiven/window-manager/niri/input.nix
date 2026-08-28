@@ -130,6 +130,7 @@ in
           PassEnvironment = [ "WAYLAND_DISPLAY" ];
           Restart = "on-failure";
           RestartSec = "2s";
+          Slice = "session-graphical.slice";
         };
       };
 

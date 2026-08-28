@@ -3,41 +3,30 @@ const test = require("node:test");
 
 const LaunchCommand = require("../services/LaunchCommand.js");
 
-test("desktop entries launch through app2unit as one typed argv", () => {
-    const command = LaunchCommand.app2unitService(
-        "/nix/store/app2unit/bin/app2unit",
-        "firefox",
-        "10s"
-    );
+test("desktop entries launch through UWSM as one typed argv", () => {
+    const command = LaunchCommand.uwsmAppService("/nix/store/uwsm/bin/uwsm-app", "firefox");
 
     assert.deepEqual(command, [
-        "/nix/store/app2unit/bin/app2unit",
+        "/nix/store/uwsm/bin/uwsm-app",
         "-t",
         "service",
         "-s",
-        "app-graphical.slice",
-        "-p",
-        "TimeoutStopSec=10s",
+        "a",
         "-p",
         "KillMode=mixed",
-        "-p",
-        "KillSignal=SIGTERM",
-        "-p",
-        "SendSIGKILL=yes",
         "--",
         "firefox.desktop"
     ]);
-    assert.equal(command.some(argument => argument.indexOf("JobTimeout") >= 0), false);
 });
 
-test("desktop-entry units require a bounded stop timeout", () => {
+test("desktop-entry units require an absolute UWSM launcher", () => {
     assert.throws(
-        () => LaunchCommand.app2unitService("/nix/store/app2unit/bin/app2unit", "firefox", ""),
-        /positive whole number/
+        () => LaunchCommand.uwsmAppService("", "firefox"),
+        /launcher is empty/
     );
     assert.throws(
-        () => LaunchCommand.app2unitService("/nix/store/app2unit/bin/app2unit", "firefox", "forever"),
-        /positive whole number/
+        () => LaunchCommand.uwsmAppService("uwsm-app", "firefox"),
+        /must be absolute/
     );
 });
 
