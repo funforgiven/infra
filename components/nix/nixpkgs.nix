@@ -20,25 +20,25 @@ in
     config = lib.mkOption {
       type = lib.types.attrs;
       default = { };
-      description = "nixpkgs config shared by generated package sets and lower-level configurations.";
+      description = "nixpkgs settings applied to every package set and host.";
     };
 
     allowUnfreePackages = lib.mkOption {
       type = lib.types.listOf lib.types.singleLineStr;
       default = [ ];
-      description = "Unfree package names explicitly allowed by dendritic feature modules.";
+      description = "Unfree package names permitted by this repository.";
     };
 
     effectiveConfig = lib.mkOption {
       type = lib.types.attrs;
       readOnly = true;
-      description = "nixpkgs config after dendritic allowlist policy has been applied.";
+      description = "Final nixpkgs settings, including the unfree-package allowlist.";
     };
 
     overlays = lib.mkOption {
       type = lib.types.listOf lib.types.unspecified;
       default = [ ];
-      description = "Overlays contributed by dendritic feature modules.";
+      description = "Overlays applied to every package set and host.";
     };
   };
 

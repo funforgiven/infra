@@ -3,7 +3,7 @@
   options.dendritic.input.physicalXkbLayout = lib.mkOption {
     type = lib.types.singleLineStr;
     readOnly = true;
-    description = "Physical XKB layout shared by NixOS and Niri.";
+    description = "Keyboard layout used by NixOS and Niri.";
   };
 
   config = {

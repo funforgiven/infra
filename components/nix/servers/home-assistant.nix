@@ -34,9 +34,9 @@ _: {
           "mqtt"
           "radio_browser"
         ];
-        # Home Assistant 2026.8 migrated HTTP settings into its authenticated
-        # runtime store. The narrow UI exception and recovery procedure are
-        # recorded in deployments/homelab/cloud/manual-exceptions.yaml.
+        # Home Assistant 2026.8 stores HTTP settings in its authenticated
+        # runtime state. The backup and recovery steps are documented in the
+        # service operations guide.
         config = {
           default_config = { };
           homeassistant = {

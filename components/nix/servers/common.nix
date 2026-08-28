@@ -180,7 +180,7 @@ in
         assertions = [
           {
             assertion = !builtins.elem 9100 config.networking.firewall.allowedTCPPorts;
-            message = "Node exporter must not be opened globally; each deployment boundary must allow it on an explicit private interface.";
+            message = "Node exporter must be allowed only on an explicit private interface.";
           }
         ];
       };
@@ -231,8 +231,8 @@ in
 
       security.sudo-rs = {
         enable = true;
-        # Service hosts have no password authentication. The pinned operator
-        # SSH key is consequently the sole interactive elevation boundary.
+        # Service hosts have no password login. The pinned operator SSH key is
+        # therefore the only way to obtain an interactive sudo session.
         wheelNeedsPassword = false;
       };
 

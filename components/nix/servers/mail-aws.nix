@@ -420,11 +420,10 @@ _: {
       # retaining hostname and certificate validation.
       security.pki.certificateFiles = [ rdsCaBundle ];
 
-      # EC2 user data materializes only non-secret deployment metadata.
-      # systemd reads this root-only file before applying each service's user
-      # boundary, so scripts depend on an injected environment rather than
-      # filesystem access.  Tmpfiles also owns the shared runtime boundary so
-      # one unit stopping cannot remove credentials still used by another.
+      # EC2 user data writes only non-secret deployment metadata. systemd reads
+      # this root-only file before starting the services, so scripts receive the
+      # values as environment variables. Tmpfiles owns the shared runtime
+      # directory so one unit cannot remove credentials still used by another.
       systemd.tmpfiles.rules = [
         "d /etc/stalwart-bootstrap 0750 root root -"
         "z ${deploymentEnvironment} 0600 root root -"
@@ -450,7 +449,7 @@ _: {
         };
 
         stalwart-bootstrap = {
-          description = "Bootstrap or reconstruct the declarative Stalwart registry";
+          description = "Create or restore the Stalwart account registry";
           after = [ "stalwart-secrets.service" ];
           requires = [ "stalwart-secrets.service" ];
           before = [ "stalwart.service" ];
@@ -511,7 +510,7 @@ _: {
         };
 
         stalwart-resend-reconcile = {
-          description = "Reconcile the independently enrolled Resend route";
+          description = "Configure the Stalwart Resend relay";
           after = [
             "stalwart.service"
             "stalwart-secrets.service"
@@ -531,7 +530,7 @@ _: {
         };
 
         stalwart-acme-reconcile = {
-          description = "Reconcile Stalwart TLS-ALPN ACME challenge";
+          description = "Configure Stalwart's TLS-ALPN ACME challenge";
           after = [
             "stalwart.service"
             "stalwart-secrets.service"
