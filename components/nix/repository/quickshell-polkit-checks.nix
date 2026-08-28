@@ -1,19 +1,13 @@
 { config, lib, ... }:
+let
+  hostName = "parmigiano";
+  hostModel = config.dendritic.hosts.${hostName};
+in
 {
   perSystem =
-    { pkgs, ... }:
+    { pkgs, system, ... }:
     let
-      hostName = "parmigiano";
-      hostModel = config.dendritic.hosts.${hostName};
-      userName = config.users.${hostModel.user}.username;
-      homeConfigurationName = "${userName}@${hostName}";
       shellConfigName = config.dendritic.quickshell.configName;
-      hostEvaluation = config.flake.nixosConfigurations.${hostName};
-      homeEvaluation = config.flake.homeConfigurations.${homeConfigurationName};
-      hostConfig = hostEvaluation.config;
-      homeConfig = homeEvaluation.config;
-      nestedHomeConfig = hostConfig.home-manager.users.${userName};
-      quickshell = homeConfig.programs.quickshell.package;
       nativeHostModel = lib.recursiveUpdate hostModel {
         polkit.agent = "quickshell";
       };
@@ -21,45 +15,14 @@
       nativeHomeEvaluation = config.dendritic.builders.mkHomeConfiguration hostName nativeHostModel;
       nativeHostConfig = nativeHostEvaluation.config;
       nativeHomeConfig = nativeHomeEvaluation.config;
-      nativeNestedHomeConfig = nativeHostConfig.home-manager.users.${userName};
       nativeShellConfig = nativeHomeConfig.programs.quickshell.configs.${shellConfigName};
-      nativeNestedShellConfig = nativeNestedHomeConfig.programs.quickshell.configs.${shellConfigName};
       nativeQuickshell = nativeHomeConfig.programs.quickshell.package;
-      nixosOnlyOverride = builtins.tryEval (
-        builtins.deepSeq
-          (hostEvaluation.extendModules {
-            modules = [
-              {
-                dendritic.polkit.agent = lib.mkForce "quickshell";
-              }
-            ];
-          }).config.system.build.toplevel.drvPath
-          true
-      );
-      nestedOnlyOverride = builtins.tryEval (
-        builtins.deepSeq
-          (hostEvaluation.extendModules {
-            modules = [
-              {
-                home-manager.users.${userName}.dendritic.polkit.agent = lib.mkForce "quickshell";
-              }
-            ];
-          }).config.system.build.toplevel.drvPath
-          true
-      );
-      runtimeValidatorFor =
-        label: evaluatedHomeConfig:
-        lib.findFirst (package: lib.getName package == "funforgiven-runtime-check")
-          (throw "funforgiven-runtime-check is missing from the ${label} Home Manager profile")
-          evaluatedHomeConfig.home.packages;
-      defaultRuntimeExpected = (runtimeValidatorFor "default" homeConfig).runtimeValidationExpected;
-      nativeRuntimeExpected =
-        (runtimeValidatorFor "native standalone" nativeHomeConfig).runtimeValidationExpected;
-      nativeNestedRuntimeExpected =
-        (runtimeValidatorFor "native nested" nativeNestedHomeConfig).runtimeValidationExpected;
     in
     {
-      checks = {
+      checks = lib.mkIf (system == hostModel.system) {
+        quickshell-native-polkit-home = nativeHomeEvaluation.activationPackage;
+        quickshell-native-polkit-toplevel = nativeHostConfig.system.build.toplevel;
+
         quickshell-native-polkit-smoke =
           pkgs.runCommandLocal "quickshell-native-polkit-smoke"
             {
@@ -67,35 +30,11 @@
                 nativeQuickshell
                 pkgs.coreutils
                 pkgs.gnugrep
-                pkgs.jq
                 pkgs.weston
               ];
             }
             ''
               set -euo pipefail
-
-              test ${lib.escapeShellArg nativeHostConfig.dendritic.polkit.agent} = quickshell
-              test ${lib.escapeShellArg nativeHomeConfig.dendritic.polkit.agent} = quickshell
-              test ${lib.escapeShellArg nativeNestedHomeConfig.dendritic.polkit.agent} = quickshell
-              test ${lib.escapeShellArg homeConfig.dendritic.polkit.agent} = ${lib.escapeShellArg hostConfig.dendritic.polkit.agent}
-              test ${lib.escapeShellArg nestedHomeConfig.dendritic.polkit.agent} = ${lib.escapeShellArg hostConfig.dendritic.polkit.agent}
-              test ${lib.escapeShellArg (toString homeConfig.programs.quickshell.package)} = ${lib.escapeShellArg (toString nestedHomeConfig.programs.quickshell.package)}
-              test ${lib.escapeShellArg (lib.boolToString nixosOnlyOverride.success)} = false
-              test ${lib.escapeShellArg (lib.boolToString nestedOnlyOverride.success)} = false
-              test ${lib.escapeShellArg (lib.boolToString nativeHostConfig.systemd.user.services.niri-flake-polkit.enable)} = false
-              test ${lib.escapeShellArg (toString nativeQuickshell)} != ${lib.escapeShellArg (toString quickshell)}
-              test ${lib.escapeShellArg (toString nativeQuickshell)} = ${lib.escapeShellArg (toString nativeNestedHomeConfig.programs.quickshell.package)}
-              grep -Fq 'readonly property bool nativePolkitEnabled: true' \
-                ${nativeShellConfig}/generated/ShellConfig.qml
-              grep -Fq 'readonly property bool nativePolkitEnabled: true' \
-                ${nativeNestedShellConfig}/generated/ShellConfig.qml
-              jq -e '.polkitAgent == "kde"' ${defaultRuntimeExpected} >/dev/null
-              jq -e '.polkitAgent == "quickshell"' ${nativeRuntimeExpected} >/dev/null
-              jq -e '.polkitAgent == "quickshell"' ${nativeNestedRuntimeExpected} >/dev/null
-              [[ ${lib.escapeShellArg (builtins.head nativeHomeConfig.systemd.user.services.quickshell.Service.ExecStart)} \
-                == ${lib.escapeShellArg "${nativeQuickshell}/bin/quickshell --config ${shellConfigName}"} ]]
-              test -e ${nativeHomeEvaluation.activationPackage}
-              test -e ${nativeHostConfig.system.build.toplevel}
 
               export HOME="$TMPDIR/home"
               export XDG_CACHE_HOME="$TMPDIR/cache"

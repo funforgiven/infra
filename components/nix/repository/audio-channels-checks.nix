@@ -5,7 +5,7 @@
 }:
 {
   perSystem =
-    { pkgs, ... }:
+    { pkgs, system, ... }:
     let
       hostConfig = config.flake.nixosConfigurations.parmigiano.config;
 
@@ -76,7 +76,7 @@
       graphContract = ../audio-channels/tests/graph-contract.mjs;
     in
     {
-      checks = {
+      checks = lib.mkIf (system == config.dendritic.hosts.parmigiano.system) {
         audio-channels-audioctl =
           pkgs.runCommandLocal "funforgiven-audioctl-check"
             {

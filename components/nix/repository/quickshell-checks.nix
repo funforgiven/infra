@@ -1,7 +1,7 @@
-{ config, ... }:
+{ config, lib, ... }:
 {
   perSystem =
-    { pkgs, ... }:
+    { pkgs, system, ... }:
     let
       hostName = "parmigiano";
       hostModel = config.dendritic.hosts.${hostName};
@@ -109,7 +109,7 @@
       '';
     in
     {
-      checks = {
+      checks = lib.mkIf (system == hostModel.system) {
         quickshell-runtime-contracts = quickshellRuntimeContracts;
         quickshell-runtime-smoke =
           pkgs.runCommandLocal "quickshell-runtime-smoke"
@@ -212,14 +212,14 @@
               qs ipc --pid "$qs_pid" call launcher open >/dev/null
               open_state="$(qs ipc --pid "$qs_pid" call launcher isVisible)"
               if [[ "$open_state" != true ]]; then
-                echo "Launcher failed to open through its typed IPC boundary; state=$open_state" >&2
+                echo "Launcher failed to open through IPC; state=$open_state" >&2
                 exit 1
               fi
 
               qs ipc --pid "$qs_pid" call launcher close >/dev/null
               closed_state="$(qs ipc --pid "$qs_pid" call launcher isVisible)"
               if [[ "$closed_state" != false ]]; then
-                echo "Launcher failed to close through its typed IPC boundary; state=$closed_state" >&2
+                echo "Launcher failed to close through IPC; state=$closed_state" >&2
                 exit 1
               fi
 
