@@ -16,10 +16,11 @@ _: {
 
       systemd.user.services.swaybg = {
         Unit = {
-          Description = "Declarative Niri wallpaper";
+          Description = "Niri wallpaper";
           Documentation = "man:swaybg(1)";
           ConditionEnvironment = "WAYLAND_DISPLAY";
           After = [ "graphical-session.target" ];
+          Before = [ "app-graphical.slice" ];
           PartOf = [ "graphical-session.target" ];
           Requisite = [ "graphical-session.target" ];
           X-Restart-Triggers = [ "${config.stylix.image}" ];

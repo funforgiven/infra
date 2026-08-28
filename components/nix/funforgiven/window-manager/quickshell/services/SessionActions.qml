@@ -56,7 +56,7 @@ QtObject {
     function _startSessionAction(action) {
         var command;
         try {
-            command = SessionCommand.sessionAction(Shell.ShellConfig.systemctl, Shell.ShellConfig.sessionActionUnits, action);
+            command = SessionCommand.sessionAction(Shell.ShellConfig.uwsm, Shell.ShellConfig.systemctl, action);
         } catch (commandError) {
             root._fail(action, commandError);
             return false;

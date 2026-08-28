@@ -6,6 +6,17 @@ _: {
       pkgs,
       ...
     }:
+    let
+      # NixOS exposes display-manager sessions through two XDG data paths, and
+      # Tuigreet lists the same desktop entry from both. Link only the supported
+      # Niri UWSM session.
+      uwsmSessions = pkgs.linkFarm "funforgiven-greetd-uwsm-sessions" [
+        {
+          name = "niri-uwsm.desktop";
+          path = "${config.services.displayManager.sessionData.desktops}/share/wayland-sessions/niri-uwsm.desktop";
+        }
+      ];
+    in
     {
       assertions = [
         {
@@ -13,13 +24,21 @@ _: {
           message = "The Niri greetd session requires programs.niri.enable.";
         }
         {
+          assertion = config.programs.uwsm.enable;
+          message = "The Niri greetd session requires programs.uwsm.enable.";
+        }
+        {
+          assertion = builtins.hasAttr "niri" config.programs.uwsm.waylandCompositors;
+          message = "The Niri greetd session requires a UWSM Niri compositor definition.";
+        }
+        {
           assertion = !(builtins.hasAttr "dank-material-shell" config.programs);
-          message = "The DMS NixOS modules and greeter must remain absent after cutover.";
+          message = "DankMaterialShell modules and its greeter must stay disabled.";
         }
       ];
 
       services = {
-        displayManager.defaultSession = "niri";
+        displayManager.defaultSession = "niri-uwsm";
 
         greetd = {
           enable = true;
@@ -30,8 +49,17 @@ _: {
               "--time"
               "--remember"
               "--asterisks"
+              "--sessions"
+              (toString uwsmSessions)
               "--cmd"
-              "${config.programs.niri.package}/bin/niri-session"
+              (lib.escapeShellArgs [
+                (lib.getExe config.programs.uwsm.package)
+                "start"
+                "-F"
+                "--"
+                "/run/current-system/sw/bin/niri"
+                "--session"
+              ])
             ];
             user = "greeter";
           };

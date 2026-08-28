@@ -384,7 +384,7 @@ QtObject {
     }
 
     function _launchCommand(entry) {
-        return LaunchCommand.app2unitService(Shell.ShellConfig.appLauncher, entry.id, Shell.ShellConfig.applicationStopTimeout);
+        return LaunchCommand.uwsmAppService(Shell.ShellConfig.appLauncher, entry.id);
     }
 
     function launchDesktopId(id) {

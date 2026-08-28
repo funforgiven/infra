@@ -67,7 +67,7 @@ in
         {
           assertion =
             config.programs.niri.settings.cursor.hide-after-inactive-ms == cursorHideDelayMilliseconds;
-          message = "Niri must hide the cursor on the AMOLED overlay's 30-second inactivity boundary.";
+          message = "Niri must hide the cursor after 30 seconds of inactivity.";
         }
         {
           assertion = lib.filterAttrs (_: command: command != null) config.services.swayidle.events == { };
@@ -77,9 +77,10 @@ in
 
       systemd.user.services.swayidle = {
         Unit = {
-          After = [ "quickshell.service" ];
-          PartOf = [ "quickshell.service" ];
-          Requires = [ "quickshell.service" ];
+          After = [
+            "quickshell.service"
+          ];
+          Wants = [ "quickshell.service" ];
           Requisite = [ "graphical-session.target" ];
         };
 
