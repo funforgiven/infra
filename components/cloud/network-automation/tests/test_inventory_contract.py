@@ -302,7 +302,17 @@ class NetworkInventoryTests(unittest.TestCase):
         )
         self.assertEqual("10.21.40.123", self.factorio_service["spec"]["loadBalancerIP"])
         self.assertEqual(
-            "Cluster", self.factorio_service["spec"]["externalTrafficPolicy"]
+            "Local", self.factorio_service["spec"]["externalTrafficPolicy"]
+        )
+        self.assertEqual(
+            {
+                "loadbalancer.openstack.org/enable-health-monitor": "true",
+                "loadbalancer.openstack.org/health-monitor-delay": "5",
+                "loadbalancer.openstack.org/health-monitor-timeout": "3",
+                "loadbalancer.openstack.org/health-monitor-max-retries": "1",
+                "loadbalancer.openstack.org/health-monitor-max-retries-down": "3",
+            },
+            self.factorio_service["metadata"]["annotations"],
         )
         self.assertIn("wan-port-forwards", self.playbook)
         self.assertIn("connection-nat-state=dstnat", self.playbook)
