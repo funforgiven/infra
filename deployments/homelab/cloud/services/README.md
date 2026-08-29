@@ -29,7 +29,7 @@ management surface is exposed.
 | SFTPGo | Services cluster | `https://upload.fahrican.com`; ZITADEL OIDC for the WebClient |
 | Beets | Services cluster | No direct user endpoint; imports accepted uploads into the media library |
 | AudioMuse | Services cluster | `https://audiomuse.fahrican.com`; LAN/WireGuard only, with ZITADEL OIDC |
-| Factorio Space Age | Services cluster | Public and LAN Factorio browsers; shared game password |
+| Factorio Space Age | Services cluster | Public browser; verified Factorio account and shared game password |
 | Home Assistant | Dedicated VM | `https://home.fahrican.com`; native local account and MFA |
 | Stalwart mail | AWS appliance | Native mail accounts; public mail protocols and web administration |
 | Prometheus and Alertmanager | Services cluster | Administrative monitoring; Alertmanager uses the infrastructure Telegram bot |

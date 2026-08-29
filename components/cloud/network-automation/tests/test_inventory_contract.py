@@ -14,6 +14,9 @@ HOST_DEFAULTS = ROOT / "deployments/homelab/cloud/hosts/group_vars/all.yml"
 HOST_KEYS = ROOT / "deployments/homelab/ssh-host-keys.json"
 INTERNAL_DNS = ROOT / "deployments/homelab/cloud/undercloud/37-service-network/internal-dns.yaml"
 PLAYBOOK = ROOT / "components/cloud/network-automation/reconcile-routeros.yaml"
+FACTORIO_RENDER_CONFIG = (
+    ROOT / "deployments/homelab/cloud/services/30-factorio/render-config.sh"
+)
 ANSIBLE_CONFIG = ROOT / "components/cloud/network-automation/ansible.cfg"
 CLOUD_COMPONENTS = ROOT / "components/cloud"
 
@@ -29,6 +32,7 @@ class NetworkInventoryTests(unittest.TestCase):
         cls.host_keys = json.loads(HOST_KEYS.read_text())
         cls.internal_dns = INTERNAL_DNS.read_text()
         cls.playbook = PLAYBOOK.read_text()
+        cls.factorio_render_config = FACTORIO_RENDER_CONFIG.read_text()
         cls.ansible_config = ANSIBLE_CONFIG.read_text()
 
     def test_routeros_connections_use_standard_pinned_host_keys(self) -> None:
@@ -240,7 +244,7 @@ class NetworkInventoryTests(unittest.TestCase):
             self.assertIn(f"{host}.mgmt IN A {address}", self.internal_dns)
         self.assertNotIn("pecorino.mgmt IN A 10.21.20.13", self.internal_dns)
 
-    def test_factorio_has_one_port_preserving_udp_wan_forward(self) -> None:
+    def test_factorio_has_port_preserving_wan_and_lan_reflection(self) -> None:
         factorio_forwards = [
             item
             for item in self.router["routeros_port_forwards"]
@@ -259,8 +263,62 @@ class NetworkInventoryTests(unittest.TestCase):
             ],
             factorio_forwards,
         )
+        self.assertEqual(
+            [
+                {
+                    "comment": "infra: Factorio Space Age LAN reflection",
+                    "source_interface_list": "INFRA-LAN",
+                    "destination_address_type": "local",
+                    "excluded_destination_address_list": "INFRA-LAN-NAT",
+                    "protocol": "udp",
+                    "destination_port": "34197",
+                    "to_address": "10.21.40.123",
+                    "to_port": "34197",
+                }
+            ],
+            self.router["routeros_nat_reflections"],
+        )
         self.assertIn("wan-port-forwards", self.playbook)
         self.assertIn("connection-nat-state=dstnat", self.playbook)
+        self.assertIn("Reconcile Git-owned NAT reflections", self.playbook)
+        self.assertIn("dst-address-type={{ item.destination_address_type }}", self.playbook)
+        self.assertIn(
+            "dst-address-list=!{{ item.excluded_destination_address_list }}",
+            self.playbook,
+        )
+        self.assertRegex(
+            self.playbook,
+            r"/interface list member find where\s+"
+            r'list="{{ routeros_provider_network.lan_interface_list }}" and\s+'
+            r'interface="{{ routeros_provider_network.interface }}"',
+        )
+        for required_setting in (
+            "public: true",
+            "lan: true",
+            "username: $username",
+            "token: $token",
+            "game_password: $game_password",
+            "require_user_verification: true",
+        ):
+            self.assertIn(required_setting, self.factorio_render_config)
+        self.assertNotIn(
+            "require_user_verification: false", self.factorio_render_config
+        )
+        selected = subprocess.run(
+            [
+                "ansible-playbook",
+                "--list-tasks",
+                "--tags",
+                "wan-port-forwards",
+                "reconcile-routeros.yaml",
+            ],
+            cwd=PLAYBOOK.parent,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+        self.assertIn("Reconcile Git-owned WAN port forwards", selected)
+        self.assertIn("Reconcile Git-owned NAT reflections", selected)
 
     def test_external_provider_vlan_is_reconciled_end_to_end(self) -> None:
         self.assertEqual(
@@ -281,6 +339,7 @@ class NetworkInventoryTests(unittest.TestCase):
         self.assertEqual(40, provider["vlan_id"])
         self.assertEqual("10.21.40.1/24", provider["address"])
         self.assertEqual("10.21.40.0/24", provider["network"])
+        self.assertEqual("INFRA-LAN", provider["lan_interface_list"])
         self.assertEqual(
             [
                 (

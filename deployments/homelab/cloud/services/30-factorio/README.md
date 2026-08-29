@@ -13,31 +13,30 @@ Cinder volume on a healthy worker rather than running unsafe active replicas.
 | State | Retained 20 GiB `rbd1` volume |
 | Runtime | 2 CPU and 4 GiB requested; 8 GiB memory ceiling; no CPU throttle |
 
-The server is published in Factorio's public multiplayer browser as
-`Fahrican Space Age`, but requires the separately shared game password. Player
-account verification is disabled, so the password is the sole admission gate
-and player names are not authenticated. Friends need Space Age; the normal
-Steam stable branch currently supplies the matching 2.0.77 client. RCON binds
-only to pod loopback and is never part of a Service or RouterOS forward.
+The server is published in Factorio's public multiplayer browser as `Fahrican
+Space Age`. Joining requires both a verified Factorio account and the
+separately shared game password. Friends need Space Age; the normal Steam stable
+branch currently supplies the matching 2.0.77 client. RCON binds only to pod
+loopback and is never part of a Service or RouterOS forward.
 
-The automatic administrator list is intentionally empty because an unverified
-player could otherwise impersonate a listed administrator name. Run operational
-commands through loopback RCON from an authenticated Kubernetes session, for
-example:
+The automatic administrator list is intentionally empty so privileged
+operations remain confined to loopback RCON from an authenticated Kubernetes
+session, for example:
 
 ```console
 kubectl -n games exec statefulset/factorio -c factorio -- \
   /bin/rcon /players
 ```
 
-Re-enable player verification before granting persistent in-game administrator
-rights based on a player name.
+Grant persistent in-game administrator rights only as an explicit operational
+change, even though player names are verified.
 
-From the trusted LAN, use the LAN game browser or direct-connect to
-`10.21.40.123:34197`. Remote friends can use the public game browser or the
-site's public IP. The WAN path keeps UDP port 34197 unchanged through the CCR
-and OpenStack load balancer so Factorio's public endpoint detection sees the
-correct source port.
+From any local LAN, use the public game browser; the trusted VLAN may also
+direct-connect to `10.21.40.123:34197`. Remote friends use the public game
+browser or direct-connect to the site's public IP on port `34197`. The WAN path
+keeps UDP port 34197 unchanged through the CCR and OpenStack load balancer so
+Factorio's public endpoint detection sees the correct source port. A UDP-only
+NAT reflection lets local LAN clients use that same public endpoint.
 
 ## Backup and recovery
 
