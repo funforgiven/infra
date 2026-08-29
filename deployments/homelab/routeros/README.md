@@ -58,6 +58,15 @@ Syncthing reaches the primary workstation through Git-owned TCP and QUIC
 destination-NAT rules on port `22000`. The target is the workstation's stable
 VLAN-10 reservation `10.21.10.20`; the Syncthing GUI is not exposed.
 
+Factorio reaches the services cluster through one Git-owned UDP destination-NAT
+rule. WAN port `34197` is forwarded without translation to the dedicated OVN
+load-balancer address `10.21.40.123:34197`. A matching destination-specific
+forward-filter rule admits only that translated flow; RCON is not forwarded.
+The public game listing is password-protected and requires Factorio account
+credentials only for server publication; player account verification is
+disabled. The automatic in-game administrator list is empty because player
+names are therefore not authenticated.
+
 ## OTOTOY Mullvad egress
 
 The CCR2004 terminates a separate Mullvad WireGuard client interface named
@@ -121,6 +130,8 @@ ansible-playbook reconcile-routeros.yaml --limit core_router --tags apply
 
 Use `--limit core_router --tags mullvad` to select only the destination-scoped
 Mullvad objects while retaining the standard read-only CCR preflight.
+Use `--limit core_router --tags wan-port-forwards` to reconcile only the
+declared Factorio and Syncthing destination-NAT rows after the usual preflight.
 
 The playbook owns only the inventory-declared subset. It does not infer unknown
 cabling or rewrite unrelated dynamic leases. Static lease activity is not

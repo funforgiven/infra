@@ -284,6 +284,12 @@ all:
               protocol: tcp
               destination_port: "443"
           routeros_port_forwards:
+            - comment: "infra: Factorio Space Age"
+              in_interface_list: INFRA-WAN
+              protocol: udp
+              destination_port: "34197"
+              to_address: 10.21.40.123
+              to_port: "34197"
             - comment: "infra: Syncthing parmigiano TCP"
               in_interface_list: INFRA-WAN
               protocol: tcp

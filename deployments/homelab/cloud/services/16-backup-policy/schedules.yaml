@@ -12,6 +12,7 @@ spec:
     ttl: 720h
     includedNamespaces:
       - backup-qualification
+      - games
       - media
       - services-databases
     snapshotVolumes: false
@@ -31,6 +32,7 @@ spec:
     ttl: 2160h
     includedNamespaces:
       - backup-qualification
+      - games
       - media
       - services-databases
     snapshotVolumes: false

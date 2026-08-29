@@ -46,6 +46,61 @@ nix run .#generate-services-credential -- --rotate KEY
 Review only ciphertext structure and diff statistics. Never print a decrypted
 document to inspect the result.
 
+## Factorio credentials
+
+Factorio's public matching service needs the host account name and the service
+token from that account's profile. The game password is also an external value
+because it must remain available in the password manager for sharing with
+friends. Put each value in its correspondingly named mode-`0600` intake file,
+then enroll it without placing the value in shell history:
+
+Log into the Factorio account from the game client first, then close the game
+and open `player-data.json`. Copy only `service-username` into
+`FACTORIO_USERNAME.key` and `service-token` into `FACTORIO_TOKEN.key`. The
+default client file is:
+
+- Linux: `~/.factorio/player-data.json`;
+- Windows: `%APPDATA%\\Factorio\\player-data.json`;
+- macOS: `~/Library/Application Support/factorio/player-data.json`.
+
+Steam Cloud may also keep a copy under its app ID `427520`, but prefer the
+Factorio user-data path. Never use the account password as the token.
+
+`FACTORIO_GAME_PASSWORD.key` is one-way intake: enrollment truncates it after
+successful encryption. Preserve the generated value separately in the password
+manager or the ignored mode-`0600` `FACTORIO_FRIENDS_PASSWORD.key` handoff file
+before enrollment. Share only that game password with players; never share the
+matching-service token.
+
+```sh
+nix run .#enroll-services-credential -- \
+  --from-file --intake-directory /absolute/path/to/intake FACTORIO_USERNAME
+nix run .#enroll-services-credential -- \
+  --from-file --intake-directory /absolute/path/to/intake FACTORIO_TOKEN
+nix run .#enroll-services-credential -- \
+  --from-file --intake-directory /absolute/path/to/intake FACTORIO_GAME_PASSWORD
+```
+
+Use at least 12 characters for the game password. The generated RCON password
+is already stored as SOPS ciphertext; it is never shared, and RCON remains
+bound to pod loopback. After the ciphertext is committed and the
+services-cluster reconciler has delivered `factorio-runtime`, apply only the
+RouterOS WAN port-forward surface (destination NAT plus its matching
+destination-specific forward filter):
+
+```sh
+cd components/cloud/network-automation
+ansible-playbook reconcile-routeros.yaml \
+  --limit core_router --tags wan-port-forwards
+```
+
+Wait for the `factorio` StatefulSet and LoadBalancer address, then verify a
+LAN-browser or direct connection to `10.21.40.123:34197` and one real WAN
+connection from outside the site. Friends should find `Fahrican Space Age` in
+the public game browser and enter the separately shared password. Do not accept
+the deployment until an on-demand `services-daily` backup and the isolated
+restore qualification both succeed.
+
 ## Provider reconciliation
 
 ### Backblaze

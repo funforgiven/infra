@@ -39,7 +39,7 @@ class TelegramActivationSelectionTest(unittest.TestCase):
             runtime_path = root / CONTRACT_PATH
             runtime_path.parent.mkdir(parents=True)
             runtime = {
-                "schemaVersion": 9,
+                "schemaVersion": 10,
                 "secretFile": "runtime.sops.yaml",
                 "credentials": {"telegram": ["SERVICE_TELEGRAM_BOT_TOKEN"]},
                 "generatedSecrets": {

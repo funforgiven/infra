@@ -5,7 +5,7 @@ metadata:
   namespace: openstack
 data:
   required-keys.yaml: |
-    schemaVersion: 9
+    schemaVersion: 10
     secret: services-runtime-bootstrap
     secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
     credentials:
@@ -14,6 +14,10 @@ data:
       media:
         - ND_LASTFM_APIKEY
         - ND_LASTFM_SECRET
+      games:
+        - FACTORIO_USERNAME
+        - FACTORIO_TOKEN
+        - FACTORIO_GAME_PASSWORD
       mailProvisioning:
         - RESEND_ADMIN_API_KEY
     generatedSecrets:
@@ -26,6 +30,7 @@ data:
           - AUDIOMUSE_POSTGRES_PASSWORD
           - NAVIDROME_OAUTH2_COOKIE_SECRET
           - AUDIOMUSE_OAUTH2_COOKIE_SECRET
+          - FACTORIO_RCON_PASSWORD
       service-hosts:
         secretFile: deployments/homelab/cloud/host-runtime/generated.sops.yaml
         keys:

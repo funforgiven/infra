@@ -1,0 +1,33 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: factorio
+  namespace: games
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: factorio
+      rules:
+        - alert: FactorioUnavailable
+          expr: >-
+            kube_statefulset_status_replicas_ready{namespace="games",
+            statefulset="factorio"} != 1
+            or absent(kube_statefulset_status_replicas_ready{
+            namespace="games",statefulset="factorio"})
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: The Factorio server is not ready.
+        - alert: FactorioLoadBalancerUnavailable
+          expr: >-
+            kube_service_status_load_balancer_ingress{namespace="games",
+            service="factorio"} < 1
+            or absent(kube_service_status_load_balancer_ingress{
+            namespace="games",service="factorio"})
+          for: 15m
+          labels:
+            severity: critical
+          annotations:
+            summary: The Factorio UDP load balancer has no provider address.

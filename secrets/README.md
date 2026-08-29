@@ -96,6 +96,9 @@ external intake names are:
 | `ND_LASTFM_APIKEY.key` | Navidrome Last.fm application key |
 | `ND_LASTFM_SECRET.key` | Navidrome Last.fm application secret |
 | `RESEND_ADMIN_API_KEY.key` | Resend administration key used to create a scoped sending key |
+| `FACTORIO_USERNAME.key` | Factorio account name used to publish the Space Age server |
+| `FACTORIO_TOKEN.key` | Factorio service token used by the public matching server |
+| `FACTORIO_GAME_PASSWORD.key` | Shared game password; generate and retain it in a password manager |
 | `AWS_BOOTSTRAP_ACCESS_KEY_ID.key` | Temporary AWS identity used to create the mail provisioning identity |
 | `AWS_BOOTSTRAP_SECRET_ACCESS_KEY.key` | Temporary AWS bootstrap secret |
 

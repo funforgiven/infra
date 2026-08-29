@@ -1,0 +1,207 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: factorio
+  namespace: games
+  labels:
+    app.kubernetes.io/name: factorio
+spec:
+  type: LoadBalancer
+  loadBalancerIP: 10.21.40.123
+  externalTrafficPolicy: Local
+  selector:
+    app.kubernetes.io/name: factorio
+  ports:
+    - name: game
+      protocol: UDP
+      port: 34197
+      targetPort: game
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: factorio
+  namespace: games
+spec:
+  serviceName: factorio
+  replicas: 1
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: factorio
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: factorio
+        app.kubernetes.io/part-of: game-servers
+      annotations:
+        backup.velero.io/backup-volumes: data
+        pre.hook.backup.velero.io/command: '["/bootstrap/factorio-save.sh", "velero"]'
+        pre.hook.backup.velero.io/container: factorio
+        pre.hook.backup.velero.io/on-error: Fail
+        pre.hook.backup.velero.io/timeout: 5m
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 180
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: render-config
+          image: docker.io/factoriotools/factorio:2.0.77-rootless@sha256:f27130ce39c472fc8a9bf447c117a8b806568ee3ed172207825d5e952c71e282
+          command:
+            - /bootstrap/render-config.sh
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext: &factorioSecurityContext
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+            - name: credentials
+              mountPath: /credentials
+              readOnly: true
+            - name: data
+              mountPath: /factorio
+            - name: engine-config
+              mountPath: /engine-config
+            - name: runtime-config
+              mountPath: /runtime-config
+      containers:
+        - name: factorio
+          image: docker.io/factoriotools/factorio:2.0.77-rootless@sha256:f27130ce39c472fc8a9bf447c117a8b806568ee3ed172207825d5e952c71e282
+          command:
+            - /bootstrap/start.sh
+          env:
+            - name: CONFIG
+              value: /runtime-config
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: RCON_PORT
+              value: "27015"
+          ports:
+            - name: game
+              protocol: UDP
+              containerPort: 34197
+          startupProbe:
+            exec: &factorioReady
+              command:
+                - /bootstrap/factorio-ready.sh
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            exec: *factorioReady
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            exec: *factorioReady
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 6
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bootstrap/factorio-save.sh
+                  - shutdown
+          resources:
+            requests:
+              cpu: "2"
+              memory: 4Gi
+            limits:
+              memory: 8Gi
+          securityContext: *factorioSecurityContext
+          volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+            - name: data
+              mountPath: /factorio
+            - name: engine-config
+              mountPath: /engine-config
+            - name: runtime-config
+              mountPath: /runtime-config
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+        - name: save-integrity
+          image: docker.io/library/busybox:1.38.0@sha256:dc2d74b28e4cf8984fa52af1f39bc7c3d9c73760b41a74d629f5d11b1ab28616
+          command:
+            - /bootstrap/verify-saves.sh
+            - --watch
+          readinessProbe:
+            exec:
+              command:
+                - /bootstrap/verify-saves.sh
+            periodSeconds: 30
+            failureThreshold: 2
+          resources:
+            requests:
+              cpu: 5m
+              memory: 8Mi
+            limits:
+              cpu: 100m
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+            - name: data
+              mountPath: /factorio
+              readOnly: true
+      volumes:
+        - name: bootstrap
+          configMap:
+            name: factorio-bootstrap
+            defaultMode: 0555
+        - name: credentials
+          secret:
+            secretName: factorio-runtime
+            defaultMode: 0440
+        - name: engine-config
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
+        - name: runtime-config
+          emptyDir:
+            medium: Memory
+            sizeLimit: 8Mi
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: rbd1
+        resources:
+          requests:
+            storage: 20Gi
