@@ -10,7 +10,7 @@ Cinder volume on a healthy worker rather than running unsafe active replicas.
 | Expansion | Space Age, Quality, and Elevated Rails enabled |
 | Provider VIP | `10.21.40.123:34197/udp` |
 | Internet path | CCR2004 WAN `34197/udp` to the provider VIP |
-| Load-balancer policy | Cluster-routed so either OVN worker member reaches the singleton |
+| Load-balancer policy | Local endpoint selected by an Octavia health monitor |
 | State | Retained 20 GiB `rbd1` volume |
 | Runtime | 2 CPU and 4 GiB requested; 8 GiB memory ceiling; no CPU throttle |
 
@@ -40,7 +40,9 @@ source port, so a narrow CCR source-NAT rule pins only provider-originated UDP
 traffic to destination port 34197 back to public source port 34197. Factorio's
 public endpoint detection therefore advertises the same port accepted by the
 inbound rule. A UDP-only NAT reflection lets local LAN clients use that same
-public endpoint.
+public endpoint. Octavia monitors the worker NodePorts and admits only the node
+with the local Factorio endpoint, automatically following a future pod
+reschedule without sending new UDP flows through a non-local worker.
 
 ## Backup and recovery
 

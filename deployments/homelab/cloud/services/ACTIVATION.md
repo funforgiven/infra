@@ -103,9 +103,11 @@ public-browser or direct connection to `10.21.40.123:34197` and one real WAN
 connection from outside the site. Friends find `Fahrican Space Age` in the
 public game browser, authenticate their Factorio client, and enter the
 separately shared password. Confirm that a local-LAN client can join through
-the public listing as proof of the scoped NAT reflection. Do not accept the
-deployment until an on-demand `services-daily` backup and the isolated restore
-qualification both succeed.
+the public listing as proof of the scoped NAT reflection. Confirm that the
+Factorio Octavia pool has a health monitor and only the worker with the local
+Factorio endpoint is `ONLINE`; `externalTrafficPolicy: Local` is unsafe without
+that monitor. Do not accept the deployment until an on-demand `services-daily`
+backup and the isolated restore qualification both succeed.
 
 ## Provider reconciliation
 

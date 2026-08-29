@@ -5,13 +5,18 @@ metadata:
   namespace: games
   labels:
     app.kubernetes.io/name: factorio
+  annotations:
+    # externalTrafficPolicy=Local requires member health monitoring so Octavia
+    # sends UDP only to the worker that currently owns the singleton endpoint.
+    loadbalancer.openstack.org/enable-health-monitor: "true"
+    loadbalancer.openstack.org/health-monitor-delay: "5"
+    loadbalancer.openstack.org/health-monitor-timeout: "3"
+    loadbalancer.openstack.org/health-monitor-max-retries: "1"
+    loadbalancer.openstack.org/health-monitor-max-retries-down: "3"
 spec:
   type: LoadBalancer
   loadBalancerIP: 10.21.40.123
-  # OVN Octavia registers every worker for the NodePort. Route through
-  # kube-proxy so a singleton remains reachable when a packet lands on a
-  # worker that does not currently host the Factorio pod.
-  externalTrafficPolicy: Cluster
+  externalTrafficPolicy: Local
   selector:
     app.kubernetes.io/name: factorio
   ports:
