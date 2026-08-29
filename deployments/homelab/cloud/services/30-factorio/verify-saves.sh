@@ -3,14 +3,17 @@ set -eu
 
 verify_once() {
   found=false
+  valid=true
   for save in /factorio/saves/*.zip; do
     if [ ! -f "$save" ]; then
       continue
     fi
     found=true
-    unzip -t "$save" >/dev/null
+    if ! unzip -t "$save" >/dev/null; then
+      valid=false
+    fi
   done
-  [ "$found" = true ]
+  [ "$found" = true ] && [ "$valid" = true ]
 }
 
 if [ "${1:-}" != --watch ]; then
@@ -19,6 +22,8 @@ if [ "${1:-}" != --watch ]; then
 fi
 
 while true; do
-  verify_once
+  if ! verify_once; then
+    echo "Factorio save integrity verification failed." >&2
+  fi
   sleep 300
 done

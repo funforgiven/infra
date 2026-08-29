@@ -42,6 +42,11 @@ class NetworkInventoryTests(unittest.TestCase):
             for document in factorio_documents
             if document["kind"] == "Service"
         )
+        cls.factorio_statefulset = next(
+            document
+            for document in factorio_documents
+            if document["kind"] == "StatefulSet"
+        )
         cls.ansible_config = ANSIBLE_CONFIG.read_text()
 
     def test_routeros_connections_use_standard_pinned_host_keys(self) -> None:
@@ -302,18 +307,17 @@ class NetworkInventoryTests(unittest.TestCase):
         )
         self.assertEqual("10.21.40.123", self.factorio_service["spec"]["loadBalancerIP"])
         self.assertEqual(
-            "Local", self.factorio_service["spec"]["externalTrafficPolicy"]
+            "Cluster", self.factorio_service["spec"]["externalTrafficPolicy"]
         )
-        self.assertEqual(
-            {
-                "loadbalancer.openstack.org/enable-health-monitor": "true",
-                "loadbalancer.openstack.org/health-monitor-delay": "5",
-                "loadbalancer.openstack.org/health-monitor-timeout": "3",
-                "loadbalancer.openstack.org/health-monitor-max-retries": "1",
-                "loadbalancer.openstack.org/health-monitor-max-retries-down": "3",
-            },
-            self.factorio_service["metadata"]["annotations"],
+        self.assertNotIn("annotations", self.factorio_service["metadata"])
+        save_integrity = next(
+            container
+            for container in self.factorio_statefulset["spec"]["template"]["spec"][
+                "containers"
+            ]
+            if container["name"] == "save-integrity"
         )
+        self.assertNotIn("readinessProbe", save_integrity)
         self.assertIn("wan-port-forwards", self.playbook)
         self.assertIn("connection-nat-state=dstnat", self.playbook)
         self.assertIn("Reconcile Git-owned WAN forward filters", self.playbook)

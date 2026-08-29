@@ -104,10 +104,10 @@ connection from outside the site. Friends find `Fahrican Space Age` in the
 public game browser, authenticate their Factorio client, and enter the
 separately shared password. Confirm that a local-LAN client can join through
 the public listing as proof of the scoped NAT reflection. Confirm that the
-Factorio Octavia pool has a health monitor and only the worker with the local
-Factorio endpoint is `ONLINE`; `externalTrafficPolicy: Local` is unsafe without
-that monitor. Do not accept the deployment until an on-demand `services-daily`
-backup and the isolated restore qualification both succeed.
+Factorio Service uses `externalTrafficPolicy: Cluster`, its EndpointSlice is
+ready, and a fresh connection succeeds through each active Octavia worker
+member. Do not accept the deployment until an on-demand `services-daily` backup
+and the isolated restore qualification both succeed.
 
 ## Provider reconciliation
 
