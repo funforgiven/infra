@@ -10,6 +10,7 @@ Cinder volume on a healthy worker rather than running unsafe active replicas.
 | Expansion | Space Age, Quality, and Elevated Rails enabled |
 | Provider VIP | `10.21.40.123:34197/udp` |
 | Internet path | CCR2004 WAN `34197/udp` to the provider VIP |
+| Load-balancer policy | Cluster-routed so either OVN worker member reaches the singleton |
 | State | Retained 20 GiB `rbd1` volume |
 | Runtime | 2 CPU and 4 GiB requested; 8 GiB memory ceiling; no CPU throttle |
 
@@ -34,9 +35,12 @@ change, even though player names are verified.
 From any local LAN, use the public game browser; the trusted VLAN may also
 direct-connect to `10.21.40.123:34197`. Remote friends use the public game
 browser or direct-connect to the site's public IP on port `34197`. The WAN path
-keeps UDP port 34197 unchanged through the CCR and OpenStack load balancer so
-Factorio's public endpoint detection sees the correct source port. A UDP-only
-NAT reflection lets local LAN clients use that same public endpoint.
+forwards UDP 34197 to the provider VIP. Calico may randomize an outbound probe's
+source port, so a narrow CCR source-NAT rule pins only provider-originated UDP
+traffic to destination port 34197 back to public source port 34197. Factorio's
+public endpoint detection therefore advertises the same port accepted by the
+inbound rule. A UDP-only NAT reflection lets local LAN clients use that same
+public endpoint.
 
 ## Backup and recovery
 

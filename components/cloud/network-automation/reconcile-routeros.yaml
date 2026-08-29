@@ -433,6 +433,7 @@
           - routeros_provider_network.network | length > 0
           - routeros_provider_network.nat_address_list | length > 0
           - routeros_provider_network.wan_interface_list | length > 0
+          - routeros_provider_network.wan_masquerade_comment | length > 0
           - routeros_provider_network.lan_interface_list | length > 0
           - routeros_provider_network.trusted_interface | length > 0
           - routeros_provider_network.forward_chain | length > 0
@@ -456,6 +457,17 @@
             (routeros_port_forwards + routeros_nat_reflections) |
             map(attribute='comment') | list | unique | length ==
             (routeros_port_forwards + routeros_nat_reflections) | length
+          - routeros_source_port_pins | length > 0
+          - >-
+            routeros_source_port_pins |
+            map(attribute='comment') | list | unique | length ==
+            routeros_source_port_pins | length
+          - >-
+            (routeros_port_forwards + routeros_nat_reflections +
+            routeros_source_port_pins) |
+            map(attribute='comment') | list | unique | length ==
+            (routeros_port_forwards + routeros_nat_reflections +
+            routeros_source_port_pins) | length
           - >-
             routeros_static_leases | map(attribute='comment') | list |
             unique | length == routeros_static_leases | length
@@ -531,6 +543,26 @@
         - always
         - inventory-contract
 
+    - name: Validate source-port pins
+      ansible.builtin.assert:
+        that:
+          - item.comment | length > 0
+          - item.source_interface == routeros_provider_network.interface
+          - >-
+            item.out_interface_list ==
+            routeros_provider_network.wan_interface_list
+          - item.protocol in ['tcp', 'udp']
+          - item.destination_port is match('^[0-9]+$')
+          - item.to_port is match('^[0-9]+$')
+          - item.to_port == item.destination_port
+        fail_msg: "Invalid source-port pin: {{ item.comment | default('unnamed') }}"
+      loop: "{{ routeros_source_port_pins }}"
+      loop_control:
+        label: "{{ item.comment }}"
+      tags:
+        - always
+        - inventory-contract
+
     - name: Require the management VLAN interface
       community.routeros.command:
         commands:
@@ -576,6 +608,11 @@
             interface="{{ routeros_provider_network.interface }}"]] != 0) do={
             :error "provider prerequisite: LAN reflection includes provider
             interface" };
+            :if ([:len [/ip firewall nat find where chain=srcnat and
+            action=masquerade and
+            comment="{{ routeros_provider_network.wan_masquerade_comment }}" and
+            disabled=no]] != 1) do={ :error "provider prerequisite: WAN
+            masquerade missing" };
             :if ([:len [/ip firewall filter find where
             chain="{{ routeros_provider_network.forward_chain }}" and
             comment="{{ routeros_provider_network.final_drop_comment }}" and
@@ -663,6 +700,33 @@
             :if ([:len $endpoint] = 1 and [:len $row] != 1) do={
             :error "NAT reflection endpoint is owned by another row" }
       loop: "{{ routeros_nat_reflections }}"
+      loop_control:
+        label: "{{ item.comment }}"
+      changed_when: false
+      tags: [always]
+
+    - name: Refuse duplicate or conflicting source-port pins
+      community.routeros.command:
+        commands:
+          - >-
+            :local row [/ip firewall nat find where
+            comment="{{ item.comment }}"];
+            :local endpoint [/ip firewall nat find where chain=srcnat and
+            dst-port={{ item.destination_port }} and
+            in-interface="{{ item.source_interface }}" and
+            out-interface-list="{{ item.out_interface_list }}" and
+            protocol={{ item.protocol }}];
+            :local ownedEndpoint [/ip firewall nat find where chain=srcnat and
+            comment="{{ item.comment }}" and
+            dst-port={{ item.destination_port }} and
+            in-interface="{{ item.source_interface }}" and
+            out-interface-list="{{ item.out_interface_list }}" and
+            protocol={{ item.protocol }}];
+            :if ([:len $row] > 1 or [:len $endpoint] > 1) do={
+            :error "duplicate source-port pin" };
+            :if ([:len $endpoint] = 1 and [:len $ownedEndpoint] != 1) do={
+            :error "source-port pin endpoint is owned by another row" }
+      loop: "{{ routeros_source_port_pins }}"
       loop_control:
         label: "{{ item.comment }}"
       changed_when: false
@@ -881,12 +945,26 @@
             protocol={{ item.protocol }} and
             to-addresses={{ item.to_address }} and
             to-ports={{ item.to_port }}]] != 1) do={
-            :error "WAN port forward failed: {{ item.comment }}" };
+            :error "WAN port forward failed: {{ item.comment }}" }
+      loop: "{{ routeros_port_forwards }}"
+      loop_control:
+        label: "{{ item.comment }}"
+      tags:
+        - never
+        - apply
+        - wan-port-forwards
+
+    - name: Reconcile Git-owned WAN forward filters
+      community.routeros.command:
+        commands:
+          - >-
             :local drop [/ip firewall filter find where
             chain="{{ routeros_provider_network.forward_chain }}" and
             comment="{{ routeros_provider_network.final_drop_comment }}"];
-            :set row [/ip firewall filter find where
+            :local row [/ip firewall filter find where
             comment="{{ item.comment }}"];
+            :if ([:len $drop] != 1) do={
+            :error "WAN port-forward final drop missing" };
             :if ([:len $row] > 1) do={
             :error "duplicate WAN port-forward filter" };
             :if ([:len $row] = 0) do={
@@ -922,6 +1000,51 @@
         - apply
         - wan-port-forwards
 
+    - name: Reconcile Git-owned source-port pins
+      community.routeros.command:
+        commands:
+          - >-
+            :local generic [/ip firewall nat find where chain=srcnat and
+            action=masquerade and
+            comment="{{ routeros_provider_network.wan_masquerade_comment }}" and
+            disabled=no];
+            :local row [/ip firewall nat find where
+            comment="{{ item.comment }}"];
+            :if ([:len $generic] != 1) do={
+            :error "source-port pin prerequisite missing" };
+            :if ([:len $row] = 0) do={
+            /ip firewall nat add action=masquerade chain=srcnat
+            comment="{{ item.comment }}" disabled=no
+            dst-port={{ item.destination_port }}
+            in-interface={{ item.source_interface }}
+            out-interface-list={{ item.out_interface_list }}
+            protocol={{ item.protocol }} to-ports={{ item.to_port }}
+            place-before=$generic } else={
+            /ip firewall nat set $row action=masquerade chain=srcnat disabled=no
+            dst-port={{ item.destination_port }}
+            in-interface={{ item.source_interface }}
+            out-interface-list={{ item.out_interface_list }}
+            protocol={{ item.protocol }} to-ports={{ item.to_port }} };
+            :set row [/ip firewall nat find where
+            comment="{{ item.comment }}"];
+            /ip firewall nat move $row destination=$generic;
+            :if ([:len [/ip firewall nat find where action=masquerade and
+            chain=srcnat and comment="{{ item.comment }}" and disabled=no and
+            dst-port={{ item.destination_port }} and
+            in-interface="{{ item.source_interface }}" and
+            out-interface-list="{{ item.out_interface_list }}" and
+            protocol={{ item.protocol }} and
+            to-ports={{ item.to_port }}]] != 1) do={
+            :error "source-port pin failed: {{ item.comment }}" }
+      loop: "{{ routeros_source_port_pins }}"
+      loop_control:
+        label: "{{ item.comment }}"
+      tags:
+        - never
+        - apply
+        - source-port-pins
+        - wan-port-forwards
+
     - name: Reconcile Git-owned NAT reflections
       community.routeros.command:
         commands:
@@ -954,12 +1077,27 @@
             protocol={{ item.protocol }} and
             to-addresses={{ item.to_address }} and
             to-ports={{ item.to_port }}]] != 1) do={
-            :error "NAT reflection failed: {{ item.comment }}" };
+            :error "NAT reflection failed: {{ item.comment }}" }
+      loop: "{{ routeros_nat_reflections }}"
+      loop_control:
+        label: "{{ item.comment }}"
+      tags:
+        - never
+        - apply
+        - nat-reflections
+        - wan-port-forwards
+
+    - name: Reconcile Git-owned NAT-reflection forward filters
+      community.routeros.command:
+        commands:
+          - >-
             :local drop [/ip firewall filter find where
             chain="{{ routeros_provider_network.forward_chain }}" and
             comment="{{ routeros_provider_network.final_drop_comment }}"];
-            :set row [/ip firewall filter find where
+            :local row [/ip firewall filter find where
             comment="{{ item.comment }}"];
+            :if ([:len $drop] != 1) do={
+            :error "NAT-reflection final drop missing" };
             :if ([:len $row] > 1) do={
             :error "duplicate NAT-reflection filter" };
             :if ([:len $row] = 0) do={

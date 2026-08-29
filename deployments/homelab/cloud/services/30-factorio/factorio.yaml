@@ -8,7 +8,10 @@ metadata:
 spec:
   type: LoadBalancer
   loadBalancerIP: 10.21.40.123
-  externalTrafficPolicy: Local
+  # OVN Octavia registers every worker for the NodePort. Route through
+  # kube-proxy so a singleton remains reachable when a packet lands on a
+  # worker that does not currently host the Factorio pod.
+  externalTrafficPolicy: Cluster
   selector:
     app.kubernetes.io/name: factorio
   ports:
