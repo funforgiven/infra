@@ -62,10 +62,12 @@ Factorio reaches the services cluster through one Git-owned UDP destination-NAT
 rule. WAN port `34197` is forwarded without translation to the dedicated OVN
 load-balancer address `10.21.40.123:34197`. A matching destination-specific
 forward-filter rule admits only that translated flow; RCON is not forwarded.
-The public game listing is password-protected and requires Factorio account
-credentials only for server publication; player account verification is
-disabled. The automatic in-game administrator list is empty because player
-names are therefore not authenticated.
+The server is published through Factorio's matching service and joining requires
+both a verified Factorio account and the shared game password. The automatic
+in-game administrator list is empty so privileged operations remain confined to
+loopback-only RCON. One UDP-only NAT-reflection rule lets local LAN interfaces
+use the same public address and port as WAN players; it matches only a local
+non-LAN destination address and does not grant general inter-VLAN access.
 
 ## OTOTOY Mullvad egress
 
@@ -131,7 +133,8 @@ ansible-playbook reconcile-routeros.yaml --limit core_router --tags apply
 Use `--limit core_router --tags mullvad` to select only the destination-scoped
 Mullvad objects while retaining the standard read-only CCR preflight.
 Use `--limit core_router --tags wan-port-forwards` to reconcile only the
-declared Factorio and Syncthing destination-NAT rows after the usual preflight.
+declared Factorio WAN/reflection and Syncthing destination-NAT rows after the
+usual preflight.
 
 The playbook owns only the inventory-declared subset. It does not infer unknown
 cabling or rewrite unrelated dynamic leases. Static lease activity is not

@@ -33,7 +33,7 @@ jq \
     username: $username,
     token: $token,
     game_password: $game_password,
-    require_user_verification: false,
+    require_user_verification: true,
     max_upload_in_kilobytes_per_second: 0,
     minimum_latency_in_ticks: 0,
     ignore_player_limit_for_returning_players: false,

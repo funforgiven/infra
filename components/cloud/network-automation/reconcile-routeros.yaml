@@ -433,6 +433,7 @@
           - routeros_provider_network.network | length > 0
           - routeros_provider_network.nat_address_list | length > 0
           - routeros_provider_network.wan_interface_list | length > 0
+          - routeros_provider_network.lan_interface_list | length > 0
           - routeros_provider_network.trusted_interface | length > 0
           - routeros_provider_network.forward_chain | length > 0
           - routeros_provider_network.final_drop_comment | length > 0
@@ -446,6 +447,15 @@
             routeros_port_forwards |
             map(attribute='comment') | list | unique | length ==
             routeros_port_forwards | length
+          - routeros_nat_reflections | length > 0
+          - >-
+            routeros_nat_reflections |
+            map(attribute='comment') | list | unique | length ==
+            routeros_nat_reflections | length
+          - >-
+            (routeros_port_forwards + routeros_nat_reflections) |
+            map(attribute='comment') | list | unique | length ==
+            (routeros_port_forwards + routeros_nat_reflections) | length
           - >-
             routeros_static_leases | map(attribute='comment') | list |
             unique | length == routeros_static_leases | length
@@ -498,6 +508,29 @@
         - always
         - inventory-contract
 
+    - name: Validate NAT reflections
+      ansible.builtin.assert:
+        that:
+          - item.comment | length > 0
+          - >-
+            item.source_interface_list ==
+            routeros_provider_network.lan_interface_list
+          - item.destination_address_type == 'local'
+          - >-
+            item.excluded_destination_address_list ==
+            routeros_provider_network.nat_address_list
+          - item.protocol in ['tcp', 'udp']
+          - item.destination_port is match('^[0-9]+$')
+          - item.to_address | length > 0
+          - item.to_port is match('^[0-9]+$')
+        fail_msg: "Invalid NAT reflection: {{ item.comment | default('unnamed') }}"
+      loop: "{{ routeros_nat_reflections }}"
+      loop_control:
+        label: "{{ item.comment }}"
+      tags:
+        - always
+        - inventory-contract
+
     - name: Require the management VLAN interface
       community.routeros.command:
         commands:
@@ -535,6 +568,14 @@
             name="{{ routeros_provider_network.trusted_interface }}" and
             disabled=no]] != 1) do={
             :error "provider prerequisite: trusted interface missing" };
+            :if ([:len [/interface list find where
+            name="{{ routeros_provider_network.lan_interface_list }}"]] != 1)
+            do={ :error "provider prerequisite: LAN interface list missing" };
+            :if ([:len [/interface list member find where
+            list="{{ routeros_provider_network.lan_interface_list }}" and
+            interface="{{ routeros_provider_network.interface }}"]] != 0) do={
+            :error "provider prerequisite: LAN reflection includes provider
+            interface" };
             :if ([:len [/ip firewall filter find where
             chain="{{ routeros_provider_network.forward_chain }}" and
             comment="{{ routeros_provider_network.final_drop_comment }}" and
@@ -600,6 +641,28 @@
             comment="{{ item.comment }}"]] > 1) do={
             :error "duplicate routed access rule: {{ item.comment }}" }
       loop: "{{ routeros_access_rules }}"
+      loop_control:
+        label: "{{ item.comment }}"
+      changed_when: false
+      tags: [always]
+
+    - name: Refuse duplicate or conflicting NAT reflections
+      community.routeros.command:
+        commands:
+          - >-
+            :local row [/ip firewall nat find where
+            comment="{{ item.comment }}"];
+            :local endpoint [/ip firewall nat find where chain=dstnat and
+            dst-address-type={{ item.destination_address_type }} and
+            dst-address-list="!{{ item.excluded_destination_address_list }}" and
+            dst-port={{ item.destination_port }} and
+            in-interface-list="{{ item.source_interface_list }}" and
+            protocol={{ item.protocol }}];
+            :if ([:len $row] > 1 or [:len $endpoint] > 1) do={
+            :error "duplicate NAT reflection" };
+            :if ([:len $endpoint] = 1 and [:len $row] != 1) do={
+            :error "NAT reflection endpoint is owned by another row" }
+      loop: "{{ routeros_nat_reflections }}"
       loop_control:
         label: "{{ item.comment }}"
       changed_when: false
@@ -857,6 +920,80 @@
       tags:
         - never
         - apply
+        - wan-port-forwards
+
+    - name: Reconcile Git-owned NAT reflections
+      community.routeros.command:
+        commands:
+          - >-
+            :local row [/ip firewall nat find where
+            comment="{{ item.comment }}"];
+            :if ([:len $row] = 0) do={
+            /ip firewall nat add action=dst-nat chain=dstnat
+            comment="{{ item.comment }}" disabled=no
+            dst-address-type={{ item.destination_address_type }}
+            dst-address-list=!{{ item.excluded_destination_address_list }}
+            dst-port={{ item.destination_port }}
+            in-interface-list={{ item.source_interface_list }}
+            protocol={{ item.protocol }}
+            to-addresses={{ item.to_address }} to-ports={{ item.to_port }}
+            } else={
+            /ip firewall nat set $row action=dst-nat chain=dstnat disabled=no
+            dst-address-type={{ item.destination_address_type }}
+            dst-address-list=!{{ item.excluded_destination_address_list }}
+            dst-port={{ item.destination_port }}
+            in-interface-list={{ item.source_interface_list }}
+            protocol={{ item.protocol }}
+            to-addresses={{ item.to_address }} to-ports={{ item.to_port }} };
+            :if ([:len [/ip firewall nat find where chain=dstnat and
+            action=dst-nat and comment="{{ item.comment }}" and disabled=no and
+            dst-address-type={{ item.destination_address_type }} and
+            dst-address-list="!{{ item.excluded_destination_address_list }}" and
+            dst-port={{ item.destination_port }} and
+            in-interface-list="{{ item.source_interface_list }}" and
+            protocol={{ item.protocol }} and
+            to-addresses={{ item.to_address }} and
+            to-ports={{ item.to_port }}]] != 1) do={
+            :error "NAT reflection failed: {{ item.comment }}" };
+            :local drop [/ip firewall filter find where
+            chain="{{ routeros_provider_network.forward_chain }}" and
+            comment="{{ routeros_provider_network.final_drop_comment }}"];
+            :set row [/ip firewall filter find where
+            comment="{{ item.comment }}"];
+            :if ([:len $row] > 1) do={
+            :error "duplicate NAT-reflection filter" };
+            :if ([:len $row] = 0) do={
+            /ip firewall filter add action=accept
+            chain={{ routeros_provider_network.forward_chain }}
+            comment="{{ item.comment }}" connection-nat-state=dstnat
+            disabled=no dst-address={{ item.to_address }}
+            dst-port={{ item.to_port }}
+            in-interface-list={{ item.source_interface_list }}
+            protocol={{ item.protocol }} place-before=$drop } else={
+            /ip firewall filter set $row action=accept
+            chain={{ routeros_provider_network.forward_chain }}
+            connection-nat-state=dstnat disabled=no
+            dst-address={{ item.to_address }} dst-port={{ item.to_port }}
+            in-interface-list={{ item.source_interface_list }}
+            protocol={{ item.protocol }} };
+            :set row [/ip firewall filter find where
+            comment="{{ item.comment }}"];
+            /ip firewall filter move $row destination=$drop;
+            :if ([:len [/ip firewall filter find where action=accept and
+            chain="{{ routeros_provider_network.forward_chain }}" and
+            comment="{{ item.comment }}" and connection-nat-state=dstnat and
+            disabled=no and dst-address={{ item.to_address }} and
+            dst-port={{ item.to_port }} and
+            in-interface-list="{{ item.source_interface_list }}" and
+            protocol={{ item.protocol }}]] != 1) do={
+            :error "NAT-reflection filter failed: {{ item.comment }}" }
+      loop: "{{ routeros_nat_reflections }}"
+      loop_control:
+        label: "{{ item.comment }}"
+      tags:
+        - never
+        - apply
+        - nat-reflections
         - wan-port-forwards
 
     - name: Prove the external provider network

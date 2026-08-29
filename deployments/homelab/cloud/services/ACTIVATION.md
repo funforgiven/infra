@@ -83,10 +83,13 @@ nix run .#enroll-services-credential -- \
 
 Use at least 12 characters for the game password. The generated RCON password
 is already stored as SOPS ciphertext; it is never shared, and RCON remains
-bound to pod loopback. After the ciphertext is committed and the
-services-cluster reconciler has delivered `factorio-runtime`, apply only the
-RouterOS WAN port-forward surface (destination NAT plus its matching
-destination-specific forward filter):
+bound to pod loopback. Public visibility requires player verification, so every
+player must use a client authenticated to a valid Factorio account in addition
+to knowing the shared game password. After the ciphertext is committed and the
+services-cluster reconciler has delivered `factorio-runtime`, apply the
+Git-declared RouterOS port-forward surface. This reconciles the Factorio WAN
+destination NAT/filter pair, its local-LAN NAT-reflection/filter pair, and the
+existing Syncthing forwards idempotently:
 
 ```sh
 cd components/cloud/network-automation
@@ -95,11 +98,13 @@ ansible-playbook reconcile-routeros.yaml \
 ```
 
 Wait for the `factorio` StatefulSet and LoadBalancer address, then verify a
-LAN-browser or direct connection to `10.21.40.123:34197` and one real WAN
-connection from outside the site. Friends should find `Fahrican Space Age` in
-the public game browser and enter the separately shared password. Do not accept
-the deployment until an on-demand `services-daily` backup and the isolated
-restore qualification both succeed.
+public-browser or direct connection to `10.21.40.123:34197` and one real WAN
+connection from outside the site. Friends find `Fahrican Space Age` in the
+public game browser, authenticate their Factorio client, and enter the
+separately shared password. Confirm that a local-LAN client can join through
+the public listing as proof of the scoped NAT reflection. Do not accept the
+deployment until an on-demand `services-daily` backup and the isolated restore
+qualification both succeed.
 
 ## Provider reconciliation
 
