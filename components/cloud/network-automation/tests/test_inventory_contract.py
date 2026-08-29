@@ -17,6 +17,9 @@ PLAYBOOK = ROOT / "components/cloud/network-automation/reconcile-routeros.yaml"
 FACTORIO_RENDER_CONFIG = (
     ROOT / "deployments/homelab/cloud/services/30-factorio/render-config.sh"
 )
+FACTORIO_WORKLOAD = (
+    ROOT / "deployments/homelab/cloud/services/30-factorio/factorio.yaml"
+)
 ANSIBLE_CONFIG = ROOT / "components/cloud/network-automation/ansible.cfg"
 CLOUD_COMPONENTS = ROOT / "components/cloud"
 
@@ -33,6 +36,12 @@ class NetworkInventoryTests(unittest.TestCase):
         cls.internal_dns = INTERNAL_DNS.read_text()
         cls.playbook = PLAYBOOK.read_text()
         cls.factorio_render_config = FACTORIO_RENDER_CONFIG.read_text()
+        factorio_documents = list(yaml.safe_load_all(FACTORIO_WORKLOAD.read_text()))
+        cls.factorio_service = next(
+            document
+            for document in factorio_documents
+            if document["kind"] == "Service"
+        )
         cls.ansible_config = ANSIBLE_CONFIG.read_text()
 
     def test_routeros_connections_use_standard_pinned_host_keys(self) -> None:
@@ -278,9 +287,30 @@ class NetworkInventoryTests(unittest.TestCase):
             ],
             self.router["routeros_nat_reflections"],
         )
+        self.assertEqual(
+            [
+                {
+                    "comment": "infra: Factorio Space Age egress port",
+                    "source_interface": "vlan40-external",
+                    "out_interface_list": "INFRA-WAN",
+                    "protocol": "udp",
+                    "destination_port": "34197",
+                    "to_port": "34197",
+                }
+            ],
+            self.router["routeros_source_port_pins"],
+        )
+        self.assertEqual("10.21.40.123", self.factorio_service["spec"]["loadBalancerIP"])
+        self.assertEqual(
+            "Cluster", self.factorio_service["spec"]["externalTrafficPolicy"]
+        )
         self.assertIn("wan-port-forwards", self.playbook)
         self.assertIn("connection-nat-state=dstnat", self.playbook)
+        self.assertIn("Reconcile Git-owned WAN forward filters", self.playbook)
         self.assertIn("Reconcile Git-owned NAT reflections", self.playbook)
+        self.assertIn(
+            "Reconcile Git-owned NAT-reflection forward filters", self.playbook
+        )
         self.assertIn("dst-address-type={{ item.destination_address_type }}", self.playbook)
         self.assertIn(
             "dst-address-list=!{{ item.excluded_destination_address_list }}",
@@ -318,7 +348,10 @@ class NetworkInventoryTests(unittest.TestCase):
             text=True,
         ).stdout
         self.assertIn("Reconcile Git-owned WAN port forwards", selected)
+        self.assertIn("Reconcile Git-owned WAN forward filters", selected)
+        self.assertIn("Reconcile Git-owned source-port pins", selected)
         self.assertIn("Reconcile Git-owned NAT reflections", selected)
+        self.assertIn("Reconcile Git-owned NAT-reflection forward filters", selected)
 
     def test_external_provider_vlan_is_reconciled_end_to_end(self) -> None:
         self.assertEqual(
@@ -340,6 +373,7 @@ class NetworkInventoryTests(unittest.TestCase):
         self.assertEqual("10.21.40.1/24", provider["address"])
         self.assertEqual("10.21.40.0/24", provider["network"])
         self.assertEqual("INFRA-LAN", provider["lan_interface_list"])
+        self.assertEqual("infra: PPPoE masquerade", provider["wan_masquerade_comment"])
         self.assertEqual(
             [
                 (

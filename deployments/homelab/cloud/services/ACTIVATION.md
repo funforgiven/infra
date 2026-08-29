@@ -89,7 +89,8 @@ to knowing the shared game password. After the ciphertext is committed and the
 services-cluster reconciler has delivered `factorio-runtime`, apply the
 Git-declared RouterOS port-forward surface. This reconciles the Factorio WAN
 destination NAT/filter pair, its local-LAN NAT-reflection/filter pair, and the
-existing Syncthing forwards idempotently:
+provider-to-WAN discovery source-port pin, plus the existing Syncthing forwards
+idempotently:
 
 ```sh
 cd components/cloud/network-automation

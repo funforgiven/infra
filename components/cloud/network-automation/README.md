@@ -19,7 +19,9 @@ objects absent from its input.
 - the `wg-admin` interface and its limited firewall rules;
 - the Mullvad route used only for OTOTOY from trusted VLAN 10;
 - the Factorio UDP and Syncthing TCP/QUIC destination NAT and matching
-  destination-specific forward-filter rules; and
+  destination-specific forward-filter rules;
+- the Factorio provider-to-WAN UDP discovery source-port pin, ordered before
+  the generic PPPoE masquerade; and
 - the VLAN-40 provider gateway and related forwarding/NAT rules.
 
 The CRS bridge, the CCR VLAN-90 interface/address, and

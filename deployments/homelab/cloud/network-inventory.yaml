@@ -162,6 +162,7 @@ all:
             network: 10.21.40.0/24
             nat_address_list: INFRA-LAN-NAT
             wan_interface_list: INFRA-WAN
+            wan_masquerade_comment: "infra: PPPoE masquerade"
             lan_interface_list: INFRA-LAN
             trusted_interface: vlan10-trusted
             forward_chain: infra-forward
@@ -311,6 +312,13 @@ all:
               protocol: udp
               destination_port: "34197"
               to_address: 10.21.40.123
+              to_port: "34197"
+          routeros_source_port_pins:
+            - comment: "infra: Factorio Space Age egress port"
+              source_interface: vlan40-external
+              out_interface_list: INFRA-WAN
+              protocol: udp
+              destination_port: "34197"
               to_port: "34197"
           routeros_static_leases:
             - comment: "infra: primary admin workstation"
