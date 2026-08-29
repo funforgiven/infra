@@ -318,6 +318,13 @@ class NetworkInventoryTests(unittest.TestCase):
             if container["name"] == "save-integrity"
         )
         self.assertNotIn("readinessProbe", save_integrity)
+        self.assertEqual(
+            {
+                "name": "POD_NAMESPACE",
+                "valueFrom": {"fieldRef": {"fieldPath": "metadata.namespace"}},
+            },
+            save_integrity["env"][0],
+        )
         self.assertIn("wan-port-forwards", self.playbook)
         self.assertIn("connection-nat-state=dstnat", self.playbook)
         self.assertIn("Reconcile Git-owned WAN forward filters", self.playbook)

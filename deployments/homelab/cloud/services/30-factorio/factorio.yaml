@@ -150,6 +150,11 @@ spec:
           command:
             - /bootstrap/verify-saves.sh
             - --watch
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           resources:
             requests:
               cpu: 5m

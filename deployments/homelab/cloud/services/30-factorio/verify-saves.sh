@@ -21,6 +21,11 @@ if [ "${1:-}" != --watch ]; then
   exit
 fi
 
+if [ "$POD_NAMESPACE" != games ]; then
+  verify_once
+  while true; do sleep 3600; done
+fi
+
 while true; do
   if ! verify_once; then
     echo "Factorio save integrity verification failed." >&2
