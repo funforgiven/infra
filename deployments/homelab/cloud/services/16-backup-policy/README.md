@@ -1,7 +1,7 @@
 # Backup and restore
 
 Velero backs up the services cluster with Kopia filesystem backups. The policy
-covers the `backup-qualification`, `media`, and `services-databases`
+covers the `backup-qualification`, `games`, `media`, and `services-databases`
 namespaces. Volume snapshots are not used.
 
 ## Schedules
@@ -39,20 +39,29 @@ missing.
 
 The source `backup-qualification` namespace contains a 1 GiB `rbd1` PVC. Its
 canary writes a fixed file only in that source namespace and verifies its
-SHA-256 checksum whenever it starts.
+SHA-256 checksum whenever it starts. Factorio's backup hook creates a completed
+named save before the filesystem copy begins.
 
 On the first day of each month, the restore job selects the newest
 `services-daily` backup. It fails if that backup is not `Completed`; it does not
 fall back to an older backup. The job then:
 
 1. deletes only `backup-qualification-restore` and waits for it to disappear;
-2. restores `backup-qualification` into that namespace;
-3. removes the backed-up PVC's `spec.volumeName` so `rbd1` provisions a new
-   volume;
-4. waits for the restore and the restored canary Deployment to complete.
+2. deletes `games-restore` through the same narrow resource-name permission;
+3. restores `backup-qualification` and `games` into those two isolated
+   namespaces;
+4. removes the backed-up PVCs' `spec.volumeName` fields so `rbd1` provisions
+   new volumes;
+5. waits for the restored canary Deployment and Factorio StatefulSet to become
+   ready.
 
-The job cannot read Secrets or delete any other namespace. It leaves the
-restored namespace available for inspection until the next run. Each run
+The restored Factorio container detects that it is outside the production
+`games` namespace and sleeps instead of starting a public server. Its integrity
+sidecar tests every recovered save ZIP; the StatefulSet cannot become ready if
+any save is corrupt. LoadBalancer Services are excluded from the restore.
+
+The job cannot read Secrets or delete any other namespace. It leaves both
+restored namespaces available for inspection until the next run. Each run
 downloads Kubernetes 1.36.2 `kubectl` and verifies its pinned SHA-256 checksum,
 so access to `dl.k8s.io` is required.
 

@@ -16,8 +16,10 @@ capacity.
 
 The OpenStack `public` network is RFC1918 provider space. Floating addresses
 provide routed LAN access, not direct Internet exposure. Public DNS records are
-explicitly declared; application routes remain reachable only from the LAN and
-administration WireGuard network.
+explicitly declared; HTTP application routes remain reachable only from the LAN
+and administration WireGuard network. Factorio is the narrow exception: the
+CCR2004 forwards only WAN UDP 34197 to its dedicated provider VIP. No game
+management surface is exposed.
 
 ## Service catalog
 
@@ -27,6 +29,7 @@ administration WireGuard network.
 | SFTPGo | Services cluster | `https://upload.fahrican.com`; ZITADEL OIDC for the WebClient |
 | Beets | Services cluster | No direct user endpoint; imports accepted uploads into the media library |
 | AudioMuse | Services cluster | `https://audiomuse.fahrican.com`; LAN/WireGuard only, with ZITADEL OIDC |
+| Factorio Space Age | Services cluster | Public and LAN Factorio browsers; shared game password |
 | Home Assistant | Dedicated VM | `https://home.fahrican.com`; native local account and MFA |
 | Stalwart mail | AWS appliance | Native mail accounts; public mail protocols and web administration |
 | Prometheus and Alertmanager | Services cluster | Administrative monitoring; Alertmanager uses the infrastructure Telegram bot |

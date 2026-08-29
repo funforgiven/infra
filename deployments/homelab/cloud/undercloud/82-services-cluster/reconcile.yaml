@@ -167,6 +167,10 @@ data:
     require_file AUDIOMUSE_POSTGRES_PASSWORD '^[A-Za-z0-9_-]+$' 32 256
     require_file NAVIDROME_OAUTH2_COOKIE_SECRET '^[A-Za-z0-9/+]+={0,2}$' 43 44
     require_file AUDIOMUSE_OAUTH2_COOKIE_SECRET '^[A-Za-z0-9/+]+={0,2}$' 43 44
+    require_file FACTORIO_USERNAME '^[A-Za-z0-9_.-]+$' 2 64
+    require_file FACTORIO_TOKEN '^[A-Za-z0-9_-]+$' 20 128
+    require_file FACTORIO_GAME_PASSWORD '^[^[:cntrl:]]+$' 12 128
+    require_file FACTORIO_RCON_PASSWORD '^[A-Za-z0-9_-]+$' 32 128
     require_file RESEND_ADMIN_API_KEY '^re_[A-Za-z0-9_-]+$' 23 512
 
     export OS_PROJECT_NAME=services
@@ -350,6 +354,8 @@ data:
       --dry-run=client -o yaml | "$kubectl" apply -f -
     "$kubectl" create namespace media \
       --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" create namespace games \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
     "$kubectl" create namespace services-observability \
       --dry-run=client -o yaml | "$kubectl" apply -f -
     "$kubectl" create namespace velero \
@@ -449,6 +455,12 @@ data:
       --from-file=NAVIDROME_OIDC_CLIENT_SECRET=/tmp/navidrome_client_secret \
       --from-file=AUDIOMUSE_OIDC_CLIENT_ID=/tmp/audiomuse_client_id \
       --from-file=AUDIOMUSE_OIDC_CLIENT_SECRET=/tmp/audiomuse_client_secret \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" -n games create secret generic factorio-runtime \
+      --from-file=FACTORIO_USERNAME=/runtime-bootstrap/FACTORIO_USERNAME \
+      --from-file=FACTORIO_TOKEN=/runtime-bootstrap/FACTORIO_TOKEN \
+      --from-file=FACTORIO_GAME_PASSWORD=/runtime-bootstrap/FACTORIO_GAME_PASSWORD \
+      --from-file=FACTORIO_RCON_PASSWORD=/runtime-bootstrap/FACTORIO_RCON_PASSWORD \
       --dry-run=client -o yaml | "$kubectl" apply -f -
     "$kubectl" apply -f /config/sync.yaml
     "$flux" reconcile source git flux-system --timeout=5m

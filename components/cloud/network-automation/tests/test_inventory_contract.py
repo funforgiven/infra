@@ -240,6 +240,28 @@ class NetworkInventoryTests(unittest.TestCase):
             self.assertIn(f"{host}.mgmt IN A {address}", self.internal_dns)
         self.assertNotIn("pecorino.mgmt IN A 10.21.20.13", self.internal_dns)
 
+    def test_factorio_has_one_port_preserving_udp_wan_forward(self) -> None:
+        factorio_forwards = [
+            item
+            for item in self.router["routeros_port_forwards"]
+            if item["comment"] == "infra: Factorio Space Age"
+        ]
+        self.assertEqual(
+            [
+                {
+                    "comment": "infra: Factorio Space Age",
+                    "in_interface_list": "INFRA-WAN",
+                    "protocol": "udp",
+                    "destination_port": "34197",
+                    "to_address": "10.21.40.123",
+                    "to_port": "34197",
+                }
+            ],
+            factorio_forwards,
+        )
+        self.assertIn("wan-port-forwards", self.playbook)
+        self.assertIn("connection-nat-state=dstnat", self.playbook)
+
     def test_external_provider_vlan_is_reconciled_end_to_end(self) -> None:
         self.assertEqual(
             [20, 30, 31, 32, 33, 40],

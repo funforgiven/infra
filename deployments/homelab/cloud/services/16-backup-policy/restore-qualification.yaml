@@ -114,6 +114,7 @@ data:
           groupResource: persistentvolumeclaims
           namespaces:
             - backup-qualification
+            - games
         patches:
           - operation: remove
             path: /spec/volumeName
@@ -150,6 +151,7 @@ rules:
       - namespaces
     resourceNames:
       - backup-qualification-restore
+      - games-restore
     verbs:
       - delete
       - get
@@ -159,6 +161,16 @@ rules:
       - deployments
     resourceNames:
       - backup-canary
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - statefulsets
+    resourceNames:
+      - factorio
     verbs:
       - get
       - list
@@ -209,10 +221,13 @@ data:
     test "$($kubectl -n velero get backup "$backup" \
       -o jsonpath='{.status.phase}')" = Completed
 
-    target=backup-qualification-restore
-    "$kubectl" delete namespace "$target" --ignore-not-found --wait=false
-    while "$kubectl" get namespace "$target" >/dev/null 2>&1; do
-      sleep 5
+    for target in backup-qualification-restore games-restore; do
+      "$kubectl" delete namespace "$target" --ignore-not-found --wait=false
+    done
+    for target in backup-qualification-restore games-restore; do
+      while "$kubectl" get namespace "$target" >/dev/null 2>&1; do
+        sleep 5
+      done
     done
 
     suffix="${backup#services-daily-}"
@@ -235,9 +250,12 @@ data:
       sleep 10
     done
     test "$phase" = Completed
-    "$kubectl" -n "$target" rollout status deployment/backup-canary \
+    "$kubectl" -n backup-qualification-restore \
+      rollout status deployment/backup-canary \
       --timeout=10m
-    echo "Restore qualification completed for backup $backup."
+    "$kubectl" -n games-restore rollout status statefulset/factorio \
+      --timeout=10m
+    echo "Restore qualification completed for application data in backup $backup."
   restore.yaml: |
     apiVersion: velero.io/v1
     kind: Restore
@@ -250,15 +268,20 @@ data:
       backupName: BACKUP_NAME
       includedNamespaces:
         - backup-qualification
+        - games
       excludedResources:
         - cronjobs.batch
         - jobs.batch
         - rolebindings.rbac.authorization.k8s.io
         - roles.rbac.authorization.k8s.io
         - serviceaccounts
+        - services
+        - servicemonitors.monitoring.coreos.com
+        - prometheusrules.monitoring.coreos.com
       includeClusterResources: false
       namespaceMapping:
         backup-qualification: backup-qualification-restore
+        games: games-restore
       restorePVs: true
       resourceModifier:
         kind: ConfigMap

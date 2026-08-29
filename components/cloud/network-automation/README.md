@@ -18,7 +18,8 @@ objects absent from its input.
 - the private `cloud.fahrican.com` DNS forward;
 - the `wg-admin` interface and its limited firewall rules;
 - the Mullvad route used only for OTOTOY from trusted VLAN 10;
-- the Syncthing TCP and QUIC destination NAT rules; and
+- the Factorio UDP and Syncthing TCP/QUIC destination NAT and matching
+  destination-specific forward-filter rules; and
 - the VLAN-40 provider gateway and related forwarding/NAT rules.
 
 The CRS bridge, the CCR VLAN-90 interface/address, and

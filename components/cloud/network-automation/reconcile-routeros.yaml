@@ -818,13 +818,46 @@
             protocol={{ item.protocol }} and
             to-addresses={{ item.to_address }} and
             to-ports={{ item.to_port }}]] != 1) do={
-            :error "WAN port forward failed: {{ item.comment }}" }
+            :error "WAN port forward failed: {{ item.comment }}" };
+            :local drop [/ip firewall filter find where
+            chain="{{ routeros_provider_network.forward_chain }}" and
+            comment="{{ routeros_provider_network.final_drop_comment }}"];
+            :set row [/ip firewall filter find where
+            comment="{{ item.comment }}"];
+            :if ([:len $row] > 1) do={
+            :error "duplicate WAN port-forward filter" };
+            :if ([:len $row] = 0) do={
+            /ip firewall filter add action=accept
+            chain={{ routeros_provider_network.forward_chain }}
+            comment="{{ item.comment }}" connection-nat-state=dstnat
+            disabled=no dst-address={{ item.to_address }}
+            dst-port={{ item.to_port }}
+            in-interface-list={{ item.in_interface_list }}
+            protocol={{ item.protocol }} place-before=$drop } else={
+            /ip firewall filter set $row action=accept
+            chain={{ routeros_provider_network.forward_chain }}
+            connection-nat-state=dstnat disabled=no
+            dst-address={{ item.to_address }} dst-port={{ item.to_port }}
+            in-interface-list={{ item.in_interface_list }}
+            protocol={{ item.protocol }} };
+            :set row [/ip firewall filter find where
+            comment="{{ item.comment }}"];
+            /ip firewall filter move $row destination=$drop;
+            :if ([:len [/ip firewall filter find where action=accept and
+            chain="{{ routeros_provider_network.forward_chain }}" and
+            comment="{{ item.comment }}" and connection-nat-state=dstnat and
+            disabled=no and dst-address={{ item.to_address }} and
+            dst-port={{ item.to_port }} and
+            in-interface-list="{{ item.in_interface_list }}" and
+            protocol={{ item.protocol }}]] != 1) do={
+            :error "WAN port-forward filter failed: {{ item.comment }}" }
       loop: "{{ routeros_port_forwards }}"
       loop_control:
         label: "{{ item.comment }}"
       tags:
         - never
         - apply
+        - wan-port-forwards
 
     - name: Prove the external provider network
       community.routeros.command:
