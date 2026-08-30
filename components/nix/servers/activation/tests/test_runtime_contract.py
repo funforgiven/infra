@@ -15,7 +15,7 @@ PROVISIONED_FILE = Path("provisioned-runtime.sops.yaml")
 
 def contract_document() -> dict:
     return {
-        "schemaVersion": 10,
+        "schemaVersion": 11,
         "secretFile": str(CLUSTER_FILE),
         "credentials": {"initial": ["CLUSTER_KEY"]},
         "hostCredentials": {
@@ -106,6 +106,13 @@ class RuntimeContractTest(unittest.TestCase):
         payload["hostCredentials"]["service-host"]["keys"] = ["CLUSTER_KEY"]
         self.write_contract(payload)
         with self.assertRaisesRegex(ContractError, "duplicate credential"):
+            RuntimeContract.load(self.root)
+
+    def test_rejects_previous_schema_version(self) -> None:
+        payload = contract_document()
+        payload["schemaVersion"] = 10
+        self.write_contract(payload)
+        with self.assertRaisesRegex(ContractError, "schemaVersion must be 11"):
             RuntimeContract.load(self.root)
 
     def test_requires_every_key_as_ciphertext(self) -> None:

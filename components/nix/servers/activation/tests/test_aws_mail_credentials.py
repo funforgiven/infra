@@ -41,7 +41,7 @@ class AwsMailCredentialsTest(unittest.TestCase):
         self.temporary_directory = TemporaryDirectory()
         self.root = Path(self.temporary_directory.name)
         contract = {
-            "schemaVersion": 10,
+            "schemaVersion": 11,
             "secretFile": "cluster.sops.yaml",
             "credentials": {"cluster": ["CLUSTER_KEY"]},
             "hostCredentials": {

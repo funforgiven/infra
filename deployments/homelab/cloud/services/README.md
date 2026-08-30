@@ -29,6 +29,7 @@ management surface is exposed.
 | SFTPGo | Services cluster | `https://upload.fahrican.com`; ZITADEL OIDC for the WebClient |
 | Beets | Services cluster | No direct user endpoint; imports accepted uploads into the media library |
 | AudioMuse | Services cluster | `https://audiomuse.fahrican.com`; LAN/WireGuard only, with ZITADEL OIDC |
+| Discord music (Muse) | Services cluster | Discord guild after credential enrollment and an owner-authorized Guild Install using Manage Server; no HTTP endpoint |
 | Factorio Space Age | Services cluster | Public browser; verified Factorio account and shared game password |
 | Home Assistant | Dedicated VM | `https://home.fahrican.com`; native local account and MFA |
 | Stalwart mail | AWS appliance | Native mail accounts; public mail protocols and web administration |
@@ -48,6 +49,8 @@ configuration.
 
 - Credential rotation, provider reconciliation, image promotion, host backup
   initialization, and HAOS cutover: [service operations](ACTIVATION.md)
+- Discord application creation, Guild Install, playback qualification, and
+  credential rotation: [Muse onboarding](40-media/MUSE.md)
 - Telegram alert-bot creation and target enrollment: [Telegram bootstrap](TELEGRAM.md)
 - Purchased-media import and recovery: [media workflow](40-media/README.md)
 - Backup and isolated restore behavior: [backup policy](16-backup-policy/README.md)

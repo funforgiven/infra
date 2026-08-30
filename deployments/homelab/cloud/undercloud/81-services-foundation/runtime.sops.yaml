@@ -17,6 +17,8 @@ data:
     FACTORIO_USERNAME: ENC[AES256_GCM,data:HKyQaoQCz41wex5ePTAdSg==,iv:WhPCKbfsBfw1em+VgWkmRz5xyAULkEPZIoRg7D9ZO0g=,tag:hczU0X3isZdroJvt31Ksqg==,type:str]
     FACTORIO_TOKEN: ENC[AES256_GCM,data:vbSKP0+cfAtjWkoGeBbuxoW+zjV6fDM1SA5mce7XuycbbVk93eeyjg==,iv:6e+LdjuvNIWrLFhFVn9E00CnhaDC+1F23Mr7AhkJHdk=,tag:Hb0T8+OQlCeM4JNXWMrARA==,type:str]
     FACTORIO_GAME_PASSWORD: ENC[AES256_GCM,data:385qej3tloyerGacYTnNZItp3h7Q5Wp4Bo5nZLH9kp0yWJRsXWafloj4Yp0=,iv:gdGmemJzvhVKsNKwi0hH716cswGzOeyyeNujWzq8Dbc=,tag:/laGiMEzqB1NhNVVT8fhgg==,type:str]
+    DISCORD_MUSIC_BOT_TOKEN: ENC[AES256_GCM,data:x5sVDWeEAKphHvqA6Rdf4WSxHN1dLQgyNbqK1e+QDkR/LPqGoOghDYMG/GY7oYLCMD0TJ9vYYWEHoomOKVAeu0hLrBJxqN0hLLzrhPEGzAwkHnx/vQLSPmtWqCwcoywW,iv:tpTABmB+Mkf/TZRxi31GOxwnRFJ+u3+ZWWjHYZOcqvg=,tag:/ADJ7kFBeEDjJRhjvvZGew==,type:str]
+    DISCORD_MUSIC_YOUTUBE_API_KEY: ENC[AES256_GCM,data:/cvanxHDODicoNq9DGKOzlNklLCjjiLyOTK3u+F+PqFrwtIo7O8RQlvn3wz62i+5Ui4dDA==,iv:fT9AYpWUoXBFsZbULoCOQI/4jC/A7iPgkVnQFqCAi7c=,tag:oapzqoX/YkHW19ae9xn8xw==,type:str]
 kind: Secret
 metadata:
     name: services-runtime-bootstrap
@@ -42,6 +44,6 @@ sops:
             -----END AGE ENCRYPTED FILE-----
           recipient: age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-08-29T18:28:50Z"
-    mac: ENC[AES256_GCM,data:AeG7lt4oTctqXw4hovLEEB4azSfn7fRRTCih34pPFacQjJCB6IfRoQgw0vmYby2hZyi2p2ncGjvCJ8xuzw5yZ4AkMpYFQ0hFHQMl6oqTUs+D7cTC8mJ6MuS7eR3h5sxnATgWJfafLzJNQ+gBhNiPSbaDcqoLSZ/ougt52ZNWy54=,iv:CLmc+SiG7613qOq19nPDowSFsqNmLXZXoAX3t4ARqRk=,tag:sC/MxT8FVgNcQY3M6ObiSg==,type:str]
+    lastmodified: "2026-08-30T20:46:52Z"
+    mac: ENC[AES256_GCM,data:SwbtJAKyGYUMmrQpOhlnX4zeWmiCIBlTBOcWoKrVfMrh7cRNdOuvdd646dLWPeNQcnSg6fTjnfNSX0sBBD1Lx20mB8N0uY4sTk6aX1gjyeTigseOfkfdT9n6pr1YaS1A4mvePpLM1derYP7UB2AvOndc0vJuJR92svAA1tUcFZk=,iv:spaM4E6T26Tmn9kn6InPjInN+oaxrvt/WgTgKS2b2tA=,tag:AZzr2jk6ICIPpRPqPOh3Pw==,type:str]
     version: 3.13.3

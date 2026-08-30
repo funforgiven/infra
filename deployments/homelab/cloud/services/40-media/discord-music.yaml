@@ -1,0 +1,202 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: discord-music-backup
+  namespace: media
+  labels:
+    app.kubernetes.io/name: discord-music
+    app.kubernetes.io/part-of: media
+data:
+  sqlite-backup.py: |
+    import os
+    import sqlite3
+    from contextlib import closing
+    from pathlib import Path
+
+    source = Path("/data/db.sqlite")
+    recovery = Path("/data/recovery")
+    destination = recovery / "db.sqlite"
+    temporary = recovery / "db.sqlite.tmp"
+
+    def fsync_directory(directory: Path) -> None:
+        descriptor = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+
+    recovery.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(recovery, 0o700)
+    fsync_directory(recovery.parent)
+    temporary.unlink(missing_ok=True)
+
+    with closing(sqlite3.connect(
+        f"file:{source}?mode=ro",
+        uri=True,
+    )) as database, closing(sqlite3.connect(temporary)) as backup:
+        database.backup(backup)
+        result = backup.execute("PRAGMA quick_check").fetchone()
+        if result != ("ok",):
+            raise RuntimeError(f"backup integrity check failed: {result!r}")
+
+    os.chmod(temporary, 0o600)
+    with temporary.open("rb") as backup_file:
+        os.fsync(backup_file.fileno())
+    os.replace(temporary, destination)
+    fsync_directory(recovery)
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: discord-music-data
+  namespace: media
+  labels:
+    app.kubernetes.io/name: discord-music
+    app.kubernetes.io/part-of: media
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: rbd1
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: discord-music
+  namespace: media
+  labels:
+    app.kubernetes.io/name: discord-music
+    app.kubernetes.io/part-of: media
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: discord-music
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: discord-music
+        app.kubernetes.io/part-of: media
+      annotations:
+        backup.velero.io/backup-volumes: data
+        backup.velero.io/backup-volumes-excludes: cache,tmp
+        pre.hook.backup.velero.io/command: >-
+          ["/usr/bin/python3", "/backup/sqlite-backup.py"]
+        pre.hook.backup.velero.io/container: muse
+        pre.hook.backup.velero.io/on-error: Fail
+        pre.hook.backup.velero.io/timeout: 1m
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: DoesNotExist
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: muse
+          image: ghcr.io/museofficial/muse:2.11.7-yt-dlp-2026.8.19@sha256:ffe4274041ff82d1ed0893bc299da4ec3afb82df1aee9c4e5e10eb980a4f38f7
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DISCORD_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: discord-music-runtime
+                  key: DISCORD_TOKEN
+            - name: YOUTUBE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: discord-music-runtime
+                  key: YOUTUBE_API_KEY
+            - name: CACHE_LIMIT
+              value: 2GB
+            - name: DATA_DIR
+              value: /data
+            - name: HOME
+              value: /tmp
+            - name: TMPDIR
+              value: /tmp
+            - name: YT_DLP_AUTO_UPDATE
+              value: "false"
+          startupProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -ec
+                - test -s /data/db.sqlite
+            periodSeconds: 2
+            failureThreshold: 60
+          readinessProbe:
+            exec:
+              command:
+                - node
+                - -e
+                - |
+                  const token = process.env.DISCORD_TOKEN?.trim();
+                  if (!token) process.exit(1);
+                  const headers = {
+                    Authorization: "Bot " + token,
+                  };
+                  fetch("https://discord.com/api/v10/users/@me", {
+                    headers,
+                    signal: AbortSignal.timeout(5000),
+                  })
+                    .then((response) => process.exit(response.ok ? 0 : 1))
+                    .catch(() => process.exit(1));
+            periodSeconds: 60
+            timeoutSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            runAsGroup: 1000
+            runAsNonRoot: true
+            runAsUser: 1000
+          volumeMounts:
+            - name: backup
+              mountPath: /backup
+              readOnly: true
+            - name: data
+              mountPath: /data
+            - name: cache
+              mountPath: /data/cache
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: backup
+          configMap:
+            name: discord-music-backup
+            defaultMode: 0555
+        - name: data
+          persistentVolumeClaim:
+            claimName: discord-music-data
+        - name: cache
+          emptyDir:
+            sizeLimit: 3Gi
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi
