@@ -7,6 +7,7 @@ resources:
   - navidrome.yaml
   - audiomuse-config.yaml
   - audiomuse.yaml
+  - discord-music.yaml
   - routes.yaml
   - monitoring.yaml
   - network-policy.yaml

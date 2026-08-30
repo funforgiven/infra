@@ -203,6 +203,10 @@ spec:
       kind: Deployment
       name: audiomuse-worker
       namespace: media
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: discord-music
+      namespace: media
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization

@@ -95,6 +95,8 @@ external intake names are:
 | `INFRA_TELEGRAM_BOT_TOKEN.key` | Infrastructure alert bot token |
 | `ND_LASTFM_APIKEY.key` | Navidrome Last.fm application key |
 | `ND_LASTFM_SECRET.key` | Navidrome Last.fm application secret |
+| `DISCORD_MUSIC_BOT_TOKEN.key` | Private Muse Discord application bot token |
+| `DISCORD_MUSIC_YOUTUBE_API_KEY.key` | Muse key restricted to YouTube Data API v3 |
 | `RESEND_ADMIN_API_KEY.key` | Resend administration key used to create a scoped sending key |
 | `FACTORIO_USERNAME.key` | Factorio account name used to publish the Space Age server |
 | `FACTORIO_TOKEN.key` | Factorio service token used by the public matching server |
@@ -116,7 +118,10 @@ are encrypted and verified.
 
 Generated passwords and provider-derived identifiers do not have intake files.
 See the [service operations guide](../deployments/homelab/cloud/services/ACTIVATION.md)
-for Backblaze, Telegram, Resend, AWS mail, and host enrollment.
+for Backblaze, Telegram, Discord music, Resend, AWS mail, and host enrollment.
+The Discord and YouTube issuance, least-privilege installation, rotation, and
+playback checks are detailed in the
+[Muse onboarding guide](../deployments/homelab/cloud/services/40-media/MUSE.md).
 
 ## Runtime files
 

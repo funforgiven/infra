@@ -161,6 +161,8 @@ data:
     require_file B2_APPLICATION_KEY '^[A-Za-z0-9/+_-]+={0,2}$' 20 128
     require_file ND_LASTFM_APIKEY '^[A-Za-z0-9_-]+$' 16 256
     require_file ND_LASTFM_SECRET '^[A-Za-z0-9_-]+$' 16 256
+    require_file DISCORD_MUSIC_BOT_TOKEN '^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$' 50 256
+    require_file DISCORD_MUSIC_YOUTUBE_API_KEY '^AIza[A-Za-z0-9_-]+$' 39 39
     require_file ND_PASSWORDENCRYPTIONKEY '^[A-Za-z0-9_-]+$' 32 256
     require_file SFTPGO_ADMIN_PASSWORD '^[A-Za-z0-9_-]+$' 32 256
     require_file AUDIOMUSE_NAVIDROME_PASSWORD '^[A-Za-z0-9_-]+$' 32 256
@@ -455,6 +457,10 @@ data:
       --from-file=NAVIDROME_OIDC_CLIENT_SECRET=/tmp/navidrome_client_secret \
       --from-file=AUDIOMUSE_OIDC_CLIENT_ID=/tmp/audiomuse_client_id \
       --from-file=AUDIOMUSE_OIDC_CLIENT_SECRET=/tmp/audiomuse_client_secret \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" -n media create secret generic discord-music-runtime \
+      --from-file=DISCORD_TOKEN=/runtime-bootstrap/DISCORD_MUSIC_BOT_TOKEN \
+      --from-file=YOUTUBE_API_KEY=/runtime-bootstrap/DISCORD_MUSIC_YOUTUBE_API_KEY \
       --dry-run=client -o yaml | "$kubectl" apply -f -
     "$kubectl" -n games create secret generic factorio-runtime \
       --from-file=FACTORIO_USERNAME=/runtime-bootstrap/FACTORIO_USERNAME \

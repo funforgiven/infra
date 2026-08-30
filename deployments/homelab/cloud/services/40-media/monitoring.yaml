@@ -97,3 +97,17 @@ spec:
           annotations:
             summary: AudioMuse PostgreSQL logical backup is stale
             description: No AudioMuse PostgreSQL logical backup completed in the last 36 hours.
+        - alert: DiscordMusicUnavailable
+          expr: >-
+            kube_deployment_status_replicas_available{
+              namespace="media",deployment="discord-music"
+            } < 1
+            or absent(kube_deployment_status_replicas_available{
+              namespace="media",deployment="discord-music"
+            })
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: The Discord music bot is unavailable
+            description: Muse has had no available replica for ten minutes.

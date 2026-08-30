@@ -46,6 +46,37 @@ nix run .#generate-services-credential -- --rotate KEY
 Review only ciphertext structure and diff statistics. Never print a decrypted
 document to inspect the result.
 
+## Discord music bot
+
+Muse needs a private Discord application token and a restricted YouTube Data
+API key before its Git-declared Deployment can connect. Create the application
+with a Guild Install, no privileged intents, and only the permissions listed in
+the [Muse onboarding guide](40-media/MUSE.md). That guide also records the
+pinned Muse/extractor version, the YouTube extraction and policy boundary,
+guild installation, playback qualification, credential rotation, and the
+intentional absence of YouTube cookie support.
+
+Put the provider values in the mode-`0600` intake files
+`DISCORD_MUSIC_BOT_TOKEN.key` and
+`DISCORD_MUSIC_YOUTUBE_API_KEY.key`, then enroll them without placing either
+value in shell history:
+
+```sh
+nix run .#enroll-services-credential -- \
+  --from-file --intake-directory /absolute/path/to/intake \
+  DISCORD_MUSIC_BOT_TOKEN
+nix run .#enroll-services-credential -- \
+  --from-file --intake-directory /absolute/path/to/intake \
+  DISCORD_MUSIC_YOUTUBE_API_KEY
+```
+
+Commit only the resulting SOPS ciphertext. Wait for the services-cluster
+reconciler to deliver `discord-music-runtime`, verify the `discord-music`
+Deployment, and only then authorize the private owner-only URL generated under
+Discord **OAuth2** > **URL Generator** for the intended server. Credential
+rotation follows the same enrollment path; restart
+the Deployment after the runtime Secret changes so it reads the replacement.
+
 ## Factorio credentials
 
 Factorio's public matching service needs the host account name and the service
