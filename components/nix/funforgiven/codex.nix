@@ -1,0 +1,115 @@
+_: {
+  dendritic.nixpkgs.allowUnfreePackages = [ "terraform" ];
+
+  home.base.imports = [
+    (
+      {
+        config,
+        lib,
+        pkgs,
+        ...
+      }:
+      let
+        awsRegion = "eu-central-1";
+        python = pkgs.python312;
+        codexPackage = pkgs.codex;
+        terraformMcpServer = pkgs.terraform-mcp-server;
+        uvx = lib.getExe' pkgs.uv "uvx";
+        uvEnvironment = {
+          UV_NO_MANAGED_PYTHON = "true";
+          UV_PYTHON = "${python}/bin/python3";
+          UV_PYTHON_DOWNLOADS = "never";
+        };
+      in
+      {
+        assertions = [
+          {
+            assertion = lib.versionAtLeast codexPackage.version "0.144.1";
+            message = "The official nixpkgs Codex package pin must provide Codex 0.144.1 or newer.";
+          }
+        ];
+
+        home.packages = [
+          pkgs.awscli2
+          pkgs.fd
+          pkgs.nodejs
+          python
+          pkgs.ripgrep
+          pkgs.terraform
+          pkgs.uv
+        ];
+
+        programs.codex = {
+          enable = true;
+          package = codexPackage;
+
+          settings = {
+            model = "gpt-5.6-sol";
+            personality = "pragmatic";
+
+            approval_policy = "on-request";
+            approvals_reviewer = "auto_review";
+            sandbox_mode = "workspace-write";
+
+            model_reasoning_effort = "xhigh";
+            model_verbosity = "medium";
+
+            projects."${config.home.homeDirectory}/dev/anwa" = {
+              trust_level = "trusted";
+            };
+
+            projects."${config.home.homeDirectory}/dev/infra" = {
+              trust_level = "trusted";
+            };
+
+            projects."${config.home.homeDirectory}/dev/yoseru" = {
+              trust_level = "trusted";
+            };
+
+            projects."${config.home.homeDirectory}/dev/tegami" = {
+              trust_level = "trusted";
+            };
+
+            projects."${config.home.homeDirectory}/dev/muketsu" = {
+              trust_level = "trusted";
+            };
+
+            projects."${config.home.homeDirectory}/dev/heliopause-dominion" = {
+              trust_level = "trusted";
+            };
+
+            mcp_servers.openaiDeveloperDocs = {
+              url = "https://developers.openai.com/mcp";
+              startup_timeout_sec = 20;
+              tool_timeout_sec = 60;
+              default_tools_approval_mode = "auto";
+            };
+
+            mcp_servers.aws = {
+              command = uvx;
+              args = [ "awslabs.aws-api-mcp-server==1.3.46" ];
+              startup_timeout_sec = 60;
+              tool_timeout_sec = 120;
+              default_tools_approval_mode = "prompt";
+              env = uvEnvironment // {
+                AWS_DEFAULT_REGION = awsRegion;
+                AWS_REGION = awsRegion;
+                FASTMCP_LOG_LEVEL = "ERROR";
+                READ_OPERATIONS_ONLY = "true";
+              };
+            };
+
+            mcp_servers.terraform = {
+              command = lib.getExe terraformMcpServer;
+              args = [ "stdio" ];
+              startup_timeout_sec = 20;
+              tool_timeout_sec = 120;
+              default_tools_approval_mode = "prompt";
+            };
+          };
+        };
+      }
+
+    )
+  ];
+}
