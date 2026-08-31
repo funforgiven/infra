@@ -12,6 +12,7 @@ in
 
   config = {
     git.ignore = [
+      "/.codex-doc-cache/"
       "/.direnv/"
       ".env"
       ".env.*"
