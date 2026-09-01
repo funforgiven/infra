@@ -89,8 +89,9 @@ spec:
                 - /bin/sh
                 - -ec
                 - |-
-                  curl -fsS http://127.0.0.1/health.php >/dev/null
                   database=/var/www/html/db/wallos.db
+                  test -s "$database"
+                  curl -fsS http://127.0.0.1/health.php >/dev/null
                   test "$(sqlite3 -cmd '.timeout 5000' "$database" \
                     "SELECT ((SELECT COUNT(*) FROM migrations WHERE migration = 'migrations/000055.php') = 1 AND \
                     (SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name IN ('idx_subscriptions_user_inactive_next_payment','idx_subscriptions_user_notify_inactive')) = 2 AND \
@@ -106,8 +107,9 @@ spec:
                 - /bin/sh
                 - -ec
                 - |-
-                  curl -fsS http://127.0.0.1/health.php >/dev/null
                   database=/var/www/html/db/wallos.db
+                  test -s "$database"
+                  curl -fsS http://127.0.0.1/health.php >/dev/null
                   test "$(sqlite3 -cmd '.timeout 5000' "$database" \
                     "SELECT ((SELECT COUNT(*) FROM migrations WHERE migration = 'migrations/000055.php') = 1 AND \
                     (SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name IN ('idx_subscriptions_user_inactive_next_payment','idx_subscriptions_user_notify_inactive')) = 2 AND \
