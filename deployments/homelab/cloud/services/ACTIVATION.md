@@ -83,12 +83,13 @@ After identity OpenTofu has created the Wallos client and the services-cluster
 reconciler has delivered `wallos-runtime`, wait for the `wallos` StatefulSet and
 all Wallos HTTPRoutes to become ready. The reconciler runs at minute 17 every
 two hours UTC; when immediate delivery is required, create an on-demand Job
-from the `openstack/services-cluster-reconcile-v1` CronJob. Connect through the
-administration WireGuard network, then immediately open
-<https://wallos.fahrican.com> and register the intended owner as the first local
-user, using that owner's verified ZITADEL email and a unique, high-entropy
-password retained in the password manager. The gateway confines the first-user
-registration route to that WireGuard network.
+from the `openstack/services-cluster-reconcile-v1` CronJob. From the trusted
+administration workstation at `10.21.10.20/32` or through the administration
+WireGuard network, immediately open <https://wallos.fahrican.com> and register
+the intended owner as the first local user, using that owner's verified
+ZITADEL email and a unique, high-entropy password retained in the password
+manager. The gateway confines the first-user registration route to those
+trusted sources.
 Continue to the login page and sign in with ZITADEL; matching the verified email
 binds the OIDC identity to the owner account. Verify the linked email and admin
 access before entering data. The declared runtime option hides the password UI,

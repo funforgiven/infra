@@ -12,14 +12,15 @@ before federated sign-in begins.
 Wallos does not offer OIDC until its first local user exists. Treat deployment
 and first registration as one controlled bootstrap: while the database has no
 users, the first registrant becomes user ID 1 and the application administrator.
-The exact registration route is therefore restricted to the administration
-WireGuard network. Connect through WireGuard, open
-<https://wallos.fahrican.com> immediately after the workload becomes ready,
-and register the intended owner using the same verified email as that owner's
-ZITADEL account and a unique, high-entropy password kept in the password
-manager. On the resulting login page, choose ZITADEL; the matching verified
-email binds the OIDC identity to the owner. Verify the linked email and admin
-access before entering any financial data.
+The exact registration route is therefore restricted to the trusted
+administration workstation at `10.21.10.20/32` and the administration
+WireGuard network. From either source, open <https://wallos.fahrican.com>
+immediately after the workload becomes ready and register the intended owner
+using the same verified email as that owner's ZITADEL account and a unique,
+high-entropy password kept in the password manager. On the resulting login
+page, choose ZITADEL; the matching verified email binds the OIDC identity to
+the owner. Verify the linked email and admin access before entering any
+financial data.
 
 The OIDC client is reconciled by the identity OpenTofu root. Its client ID and
 secret move directly from the undercloud output Secret to the services
@@ -41,12 +42,12 @@ OIDC login then links the account.
 
 `OIDC_DISABLE_PASSWORD_LOGIN` hides the password form and registration link,
 but Wallos 5.4.5 still accepts a valid password submitted directly to
-`login.php`. The gateway confines that POST to the administration WireGuard
-network. Treat the retained bootstrap password as a live recovery credential.
-If ZITADEL is unavailable or the client configuration is broken, connect
-through WireGuard, temporarily set the option to `"false"` in `wallos.yaml` to
-reveal the form, reconcile, and use that password; restore the UI restriction
-after recovery.
+`login.php`. The gateway confines that POST to the trusted administration
+workstation and administration WireGuard network. Treat the retained bootstrap
+password as a live recovery credential. If ZITADEL is unavailable or the
+client configuration is broken, connect from either trusted source,
+temporarily set the option to `"false"` in `wallos.yaml` to reveal the form,
+reconcile, and use that password; restore the UI restriction after recovery.
 
 ## Storage and backup
 
@@ -119,10 +120,11 @@ blocked; use Wallos's HTTPS APILayer currency provider.
 The catch-all application route and HTTP redirect are limited to LAN/WireGuard
 clients. A higher-precedence `/db` route denies every request because upstream
 nginx does not protect all SQLite journal and in-progress backup filenames.
-More-specific routes confine registration and password POSTs to the
-administration WireGuard network. A separate exact HTTPS route exposes only
-`/health.php` to the in-cluster blackbox monitor; the endpoint returns the fixed
-text `OK` and the services Gateway address is not Internet-routable. HTTPS
-responses set a host-only HSTS policy; Wallos 5.4.5 does not set `Secure` on its
-session and remember-me cookies, so the first visit must be HTTPS and the
-application must remain confined to these trusted networks.
+More-specific routes confine registration and password POSTs to the trusted
+administration workstation and administration WireGuard network. A separate
+exact HTTPS route exposes only `/health.php` to the in-cluster blackbox monitor;
+the endpoint returns the fixed text `OK` and the services Gateway address is
+not Internet-routable. HTTPS responses set a host-only HSTS policy; Wallos
+5.4.5 does not set `Secure` on its session and remember-me cookies, so the first
+visit must be HTTPS and the application must remain confined to these trusted
+networks.

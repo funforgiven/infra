@@ -186,4 +186,6 @@ spec:
       - action: Allow
         principal:
           clientCIDRs:
+            # Trusted administration workstation.
+            - 10.21.10.20/32
             - 10.21.91.0/24
