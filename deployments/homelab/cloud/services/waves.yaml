@@ -150,7 +150,8 @@ metadata:
   name: services-wallos
   namespace: flux-system
 spec:
-  suspend: false
+  # Git-declared maintenance boundary for failed first-start database recovery.
+  suspend: true
   interval: 10m
   retryInterval: 1m
   timeout: 10m
