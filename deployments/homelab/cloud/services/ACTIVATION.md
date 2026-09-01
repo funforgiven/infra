@@ -77,6 +77,34 @@ Discord **OAuth2** > **URL Generator** for the intended server. Credential
 rotation follows the same enrollment path; restart
 the Deployment after the runtime Secret changes so it reads the replacement.
 
+## Wallos first login
+
+After identity OpenTofu has created the Wallos client and the services-cluster
+reconciler has delivered `wallos-runtime`, wait for the `wallos` StatefulSet and
+all Wallos HTTPRoutes to become ready. The reconciler runs at minute 17 every
+two hours UTC; when immediate delivery is required, create an on-demand Job
+from the `openstack/services-cluster-reconcile-v1` CronJob. Connect through the
+administration WireGuard network, then immediately open
+<https://wallos.fahrican.com> and register the intended owner as the first local
+user, using that owner's verified ZITADEL email and a unique, high-entropy
+password retained in the password manager. The gateway confines the first-user
+registration route to that WireGuard network.
+Continue to the login page and sign in with ZITADEL; matching the verified email
+binds the OIDC identity to the owner account. Verify the linked email and admin
+access before entering data. The declared runtime option hides the password UI,
+but Wallos 5.4.5 still accepts the retained password through a direct login POST;
+treat it as a live recovery credential.
+
+If the ZITADEL client is recreated rather than only its secret rotated, restart
+the Wallos StatefulSet after `wallos-runtime` is refreshed so the environment-
+backed client ID changes too.
+
+Complete an on-demand `services-daily` backup and the isolated database check
+in the [Wallos runbook](45-wallos/README.md) before entering financial data.
+Keep the bootstrap password for identity-provider recovery, and use only the
+HTTPS APILayer currency provider; the workload's egress policy deliberately
+blocks the legacy Fixer provider's cleartext HTTP API.
+
 ## Factorio credentials
 
 Factorio's public matching service needs the host account name and the service

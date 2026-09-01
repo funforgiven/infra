@@ -12,6 +12,7 @@ spec:
     ttl: 720h
     includedNamespaces:
       - backup-qualification
+      - finance
       - games
       - media
       - services-databases
@@ -32,6 +33,7 @@ spec:
     ttl: 2160h
     includedNamespaces:
       - backup-qualification
+      - finance
       - games
       - media
       - services-databases

@@ -17,6 +17,7 @@ spec:
         - https://upload.fahrican.com/web/client/
         - https://mail.fahrican.com
         - https://music.fahrican.com/ping
+        - https://wallos.fahrican.com/health.php
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: Probe
