@@ -91,6 +91,15 @@ resource "zitadel_org_member" "identity_controller" {
   roles   = ["ORG_OWNER"]
 }
 
+resource "zitadel_project_member" "identity_controller" {
+  org_id     = local.org_id
+  project_id = zitadel_project.infrastructure.id
+  user_id    = zitadel_machine_user.identity_controller.id
+  roles      = ["PROJECT_OWNER"]
+
+  depends_on = [zitadel_org_member.identity_controller]
+}
+
 resource "zitadel_machine_key" "identity_controller" {
   org_id          = local.org_id
   user_id         = zitadel_machine_user.identity_controller.id
@@ -185,6 +194,8 @@ resource "zitadel_application_oidc" "wallos" {
   lifecycle {
     replace_triggered_by = [terraform_data.wallos_oidc_credential_generation]
   }
+
+  depends_on = [zitadel_project_member.identity_controller]
 }
 
 resource "zitadel_application_oidc" "kubernetes" {
