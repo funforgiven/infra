@@ -1,0 +1,23 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: wallos
+  namespace: finance
+spec:
+  groups:
+    - name: wallos
+      rules:
+        - alert: WallosUnavailable
+          expr: >-
+            kube_statefulset_status_replicas_ready{
+              namespace="finance",statefulset="wallos"
+            } < 1
+            or absent(kube_statefulset_status_replicas_ready{
+              namespace="finance",statefulset="wallos"
+            })
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Wallos is unavailable
+            description: Wallos has had no ready replica for ten minutes.

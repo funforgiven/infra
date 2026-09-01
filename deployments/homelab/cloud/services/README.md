@@ -32,6 +32,7 @@ management surface is exposed.
 | Discord music (Muse) | Services cluster | Discord guild after credential enrollment and an owner-authorized Guild Install using Manage Server; no HTTP endpoint |
 | Factorio Space Age | Services cluster | Public browser; verified Factorio account and shared game password |
 | Home Assistant | Dedicated VM | `https://home.fahrican.com`; native local account and MFA |
+| Wallos | Services cluster | `https://wallos.fahrican.com`; LAN/WireGuard only, with ZITADEL OIDC |
 | Stalwart mail | AWS appliance | Native mail accounts; public mail protocols and web administration |
 | Prometheus and Alertmanager | Services cluster | Administrative monitoring; Alertmanager uses the infrastructure Telegram bot |
 | Velero | Services cluster | Filesystem backups to the service-specific Backblaze prefix |
@@ -53,6 +54,7 @@ configuration.
   credential rotation: [Muse onboarding](40-media/MUSE.md)
 - Telegram alert-bot creation and target enrollment: [Telegram bootstrap](TELEGRAM.md)
 - Purchased-media import and recovery: [media workflow](40-media/README.md)
+- Wallos first login and recovery: [Wallos runbook](45-wallos/README.md)
 - Backup and isolated restore behavior: [backup policy](16-backup-policy/README.md)
 - AWS mail operation and recovery:
   [mail runbook](../../../../components/cloud/services/mail-aws/README.md)

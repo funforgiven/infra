@@ -48,6 +48,7 @@ locals {
     "home",
     "music",
     "upload",
+    "wallos",
   ])
   mail_hosts = toset([
     "autoconfig",

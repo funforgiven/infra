@@ -283,7 +283,8 @@ data:
     for key in \
       sftpgo_client_id sftpgo_client_secret \
       navidrome_client_id navidrome_client_secret \
-      audiomuse_client_id audiomuse_client_secret; do
+      audiomuse_client_id audiomuse_client_secret \
+      wallos_client_id wallos_client_secret; do
       KUBECONFIG="$undercloud_kubeconfig" \
         "$kubectl" -n tofu-system get secret zitadel-identity-outputs \
         -o "jsonpath={.data.$key}" | base64 -d > "/tmp/$key"
@@ -357,6 +358,8 @@ data:
     "$kubectl" create namespace media \
       --dry-run=client -o yaml | "$kubectl" apply -f -
     "$kubectl" create namespace games \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" create namespace finance \
       --dry-run=client -o yaml | "$kubectl" apply -f -
     "$kubectl" create namespace services-observability \
       --dry-run=client -o yaml | "$kubectl" apply -f -
@@ -467,6 +470,10 @@ data:
       --from-file=FACTORIO_TOKEN=/runtime-bootstrap/FACTORIO_TOKEN \
       --from-file=FACTORIO_GAME_PASSWORD=/runtime-bootstrap/FACTORIO_GAME_PASSWORD \
       --from-file=FACTORIO_RCON_PASSWORD=/runtime-bootstrap/FACTORIO_RCON_PASSWORD \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" -n finance create secret generic wallos-runtime \
+      --from-file=OIDC_CLIENT_ID=/tmp/wallos_client_id \
+      --from-file=OIDC_CLIENT_SECRET=/tmp/wallos_client_secret \
       --dry-run=client -o yaml | "$kubectl" apply -f -
     "$kubectl" apply -f /config/sync.yaml
     "$flux" reconcile source git flux-system --timeout=5m

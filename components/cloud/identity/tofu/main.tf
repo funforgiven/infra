@@ -127,21 +127,30 @@ locals {
       redirect_uri = "https://audiomuse.fahrican.com/oauth2/callback"
       post_logout  = "https://audiomuse.fahrican.com/"
     }
+    wallos = {
+      name         = "Wallos"
+      redirect_uri = "https://wallos.fahrican.com/index.php"
+      post_logout  = "https://wallos.fahrican.com/"
+    }
   }
 }
 
 resource "zitadel_application_oidc" "web" {
   for_each = local.web_oidc_apps
 
-  org_id                       = local.org_id
-  project_id                   = zitadel_project.infrastructure.id
-  name                         = each.value.name
-  redirect_uris                = [each.value.redirect_uri]
-  post_logout_redirect_uris    = [each.value.post_logout]
-  response_types               = ["OIDC_RESPONSE_TYPE_CODE"]
-  grant_types                  = ["OIDC_GRANT_TYPE_AUTHORIZATION_CODE", "OIDC_GRANT_TYPE_REFRESH_TOKEN"]
-  app_type                     = "OIDC_APP_TYPE_WEB"
-  auth_method_type             = "OIDC_AUTH_METHOD_TYPE_BASIC"
+  org_id                    = local.org_id
+  project_id                = zitadel_project.infrastructure.id
+  name                      = each.value.name
+  redirect_uris             = [each.value.redirect_uri]
+  post_logout_redirect_uris = [each.value.post_logout]
+  response_types            = ["OIDC_RESPONSE_TYPE_CODE"]
+  grant_types               = ["OIDC_GRANT_TYPE_AUTHORIZATION_CODE", "OIDC_GRANT_TYPE_REFRESH_TOKEN"]
+  app_type                  = "OIDC_APP_TYPE_WEB"
+  # Wallos submits its credentials in the token request body. The other web
+  # clients use HTTP Basic client authentication.
+  auth_method_type = each.key == "wallos" ? (
+    "OIDC_AUTH_METHOD_TYPE_POST"
+  ) : "OIDC_AUTH_METHOD_TYPE_BASIC"
   version                      = "OIDC_VERSION_1_0"
   access_token_type            = "OIDC_TOKEN_TYPE_BEARER"
   access_token_role_assertion  = true
@@ -233,6 +242,16 @@ output "audiomuse_client_id" {
 
 output "audiomuse_client_secret" {
   value     = zitadel_application_oidc.web["audiomuse"].client_secret
+  sensitive = true
+}
+
+output "wallos_client_id" {
+  value     = zitadel_application_oidc.web["wallos"].client_id
+  sensitive = true
+}
+
+output "wallos_client_secret" {
+  value     = zitadel_application_oidc.web["wallos"].client_secret
   sensitive = true
 }
 

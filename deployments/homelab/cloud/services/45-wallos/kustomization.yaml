@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - storage.yaml
+  - wallos.yaml
+  - route.yaml
+  - monitoring.yaml
+  - network-policy.yaml
+
+configMapGenerator:
+  - name: wallos-bootstrap
+    namespace: finance
+    files:
+      - backup.sh=backup.sh

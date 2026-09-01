@@ -1,0 +1,203 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: wallos
+  namespace: finance
+  labels:
+    app.kubernetes.io/name: wallos
+spec:
+  selector:
+    app.kubernetes.io/name: wallos
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: wallos
+  namespace: finance
+spec:
+  serviceName: wallos
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: wallos
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: wallos
+        app.kubernetes.io/part-of: personal-finance
+      annotations:
+        backup.velero.io/backup-volumes: database,logos
+        pre.hook.backup.velero.io/command: '["/bootstrap/backup.sh", "--once"]'
+        pre.hook.backup.velero.io/container: wallos-backup
+        pre.hook.backup.velero.io/on-error: Fail
+        pre.hook.backup.velero.io/timeout: 5m
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        fsGroup: 82
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: wallos
+          image: docker.io/bellamy/wallos:5.4.5@sha256:2ad6f504f555d99bf47abf6cdad416d748982b7056c7e1c6e3cd4e1f2ef41606
+          env:
+            - name: TZ
+              value: Europe/Istanbul
+            - name: PUID
+              value: "82"
+            - name: PGID
+              value: "82"
+            - name: OIDC_ENABLED
+              value: "true"
+            - name: OIDC_PROVIDER_NAME
+              value: ZITADEL
+            - name: OIDC_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: wallos-runtime
+                  key: OIDC_CLIENT_ID
+            - name: OIDC_CLIENT_SECRET_FILE
+              value: /run/secrets/wallos-oidc-client-secret
+            - name: OIDC_ISSUER
+              value: https://auth.cloud.fahrican.com
+            - name: OIDC_REDIRECT_URL
+              value: https://wallos.fahrican.com/index.php
+            - name: OIDC_USER_IDENTIFIER
+              value: sub
+            - name: OIDC_SCOPES
+              value: openid email profile
+            - name: OIDC_AUTO_CREATE_USER
+              value: "false"
+            - name: OIDC_DISABLE_PASSWORD_LOGIN
+              value: "true"
+            - name: OIDC_REQUIRE_EMAIL_VERIFIED
+              value: "true"
+            - name: SSRF_ALLOWLIST
+              value: auth.cloud.fahrican.com
+          ports:
+            - name: http
+              containerPort: 80
+          startupProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -ec
+                - |-
+                  curl -fsS http://127.0.0.1/health.php >/dev/null
+                  database=/var/www/html/db/wallos.db
+                  test "$(sqlite3 -cmd '.timeout 5000' "$database" \
+                    "SELECT ((SELECT COUNT(*) FROM migrations WHERE migration = 'migrations/000055.php') = 1 AND \
+                    (SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name IN ('idx_subscriptions_user_inactive_next_payment','idx_subscriptions_user_notify_inactive')) = 2 AND \
+                    (SELECT COUNT(*) FROM pragma_table_info('oauth_settings') WHERE name = 'require_email_verified') = 1);")" = 1
+                  test "$(sqlite3 -cmd '.timeout 5000' "$database" \
+                    'PRAGMA quick_check;')" = ok
+            periodSeconds: 5
+            failureThreshold: 60
+            timeoutSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -ec
+                - |-
+                  curl -fsS http://127.0.0.1/health.php >/dev/null
+                  database=/var/www/html/db/wallos.db
+                  test "$(sqlite3 -cmd '.timeout 5000' "$database" \
+                    "SELECT ((SELECT COUNT(*) FROM migrations WHERE migration = 'migrations/000055.php') = 1 AND \
+                    (SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name IN ('idx_subscriptions_user_inactive_next_payment','idx_subscriptions_user_notify_inactive')) = 2 AND \
+                    (SELECT COUNT(*) FROM pragma_table_info('oauth_settings') WHERE name = 'require_email_verified') = 1);")" = 1
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health.php
+              port: http
+            periodSeconds: 30
+            failureThreshold: 3
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+                - DAC_OVERRIDE
+                - FOWNER
+                - NET_BIND_SERVICE
+                - SETGID
+                - SETUID
+            runAsUser: 0
+          volumeMounts:
+            - name: database
+              mountPath: /var/www/html/db
+            - name: logos
+              mountPath: /var/www/html/images/uploads/logos
+            - name: oidc
+              mountPath: /run/secrets
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+        - name: wallos-backup
+          image: docker.io/bellamy/wallos:5.4.5@sha256:2ad6f504f555d99bf47abf6cdad416d748982b7056c7e1c6e3cd4e1f2ef41606
+          command:
+            - /bootstrap/backup.sh
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            runAsGroup: 82
+            runAsNonRoot: true
+            runAsUser: 82
+          volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+            - name: database
+              mountPath: /var/www/html/db
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: bootstrap
+          configMap:
+            name: wallos-bootstrap
+            defaultMode: 0555
+        - name: database
+          persistentVolumeClaim:
+            claimName: wallos-database
+        - name: logos
+          persistentVolumeClaim:
+            claimName: wallos-logos
+        - name: oidc
+          secret:
+            secretName: wallos-runtime
+            defaultMode: 0440
+            items:
+              - key: OIDC_CLIENT_SECRET
+                path: wallos-oidc-client-secret
+        - name: tmp
+          emptyDir:
+            sizeLimit: 256Mi

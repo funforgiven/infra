@@ -1,8 +1,8 @@
 # Backup and restore
 
 Velero backs up the services cluster with Kopia filesystem backups. The policy
-covers the `backup-qualification`, `games`, `media`, and `services-databases`
-namespaces. Volume snapshots are not used.
+covers the `backup-qualification`, `finance`, `games`, `media`, and
+`services-databases` namespaces. Volume snapshots are not used.
 
 ## Schedules
 
@@ -19,6 +19,17 @@ AudioMuse's live PostgreSQL volume is excluded from filesystem backup. Its
 01:45 `Europe/Istanbul` to the `audiomuse-postgres-dumps` PVC and retains the
 three newest dumps. Velero backs up that dump volume. Recover AudioMuse from a
 dump, not from the empty restored live-data PVC.
+
+Wallos creates an integrity-checked SQLite native backup every six hours. Its
+Velero pre-backup hook refreshes that backup before Kopia copies the database
+and uploaded-logo PVCs. Recover the database from `backups/wallos.db`, not from
+the filesystem copy of the live `wallos.db`; see the
+[Wallos runbook](../45-wallos/README.md).
+
+`finance-restore-modifiers` removes the production volume bindings from both
+Wallos PVCs during an isolated namespace-mapped restore. Exclude the live route,
+workload, Secret, and NetworkPolicy resources so the restored financial data
+cannot start a writer, receive traffic, contact ZITADEL, or send notifications.
 
 ## Run and inspect a backup
 
