@@ -168,10 +168,6 @@ moved {
   to   = zitadel_application_oidc.wallos
 }
 
-resource "terraform_data" "wallos_oidc_credential_generation" {
-  input = 1
-}
-
 resource "zitadel_application_oidc" "wallos" {
   org_id                       = local.org_id
   project_id                   = zitadel_project.infrastructure.id
@@ -190,10 +186,6 @@ resource "zitadel_application_oidc" "wallos" {
   dev_mode                     = false
   additional_origins           = []
   skip_native_app_success_page = false
-
-  lifecycle {
-    replace_triggered_by = [terraform_data.wallos_oidc_credential_generation]
-  }
 
   depends_on = [zitadel_project_member.identity_controller]
 }
