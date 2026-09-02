@@ -489,6 +489,7 @@ spec:
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
+      activeDeadlineSeconds: 1800
       backoffLimit: 2
       template:
         metadata:
@@ -498,6 +499,9 @@ spec:
         spec:
           restartPolicy: Never
           automountServiceAccountToken: false
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
           containers:
             - name: reconcile
               image: ghcr.io/neptunehub/audiomuse-ai:3.4.0@sha256:5c2c3710d0a0990258946b2d268c955d29b675afc9588bcfe3f70fd3d1f11ff6
@@ -546,6 +550,7 @@ spec:
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
+      activeDeadlineSeconds: 1800
       backoffLimit: 2
       template:
         metadata:
@@ -571,6 +576,8 @@ spec:
                   value: audiomuse-postgres.media.svc.cluster.local
                 - name: POSTGRES_USER
                   value: audiomuse
+                - name: PGCONNECT_TIMEOUT
+                  value: "30"
                 - name: PGPASSWORD
                   valueFrom:
                     secretKeyRef:

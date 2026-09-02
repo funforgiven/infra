@@ -118,6 +118,30 @@ data:
         patches:
           - operation: remove
             path: /spec/volumeName
+      - conditions:
+          groupResource: deployments.apps
+          resourceNameRegex: ^backup-canary$
+          namespaces:
+            - backup-qualification
+        patches:
+          - operation: replace
+            path: /spec/template/spec/containers/0/resources/requests/cpu
+            value: 10m
+          - operation: replace
+            path: /spec/template/spec/containers/0/resources/requests/memory
+            value: 16Mi
+      - conditions:
+          groupResource: statefulsets.apps
+          resourceNameRegex: ^factorio$
+          namespaces:
+            - games
+        patches:
+          - operation: replace
+            path: /spec/template/spec/containers/0/resources/requests/cpu
+            value: 10m
+          - operation: replace
+            path: /spec/template/spec/containers/0/resources/requests/memory
+            value: 64Mi
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -255,6 +279,14 @@ data:
       --timeout=10m
     "$kubectl" -n games-restore rollout status statefulset/factorio \
       --timeout=10m
+    test "$($kubectl -n backup-qualification-restore get deployment backup-canary \
+      -o jsonpath='{.spec.template.spec.containers[0].resources.requests.cpu}')" = 10m
+    test "$($kubectl -n backup-qualification-restore get deployment backup-canary \
+      -o jsonpath='{.spec.template.spec.containers[0].resources.requests.memory}')" = 16Mi
+    test "$($kubectl -n games-restore get statefulset factorio \
+      -o jsonpath='{.spec.template.spec.containers[0].resources.requests.cpu}')" = 10m
+    test "$($kubectl -n games-restore get statefulset factorio \
+      -o jsonpath='{.spec.template.spec.containers[0].resources.requests.memory}')" = 64Mi
     echo "Restore qualification completed for application data in backup $backup."
   restore.yaml: |
     apiVersion: velero.io/v1

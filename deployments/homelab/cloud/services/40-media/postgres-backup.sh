@@ -6,10 +6,20 @@ timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 temporary="/backups/audiomuse-$timestamp.dump.partial"
 destination="/backups/audiomuse-$timestamp.dump"
 
+cleanup() {
+  rm -f -- "$temporary"
+}
+
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
 pg_dump \
   --host "$POSTGRES_HOST" \
   --username "$POSTGRES_USER" \
   --dbname "$POSTGRES_DB" \
+  --lock-wait-timeout 60s \
   --format custom \
   --file "$temporary"
 mv "$temporary" "$destination"
