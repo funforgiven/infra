@@ -137,6 +137,11 @@ data:
 
     cluster=services-v1
     template=services-kubernetes-v1.36.2-v2
+    desired_control_planes=3
+    # Keep enough worker capacity to reschedule production requests after one
+    # worker failure without borrowing from tainted control-plane nodes.
+    desired_workers=3
+    desired_nodes=$((desired_control_planes + desired_workers))
     undercloud_kubeconfig=/tmp/undercloud-kubeconfig
     kubeconfig=/tmp/kube/config
     kubectl=/tmp/bin/kubectl
@@ -202,8 +207,8 @@ data:
     if ! openstack coe cluster show "$cluster" >/dev/null 2>&1; then
       openstack coe cluster create "$cluster" \
         --cluster-template "$template" \
-        --master-count 3 \
-        --node-count 2 \
+        --master-count "$desired_control_planes" \
+        --node-count "$desired_workers" \
         --timeout 90
     fi
 
@@ -220,11 +225,12 @@ data:
       sleep 10
     done
 
-    test "$(openstack coe cluster show "$cluster" -f value -c master_count)" -eq 3
+    test "$(openstack coe cluster show "$cluster" -f value -c master_count)" \
+      -eq "$desired_control_planes"
     node_count="$(openstack coe cluster show "$cluster" -f value -c node_count)"
-    if test "$node_count" -lt 2; then
-      openstack coe cluster resize "$cluster" 2
-    elif test "$node_count" -gt 2; then
+    if test "$node_count" -lt "$desired_workers"; then
+      openstack coe cluster resize "$cluster" "$desired_workers"
+    elif test "$node_count" -gt "$desired_workers"; then
       echo "$cluster has $node_count workers; refusing a destructive scale-down" >&2
       exit 1
     fi
@@ -336,7 +342,8 @@ data:
       nodes="$($kubectl get nodes --no-headers 2>/dev/null || true)"
       total="$(printf '%s\n' "$nodes" | awk 'NF { count++ } END { print count + 0 }')"
       ready="$(printf '%s\n' "$nodes" | awk '$2 == "Ready" { count++ } END { print count + 0 }')"
-      if test "$total" -eq 5 && test "$ready" -eq 5; then
+      if test "$total" -eq "$desired_nodes" && \
+        test "$ready" -eq "$desired_nodes"; then
         break
       fi
       test "$attempt" -lt 240
@@ -479,7 +486,7 @@ data:
     "$flux" reconcile source git flux-system --timeout=5m
     "$flux" reconcile kustomization flux-system --with-source --timeout=20m
 
-    test "$($kubectl get nodes --no-headers | wc -l)" -eq 5
+    test "$($kubectl get nodes --no-headers | wc -l)" -eq "$desired_nodes"
     echo "$cluster is ready and reconciled from signed Git"
 ---
 apiVersion: batch/v1

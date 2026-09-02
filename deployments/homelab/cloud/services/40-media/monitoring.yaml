@@ -31,9 +31,14 @@ spec:
             description: Navidrome has not been scrapeable for ten minutes.
         - alert: BeetsImporterStalled
           expr: >-
-            time() - kube_cronjob_status_last_successful_time{
+            (time() - kube_cronjob_status_last_successful_time{
               namespace="media",cronjob="beets-import"
-            } > 1800
+            } > 1800) or ((time() - kube_cronjob_created{
+              namespace="media",cronjob="beets-import"
+            } > 1800) unless on(namespace,cronjob)
+            kube_cronjob_status_last_successful_time{
+              namespace="media",cronjob="beets-import"
+            })
           for: 10m
           labels:
             severity: warning
@@ -77,9 +82,14 @@ spec:
             description: AudioMuse PostgreSQL has had no ready replica for ten minutes.
         - alert: AudioMuseReconcileStalled
           expr: >-
-            time() - kube_cronjob_status_last_successful_time{
+            (time() - kube_cronjob_status_last_successful_time{
               namespace="media",cronjob="audiomuse-reconcile"
-            } > 3600
+            } > 3600) or ((time() - kube_cronjob_created{
+              namespace="media",cronjob="audiomuse-reconcile"
+            } > 3600) unless on(namespace,cronjob)
+            kube_cronjob_status_last_successful_time{
+              namespace="media",cronjob="audiomuse-reconcile"
+            })
           for: 15m
           labels:
             severity: warning
@@ -88,9 +98,14 @@ spec:
             description: AudioMuse cron policy has not reconciled successfully for an hour.
         - alert: AudioMusePostgresBackupStalled
           expr: >-
-            time() - kube_cronjob_status_last_successful_time{
+            (time() - kube_cronjob_status_last_successful_time{
               namespace="media",cronjob="audiomuse-postgres-backup"
-            } > 129600
+            } > 129600) or ((time() - kube_cronjob_created{
+              namespace="media",cronjob="audiomuse-postgres-backup"
+            } > 129600) unless on(namespace,cronjob)
+            kube_cronjob_status_last_successful_time{
+              namespace="media",cronjob="audiomuse-postgres-backup"
+            })
           for: 30m
           labels:
             severity: warning

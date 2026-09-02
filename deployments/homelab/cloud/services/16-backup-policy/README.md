@@ -63,13 +63,17 @@ fall back to an older backup. The job then:
    namespaces;
 4. removes the backed-up PVCs' `spec.volumeName` fields so `rbd1` provisions
    new volumes;
-5. waits for the restored canary Deployment and Factorio StatefulSet to become
-   ready.
+5. gives the isolated sleepers small qualification-only resource requests;
+6. waits for the restored canary Deployment and Factorio StatefulSet to become
+   ready and verifies those resource requests were applied.
 
 The restored Factorio container detects that it is outside the production
 `games` namespace and sleeps instead of starting a public server. Its integrity
 sidecar tests every recovered save ZIP; the StatefulSet cannot become ready if
-any save is corrupt. LoadBalancer Services are excluded from the restore.
+any save is corrupt. The restored Factorio container requests only 10m CPU and
+64 MiB of memory while it sleeps, so leaving the latest restore available for
+inspection does not reserve the production game's capacity. LoadBalancer
+Services are excluded from the restore.
 
 The job cannot read Secrets or delete any other namespace. It leaves both
 restored namespaces available for inspection until the next run. Each run
