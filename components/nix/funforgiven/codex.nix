@@ -58,6 +58,10 @@ _: {
               trust_level = "trusted";
             };
 
+            projects."${config.home.homeDirectory}/dev/atollion" = {
+              trust_level = "trusted";
+            };
+
             projects."${config.home.homeDirectory}/dev/infra" = {
               trust_level = "trusted";
             };
