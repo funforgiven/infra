@@ -82,6 +82,31 @@ sudo nixos-rebuild switch --flake .#parmigiano --accept-flake-config
 
 Restart or reconcile the affected consumer after the new value is present.
 
+## Atollion GitHub CLI token
+
+Create a fine-grained personal access token at
+<https://github.com/settings/personal-access-tokens/new> with these limits:
+
+- Resource owner: `funforgiven`
+- Repository access: only `atollion`
+- Repository permissions: Contents read-only, Issues read/write, and Pull
+  requests read/write
+- A short expiration appropriate for the current work period
+
+Do not use a classic personal access token. Open the SOPS document with the
+repository-pinned CLI and replace `codex/atollion_github_cli_token` with the
+new `github_pat_...` value:
+
+```sh
+nix run .#sops --accept-flake-config -- secrets/api-tokens.yaml
+```
+
+The Home Manager `gh` wrapper reads the deployed secret only when its current
+Git root is `~/dev/atollion`, sets `GH_REPO=funforgiven/atollion`, and rejects
+`gh auth` commands. The repository's Codex config limits sandbox networking to
+GitHub domains. Apply the host configuration after enrolling or rotating the
+token, then verify from inside Atollion with `gh repo view`.
+
 ## External credential intake
 
 Ignored `*.key` files are one-way intake files, not a secret store. Each file

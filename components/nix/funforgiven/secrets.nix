@@ -7,6 +7,7 @@
 let
   user = config.users.funforgiven;
   anwaWorkspace = "${user.homeDirectory}/dev/anwa";
+  atollionWorkspace = "${user.homeDirectory}/dev/atollion";
   hostIdentityPath = "/etc/ssh/ssh_host_ed25519_key";
   # Verification-only: existing commits were signed by this public key before
   # the SOPS migration. Keeping it does not invoke or depend on 1Password.
@@ -20,6 +21,7 @@ let
   passwordHashSecretName = "${user.username}-password-hash";
   apiTokenKeys = {
     anwa-github-mcp-token = "codex/anwa_github_mcp_token";
+    atollion-github-cli-token = "codex/atollion_github_cli_token";
     context7-api-key = "codex/context7_api_key";
     github-mcp-token = "codex/github_mcp_token";
   };
@@ -185,13 +187,74 @@ let
         secretPath = secretPaths.anwa-github-mcp-token;
         variable = "GITHUB_PERSONAL_ACCESS_TOKEN";
       };
+      atollionGithubCli = pkgs.writeShellApplication {
+        name = "gh";
+        text = ''
+          readonly atollion_repository=funforgiven/atollion
+          atollion_workspace="$(${lib.getExe' pkgs.coreutils "realpath"} --canonicalize-missing ${lib.escapeShellArg atollionWorkspace})"
+          readonly atollion_workspace
+
+          case "''${1:-}" in
+            --help|-h|help|--version|version|completion|__complete*)
+              exec ${lib.getExe pkgs.gh} "$@"
+              ;;
+            auth)
+              printf 'gh: authentication commands are disabled for the Atollion-scoped credential.\n' >&2
+              exit 1
+              ;;
+          esac
+
+          session_directory="$(${lib.getExe' pkgs.coreutils "realpath"} --canonicalize-existing .)"
+          readonly session_directory
+          repository_root="$(${lib.getExe pkgs.git} -C "$session_directory" rev-parse --show-toplevel 2>/dev/null)" || {
+            printf 'gh: run this repository-scoped command inside %s.\n' "$atollion_workspace" >&2
+            exit 1
+          }
+          repository_root="$(${lib.getExe' pkgs.coreutils "realpath"} --canonicalize-existing "$repository_root")"
+          readonly repository_root
+
+          if [[ "$repository_root" != "$atollion_workspace" ]]; then
+            printf 'gh: the managed credential is restricted to %s.\n' "$atollion_workspace" >&2
+            exit 1
+          fi
+
+          readonly secret_file=${lib.escapeShellArg secretPaths.atollion-github-cli-token}
+          if [[ ! -r "$secret_file" ]]; then
+            printf 'gh: required Atollion token is not readable: %s\n' "$secret_file" >&2
+            exit 1
+          fi
+
+          token="$(< "$secret_file")"
+          if [[ "$token" != github_pat_* ]]; then
+            unset token
+            printf 'gh: the Atollion credential must be a configured fine-grained GitHub token.\n' >&2
+            exit 1
+          fi
+
+          unset GITHUB_TOKEN GH_ENTERPRISE_TOKEN GITHUB_ENTERPRISE_TOKEN GH_DEBUG
+          export GH_TOKEN="$token"
+          export GH_HOST=github.com
+          export GH_REPO="$atollion_repository"
+          export GH_PROMPT_DISABLED=1
+          unset token
+
+          exec ${lib.getExe pkgs.gh} "$@"
+        '';
+      };
       scopedGithubMcpLauncher = pkgs.writeShellApplication {
         name = "github-mcp-server-scoped";
         text = ''
           anwa_workspace="$(${lib.getExe' pkgs.coreutils "realpath"} --canonicalize-missing ${lib.escapeShellArg anwaWorkspace})"
           readonly anwa_workspace
+          atollion_workspace="$(${lib.getExe' pkgs.coreutils "realpath"} --canonicalize-missing ${lib.escapeShellArg atollionWorkspace})"
+          readonly atollion_workspace
           session_directory="$(${lib.getExe' pkgs.coreutils "realpath"} --canonicalize-existing .)"
           readonly session_directory
+
+          if [[ "$session_directory" == "$atollion_workspace" || "$session_directory" == "$atollion_workspace/"* ]]; then
+            printf 'github-mcp-server: disabled in Atollion; use the repository-scoped gh CLI.\n' >&2
+            exit 1
+          fi
 
           if [[ "$session_directory" == "$anwa_workspace" || "$session_directory" == "$anwa_workspace/"* ]]; then
             exec ${lib.getExe anwaGithubMcpLauncher} "$@"
@@ -223,6 +286,8 @@ let
 
         programs = {
           codex.enableMcpIntegration = true;
+
+          gh.package = atollionGithubCli;
 
           git = {
             signing = {
