@@ -1,0 +1,61 @@
+name: Runner qualification
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  produce:
+    runs-on: linux-x86_64
+    steps:
+      - uses: https://data.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Verify isolation and toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = 1000
+          test ! -e /var/run/secrets/kubernetes.io/serviceaccount/token
+          test ! -e /run/enrollment/token
+          test ! -S /var/run/docker.sock
+          python3 - <<'PY'
+          import socket, urllib.request, urllib.error
+          for host, port in [('169.254.169.254', 80), ('172.24.0.1', 443), ('10.21.20.131', 443), ('192.168.82.10', 5432)]:
+              try:
+                  with socket.create_connection((host, port), timeout=2):
+                      raise AssertionError(f'Private endpoint reachable: {host}:{port}')
+              except (TimeoutError, OSError):
+                  pass
+          for path in ['/admin', '/api/v1/admin', '/%61dmin', '//admin', '/%2fadmin']:
+              request = urllib.request.Request('https://git.fahrican.com' + path,
+                  headers={'X-Forwarded-For': '10.21.10.20'})
+              try:
+                  urllib.request.urlopen(request, timeout=10)
+              except urllib.error.HTTPError as response:
+                  assert response.code in (400, 403), (path, response.code)
+              else:
+                  raise AssertionError('CI reached an administration route: ' + path)
+          print('Cluster credentials, private network and administrator routes are isolated.')
+          PY
+          nix --version
+          node --version
+          git --version
+          nix build --no-link github:NixOS/nixpkgs/2fcb964de67fcf60b43471c55d5d99e61a9ccb5a#hello
+          printf '%s\n' 'forgejo-recovery-qualification-v1' > qualification.txt
+      - uses: https://data.forgejo.org/actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5
+        with:
+          name: qualification
+          path: qualification.txt
+          retention-days: 7
+  consume:
+    needs: produce
+    runs-on: linux-x86_64
+    steps:
+      - uses: https://data.forgejo.org/actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
+        with:
+          name: qualification
+          path: recovered
+      - name: Verify artifact in a new job
+        run: |
+          test "$(cat recovered/qualification.txt)" = forgejo-recovery-qualification-v1
+          echo 'A separate ephemeral job recovered the exact artifact.'

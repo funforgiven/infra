@@ -9,6 +9,7 @@ import argparse
 import hashlib
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import tarfile
@@ -57,6 +58,8 @@ def main():
         archive = root / (name + ".tar.gz")
         download(url, archive, expected)
         # Re-extract verified inputs on each run to discard local source edits.
+        if (root / name).exists():
+            shutil.rmtree(root / name)
         with tarfile.open(archive) as source:
             source.extractall(root / name, filter="data")
     source_dir, = [item for item in (root / "source").iterdir() if item.is_dir()]

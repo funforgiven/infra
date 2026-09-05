@@ -1,5 +1,6 @@
 #!/bin/sh
 set -eu
+mkdir -p "${GITEA_TEMP:-/tmp/gitea}"
 forgejo() { /app/gitea/gitea --config /var/lib/gitea/custom/conf/app.ini "$@"; }
 forgejo migrate
 if ! forgejo admin user list | awk '$2 == "forge-admin" { found = 1 } END { exit !found }'; then

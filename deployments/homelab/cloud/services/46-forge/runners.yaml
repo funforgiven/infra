@@ -1,0 +1,150 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: runner-job
+  namespace: forge-ci
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: runner-jobs
+  namespace: forge-ci
+spec:
+  hard:
+    pods: '6'
+    requests.cpu: '3'
+    requests.memory: 6Gi
+    limits.cpu: '10'
+    limits.memory: 12Gi
+    limits.ephemeral-storage: 72Gi
+    requests.storage: '0'
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: forge-linux-qualification
+  namespace: forge-ci
+spec:
+  schedule: '* * * * *'
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 60
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      ttlSecondsAfterFinished: 600
+      activeDeadlineSeconds: 9000
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: forge-runner
+            app.kubernetes.io/component: job
+        spec:
+          automountServiceAccountToken: false
+          serviceAccountName: runner-job
+          restartPolicy: Never
+          terminationGracePeriodSeconds: 45
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          imagePullSecrets:
+          - name: runner-registry
+          volumes:
+          - name: bootstrap
+            configMap:
+              name: forge-runner-bootstrap
+          - name: enrollment
+            secret:
+              secretName: runner-qualification
+              defaultMode: 288
+          - name: runner
+            emptyDir:
+              medium: Memory
+              sizeLimit: 1Mi
+          - name: workspace
+            emptyDir:
+              sizeLimit: 16Gi
+          - name: home
+            emptyDir:
+              sizeLimit: 8Gi
+          - name: tmp
+            emptyDir:
+              sizeLimit: 2Gi
+          initContainers:
+          - name: register
+            image: docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4
+            command:
+            - python
+            - /bootstrap/register-job.py
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities: &id001
+                drop:
+                - ALL
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              readOnlyRootFilesystem: true
+            env:
+            - name: FORGE_REPOSITORY
+              value: forge-runner/runner-qualification
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+            - name: enrollment
+              mountPath: /run/enrollment
+              readOnly: true
+            - name: runner
+              mountPath: /run/runner
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                cpu: 250m
+                memory: 128Mi
+          containers:
+          - name: runner
+            image: git.fahrican.com/forge-runner/runner-linux:13.1.0@sha256:7c22b2209c8f86e6392d96056dd69b5ef6c8615fd573df7349bc45bba9f2fbca
+            command:
+            - /bin/sh
+            - /bootstrap/run-job.sh
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities: *id001
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+            volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+            - name: runner
+              mountPath: /run/runner
+              readOnly: true
+            - name: workspace
+              mountPath: /workspace
+            - name: home
+              mountPath: /home/runner
+            - name: tmp
+              mountPath: /tmp
+            resources:
+              requests:
+                cpu: 250m
+                memory: 512Mi
+                ephemeral-storage: 4Gi
+              limits:
+                cpu: '3'
+                memory: 4Gi
+                ephemeral-storage: 24Gi
