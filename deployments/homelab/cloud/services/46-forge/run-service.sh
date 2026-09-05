@@ -6,11 +6,13 @@ set -eu
 child=
 control=${BACKUP_CONTROL:-/control}
 stop_child() {
-  kill -TERM "$child" 2>/dev/null || true
+  kill -TERM "-$child" 2>/dev/null || true
   # A stuck application must not leave a permanent maintenance window.
-  (sleep 45; kill -KILL "$child" 2>/dev/null || true) &
+  (sleep 45; kill -KILL "-$child" 2>/dev/null || true) &
   watchdog=$!
   wait "$child" 2>/dev/null || true
+  # Git subprocesses must also stop before the backup marker is published.
+  kill -KILL "-$child" 2>/dev/null || true
   kill "$watchdog" 2>/dev/null || true
   wait "$watchdog" 2>/dev/null || true
   child=
@@ -26,7 +28,7 @@ trap 'exit 143' TERM
 trap 'exit 130' INT
 
 while :; do
-  "$@" &
+  setsid "$@" &
   child=$!
   while kill -0 "$child" 2>/dev/null; do
     if test -s "$control/request"; then

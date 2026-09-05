@@ -36,7 +36,10 @@
       pythonTests =
         pkgs.runCommandLocal "cloud-python-tests"
           {
-            nativeBuildInputs = [ python ];
+            nativeBuildInputs = [
+              python
+              pkgs.util-linux
+            ];
           }
           ''
             set -euo pipefail

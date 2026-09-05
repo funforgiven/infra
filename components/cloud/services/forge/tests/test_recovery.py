@@ -27,9 +27,18 @@ class RecoveryTests(unittest.TestCase):
         # Each transaction refers to an already-written repository object. The
         # restore must contain both the committed row and its exact file bytes.
         self.app = self.root / "app.py"
-        self.app.write_text('''import os, sqlite3, time
+        (self.root / "child.py").write_text('''import os, signal, time
+from pathlib import Path
+signal.signal(signal.SIGTERM, signal.SIG_IGN)
+path = Path(os.environ["BACKUP_DATA"]) / "child"
+while True:
+    path.write_text(str(time.time_ns()))
+    time.sleep(.02)
+''')
+        self.app.write_text('''import os, sqlite3, subprocess, sys, time
 from pathlib import Path
 root = Path(os.environ["BACKUP_DATA"])
+subprocess.Popen([sys.executable, str(root.parent / "child.py")])
 db = sqlite3.connect(root / "state.db")
 db.execute("PRAGMA journal_mode=WAL")
 db.execute("CREATE TABLE IF NOT EXISTS objects (id INTEGER PRIMARY KEY, content TEXT)")
@@ -86,6 +95,16 @@ while True:
         before = len(list((self.root / "data").iterdir()))
         self.await_condition(lambda: len(list((self.root / "data").iterdir())) > before)
         self.assertIsNone(self.service.poll())
+
+    def test_quiescence_stops_subprocesses_that_ignore_term(self):
+        self.await_condition(lambda: (self.root / "data/child").exists())
+        (self.root / "control/request").write_text(f"{int(time.time()) + 10} subprocess-check\n")
+        self.await_condition(lambda: (self.root / "control/paused").exists())
+        before = (self.root / "data/child").read_text()
+        time.sleep(.2)
+        self.assertEqual((self.root / "data/child").read_text(), before)
+        (self.root / "control/request").unlink()
+        self.await_condition(lambda: not (self.root / "control/paused").exists())
 
 
 if __name__ == "__main__":

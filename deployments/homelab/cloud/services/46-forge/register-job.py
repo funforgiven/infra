@@ -25,7 +25,7 @@ def request(method, path="", body=None):
 
 # Kubernetes expires idle/failed job pods after three hours. Remove only
 # older, offline ephemeral identities belonging to this managed CronJob.
-for runner in request("GET", "?limit=50"):
+for runner in request("GET", "?limit=50") or []:
     if not runner["ephemeral"] or runner["status"] != "offline":
         continue
     if not runner["name"].startswith("forge-linux-qualification-"):
@@ -37,7 +37,7 @@ for runner in request("GET", "?limit=50"):
     if time.time() - minute * 60 > 21600:
         request("DELETE", "/" + str(runner["id"]))
 
-jobs = request("GET", "/jobs?labels=linux-x86_64")
+jobs = request("GET", "/jobs?labels=linux-x86_64") or []
 waiting = [job for job in jobs if job["status"] == "waiting"
            and set(job["runs_on"]) <= {"linux", "linux-x86_64"}]
 if not waiting:
