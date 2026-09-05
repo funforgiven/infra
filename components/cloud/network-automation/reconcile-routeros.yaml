@@ -910,6 +910,7 @@
       tags:
         - never
         - apply
+        - private-access
 
     - name: Reconcile Git-owned WAN port forwards
       community.routeros.command:
@@ -1199,6 +1200,7 @@
       tags:
         - never
         - apply
+        - private-access
 
     - name: Reconcile the static-only management DHCP network
       community.routeros.command:

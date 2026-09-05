@@ -135,6 +135,10 @@ Mullvad objects while retaining the standard read-only CCR preflight.
 Use `--limit core_router --tags wan-port-forwards` to reconcile only the
 declared Factorio WAN/reflection and Syncthing destination-NAT rows after the
 usual preflight.
+Use `--limit core_router --tags private-access` to reconcile and verify routed
+access rules while retaining the read-only preflight. An `--extra-vars` file
+containing `routeros_access_rules` can select the exact inventory rows for a
+service rollout.
 
 The playbook owns only the inventory-declared subset. It does not infer unknown
 cabling or rewrite unrelated dynamic leases. Static lease activity is not
