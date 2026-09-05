@@ -21,28 +21,6 @@ spec:
     interval: 60s
 ---
 apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: woodpecker
-  namespace: forge
-spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: woodpecker
-  endpoints:
-  - port: http
-    path: /metrics
-    authorization:
-      type: Bearer
-      credentials:
-        name: forge-runtime
-        key: woodpecker-metrics-token
-    interval: 30s
-  - port: backup-metrics
-    path: /metrics
-    interval: 60s
----
-apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: forge
@@ -70,26 +48,5 @@ spec:
         severity: critical
       annotations:
         summary: forgejo recovery archive is overdue
-        description: No successful local recovery archive in eight hours; inspect
-          backup sidecar before relying on Velero.
-    - alert: WoodpeckerUnavailable
-      expr: kube_statefulset_replicas{namespace="forge",statefulset="woodpecker"}
-        > 0 and kube_statefulset_status_replicas_ready{namespace="forge",statefulset="woodpecker"}
-        < 1
-      for: 5m
-      labels:
-        severity: critical
-      annotations:
-        summary: woodpecker is unavailable
-        description: The private development service has had no ready replica for
-          five minutes.
-    - alert: WoodpeckerBackupStale
-      expr: time() - forge_backup_completed_timestamp_seconds{service="woodpecker"}
-        > 28800
-      for: 15m
-      labels:
-        severity: critical
-      annotations:
-        summary: woodpecker recovery archive is overdue
         description: No successful local recovery archive in eight hours; inspect
           backup sidecar before relying on Velero.

@@ -59,8 +59,6 @@ spec:
     - home.fahrican.com
     - wallos.fahrican.com
     - git.fahrican.com
-    - ci.fahrican.com
-    - ci-rpc.fahrican.com
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway

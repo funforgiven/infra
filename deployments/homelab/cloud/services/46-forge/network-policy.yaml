@@ -31,13 +31,6 @@ spec:
       - 3000
       - 8000
       - 9900
-  - action: Allow
-    protocol: TCP
-    source:
-      selector: app.kubernetes.io/name == 'woodpecker-agent'
-    destination:
-      ports:
-      - 9000
   - action: Deny
   egress:
   - action: Allow
@@ -81,12 +74,6 @@ spec:
   - action: Allow
     protocol: TCP
     destination:
-      selector: app.kubernetes.io/name == 'woodpecker'
-      ports:
-      - 9000
-  - action: Allow
-    protocol: TCP
-    destination:
       nets:
       - 0.0.0.0/0
       notNets:
@@ -103,34 +90,6 @@ spec:
       - 443
       - 587
   - action: Deny
----
-apiVersion: projectcalico.org/v3
-kind: NetworkPolicy
-metadata:
-  name: woodpecker-agent-api
-  namespace: forge
-spec:
-  order: 15
-  selector: app.kubernetes.io/name == 'woodpecker-agent'
-  types:
-  - Egress
-  egress:
-  - action: Allow
-    protocol: TCP
-    destination:
-      nets:
-      - 172.24.0.1/32
-      ports:
-      - 443
-  - action: Allow
-    protocol: TCP
-    destination:
-      nets:
-      - 192.168.80.40/32
-      - 192.168.80.196/32
-      - 192.168.80.209/32
-      ports:
-      - 6443
 ---
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy

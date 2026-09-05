@@ -18,6 +18,7 @@ for section, key, secret in [
     ("server", "LFS_JWT_SECRET", "forgejo-lfs-secret"),
     ("oauth2", "JWT_SECRET", "forgejo-oauth-secret"),
     ("metrics", "TOKEN", "forgejo-metrics-token"),
+    ("mailer", "PASSWD", "FORGEJO_RESEND_API_KEY"),
 ]:
     if not config.has_section(section):
         config.add_section(section)

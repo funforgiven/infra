@@ -76,5 +76,10 @@ data:
         secretFile: deployments/homelab/cloud/undercloud/86-gitlab/runtime.sops.yaml
         keys:
           - GITLAB_RESEND_API_KEY
+      resend-forgejo:
+        provisioner: reconcile-services-resend
+        secretFile: deployments/homelab/cloud/services/46-forge/runtime.sops.yaml
+        keys:
+          - FORGEJO_RESEND_API_KEY
     policy:
       secretTransport: isolated-sops-ciphertext-and-memory-backed-reconciliation
