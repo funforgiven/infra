@@ -18,6 +18,20 @@
     ],
     "publicKey": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC9p5NSzw5ZDgnT22vaFWA3wnmGVRbQtpJqDy4unKdt7CQsXJ0eldwsrp8eZ+fHTeHjxagp4m0WdsC7ZwXQtXYX/VX6qrrxp4TkLNBho87fNm9+M2P/KmrJ7DGzcsd/NnA8AhMEpaYRUPpBOXaWI+gXUMjOPTmdrKwxxkIeJ4Iy6D75Vl/To/MdFnpBAsJS6C7jbBd5uA1KK4SbMegHbZ6CQth/qs1nLxMftELOy4QYDmxzccUPRouvMslO+GrPPBDOACyuvPzOwHFw74hriudMNDDPmYAjcMZnJhch3/p7i03pHNXSZtJROoPshXsYq4uoGMdxTjmE+WXfFX5aAx3z"
   },
+  "gitlab": {
+    "hostNames": [
+      "10.21.40.128",
+      "gitlab"
+    ],
+    "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK0Hya2UeSALosQ1N0+CDSGXktzJHehSG0dLT5XxK4qK"
+  },
+  "gitlab-git": {
+    "hostNames": [
+      "[gitlab.fahrican.com]:2222",
+      "[10.21.40.127]:2222"
+    ],
+    "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKtBVuEKw22EEXoPZ45yQ7HBnq94VqvQkeV8bdR/4U6X"
+  },
   "home-assistant": {
     "hostNames": [
       "10.21.40.120",

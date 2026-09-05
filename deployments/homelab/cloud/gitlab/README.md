@@ -7,6 +7,42 @@ commit. EE starts with Free features; an administrator can activate a Premium
 license later without replacing the installation. No paid subscription or trial
 activation token is embedded in this repository.
 
+## Deployment status — 2026-09-05
+
+GitLab is live at `https://gitlab.fahrican.com` over LAN/WireGuard. The dedicated
+cluster has two Ready nodes and its private Kubernetes API is `10.21.40.245:6443`.
+The application, registry, data backend, private TLS and security reconciliation
+are healthy. EE reports no installed license. The initial root password is in
+`undercloud/86-gitlab/runtime.sops.yaml`, under `stringData.root-password`.
+
+Verified against the live deployment:
+
+- HTTPS health/readiness and sign-in, registry authentication challenge, and
+  GitLab Shell's internal API/Redis checks. The Git SSH key was checked against
+  the trusted Kubernetes Secret and recorded with the data VM key in
+  `deployments/homelab/ssh-host-keys.json`.
+- ZITADEL authorization-code redirect with PKCE S256, state and nonce. An
+  interactive user login and the resulting account approval remain to be tested.
+- A standalone job under the CI namespace policy: UID 1000, no capabilities,
+  no service-account token or Docker socket, RuntimeDefault seccomp, successful
+  GitLab/public HTTPS, denied admin route, and blocked direct access to PostgreSQL,
+  Redis, Gitaly, S3, OIDC, metadata and Kubernetes APIs.
+- Native backup `1788635534_2026_09_05_19.3.1-ee`: archive, matching namespace
+  encryption secrets and completion marker in Ceph. The data VM staged that pair
+  with backend credentials/configuration and verified the archive/secret checksums.
+
+The Linux runner wave remains suspended until a private project and its locked
+runner are registered. Project creation and a one-day project-scoped qualification
+token are awaiting explicit approval after automatic approval review rejected
+credential creation under the broader deployment approval. No qualification
+project or token has been created. Git push/clone, LFS, authenticated registry
+push/pull and a real GitLab pipeline have therefore not been qualified yet.
+
+Windows 11 and Quickemu provisioning remain suspended for the capacity, vTPM and
+nested-virtualization prerequisites below. Off-site B2 provisioning awaits the
+local administrator bootstrap credentials. No isolated restore exercise has
+passed yet; the successful native backup is not an off-site or restore claim.
+
 ```mermaid
 flowchart LR
   Clients[LAN and WireGuard] --> Gateway[Private TLS gateway]
@@ -154,6 +190,8 @@ Quickemu host to reach the guest's loopback SSH forward on port 22220.
 Before provisioning that host, qualify a per-host Nova `host-passthrough` CPU
 configuration on `pecorino` and verify `/dev/kvm` inside the resulting VM. The
 initial GitLab rollout does not change the running compute service's CPU model.
+Add the `10.21.40.126:9100` host-monitoring target when that runner is provisioned;
+an unprovisioned runner is not included in active endpoint monitoring.
 
 `register-runner.py` creates a locked project runner with explicit platform tags
 and writes the one-time token privately. Desktop shell runners are limited to
