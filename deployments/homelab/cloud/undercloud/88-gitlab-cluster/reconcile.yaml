@@ -243,12 +243,15 @@ data:
                           "region": "us-east-1", "regionendpoint": endpoint,
                           "pathstyle": True, "checksum_disabled": True},
                 "redirect": {"disable": True}}
+    # The chart inserts this fragment beside its own storage mapping entries.
+    # Each entry must be block YAML; an outer JSON object cannot be extended.
+    registry_config = "".join(f"{key}: {json.dumps(value)}\n" for key, value in registry.items())
     s3cmd = ("[default]\naccess_key = " + access + "\nsecret_key = " + private +
              "\nhost_base = gitlab-s3.cloud.fahrican.com\nhost_bucket = gitlab-s3.cloud.fahrican.com\n"
              "use_https = True\ncheck_ssl_certificate = True\ncheck_ssl_hostname = True\nbucket_location = us-east-1\n")
     items = [secret("gitlab-smtp", {"password": read("/runtime-bootstrap/GITLAB_RESEND_API_KEY")}),
              secret("gitlab-bootstrap", bootstrap), secret("gitlab-oidc", {"provider": json.dumps(provider)}),
-             secret("gitlab-object-storage", {"connection": json.dumps(connection), "registry": json.dumps(registry), "s3cmd": s3cmd})]
+             secret("gitlab-object-storage", {"connection": json.dumps(connection), "registry": registry_config, "s3cmd": s3cmd})]
     Path("/tmp/gitlab-runtime.json").write_text(json.dumps({"apiVersion": "v1", "kind": "List", "items": items}))
 ---
 apiVersion: batch/v1
