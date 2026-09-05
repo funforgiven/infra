@@ -104,7 +104,10 @@ spec:
           - openid_connect
           blockAutoCreatedUsers: true
           autoLinkUser: []
-          allowBypassTwoFactor: []
+          # ZITADEL owns authentication policy for its OIDC sessions.
+          # Local logins still use GitLab's enforced 2FA policy.
+          allowBypassTwoFactor:
+          - openid_connect
           providers:
           - secret: gitlab-oidc
             key: provider
