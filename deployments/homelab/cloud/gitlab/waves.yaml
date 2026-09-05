@@ -70,7 +70,7 @@ spec:
   healthChecks:
   - apiVersion: batch/v1
     kind: Job
-    name: gitlab-create-buckets-v1
+    name: gitlab-create-buckets-v2
     namespace: gitlab
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1

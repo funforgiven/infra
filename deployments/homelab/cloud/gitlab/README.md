@@ -126,6 +126,15 @@ namespace. The default build container is limited to 2 GiB RAM; larger game
 builds need an explicit worker/resource increase. Use build images containing
 required tools rather than installing packages as root during the job.
 
+The policies use Calico's ordered namespace rules. CAPI's metadata protection
+installs a global egress Allow at order 20, which otherwise bypasses ordinary
+Kubernetes egress isolation. GitLab's explicit allows and final Deny run at order
+16, after the provider's metadata Deny at order 10. Narrow application API rules
+run at order 15. Keep those priorities and terminal denies when editing policy.
+The gateway permits the dedicated cluster's `172.16.0.0/13` pod CIDR on normal
+GitLab routes, including service address translation to Envoy; `/admin` remains
+restricted to LAN and WireGuard source addresses.
+
 Windows is **Windows 11 Pro**, not Windows Server or Enterprise evaluation. Its
 image must pass UEFI Secure Boot, TPM 2.0 and desktop edition checks. Activation
 can be supplied later. The current Nova compute image was found to lack software
@@ -162,6 +171,12 @@ ID. Failed or partial uploads never receive a marker. Seven native archives are
 retained in Ceph. The native Helm utility includes SQL, repositories and supported
 object stores, including registry blobs; the registry metadata database is
 explicitly disabled. Dependency-proxy cache can be regenerated.
+
+All buckets inspected by the native utility are provisioned, including its
+default Pages and agent-plan-content buckets. The wrapper checks bucket access
+before starting and rejects native output reporting skipped or failed buckets,
+even if the upstream utility exits zero. Such archives receive no completion
+marker and cannot be selected for off-site backup.
 
 During first bootstrap, the reconciler starts `gitlab-initial-backup` after
 database migrations. This binds Cinder's `WaitForFirstConsumer` scratch volume
