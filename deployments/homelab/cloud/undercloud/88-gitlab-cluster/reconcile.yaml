@@ -1,0 +1,341 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gitlab-cluster-reconcile-v1
+  namespace: openstack
+data:
+  signing-key.pub: |
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL1nHHxNA1YUl+89HhieA+YOyOLYJaSRBmutEOVxVQeB github-funforgiven-2026-07-18
+  sync.yaml: |
+    apiVersion: source.toolkit.fluxcd.io/v1
+    kind: GitRepository
+    metadata:
+      name: flux-system
+      namespace: flux-system
+    spec:
+      interval: 5m
+      url: https://github.com/funforgiven/infra.git
+      ref:
+        branch: main
+      verify:
+        mode: HEAD
+        secretRef:
+          name: flux-system-signing-key
+    ---
+    apiVersion: kustomize.toolkit.fluxcd.io/v1
+    kind: Kustomization
+    metadata:
+      name: flux-system
+      namespace: flux-system
+    spec:
+      interval: 10m
+      retryInterval: 1m
+      timeout: 20m
+      path: ./deployments/homelab/cloud/gitlab
+      prune: true
+      sourceRef:
+        kind: GitRepository
+        name: flux-system
+      decryption:
+        provider: sops
+        secretRef:
+          name: sops-age
+  reconcile.sh: |
+    #!/bin/sh
+    set -eu
+    umask 077
+    mkdir -p /tmp/bin /tmp/kube
+
+    cluster=gitlab-v1
+    template=gitlab-kubernetes-v1.36.2-v1
+    desired_control_planes=1
+    # Initial private installation: one control plane and one worker.
+    # This is not HA; Cinder protects disks, backups provide disaster recovery.
+    desired_workers=1
+    desired_nodes=$((desired_control_planes + desired_workers))
+    undercloud_kubeconfig=/tmp/undercloud-kubeconfig
+    kubeconfig=/tmp/kube/config
+    kubectl=/tmp/bin/kubectl
+    flux=/tmp/bin/flux
+
+    export OS_PROJECT_NAME=gitlab
+    export OS_PROJECT_DOMAIN_NAME=Default
+    unset OS_PROJECT_ID OS_TENANT_ID OS_TENANT_NAME || true
+
+    project_id="$(openstack project show gitlab -f value -c id)"
+    openstack token issue -f value -c project_id | grep -Fx "$project_id" >/dev/null
+
+    openstack coe cluster template list -f value -c name > /tmp/templates
+    if ! grep -Fx "$template" /tmp/templates >/dev/null; then
+      openstack coe cluster template create "$template" \
+        --coe kubernetes \
+        --image ubuntu-jammy-kube-v1.36.2-260705-1940 \
+        --external-network public \
+        --fixed-network gitlab \
+        --fixed-subnet gitlab-v4 \
+        --network-driver calico \
+        --volume-driver cinder \
+        --flavor gitlab-worker \
+        --master-flavor gitlab-master \
+        --dns-nameserver 10.21.40.1 \
+        --master-lb-enabled \
+        --floating-ip-disabled \
+        --labels capi_helm_chart_version=0.27.0 \
+        --labels master_lb_floating_ip_enabled=true \
+        --labels 'extra_network_names=' \
+        --labels 'api_master_lb_allowed_cidrs=10.21.10.0/24,10.21.20.0/24,10.21.91.0/24,192.168.82.0/24,10.21.40.129/32,10.21.40.164/32,10.21.40.101/32,10.21.40.102/32,10.21.40.103/32'
+    fi
+
+    openstack coe cluster list -f value -c name > /tmp/clusters
+    if ! grep -Fx "$cluster" /tmp/clusters >/dev/null; then
+      openstack coe cluster create "$cluster" \
+        --cluster-template "$template" \
+        --master-count "$desired_control_planes" \
+        --node-count "$desired_workers" \
+        --timeout 90
+    fi
+
+    for attempt in $(seq 1 720); do
+      status="$(openstack coe cluster show "$cluster" -f value -c status)"
+      case "$status" in
+        CREATE_COMPLETE|UPDATE_COMPLETE) break ;;
+        *_FAILED)
+          echo "$cluster entered terminal status $status" >&2
+          exit 1
+          ;;
+      esac
+      test "$attempt" -lt 720
+      sleep 10
+    done
+
+    test "$(openstack coe cluster show "$cluster" -f value -c master_count)" \
+      -eq "$desired_control_planes"
+    node_count="$(openstack coe cluster show "$cluster" -f value -c node_count)"
+    if test "$node_count" -lt "$desired_workers"; then
+      openstack coe cluster resize "$cluster" "$desired_workers"
+    elif test "$node_count" -gt "$desired_workers"; then
+      echo "$cluster has $node_count workers; refusing a destructive scale-down" >&2
+      exit 1
+    fi
+
+    mkdir -p /tmp/bin /tmp/kube
+    curl -fsSL -o "$kubectl" \
+      https://dl.k8s.io/release/v1.36.2/bin/linux/amd64/kubectl
+    printf '%s  %s\n' \
+      1e9045ec32bea85da43de85f0065358529ea7c7a152eca78154fba5b58c27d82 \
+      "$kubectl" | sha256sum -c -
+    chmod 0500 "$kubectl"
+
+    curl -fsSL -o /tmp/flux.tar.gz \
+      https://github.com/fluxcd/flux2/releases/download/v2.9.3/flux_2.9.3_linux_amd64.tar.gz
+    printf '%s  %s\n' \
+      eae4e8608c0ade2bf4e8dec1669dbb6b0c28b5822b252d97feccfb4fb1181fd2 \
+      /tmp/flux.tar.gz | sha256sum -c -
+    tar -xzf /tmp/flux.tar.gz -C /tmp/bin flux
+    chmod 0500 "$flux"
+
+    service_account=/var/run/secrets/kubernetes.io/serviceaccount
+    service_account_token="$(cat "$service_account/token")"
+    {
+      printf '%s\n' \
+        'apiVersion: v1' \
+        'kind: Config' \
+        'clusters:' \
+        '- name: undercloud' \
+        '  cluster:' \
+        "    certificate-authority: $service_account/ca.crt" \
+        "    server: https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT_HTTPS" \
+        'contexts:' \
+        '- name: undercloud' \
+        '  context:' \
+        '    cluster: undercloud' \
+        '    user: gitlab-cluster-reconcile' \
+        'current-context: undercloud' \
+        'users:' \
+        '- name: gitlab-cluster-reconcile' \
+        '  user:'
+      printf '    token: %s\n' "$service_account_token"
+    } > "$undercloud_kubeconfig"
+    chmod 0600 "$undercloud_kubeconfig"
+    unset service_account_token
+
+    KUBECONFIG="$undercloud_kubeconfig" \
+      "$kubectl" -n cert-manager get secret cloudflare-dns01 \
+      -o jsonpath='{.data.api-token}' | \
+      base64 -d > /tmp/cloudflare-api-token
+    for key in gitlab_client_id gitlab_client_secret; do
+      KUBECONFIG="$undercloud_kubeconfig" "$kubectl" -n tofu-system \
+        get secret zitadel-identity-outputs -o "jsonpath={.data.$key}" | base64 -d > "/tmp/$key"
+      test -s "/tmp/$key"
+    done
+    KUBECONFIG="$undercloud_kubeconfig" "$kubectl" -n rook-ceph \
+      get secret rook-ceph-object-user-gitlab-gitlab -o json > /tmp/rgw.json
+    python3 /config/render-runtime.py
+    openstack coe cluster config "$cluster" --dir /tmp/kube --force
+    export KUBECONFIG="$kubeconfig"
+
+    for attempt in $(seq 1 240); do
+      nodes="$($kubectl get nodes --no-headers 2>/dev/null || true)"
+      total="$(printf '%s\n' "$nodes" | awk 'NF { count++ } END { print count + 0 }')"
+      ready="$(printf '%s\n' "$nodes" | awk '$2 == "Ready" { count++ } END { print count + 0 }')"
+      if test "$total" -eq "$desired_nodes" && \
+        test "$ready" -eq "$desired_nodes"; then
+        break
+      fi
+      test "$attempt" -lt 240
+      sleep 5
+    done
+
+    "$flux" install --namespace=flux-system
+    "$kubectl" -n flux-system create secret generic sops-age \
+      --from-file=age.agekey=/bootstrap/age.agekey \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" -n flux-system create secret generic flux-system-signing-key \
+      --from-file=trusted-signing-key.sshpub=/config/signing-key.pub \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" create namespace cert-manager \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" -n cert-manager create secret generic cloudflare-dns01 \
+      --from-file=api-token=/tmp/cloudflare-api-token \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" create namespace gitlab --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" -n gitlab apply -f /tmp/gitlab-runtime.json >/dev/null
+    "$kubectl" apply -f /config/sync.yaml
+    "$flux" reconcile source git flux-system --timeout=5m
+    "$flux" reconcile kustomization flux-system --with-source --timeout=20m
+
+    test "$($kubectl get nodes --no-headers | wc -l)" -eq "$desired_nodes"
+    echo "$cluster is ready and reconciled from signed Git"
+  render-runtime.py: |
+    #!/usr/bin/env python3
+    import base64
+    import json
+    from pathlib import Path
+
+    def secret(name, data):
+        return {"apiVersion": "v1", "kind": "Secret", "metadata": {"name": name, "namespace": "gitlab"}, "type": "Opaque", "stringData": data}
+
+    def read(name):
+        value = Path(name).read_text().strip()
+        if not value:
+            raise ValueError("Missing runtime input")
+        return value
+
+    keys = ["root-password", "postgres-password", "redis-password", "gitaly-token", "shell-token"]
+    bootstrap = {k: read("/runtime-bootstrap/" + k) for k in keys}
+    provider = {"name": "openid_connect", "label": "ZITADEL", "args": {
+        "name": "openid_connect", "scope": ["openid", "profile", "email"],
+        "response_type": "code", "issuer": "https://auth.cloud.fahrican.com",
+        "discovery": True, "client_auth_method": "basic", "uid_field": "sub",
+        "pkce": True, "send_scope_to_token_endpoint": False,
+        "client_options": {"identifier": read("/tmp/gitlab_client_id"),
+                           "secret": read("/tmp/gitlab_client_secret"),
+                           "redirect_uri": "https://gitlab.fahrican.com/users/auth/openid_connect/callback"}}}
+    rgw = json.loads(Path("/tmp/rgw.json").read_text())["data"]
+    access, private = [base64.b64decode(rgw[k]).decode() for k in ("AccessKey", "SecretKey")]
+    endpoint = "https://gitlab-s3.cloud.fahrican.com"
+    connection = {"provider": "AWS", "region": "us-east-1", "aws_access_key_id": access,
+                  "aws_secret_access_key": private, "endpoint": endpoint, "path_style": True,
+                  "aws_signature_version": 4, "enable_signature_v4_streaming": False}
+    registry = {"s3_v2": {"bucket": "gitlab-registry", "accesskey": access, "secretkey": private,
+                          "region": "us-east-1", "regionendpoint": endpoint,
+                          "pathstyle": True, "checksum_disabled": True},
+                "redirect": {"disable": True}}
+    s3cmd = ("[default]\naccess_key = " + access + "\nsecret_key = " + private +
+             "\nhost_base = gitlab-s3.cloud.fahrican.com\nhost_bucket = gitlab-s3.cloud.fahrican.com\n"
+             "use_https = True\ncheck_ssl_certificate = True\ncheck_ssl_hostname = True\nbucket_location = us-east-1\n")
+    items = [secret("gitlab-smtp", {"password": read("/runtime-bootstrap/GITLAB_RESEND_API_KEY")}),
+             secret("gitlab-bootstrap", bootstrap), secret("gitlab-oidc", {"provider": json.dumps(provider)}),
+             secret("gitlab-object-storage", {"connection": json.dumps(connection), "registry": json.dumps(registry), "s3cmd": s3cmd})]
+    Path("/tmp/gitlab-runtime.json").write_text(json.dumps({"apiVersion": "v1", "kind": "List", "items": items}))
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: gitlab-cluster-reconcile-v1
+  namespace: openstack
+spec:
+  schedule: 37 */2 * * *
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 9000
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: gitlab-cluster-reconcile
+            app.kubernetes.io/part-of: self-hosted-platform
+        spec:
+          automountServiceAccountToken: true
+          serviceAccountName: gitlab-cluster-reconcile
+          restartPolicy: Never
+          nodeSelector:
+            openstack-control-plane: enabled
+          securityContext:
+            fsGroup: 65532
+            fsGroupChangePolicy: OnRootMismatch
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: reconcile
+              image: quay.io/airshipit/openstack-client:2026.1-ubuntu_noble@sha256:f38785f22b3b2c42ed28beacd927e194f4e14c2a721debe8d43e4752b7270676
+              command:
+                - /config/reconcile.sh
+              envFrom:
+                - secretRef:
+                    name: magnum-keystone-admin
+              env:
+                - name: HOME
+                  value: /tmp
+                - name: SHELL
+                  value: /bin/sh
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  cpu: '1'
+                  memory: 768Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+                readOnlyRootFilesystem: true
+              volumeMounts:
+                - name: bootstrap
+                  mountPath: /bootstrap
+                  readOnly: true
+                - name: config
+                  mountPath: /config
+                  readOnly: true
+                - name: runtime-bootstrap
+                  mountPath: /runtime-bootstrap
+                  readOnly: true
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: bootstrap
+              secret:
+                secretName: gitlab-flux-bootstrap
+                defaultMode: 288
+            - name: config
+              configMap:
+                name: gitlab-cluster-reconcile-v1
+                defaultMode: 365
+            - name: runtime-bootstrap
+              secret:
+                secretName: gitlab-runtime-bootstrap
+                defaultMode: 288
+            - name: tmp
+              emptyDir:
+                medium: Memory
+                sizeLimit: 512Mi

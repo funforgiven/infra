@@ -38,6 +38,8 @@ data:
         secretFile: deployments/homelab/cloud/host-runtime/generated.sops.yaml
         keys:
           - HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD
+          - GITLAB_BACKUP_RESTIC_PASSWORD
+          - GITLAB_ROOT_PASSWORD
     provisionedSecrets:
       backblaze-services:
         provisioner: reconcile-services-backblaze
@@ -51,6 +53,8 @@ data:
         keys:
           - HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID
           - HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY
+          - GITLAB_BACKUP_B2_APPLICATION_KEY_ID
+          - GITLAB_BACKUP_B2_APPLICATION_KEY
       telegram-infrastructure:
         provisioner: reconcile-services-telegram
         secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
@@ -67,5 +71,10 @@ data:
         secretFile: deployments/homelab/cloud/undercloud/84-mail-aws/resend.sops.yaml
         keys:
           - STALWART_RESEND_API_KEY
+      resend-gitlab:
+        provisioner: reconcile-services-resend
+        secretFile: deployments/homelab/cloud/undercloud/86-gitlab/runtime.sops.yaml
+        keys:
+          - GITLAB_RESEND_API_KEY
     policy:
       secretTransport: isolated-sops-ciphertext-and-memory-backed-reconciliation

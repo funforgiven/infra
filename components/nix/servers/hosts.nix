@@ -17,6 +17,7 @@ in
 {
   dendritic.hosts = {
     home-assistant = mkServer "services-openstack-guest" "services-home-assistant";
+    gitlab = mkServer "services-openstack-guest" "services-gitlab";
     mail-aws = {
       system = "aarch64-linux";
       stateVersion = "26.05";

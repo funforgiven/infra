@@ -22,6 +22,7 @@ _: {
             pkgs.gitMinimal
             pkgs.gitleaks
             pkgs.kubectl
+            pkgs.kubernetes-helm
             pkgs.kustomize
             pkgs.nixd
             pkgs.opentofu

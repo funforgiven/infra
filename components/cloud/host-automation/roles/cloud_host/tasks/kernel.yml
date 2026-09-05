@@ -16,11 +16,37 @@
     group: root
     mode: "0644"
 
+- name: Persist explicitly selected nested KVM support
+  ansible.builtin.copy:
+    content: "options {{ cloud_cpu_virtualization_module }} nested=1\n"
+    dest: /etc/modprobe.d/90-gitlab-nested-kvm.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: cloud_nested_kvm | bool
+
 - name: Load required kernel modules
   community.general.modprobe:
     name: "{{ item }}"
     state: present
   loop: "{{ (cloud_kernel_modules + [cloud_cpu_virtualization_module]) | unique }}"
+
+# Do not unload KVM on an active compute host. A host that does not already
+# expose nested virtualization needs a separately scheduled drain and reboot.
+- name: Read active nested KVM capability
+  ansible.builtin.slurp:
+    src: "/sys/module/{{ cloud_cpu_virtualization_module }}/parameters/nested"
+  register: cloud_active_nested_kvm
+  when: cloud_nested_kvm | bool
+
+- name: Require active nested KVM before scheduling macOS
+  ansible.builtin.assert:
+    that:
+      - (cloud_active_nested_kvm.content | b64decode | trim) in ['Y', '1']
+    fail_msg: >-
+      Nested KVM was persisted but is not active. Drain this compute host and
+      reboot in a maintenance window; never unload KVM with running guests.
+  when: cloud_nested_kvm | bool
 
 - name: Check that the containerized QEMU UID is host-local unused
   ansible.builtin.command:

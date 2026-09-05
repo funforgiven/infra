@@ -1330,3 +1330,94 @@ spec:
       kind: Terraform
       name: service-dns
       namespace: cert-manager
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave86-gitlab
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./deployments/homelab/cloud/undercloud/86-gitlab
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+  - name: wave86-gitlab-foundation
+  healthChecks:
+  - apiVersion: infra.contrib.fluxcd.io/v1alpha2
+    kind: Terraform
+    name: gitlab
+    namespace: openstack
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave87-gitlab-runners
+  namespace: flux-system
+spec:
+  # Resume after desktop image, nested virtualization and capacity qualification.
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./deployments/homelab/cloud/undercloud/87-gitlab-runners
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+  - name: wave86-gitlab
+  healthChecks:
+  - apiVersion: infra.contrib.fluxcd.io/v1alpha2
+    kind: Terraform
+    name: gitlab-runners
+    namespace: openstack
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave88-gitlab-cluster
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 125m
+  path: ./deployments/homelab/cloud/undercloud/88-gitlab-cluster
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+  - name: wave86-gitlab
+  - name: wave30-ceph-services
+  - name: wave34-identity-configuration
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave86-gitlab-foundation
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./deployments/homelab/cloud/undercloud/86-gitlab-foundation
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: wave81-services-foundation
+  healthChecks:
+    - apiVersion: infra.contrib.fluxcd.io/v1alpha2
+      kind: Terraform
+      name: gitlab-foundation
+      namespace: openstack

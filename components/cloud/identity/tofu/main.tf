@@ -111,6 +111,11 @@ resource "zitadel_machine_key" "identity_controller" {
 
 locals {
   web_oidc_apps = {
+    gitlab = {
+      name         = "GitLab"
+      redirect_uri = "https://gitlab.fahrican.com/users/auth/openid_connect/callback"
+      post_logout  = "https://gitlab.fahrican.com/"
+    }
     grafana = {
       name         = "Grafana"
       redirect_uri = "https://grafana.cloud.fahrican.com/login/generic_oauth"
@@ -222,6 +227,16 @@ resource "zitadel_application_oidc" "kubernetes" {
 
 output "organization_id" {
   value = local.org_id
+}
+
+output "gitlab_client_id" {
+  value     = zitadel_application_oidc.web["gitlab"].client_id
+  sensitive = true
+}
+
+output "gitlab_client_secret" {
+  value     = zitadel_application_oidc.web["gitlab"].client_secret
+  sensitive = true
 }
 
 output "infrastructure_project_id" {

@@ -27,6 +27,14 @@
         text = ''
           set -euo pipefail
 
+          host="''${1:-home-assistant}"
+          case "$host" in
+            home-assistant) project=services ;;
+            gitlab) project=gitlab ;;
+            gitlab-macos) project=gitlab-ci ;;
+            *) echo 'Expected home-assistant, gitlab or gitlab-macos.' >&2; exit 64 ;;
+          esac
+
           repository_root="$(git rev-parse --show-toplevel)"
           cd "$repository_root"
 
@@ -52,7 +60,7 @@
             )"
             export OS_PASSWORD
             export OS_PROJECT_DOMAIN_NAME=Default
-            export OS_PROJECT_NAME=services
+            export OS_PROJECT_NAME="$project"
             export OS_REGION_NAME=RegionOne
             export OS_USER_DOMAIN_NAME=Default
             export OS_USERNAME=admin
@@ -63,21 +71,20 @@
           fi
 
           services_project_id="$(
-            openstack project show services --format value --column id
+            openstack project show "$project" --format value --column id
           )"
           token_project_id="$(
             openstack token issue --format value --column project_id
           )"
 
           if [[ "$token_project_id" != "$services_project_id" ]]; then
-            echo "The active OpenStack token must be scoped to the services project." >&2
+            echo "The active OpenStack token must be scoped to the $project project." >&2
             exit 1
           fi
 
           temporary_directory="$(mktemp --directory)"
           trap 'rm -rf "$temporary_directory"' EXIT
 
-          host=home-assistant
           image_name="nixos-$host-''${revision:0:12}"
 
           nix build \
@@ -141,6 +148,11 @@
               --property "os_type=linux" \
               --format value \
               --column id
+          fi
+
+          if [[ "$host" != home-assistant ]]; then
+            printf 'Promoted %s at %s. Existing boot volumes were not changed.\n' "$host" "$revision"
+            exit 0
           fi
 
           haos_version=18.2
@@ -221,6 +233,10 @@
       // lib.optionalAttrs (system == config.dendritic.hosts.home-assistant.system) {
         home-assistant-openstack-image =
           inputs.self.nixosConfigurations.home-assistant.config.system.build.images.openstack;
+        gitlab-openstack-image =
+          inputs.self.nixosConfigurations.gitlab.config.system.build.images.openstack;
+        gitlab-macos-openstack-image =
+          inputs.self.nixosConfigurations.gitlab-macos.config.system.build.images.openstack;
       };
     };
 }

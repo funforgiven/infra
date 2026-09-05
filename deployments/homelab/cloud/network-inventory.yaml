@@ -194,6 +194,20 @@ all:
               destination: 10.21.20.130
               protocol: tcp
               destination_port: "80,443"
+            - comment: "infra: CLOUD-EXTERNAL to OIDC"
+              chain: infra-forward
+              final_drop_comment: "infra: forward final drop"
+              source_interface: vlan40-external
+              destination: 10.21.20.131
+              protocol: tcp
+              destination_port: "443"
+            - comment: "infra: WireGuard workload Kubernetes APIs"
+              chain: infra-forward
+              final_drop_comment: "infra: forward final drop"
+              source_interface: wg-admin
+              destination: 10.21.40.0/24
+              protocol: tcp
+              destination_port: "6443"
             - comment: "infra: WireGuard DNS UDP"
               chain: infra-input
               final_drop_comment: "infra: input final drop"
@@ -264,6 +278,41 @@ all:
               destination: 10.21.40.100
               protocol: tcp
               destination_port: "6443"
+            - comment: "infra: WireGuard GitLab HTTPS and Git SSH"
+              chain: infra-forward
+              final_drop_comment: "infra: forward final drop"
+              source_interface: wg-admin
+              destination: 10.21.40.127
+              protocol: tcp
+              destination_port: "443,2222"
+            - comment: "infra: WireGuard GitLab management SSH"
+              chain: infra-forward
+              final_drop_comment: "infra: forward final drop"
+              source_interface: wg-admin
+              destination: 10.21.40.128
+              protocol: tcp
+              destination_port: "22"
+            - comment: "infra: WireGuard CI host management"
+              chain: infra-forward
+              final_drop_comment: "infra: forward final drop"
+              source_interface: wg-admin
+              destination: 10.21.40.125
+              protocol: tcp
+              destination_port: "22"
+            - comment: "infra: WireGuard macOS host management"
+              chain: infra-forward
+              final_drop_comment: "infra: forward final drop"
+              source_interface: wg-admin
+              destination: 10.21.40.126
+              protocol: tcp
+              destination_port: "22"
+            - comment: "infra: WireGuard Windows 11 desktop"
+              chain: infra-forward
+              final_drop_comment: "infra: forward final drop"
+              source_interface: wg-admin
+              destination: 10.21.40.125
+              protocol: tcp
+              destination_port: "3389"
             - comment: "infra: WireGuard CRS management"
               chain: infra-forward
               final_drop_comment: "infra: forward final drop"

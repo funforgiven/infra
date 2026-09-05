@@ -11,6 +11,28 @@
         pythonPackages.requests
       ]);
 
+      gitlabChart = pkgs.fetchurl {
+        url = "https://gitlab-charts.s3.amazonaws.com/gitlab-10.3.1.tgz";
+        sha256 = "70f893db79d61e504a67d5cf75f64c92f5a2070b8132741105ffaf2368b848c7";
+      };
+      gitlabHelm =
+        pkgs.runCommandLocal "gitlab-helm-check"
+          {
+            nativeBuildInputs = [
+              python
+              pkgs.kubernetes-helm
+              pkgs.kustomize
+              pkgs.gnutar
+              pkgs.gzip
+            ];
+          }
+          ''
+            mkdir chart
+            tar -xzf ${gitlabChart} -C chart
+            python ${source}/components/cloud/services/gitlab/tests/check-chart.py ${source} "$PWD/chart/gitlab"
+            touch "$out"
+          '';
+
       pythonTests =
         pkgs.runCommandLocal "cloud-python-tests"
           {
@@ -38,6 +60,8 @@
             python -m compileall -q \
               components/cloud \
               deployments/homelab/cloud/services
+            python -m unittest discover \
+              -s components/cloud/services/gitlab/tests -p 'test_*.py'
 
             touch "$out"
           '';
@@ -185,6 +209,7 @@
     in
     {
       checks = {
+        gitlab-helm = gitlabHelm;
         cloud-ansible = ansibleChecks;
         cloud-kustomize = kustomizeChecks;
         cloud-python = pythonTests;
@@ -193,6 +218,10 @@
         cloud-yaml = yamlChecks;
 
         cloud-configuration = pkgs.linkFarm "cloud-configuration-check" [
+          {
+            name = "gitlab-helm";
+            path = gitlabHelm;
+          }
           {
             name = "ansible";
             path = ansibleChecks;

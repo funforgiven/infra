@@ -47,6 +47,7 @@ spec:
     - share.cloud.fahrican.com
     - key-manager.cloud.fahrican.com
     - container-infra.cloud.fahrican.com
+    - gitlab-s3.cloud.fahrican.com
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate

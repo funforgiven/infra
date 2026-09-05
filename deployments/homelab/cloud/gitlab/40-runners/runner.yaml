@@ -1,0 +1,106 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: gitlab-runner-chart
+  namespace: gitlab-runners
+spec:
+  interval: 24h
+  url: https://gitlab.com/gitlab-org/charts/gitlab-runner.git
+  ref:
+    commit: 216a88ce86fe2c563a8ba0fb9f5fe8fb54c7b7cb
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: gitlab-linux-runner
+  namespace: gitlab-runners
+spec:
+  interval: 30m
+  timeout: 10m
+  chart:
+    spec:
+      chart: .
+      sourceRef:
+        kind: GitRepository
+        name: gitlab-runner-chart
+      reconcileStrategy: Revision
+  values:
+    gitlabUrl: https://gitlab.fahrican.com
+    concurrent: 1
+    checkInterval: 5
+    shutdown_timeout: 1800
+    terminationGracePeriodSeconds: 1830
+    rbac:
+      create: false
+    serviceAccount:
+      create: true
+      name: gitlab-runner-manager
+    runners:
+      secret: gitlab-linux-runner
+      config: |
+        [[runners]]
+          name = "homelab-linux"
+          executor = "kubernetes"
+          environment = ["FF_USE_ADVANCED_POD_SPEC_CONFIGURATION=false"]
+          [runners.kubernetes]
+            namespace = "gitlab-ci"
+            image = "alpine:3.23"
+            helper_image = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v19.3.1@sha256:ce41f9ba0465950d1c7e290e38e33ea9064385b4015ba4fa4b12b318a6242682"
+            privileged = false
+            allow_privilege_escalation = false
+            automount_service_account_token = false
+            service_account = "gitlab-job"
+            pull_policy = "always"
+            allowed_pull_policies = ["always"]
+            cap_drop = ["ALL"]
+            cpu_request = "500m"
+            cpu_limit = "2"
+            memory_request = "2Gi"
+            memory_limit = "2Gi"
+            ephemeral_storage_request = "2Gi"
+            ephemeral_storage_limit = "8Gi"
+            helper_cpu_request = "100m"
+            helper_cpu_limit = "500m"
+            helper_memory_request = "256Mi"
+            helper_memory_limit = "256Mi"
+            service_cpu_request = "100m"
+            service_cpu_limit = "500m"
+            service_memory_request = "256Mi"
+            service_memory_limit = "512Mi"
+            services_limit = 2
+            poll_timeout = 600
+            [runners.kubernetes.pod_security_context]
+              run_as_non_root = true
+              run_as_user = 1000
+              run_as_group = 1000
+              fs_group = 1000
+              [runners.kubernetes.pod_security_context.seccomp_profile]
+                type = "RuntimeDefault"
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 100
+      fsGroup: 65533
+      seccompProfile:
+        type: RuntimeDefault
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 256Mi
+    unregisterRunners: false
+    image:
+      registry: registry.gitlab.com
+      image: gitlab-org/gitlab-runner
+      tag: alpine-v19.3.1
+  install:
+    remediation:
+      retries: 3
+  driftDetection:
+    mode: enabled
+  postRenderers:
+  - kustomize:
+      images:
+      - name: registry.gitlab.com/gitlab-org/gitlab-runner
+        newTag: alpine-v19.3.1
+        digest: sha256:af0325804248aee217e055e753add77ccaaba6c8f5e2143b01108fd401165ef3

@@ -98,8 +98,8 @@ Each administrator device supplies its own WireGuard public key and receives a
 unique SOPS-encrypted preshared key. Add the public key and sops-nix runtime
 path under `routeros_wireguard.peers` in `network-inventory.yaml`, using a
 unique `/32` from `10.21.91.0/24`; never commit the client private or preshared
-key as plaintext. A client routes only `10.21.20.0/24`, `10.21.40.100/32`,
-`10.21.40.122/32`, `10.21.90.0/24`, and `10.21.91.1/32` through the tunnel and
+key as plaintext. A client routes only `10.21.20.0/24`, `10.21.40.0/24`,
+`10.21.90.0/24`, and `10.21.91.1/32` through the tunnel and
 uses `10.21.91.1` for private DNS. The stable `10.21.40.122` services Gateway
 fronts every personal service hostname, so publishing another application on
 that Gateway does not require another WireGuard route or firewall rule.

@@ -1,0 +1,114 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gitlab-security-settings
+  namespace: gitlab
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gitlab-security-settings
+  namespace: gitlab
+rules:
+  - apiGroups:
+      - ''
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+  - apiGroups:
+      - ''
+    resources:
+      - pods/exec
+    verbs:
+      - create
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    resourceNames:
+      - gitlab-toolbox
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gitlab-security-settings
+  namespace: gitlab
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: gitlab-security-settings
+subjects:
+  - kind: ServiceAccount
+    name: gitlab-security-settings
+    namespace: gitlab
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gitlab-security-settings-v1
+  namespace: gitlab
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 1200
+  template:
+    metadata:
+      labels:
+        app: gitlab-security-settings
+    spec:
+      restartPolicy: Never
+      serviceAccountName: gitlab-security-settings
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: configure
+          image: registry.k8s.io/kubectl:v1.35.4@sha256:e8bc9c71a813d90d5f7689fa57516b2aacd7a02bb9d70d3ab6664ed6d202fc10
+          command:
+            - kubectl
+            - -n
+            - gitlab
+            - exec
+            - deployment/gitlab-toolbox
+            - --
+            - gitlab-rails
+            - runner
+            - |
+              # Reconcile security defaults through the supported application-settings model.
+              # Never print settings: they can contain tokens and integration credentials.
+              ApplicationSetting.current.update!(
+                signup_enabled: false,
+                require_admin_approval_after_user_signup: true,
+                default_project_visibility: 0,
+                default_group_visibility: 0,
+                default_snippet_visibility: 0,
+                restricted_visibility_levels: [10, 20],
+                password_authentication_enabled_for_git: false,
+                require_two_factor_authentication: true,
+                two_factor_grace_period: 24,
+                allow_local_requests_from_web_hooks_and_services: false,
+                allow_local_requests_from_system_hooks: false,
+                shared_runners_enabled: false,
+                usage_ping_enabled: false
+              )
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          volumeMounts: []

@@ -1,0 +1,29 @@
+apiVersion: infra.contrib.fluxcd.io/v1alpha2
+kind: Terraform
+metadata:
+  name: gitlab
+  namespace: openstack
+spec:
+  interval: 10m
+  retryInterval: 1m
+  approvePlan: auto
+  destroyResourcesOnDeletion: false
+  path: ./components/cloud/services/gitlab/tofu
+  sourceRef:
+    kind: GitRepository
+    name: services-tofu-source
+  # Published after signed NixOS data-image promotion.
+  # Missing inputs stop provisioning, never substitute an unverified image.
+  varsFrom:
+    - kind: ConfigMap
+      name: gitlab-image-promotion
+      varsKeys: [image_revision]
+  runnerPodTemplate:
+    spec:
+      envFrom:
+        - secretRef:
+            name: magnum-keystone-admin
+  writeOutputsToSecret:
+    name: gitlab-infrastructure-outputs
+  remediation:
+    retries: 3
