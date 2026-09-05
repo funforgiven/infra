@@ -62,6 +62,8 @@
               deployments/homelab/cloud/services
             python -m unittest discover \
               -s components/cloud/services/gitlab/tests -p 'test_*.py'
+            python -m unittest discover \
+              -s components/cloud/services/forge/tests -p 'test_*.py'
 
             touch "$out"
           '';
