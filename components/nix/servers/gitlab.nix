@@ -96,8 +96,11 @@ _: {
       systemd.tmpfiles.rules = [
         "d /var/lib/gitlab 0700 root root - -"
         "d /var/lib/gitlab/config 0700 root root - -"
-        "d /var/lib/gitlab/data 0700 root root - -"
-        "d /var/lib/gitlab/logs 0700 root root - -"
+        # These become /var/opt/gitlab and /var/log/gitlab inside the container.
+        # Match the package's traversal modes for its unprivileged service users;
+        # /var/lib/gitlab remains 0700 to protect both trees on the host.
+        "d /var/lib/gitlab/data 0755 root root - -"
+        "d /var/lib/gitlab/logs 0755 root root - -"
         "d /var/lib/gitlab-bootstrap 0700 root root - -"
         "d /var/lib/gitlab-backup 0700 root root - -"
       ];
