@@ -111,6 +111,11 @@ resource "zitadel_machine_key" "identity_controller" {
 
 locals {
   web_oidc_apps = {
+    forgejo = {
+      name         = "Forgejo"
+      redirect_uri = "https://git.fahrican.com/user/oauth2/ZITADEL/callback"
+      post_logout  = "https://git.fahrican.com/"
+    }
     gitlab = {
       name         = "GitLab"
       redirect_uri = "https://gitlab.fahrican.com/users/auth/openid_connect/callback"
@@ -227,6 +232,16 @@ resource "zitadel_application_oidc" "kubernetes" {
 
 output "organization_id" {
   value = local.org_id
+}
+
+output "forgejo_client_id" {
+  value     = zitadel_application_oidc.web["forgejo"].client_id
+  sensitive = true
+}
+
+output "forgejo_client_secret" {
+  value     = zitadel_application_oidc.web["forgejo"].client_secret
+  sensitive = true
 }
 
 output "gitlab_client_id" {
