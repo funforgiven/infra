@@ -10,6 +10,7 @@ resources:
 - runners.yaml
 - runner-qualification.sops.yaml
 - runner-registry.sops.yaml
+- restore-qualification.yaml
 configMapGenerator:
 - name: forge-bootstrap
   namespace: forge
@@ -25,3 +26,14 @@ configMapGenerator:
   - register-job.py
   - run-job.sh
   - runner.yaml
+- name: forge-restore-tools
+  namespace: forge-restore
+  options:
+    disableNameSuffixHash: true
+  files:
+  - verify-restore.py
+  - verify-git.sh
+- name: forge-restore-controller
+  namespace: backup-qualification
+  files:
+  - qualify-restore.py
