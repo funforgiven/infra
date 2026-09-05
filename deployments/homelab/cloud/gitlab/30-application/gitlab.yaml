@@ -223,9 +223,9 @@ spec:
         resources:
           requests:
             cpu: 50m
-            memory: 384Mi
+            memory: 512Mi
           limits:
-            memory: 1Gi
+            memory: 2Gi
         backups:
           cron:
             enabled: true
@@ -266,7 +266,7 @@ spec:
             path: /spec/jobTemplate/spec/template/spec/initContainers/-
             value:
               name: capture-recovery-secrets
-              image: registry.k8s.io/kubectl:v1.35.4@sha256:e8bc9c71a813d90d5f7689fa57516b2aacd7a02bb9d70d3ab6664ed6d202fc10
+              image: registry.gitlab.com/gitlab-org/build/cng/kubectl:v19.3.1@sha256:f988746c511d16642ef37adae2ec4e710d2834813412b66029a3a938a5dfd879
               command:
                 - /bin/sh
                 - -ec

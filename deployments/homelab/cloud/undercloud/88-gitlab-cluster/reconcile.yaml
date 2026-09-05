@@ -206,6 +206,28 @@ data:
     "$flux" reconcile source git flux-system --timeout=5m
     "$flux" reconcile kustomization flux-system --with-source --timeout=20m
 
+    # Cinder's default class waits for a consumer, while Helm waits for the
+    # backup PVC to bind. Start the first native backup after migrations so a
+    # fresh installation does not deadlock until the nightly cron schedule.
+    for attempt in $(seq 1 240); do
+      if "$kubectl" -n gitlab get cronjob gitlab-toolbox-backup >/dev/null 2>&1; then
+        break
+      fi
+      test "$attempt" -lt 240
+      sleep 5
+    done
+    backup_phase="$($kubectl -n gitlab get pvc gitlab-toolbox-backup-tmp -o jsonpath='{.status.phase}')"
+    if test "$backup_phase" = Pending; then
+      "$kubectl" -n gitlab wait --for=condition=complete job -l app=migrations --timeout=30m
+      if ! "$kubectl" -n gitlab get job gitlab-initial-backup >/dev/null 2>&1; then
+        "$kubectl" -n gitlab create job gitlab-initial-backup --from=cronjob/gitlab-toolbox-backup
+      fi
+      "$kubectl" -n gitlab wait --for=jsonpath='{.status.phase}'=Bound \
+        pvc/gitlab-toolbox-backup-tmp --timeout=10m
+    fi
+    "$flux" reconcile kustomization gitlab-application --with-source --timeout=35m
+    "$flux" reconcile kustomization gitlab-access --with-source --timeout=30m
+
     test "$($kubectl get nodes --no-headers | wc -l)" -eq "$desired_nodes"
     echo "$cluster is ready and reconciled from signed Git"
   render-runtime.py: |
