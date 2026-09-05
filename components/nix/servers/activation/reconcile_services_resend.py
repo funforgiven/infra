@@ -46,7 +46,7 @@ class ResendKeySpec:
         if not isinstance(document, dict) or document.get("schemaVersion") != 1:
             raise ResendReconcileError("Resend contract must use schema version 1")
         keys = document.get("keys")
-        if not isinstance(keys, dict) or not set(keys) <= {"stalwart", "gitlab"} or key not in keys:
+        if not isinstance(keys, dict) or not set(keys) <= {"stalwart", "gitlab", "forgejo"} or key not in keys:
             raise ResendReconcileError("Resend contract must declare the requested service key")
         definition = keys[key]
         if not isinstance(definition, dict):
@@ -197,7 +197,7 @@ def argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("check", "apply"))
     parser.add_argument("--repository-root", type=Path)
-    parser.add_argument("--key", choices=("stalwart", "gitlab"), default="stalwart")
+    parser.add_argument("--key", choices=("stalwart", "gitlab", "forgejo"), default="stalwart")
     parser.add_argument(
         "--rotate",
         action="store_true",

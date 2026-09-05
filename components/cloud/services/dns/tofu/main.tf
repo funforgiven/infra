@@ -45,8 +45,6 @@ locals {
   services_gateway_address = "10.21.40.122"
   private_services = toset([
     "audiomuse",
-    "ci",
-    "ci-rpc",
     "git",
     "home",
     "gitlab",

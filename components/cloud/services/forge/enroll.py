@@ -31,9 +31,11 @@ def main():
             "name": "forge-runtime", "namespace": "forge"}, "type": "Opaque", "stringData": {}}
     values = document["stringData"]
     for name in ("forgejo-secret-key", "forgejo-internal-token", "forgejo-admin-password",
-                 "forgejo-metrics-token", "woodpecker-grpc-secret", "woodpecker-agent-secret",
-                 "woodpecker-metrics-token"):
+                 "forgejo-metrics-token"):
         values.setdefault(name, secrets.token_hex(32))
+    for name in tuple(values):
+        if name.startswith("woodpecker-"):
+            del values[name]
     for name in ("forgejo-lfs-secret", "forgejo-oauth-secret"):
         values.setdefault(name, secrets.token_urlsafe(32))
     outputs = json.loads(run([args.kubectl, "-n", "tofu-system", "get", "secret",

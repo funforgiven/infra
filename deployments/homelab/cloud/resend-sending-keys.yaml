@@ -3,6 +3,12 @@ document: homelab-cloud-resend-sending-keys
 lastReviewed: "2026-09-05"
 
 keys:
+  forgejo:
+    name: fahrican-forgejo-smtp
+    permission: sending_access
+    domain: fahrican.com
+    administrationCredential: RESEND_ADMIN_API_KEY
+    outputCredential: FORGEJO_RESEND_API_KEY
   stalwart:
     name: fahrican-stalwart-smtp
     permission: sending_access

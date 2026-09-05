@@ -24,10 +24,6 @@ spec:
       kind: StatefulSet
       name: forgejo
       namespace: forge
-    - apiVersion: apps/v1
-      kind: StatefulSet
-      name: woodpecker
-      namespace: forge
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
