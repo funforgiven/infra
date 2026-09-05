@@ -24,6 +24,11 @@ spec:
         patch:
           type: StrategicMerge
           value:
+            metadata:
+              annotations:
+                # Local traffic policy preserves client IPs but drops traffic
+                # on workers without an Envoy pod. Octavia must probe members.
+                loadbalancer.openstack.org/enable-health-monitor: "true"
             spec:
               loadBalancerIP: 10.21.40.122
       envoyPDB:
