@@ -1,6 +1,24 @@
 apiVersion: v1
 kind: Namespace
 metadata:
+  name: forge
+  labels:
+    gateway.fahrican.com/services: allowed
+    gateway.fahrican.com/forge: allowed
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.35
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: forge-ci
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.35
+---
+apiVersion: v1
+kind: Namespace
+metadata:
   name: backup-qualification
   labels:
     pod-security.kubernetes.io/enforce: restricted

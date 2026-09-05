@@ -58,6 +58,9 @@ spec:
     - upload.fahrican.com
     - home.fahrican.com
     - wallos.fahrican.com
+    - git.fahrican.com
+    - ci.fahrican.com
+    - ci-rpc.fahrican.com
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
@@ -67,6 +70,17 @@ metadata:
 spec:
   gatewayClassName: services-envoy
   listeners:
+    - name: git-ssh
+      protocol: TCP
+      port: 2222
+      allowedRoutes:
+        kinds:
+          - kind: TCPRoute
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              gateway.fahrican.com/forge: allowed
     - name: http
       protocol: HTTP
       port: 80
