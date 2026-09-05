@@ -21,8 +21,11 @@ Verified against the live deployment:
   GitLab Shell's internal API/Redis checks. The Git SSH key was checked against
   the trusted Kubernetes Secret and recorded with the data VM key in
   `deployments/homelab/ssh-host-keys.json`.
-- ZITADEL authorization-code redirect with PKCE S256, state and nonce. An
-  interactive user login and the resulting account approval remain to be tested.
+- ZITADEL authorization-code redirect with PKCE S256, state and nonce. The first
+  interactive login created the expected pending account with a confirmed email.
+  That account was approved through GitLab's approval service and now reports
+  active for authentication; a fresh browser sign-in remains to be confirmed.
+  New accounts still require administrator approval.
 - A standalone job under the CI namespace policy: UID 1000, no capabilities,
   no service-account token or Docker socket, RuntimeDefault seccomp, successful
   GitLab/public HTTPS, denied admin route, and blocked direct access to PostgreSQL,
