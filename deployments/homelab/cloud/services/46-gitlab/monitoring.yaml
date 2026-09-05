@@ -58,7 +58,9 @@ spec:
     - name: gitlab
       rules:
         - alert: GitLabEndpointDown
-          expr: probe_success{job=~"gitlab-http|gitlab-registry|gitlab-ssh"} == 0
+          expr: >-
+            probe_success{job=~"gitlab-http|gitlab-registry|gitlab-ssh"} == 0
+            or up{job=~"gitlab-http|gitlab-registry|gitlab-ssh"} == 0
           for: 20m
           labels:
             severity: critical
