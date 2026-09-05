@@ -2,6 +2,7 @@ _: {
   dendritic.nixpkgs.allowUnfreePackages = [
     "discord"
     "r2modman"
+    "unrar"
   ];
 
   home.gui =
@@ -21,6 +22,7 @@ _: {
         pkgs.pavucontrol
         pkgs.qbittorrent
         pkgs.r2modman
+        pkgs.unrar
       ];
     };
 }
