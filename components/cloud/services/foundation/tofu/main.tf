@@ -30,6 +30,11 @@ data "openstack_networking_network_v2" "public" {
   external = true
 }
 
+data "openstack_networking_subnet_v2" "public" {
+  name       = "public-v4"
+  network_id = data.openstack_networking_network_v2.public.id
+}
+
 resource "openstack_identity_project_v3" "services" {
   name        = "services"
   description = "Self-hosted application services"
@@ -122,6 +127,12 @@ resource "openstack_networking_router_v2" "services" {
   external_network_id = data.openstack_networking_network_v2.public.id
   enable_snat         = true
   tags                = local.tags
+  # Preserve the currently allocated SNAT identity, used by private service
+  # probes when accessing CI floating IPs and hairpin load-balancer traffic.
+  external_fixed_ip {
+    subnet_id  = data.openstack_networking_subnet_v2.public.id
+    ip_address = "10.21.40.154"
+  }
 }
 
 resource "openstack_networking_router_interface_v2" "services" {

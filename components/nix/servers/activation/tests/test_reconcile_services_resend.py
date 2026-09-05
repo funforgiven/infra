@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 import unittest
 
@@ -27,7 +28,7 @@ class FakeStore:
         return self.value
 
     def write(self, secret_file: Path, values: dict[str, str]) -> None:
-        self.value = values[SPEC.output_credential]
+        self.value = next(iter(values.values()))
 
 
 class FakeClient:
@@ -63,6 +64,19 @@ class ResendKeyReconcilerTest(unittest.TestCase):
         self.assertEqual(store.value, "new-secret")
         self.assertNotIn("new-secret", report)
         self.assertNotIn("new-id", report)
+
+    def test_gitlab_key_does_not_rotate_stalwart(self) -> None:
+        client = FakeClient()
+        client.inventory = [{"id": "stalwart-id", "name": SPEC.name}]
+        spec = replace(SPEC, name="fahrican-gitlab-smtp",
+                       output_credential="GITLAB_RESEND_API_KEY")
+        store = FakeStore()
+        report = ResendKeyReconciler(spec, client, store).reconcile(
+            apply=True, rotate=False
+        )
+        self.assertEqual(client.created, (spec.name, "sending_access", "domain-id"))
+        self.assertEqual(client.deleted, [])
+        self.assertNotIn("new-secret", report)
 
     def test_partial_or_unrecoverable_state_requires_rotation(self) -> None:
         client = FakeClient()

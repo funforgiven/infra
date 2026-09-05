@@ -1,0 +1,92 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gitlab-cluster-reconcile
+  namespace: openstack
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gitlab-bootstrap-reader
+  namespace: cert-manager
+rules:
+  - apiGroups:
+      - ''
+    resources:
+      - secrets
+    resourceNames:
+      - cloudflare-dns01
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gitlab-bootstrap-reader
+  namespace: cert-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: gitlab-bootstrap-reader
+subjects:
+  - kind: ServiceAccount
+    name: gitlab-cluster-reconcile
+    namespace: openstack
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gitlab-bootstrap-reader
+  namespace: tofu-system
+rules:
+  - apiGroups:
+      - ''
+    resources:
+      - secrets
+    resourceNames:
+      - zitadel-identity-outputs
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gitlab-bootstrap-reader
+  namespace: tofu-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: gitlab-bootstrap-reader
+subjects:
+  - kind: ServiceAccount
+    name: gitlab-cluster-reconcile
+    namespace: openstack
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gitlab-bootstrap-reader
+  namespace: rook-ceph
+rules:
+  - apiGroups:
+      - ''
+    resources:
+      - secrets
+    resourceNames:
+      - rook-ceph-object-user-gitlab-gitlab
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gitlab-bootstrap-reader
+  namespace: rook-ceph
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: gitlab-bootstrap-reader
+subjects:
+  - kind: ServiceAccount
+    name: gitlab-cluster-reconcile
+    namespace: openstack

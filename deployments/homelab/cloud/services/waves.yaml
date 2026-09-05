@@ -1,6 +1,23 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
+  name: services-gitlab
+  namespace: flux-system
+spec:
+  interval: 10m
+  timeout: 10m
+  path: ./deployments/homelab/cloud/services/46-gitlab
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: services-platform-gateway
+    - name: services-observability
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
   name: services-platform-controllers
   namespace: flux-system
 spec:

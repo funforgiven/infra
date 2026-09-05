@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: gitlab-flux-bootstrap
+    namespace: openstack
+stringData:
+    age.agekey: ENC[AES256_GCM,data:w2CIBMGXNHhDApqgHje7W00bleUW5xR4qQ1Efdb3GPoBpiZqvo0yFZarPlY9pTwXHS97JUqWhcPGuGadl/5cC78XnPsZ+AXgtnD/6D9/JZReyHoFS4cLRtMUoqYDK2k6xJKcT6hnxNi0KKfdTh36mFWLo4/DZ+m4CoYm9AHUlYEIDhDQ4lYDxc0ScifFV7OpA5Xux/rEVxjhEpJmzylNHTN1mLOUNeTzbo0D+mpjFr2ZiQecCKzEO7NR4WgP,iv:m6m2acK/9UqOJXCs21OFa7GP/zeMxerBfur6QsQo9mU=,tag:TxOfAmFlAgBW9kydtQkmNA==,type:str]
+type: Opaque
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBzcGlmTHZuOXpaMWE4cGtE
+            cm9kMGpMZkgwTlZWbDBuQWNobm03VGg1OEQwCnBETW9oU1ZIakdBZk4rRkd1RTN2
+            MldEOXVvdTZQSnJhczlIcWtlUTJEcnMKLS0tIG4xTmY3QnBqTmVYMFhtSDBCWldp
+            WWhVMUNsNFNNTlIwTG96TnBpZE4zVmsKFXLBzXN0gmhCWSOdM5i9duijdeMYL78c
+            i+wkO1SLGV6yXFY2+bx8aywVPbbrY0+a0EbZxy9yTSZ3EbOLB7mnnQ==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBSL1pzUmtFSTdTSDdNN3Vm
+            OVhESGJhT0hzMUprZ3F3azN5K1FjTFFoazBBCjRRcE45SU14WDU2aVhxOTE4WmUy
+            QnBpNnQ5VmFaWDhvWUxVcEMraVd4NTQKLS0tIE9xM3g2NkdoYTdEa2RVSk4xRkVs
+            bjVuME9ZNFRhUEgxblJ0Y0Njemp1MkUKtGIavDIiNXAlfmhqhc5IWFyPtovgMIi6
+            BSdLDahG3tANXxMjY0XKrS4+ql8RKf2innho08IcFRXNz/3cGzBMCg==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-09-05T16:05:45Z"
+    mac: ENC[AES256_GCM,data:YP3s4fLJJxA42HJp8mvkW19TRkGbXP9BA4ysabLUKplUrene277JJ4/cbF05TnMEfSYa3rbr6qdkxiZmQ2KV1WnbpyVHaiiqR+XyhqwYMBz3qGPZzi3DnIFPXrlLYVMJvfS3rwTTIp0TyElRurIDafpr161j6RL9rTq2a+637B0=,iv:67TQ0KblxdB3u9EJNfWxcwOfYhIMxbhp+SFQAXAmz2g=,tag:2OhYCruzg5qnBssMtxpX9Q==,type:str]
+    version: 3.13.3

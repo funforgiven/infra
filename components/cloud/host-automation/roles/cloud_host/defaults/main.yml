@@ -30,6 +30,7 @@ cloud_ceph_disk_minimum_bytes: 1800000000000
 cloud_secondary_efi_mountpoint: /boot/efi-secondary
 cloud_iommu_kernel_parameters: []
 cloud_cpu_virtualization_module: ""
+cloud_nested_kvm: false
 cloud_libvirt_qemu_uid: 42424
 
 cloud_packages:

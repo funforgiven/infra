@@ -17,6 +17,7 @@ cloud_iommu_kernel_parameters:
   - intel_iommu=on
   - iommu=pt
 cloud_cpu_virtualization_module: kvm_intel
+cloud_nested_kvm: true
 
 cloud_console_password_file: /run/secrets/cloud-host-pecorino-ubuntu-console-password
 cloud_console_password_salt: pecorino.ubuntu

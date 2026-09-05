@@ -1,0 +1,100 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: cert-manager-chart
+  namespace: cert-manager
+spec:
+  interval: 24h
+  url: oci://quay.io/jetstack/charts/cert-manager
+  ref:
+    digest: sha256:15c0b46d9006ce8eb9ff14d1bf54d1bbfcc587bb9e24cd9fe186fb8fec56af1f
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cert-manager
+  namespace: cert-manager
+spec:
+  interval: 30m
+  timeout: 10m
+  releaseName: cert-manager
+  chartRef:
+    kind: OCIRepository
+    name: cert-manager-chart
+  driftDetection:
+    mode: enabled
+  install:
+    crds: Create
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  values:
+    crds:
+      enabled: true
+      keep: true
+    replicaCount: 1
+    extraArgs:
+      - --dns01-recursive-nameservers-only
+      - --dns01-recursive-nameservers=10.21.40.1:53
+    podDisruptionBudget:
+      enabled: true
+      minAvailable: 0
+    image:
+      repository: quay.io/jetstack/cert-manager-controller
+      tag: v1.21.1
+      digest: sha256:416a2d76870d996460e62bd7f521bf14fa017be9e3e904aab92163a331fcb61a
+    resources:
+      requests:
+        cpu: 50m
+        memory: 96Mi
+      limits:
+        memory: 384Mi
+    webhook:
+      replicaCount: 1
+      podDisruptionBudget:
+        enabled: true
+        minAvailable: 0
+      image:
+        repository: quay.io/jetstack/cert-manager-webhook
+        tag: v1.21.1
+        digest: sha256:d8b3961b51c8c7320633f8208dc46bf88aa13804d0f7cbe48a096b2c523cee42
+      resources:
+        requests:
+          cpu: 20m
+          memory: 48Mi
+        limits:
+          memory: 192Mi
+    cainjector:
+      replicaCount: 1
+      podDisruptionBudget:
+        enabled: true
+        minAvailable: 0
+      image:
+        repository: quay.io/jetstack/cert-manager-cainjector
+        tag: v1.21.1
+        digest: sha256:ccf6b919ec0500745a47a910118f834f9636d0aac1ff221245cd2557ed8c7c98
+      resources:
+        requests:
+          cpu: 20m
+          memory: 64Mi
+        limits:
+          memory: 256Mi
+    acmesolver:
+      image:
+        repository: quay.io/jetstack/cert-manager-acmesolver
+        tag: v1.21.1
+        digest: sha256:dbc7cc1354f603918e7c5af7f55a0a620537394452c93a565bde75c6f48e8837
+    startupapicheck:
+      enabled: true
+      timeout: 2m
+      image:
+        repository: quay.io/jetstack/cert-manager-startupapicheck
+        tag: v1.21.1
+        digest: sha256:d8ab6416e6e7303a86fa0a8daa82c94a8001f21c9d78eb2e7db20534e5d07ae8
+    prometheus:
+      enabled: true
+      servicemonitor:
+        enabled: false

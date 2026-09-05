@@ -1,0 +1,21 @@
+apiVersion: infra.contrib.fluxcd.io/v1alpha2
+kind: Terraform
+metadata:
+  name: gitlab-foundation
+  namespace: openstack
+spec:
+  interval: 10m
+  retryInterval: 1m
+  approvePlan: auto
+  destroyResourcesOnDeletion: false
+  path: ./components/cloud/services/gitlab/foundation-tofu
+  sourceRef:
+    kind: GitRepository
+    name: services-tofu-source
+  runnerPodTemplate:
+    spec:
+      envFrom:
+        - secretRef:
+            name: magnum-keystone-admin
+  remediation:
+    retries: 3

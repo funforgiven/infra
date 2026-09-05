@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create or rotate the Resend API key used by Stalwart."""
+"""Create or rotate a domain-scoped Resend sending key for a declared service."""
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ class ResendKeySpec:
     output_credential: str
 
     @classmethod
-    def load(cls, repository_root: Path) -> "ResendKeySpec":
+    def load(cls, repository_root: Path, key: str = "stalwart") -> "ResendKeySpec":
         path = repository_root / RESEND_CONTRACT_PATH
         try:
             document = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -46,11 +46,11 @@ class ResendKeySpec:
         if not isinstance(document, dict) or document.get("schemaVersion") != 1:
             raise ResendReconcileError("Resend contract must use schema version 1")
         keys = document.get("keys")
-        if not isinstance(keys, dict) or set(keys) != {"stalwart"}:
-            raise ResendReconcileError("Resend contract must declare only the Stalwart key")
-        definition = keys["stalwart"]
+        if not isinstance(keys, dict) or not set(keys) <= {"stalwart", "gitlab"} or key not in keys:
+            raise ResendReconcileError("Resend contract must declare the requested service key")
+        definition = keys[key]
         if not isinstance(definition, dict):
-            raise ResendReconcileError("Resend Stalwart key must be a mapping")
+            raise ResendReconcileError("Resend service key must be a mapping")
         runtime = RuntimeContract.load(repository_root)
         administration_credential = _string(
             definition.get("administrationCredential"), "administrationCredential"
@@ -61,7 +61,7 @@ class ResendKeySpec:
         administration = runtime.credential(administration_credential)
         output = runtime.provisioned_credential(output_credential)
         if output.provisioner != "reconcile-services-resend":
-            raise ResendReconcileError("Stalwart sending key has the wrong provisioner")
+            raise ResendReconcileError("Sending key has the wrong provisioner")
         spec = cls(
             name=_string(definition.get("name"), "name"),
             permission=_string(definition.get("permission"), "permission"),
@@ -72,7 +72,7 @@ class ResendKeySpec:
             output_credential=output_credential,
         )
         if spec.permission != "sending_access" or spec.domain != "fahrican.com":
-            raise ResendReconcileError("Stalwart must use sending access scoped to fahrican.com")
+            raise ResendReconcileError("Sending keys must use sending access scoped to fahrican.com")
         if len(spec.name) > 50:
             raise ResendReconcileError("Resend key name exceeds the provider limit")
         return spec
@@ -161,7 +161,7 @@ class ResendKeyReconciler:
         if not isinstance(domain_id, str):
             raise ResendReconcileError("Resend domain response has no identifier")
         if domain.get("status") != "verified":
-            raise ResendReconcileError("Resend domain must be verified before issuing the Stalwart key")
+            raise ResendReconcileError("Resend domain must be verified before issuing a sending key")
         named = [key for key in self.client.keys() if key.get("name") == self.spec.name]
         stored = self.store.read(self.spec.output_file, self.spec.output_credential)
         if len(named) == 1 and stored is not None and not rotate:
@@ -197,6 +197,7 @@ def argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("check", "apply"))
     parser.add_argument("--repository-root", type=Path)
+    parser.add_argument("--key", choices=("stalwart", "gitlab"), default="stalwart")
     parser.add_argument(
         "--rotate",
         action="store_true",
@@ -220,7 +221,7 @@ def main() -> int:
                 ).stdout.strip()
             )
         )
-        spec = ResendKeySpec.load(repository_root)
+        spec = ResendKeySpec.load(repository_root, arguments.key)
         store = SopsCredentialStore(repository_root)
         administration_key = store.read(
             spec.administration_file, spec.administration_credential

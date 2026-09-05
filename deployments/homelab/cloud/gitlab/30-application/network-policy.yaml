@@ -1,0 +1,121 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gitlab
+  namespace: gitlab
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector: {}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: envoy-gateway-system
+      ports:
+        - port: 8181
+        - port: 2222
+        - port: 5000
+        - port: 8150
+  egress:
+    - to:
+        - podSelector: {}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - ipBlock:
+            cidr: 192.168.82.10/32
+      ports:
+        - port: 5432
+        - port: 6379
+        - port: 8075
+    - to:
+        - ipBlock:
+            cidr: 10.21.20.130/32
+        - ipBlock:
+            cidr: 10.21.20.131/32
+        - ipBlock:
+            cidr: 10.21.40.127/32
+      ports:
+        - port: 443
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+              - 127.0.0.0/8
+              - 100.64.0.0/10
+              - 224.0.0.0/4
+              - 240.0.0.0/4
+      ports:
+        - port: 443
+        - port: 587
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gitlab-secret-generation
+  namespace: gitlab
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - gitlab
+          - gitlab-recovery
+          - gitlab-security-settings
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 192.168.82.0/24
+      ports:
+        - port: 6443
+        - port: 443
+    - to:
+        - ipBlock:
+            cidr: 10.21.40.0/24
+      ports:
+        - port: 6443
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gitlab-backup-api
+  namespace: gitlab
+spec:
+  egress:
+    - ports:
+        - port: 6443
+        - port: 443
+      to:
+        - ipBlock:
+            cidr: 192.168.82.0/24
+    - ports:
+        - port: 6443
+      to:
+        - ipBlock:
+            cidr: 10.21.40.0/24
+  podSelector:
+    matchLabels:
+      gitlab-backup: 'true'
+  policyTypes:
+    - Egress

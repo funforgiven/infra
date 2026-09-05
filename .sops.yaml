@@ -4,6 +4,7 @@ keys:
   - &undercloud_flux age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2
   - &management_flux age1pshevdsu2fplu7hzwnpnmhsfcmg0325srsw7z630xz2dd8re6ysq4p9gd5
   - &services_flux age1vfxeaxdj7jze5p5ytff0peyjm3rusn8naacfudklvzwknv4yk5wq3qqg3v
+  - &gitlab_flux age1zz5qpahqcev8pzrwgd4djf7j838aqqd28d3nkwn7a9y0skv7t95sr0ntj2
 
 creation_rules:
   - path_regex: ^secrets/omada\.yaml$
@@ -30,6 +31,12 @@ creation_rules:
       - age:
           - *admin_funforgiven
           - *management_flux
+  - path_regex: ^deployments/homelab/cloud/gitlab/.*\.sops\.yaml$
+    encrypted_regex: '^(data|stringData)$'
+    key_groups:
+      - age:
+          - *admin_funforgiven
+          - *gitlab_flux
   - path_regex: ^deployments/homelab/cloud/services/.*\.sops\.yaml$
     encrypted_regex: '^(data|stringData)$'
     key_groups:

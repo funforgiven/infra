@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: gitlab-runtime-bootstrap
+    namespace: openstack
+stringData:
+    gitaly-token: ENC[AES256_GCM,data:JpzXL7kOqLIdfYIi88GM8CvBDh1zR8WR0NA/5//kWVGuqirN9cWs+RjmD+cRp33HFnFTWYLS7rWef8pSJBKNkA==,iv:uZjiumrbJZFHjxj7Lpbe+193s7UQ8egs3Olq4YiEPa0=,tag:V88y1TYge+zdSFivYDV0jQ==,type:str]
+    postgres-password: ENC[AES256_GCM,data:KdHxxwL2+PMcoeIQDbKFTyKZb+6TC4LReX+iij5ejvWVhzhzsX4l+H4GKC2VqEwTD/bPeIItnnSmcfQI85GwsA==,iv:CpqeduxppA+u+9JS1gcNdA8bPOMGwBapKX9iXXMiKFw=,tag:hQ5ADPDCf+f1SnVADx9ipg==,type:str]
+    redis-password: ENC[AES256_GCM,data:DwU9thSchLrC3/FhzA+zH4MWCZnzl9YR/Eb9jBoKOsdHd5BvFBwDi6YeYnNYVGql7Z3cBTOrNiecApLC/yFHYg==,iv:zrhcqFrTwJLINlIl1cC2EMSTpI3h/p8TdIvmBL9AKV0=,tag:AH2d+jDnL9OZ8tnJ7X12Sw==,type:str]
+    root-password: ENC[AES256_GCM,data:gR8xFY2ZAkuRpKLya6XAt1eFOHpqIGuUDY8Z8aEhkhhib4xJNGeIV9OtA33R0RP7NtCreLSUXeWpY1SCPk5KdQ==,iv:4ENVqioK8kWBzMwtjb6m0HwrAl+Xp16ldiIuOktKJTk=,tag:sxn+yBIKBbm2KX0gDtY5ww==,type:str]
+    shell-token: ENC[AES256_GCM,data:auFIet1PZiW50zj/62oMEnq8ThN847JW7BDpLKKKuc5W20ZDN/9umvP90WOudcctopKCJHjseofgPx5MXOGW4w==,iv:A4Hg3kHYCKt5R9Ze3HQJ4bJ72HEIfi7JRVpGus5P6r4=,tag:z0ORTPUr1F4C/bxsYICI1g==,type:str]
+type: Opaque
+data:
+    GITLAB_RESEND_API_KEY: ENC[AES256_GCM,data:fY043Yn/3AZUkuVP/XYJb3T3P5aIXYYIBjJ0m2IsZbJb5L0Um4pMYpm7Y4j6kKvB,iv:JCWSqPxRsrNQkSUKEpMwn2uINo0nMrsQ4cwvQw/gHhc=,tag:2+Hh91drn8VGwCYMDv764w==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBHSmo4RnFkODdaNGFlQ2Ft
+            RVRLbnM4M3YvakdQallBMmptS3FmcTF1UUJBCld3TnIxcVNDdG9HbXZYL2hqejlo
+            ZU03clc1NkVmK05KYWRUMGY1S0txUkEKLS0tIEt5Vm56V2NHSk5KekpOZHY0V0NL
+            M0NBMFZETTlvSU8rUGRXMWcxcEQyU0UKnjXCMFtQmH2esvLSKOvwramq52K4Fw9l
+            PX/zeIv/OtdMVZu2BXlJuvhf3mmomQAQxYJICFwdzAWYMOS3cZbRLQ==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA1M0l4NWc0VU1DNGJTaU52
+            VFdxa3lKazhheGQxYzhBVFlJb2tLL2pYcUN3CmZyOUxCZjNwSGl6ekZqSDRmT2Uw
+            NlhuTnRtUFRoTmY2VHdIYTlyellabVEKLS0tIEtjOE55TG5zS1RHcG5NdmNVSkdT
+            Zk5pSC9hTnp5dVNCeVRnUHZucVBSSWsK/yoyDz6Ex0a/TpmsitU+a9s5H0uaWNxQ
+            b4aAilJ26RR4upWYz3B0shOYeGkqEHnbal/+2yR8HCdkLP2Cnk+mXg==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-09-05T16:21:47Z"
+    mac: ENC[AES256_GCM,data:rLhAly4Uz6W4NgW3KtTkr5AsnBTRrdR3HGLhwn+X6QCS4qmmYVYyxRzL4Qd5j4Lx5wtNTHcHBH3XAHHtn4YJ2M/U7jL6y2gzn+ODEmvxioUSAYydUQDGG7XhjDIGgTb7W+mWpnXTgJRgBG3gYxNx5iAasDFj4c2Xdp3oZdXWLdQ=,iv:TTGBk0Ui0YTw12qdb8j1aWEAXKS3b0MGkzCq8iPP6PU=,tag:9Hjxy1q6G6qgwyygVq5f+w==,type:str]
+    version: 3.13.3
