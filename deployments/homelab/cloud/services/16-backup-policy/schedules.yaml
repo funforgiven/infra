@@ -13,6 +13,7 @@ spec:
     includedNamespaces:
       - backup-qualification
       - finance
+      - forge
       - games
       - media
       - services-databases
@@ -34,6 +35,7 @@ spec:
     includedNamespaces:
       - backup-qualification
       - finance
+      - forge
       - games
       - media
       - services-databases

@@ -1,0 +1,197 @@
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: forge
+  namespace: forge
+spec:
+  order: 16
+  selector: all()
+  types:
+  - Ingress
+  - Egress
+  ingress:
+  - action: Allow
+    protocol: TCP
+    source:
+      namespaceSelector: kubernetes.io/metadata.name == 'envoy-gateway-system'
+      selector: gateway.envoyproxy.io/owning-gateway-name == 'services' && gateway.envoyproxy.io/owning-gateway-namespace
+        == 'services-network'
+    destination:
+      ports:
+      - 3000
+      - 8000
+      - 9000
+      - 2222
+  - action: Allow
+    protocol: TCP
+    source:
+      namespaceSelector: kubernetes.io/metadata.name == 'services-observability'
+    destination:
+      ports:
+      - 3000
+      - 8000
+      - 9900
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: app.kubernetes.io/name == 'woodpecker-agent'
+    destination:
+      ports:
+      - 9000
+  - action: Deny
+  egress:
+  - action: Allow
+    protocol: UDP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'kube-system'
+      selector: k8s-app == 'kube-dns'
+      ports:
+      - 53
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'kube-system'
+      selector: k8s-app == 'kube-dns'
+      ports:
+      - 53
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'envoy-gateway-system'
+      selector: gateway.envoyproxy.io/owning-gateway-name == 'services' && gateway.envoyproxy.io/owning-gateway-namespace
+        == 'services-network'
+      ports:
+      - 10443
+      - 2222
+  - action: Allow
+    protocol: TCP
+    destination:
+      nets:
+      - 10.21.40.122/32
+      ports:
+      - 443
+      - 2222
+  - action: Allow
+    protocol: TCP
+    destination:
+      nets:
+      - 10.21.20.131/32
+      ports:
+      - 443
+  - action: Allow
+    protocol: TCP
+    destination:
+      selector: app.kubernetes.io/name == 'woodpecker'
+      ports:
+      - 9000
+  - action: Allow
+    protocol: TCP
+    destination:
+      nets:
+      - 0.0.0.0/0
+      notNets:
+      - 0.0.0.0/8
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.0.0/16
+      - 169.254.0.0/16
+      - 127.0.0.0/8
+      - 100.64.0.0/10
+      - 224.0.0.0/4
+      - 240.0.0.0/4
+      ports:
+      - 443
+      - 587
+  - action: Deny
+---
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: woodpecker-agent-api
+  namespace: forge
+spec:
+  order: 15
+  selector: app.kubernetes.io/name == 'woodpecker-agent'
+  types:
+  - Egress
+  egress:
+  - action: Allow
+    protocol: TCP
+    destination:
+      nets:
+      - 172.24.0.1/32
+      ports:
+      - 443
+  - action: Allow
+    protocol: TCP
+    destination:
+      nets:
+      - 192.168.80.40/32
+      - 192.168.80.196/32
+      - 192.168.80.209/32
+      ports:
+      - 6443
+---
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: ci-jobs
+  namespace: forge-ci
+spec:
+  order: 16
+  selector: all()
+  types:
+  - Ingress
+  - Egress
+  ingress:
+  - action: Deny
+  egress:
+  - action: Allow
+    protocol: UDP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'kube-system'
+      selector: k8s-app == 'kube-dns'
+      ports:
+      - 53
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'kube-system'
+      selector: k8s-app == 'kube-dns'
+      ports:
+      - 53
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'envoy-gateway-system'
+      selector: gateway.envoyproxy.io/owning-gateway-name == 'services' && gateway.envoyproxy.io/owning-gateway-namespace
+        == 'services-network'
+      ports:
+      - 10443
+      - 2222
+  - action: Allow
+    protocol: TCP
+    destination:
+      nets:
+      - 10.21.40.122/32
+      ports:
+      - 443
+      - 2222
+  - action: Allow
+    protocol: TCP
+    destination:
+      nets:
+      - 0.0.0.0/0
+      notNets:
+      - 0.0.0.0/8
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.0.0/16
+      - 169.254.0.0/16
+      - 127.0.0.0/8
+      - 100.64.0.0/10
+      - 224.0.0.0/4
+      - 240.0.0.0/4
+      ports:
+      - 443
+  - action: Deny

@@ -1,0 +1,196 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: forgejo
+  namespace: forge
+spec:
+  parentRefs:
+  - name: services
+    namespace: services-network
+    sectionName: https
+  hostnames:
+  - git.fahrican.com
+  rules:
+  - backendRefs:
+    - name: forgejo
+      port: 3000
+    timeouts:
+      request: 0s
+      backendRequest: 0s
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: forgejo-private
+  namespace: forge
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: forgejo
+  authorization:
+    defaultAction: Deny
+    rules:
+    - name: private-clients
+      action: Allow
+      principal:
+        clientCIDRs:
+        - 10.21.10.0/24
+        - 10.21.91.0/24
+        - 172.16.0.0/13
+        - 192.168.80.0/24
+        - 10.21.40.154/32
+        - 10.21.40.125/32
+        - 10.21.40.126/32
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: woodpecker
+  namespace: forge
+spec:
+  parentRefs:
+  - name: services
+    namespace: services-network
+    sectionName: https
+  hostnames:
+  - ci.fahrican.com
+  rules:
+  - backendRefs:
+    - name: woodpecker
+      port: 8000
+    timeouts:
+      request: 0s
+      backendRequest: 0s
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: woodpecker-private
+  namespace: forge
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: woodpecker
+  authorization:
+    defaultAction: Deny
+    rules:
+    - name: private-clients
+      action: Allow
+      principal:
+        clientCIDRs:
+        - 10.21.10.0/24
+        - 10.21.91.0/24
+        - 172.16.0.0/13
+        - 192.168.80.0/24
+        - 10.21.40.154/32
+        - 10.21.40.125/32
+        - 10.21.40.126/32
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: woodpecker-rpc
+  namespace: forge
+spec:
+  parentRefs:
+  - name: services
+    namespace: services-network
+    sectionName: https
+  hostnames:
+  - ci-rpc.fahrican.com
+  rules:
+  - backendRefs:
+    - name: woodpecker
+      port: 9000
+    timeouts:
+      request: 0s
+      backendRequest: 0s
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: woodpecker-rpc-private
+  namespace: forge
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: woodpecker-rpc
+  authorization:
+    defaultAction: Deny
+    rules:
+    - name: private-clients
+      action: Allow
+      principal:
+        clientCIDRs:
+        - 10.21.10.0/24
+        - 10.21.91.0/24
+        - 172.16.0.0/13
+        - 192.168.80.0/24
+        - 10.21.40.154/32
+        - 10.21.40.125/32
+        - 10.21.40.126/32
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: forgejo-admin
+  namespace: forge
+spec:
+  parentRefs:
+  - name: services
+    namespace: services-network
+    sectionName: https
+  hostnames:
+  - git.fahrican.com
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /admin
+    - path:
+        type: PathPrefix
+        value: /api/v1/admin
+    - path:
+        type: RegularExpression
+        value: ^/(?:/|%2[fF]|%5[cC])*(?:(?:a|%61)(?:p|%70)(?:i|%69)(?:/|%2[fF]|%5[cC])(?:v|%76)(?:1|%31)(?:/|%2[fF]|%5[cC]))?(?:a|%61)(?:d|%64)(?:m|%6[dD])(?:i|%69)(?:n|%6[eE])(?:(?:/|%2[fF]|%5[cC])|$).*
+    backendRefs:
+    - name: forgejo
+      port: 3000
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: forgejo-admin
+  namespace: forge
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: forgejo-admin
+  authorization:
+    defaultAction: Deny
+    rules:
+    - name: operators
+      action: Allow
+      principal:
+        clientCIDRs:
+        - 10.21.10.0/24
+        - 10.21.91.0/24
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  name: forgejo-ssh
+  namespace: forge
+spec:
+  parentRefs:
+  - name: services
+    namespace: services-network
+    sectionName: git-ssh
+  rules:
+  - backendRefs:
+    - name: forgejo
+      port: 2222
