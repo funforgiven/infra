@@ -98,3 +98,19 @@ spec:
           selector:
             matchLabels:
               gateway.fahrican.com/gitlab: allowed
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: gitlab-paths
+  namespace: gitlab-network
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gitlab
+      sectionName: https
+  path:
+    # GitLab encodes namespace/project and repository file paths as API parameters.
+    # Decoding %2F in the proxy changes the endpoint before Rails can route it.
+    escapedSlashesAction: KeepUnchanged
