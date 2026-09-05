@@ -128,6 +128,8 @@ account during first login.
 
 PostgreSQL, Redis and Gitaly require separate authentication tokens. Their ports
 are reachable only from the GitLab tenant; the CI network cannot reach them.
+The data VM also allows Gitaly's port 8075 on its local Docker bridge so Gitaly
+can fetch merge-request source refs through its own advertised tenant address.
 Traffic within that isolated tenant uses the native PostgreSQL/Redis/Gitaly
 protocols. TLS protects client, OIDC, SMTP and S3 connections. Registry redirects
 and object download redirects are disabled, so runners never need S3 credentials

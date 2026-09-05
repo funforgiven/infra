@@ -80,6 +80,9 @@ _: {
         6379
         8075
       ];
+      # Gitaly fetches MR source refs through its advertised tenant address.
+      # Docker's userland proxy receives that container-to-host connection here.
+      networking.firewall.interfaces.docker0.allowedTCPPorts = [ 8075 ];
       servicesPlatform.backup = {
         paths = [ "/var/lib/gitlab-backup/current" ];
         tag = "gitlab-helm-native";
