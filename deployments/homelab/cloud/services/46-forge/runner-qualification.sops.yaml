@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: runner-qualification
+    namespace: forge-ci
+type: Opaque
+stringData:
+    token: ENC[AES256_GCM,data:/zGB28b3wi9Qd949CHwza2Vb29zO9dPPA8NVlGgQuZIEl0VfI29m9g==,iv:MsvEEtNRHA/AUVdx1tDDJITSiSRZxQ4/BS1k/bOnesw=,tag:SY1ZEWSvQCJtoiUzE6KXtw==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBvaFEyQm1wdmZKLy9XUEF2
+            c1Fkbk5GNkhINUNOcHNKdm5OVzJsVjJEQkhzCkJrT3ozZkVvV2phMU9XWGNOK1Fm
+            TFhQMit4MXMvbUMrWVdRaERQQVoyYmcKLS0tIGh1SGtuZk5qRVZERnRIOXhGazlZ
+            YzdkREtCcWtiQkU5eVdIWS8vY3lLcDQKqEvxuOUUYOy72vBs5+mhiwGinVtPB6yD
+            r/tb8luom+ixG6thu5+gFIFOTCSvpZje/v5Y3Kk/VbSPQn9inh7+YQ==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA5WGZxTU1DZ1FqckFCaHZj
+            T3N5RGFtdVhic0pyd251aWUvSXFtTG9JQkJVCmlpOUprVDllTFRpNGJ6bVFjdHdR
+            YmR1dkhZZTZCVFVBZSs4UEtGVE12NmsKLS0tIFYzUHRPb0NrMEdYb1BYVzBLdTlr
+            MWI0dUlVR3hQUFVLbEJZaTRzeHJjV2MKyckUSFtA/mooxSfwhCq0DLfV9k9fCy5I
+            OO7kbYcXSraIS12LMZe3Rl4ju4pLrpLMOh7ahenYyef4CgtUC4x2lg==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1vfxeaxdj7jze5p5ytff0peyjm3rusn8naacfudklvzwknv4yk5wq3qqg3v
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-09-05T23:13:20Z"
+    mac: ENC[AES256_GCM,data:pXyTC0Sl2RXrmX7vTewkDl0KD+WKvrBVWTS+yv/8iFx4cDRfkzQF77EGYVu4h/GViBNldCbo443u+m4J/OfVwlGgrlBcylCJCwHdLCh/WA/hefTeBqWUKcQU8zx21HQaS8JzHtXQ9zw6sq9t3Zpncxx//XZKqo1mbHk1HW00c8M=,iv:k3PzOMYVo+HQd1ohETToKzQat+e7NCsGFUMgJ1IHMkM=,tag:OA0Nr5oK3/taBMlNZVCZIw==,type:str]
+    version: 3.13.3

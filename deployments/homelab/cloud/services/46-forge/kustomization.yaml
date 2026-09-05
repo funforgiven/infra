@@ -7,6 +7,9 @@ resources:
 - network-policy.yaml
 - monitoring.yaml
 - runtime.sops.yaml
+- runners.yaml
+- runner-qualification.sops.yaml
+- runner-registry.sops.yaml
 configMapGenerator:
 - name: forge-bootstrap
   namespace: forge
@@ -16,3 +19,9 @@ configMapGenerator:
   - render-forgejo.py
   - forgejo.ini
   - bootstrap-forgejo.sh
+- name: forge-runner-bootstrap
+  namespace: forge-ci
+  files:
+  - register-job.py
+  - run-job.sh
+  - runner.yaml
