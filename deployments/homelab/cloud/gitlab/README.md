@@ -107,6 +107,10 @@ allowed destination ports. Magnum allocates the private Kubernetes API floating
 address; its API listener allowlist includes operators, the undercloud, CAPI
 management and the GitLab tenant.
 
+The HTTPS listener preserves escaped slashes so GitLab can resolve API project
+names such as `funforgiven%2Fatollion` and encoded repository file paths. Admin
+routes also match encoded separators and retain the LAN/WireGuard-only policy.
+
 GitLab uses native ZITADEL OIDC, keeping Git, registry authentication and API
 tokens usable. Newly created OIDC accounts require administrator approval;
 accounts are not automatically linked by email. A security reconciliation Job

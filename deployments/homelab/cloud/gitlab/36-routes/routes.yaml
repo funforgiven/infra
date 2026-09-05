@@ -103,6 +103,10 @@ spec:
         - path:
             type: PathPrefix
             value: /admin
+        # Preserve the operator boundary when clients encode path separators.
+        - path:
+            type: RegularExpression
+            value: '^/(?:/|%2[Ff]|%5[Cc])*admin(?:/|%2[Ff]|%5[Cc]|$).*'
       backendRefs:
         - name: gitlab-webservice-default
           port: 8181
