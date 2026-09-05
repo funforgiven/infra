@@ -81,6 +81,8 @@ data:
         --master-lb-enabled \
         --floating-ip-disabled \
         --labels capi_helm_chart_version=0.27.0 \
+        --labels boot_volume_size=80 \
+        --labels boot_volume_type=rbd1 \
         --labels master_lb_floating_ip_enabled=true \
         --labels 'extra_network_names=' \
         --labels 'api_master_lb_allowed_cidrs=10.21.10.0/24,10.21.20.0/24,10.21.91.0/24,192.168.82.0/24,10.21.40.129/32,10.21.40.164/32,10.21.40.101/32,10.21.40.102/32,10.21.40.103/32'

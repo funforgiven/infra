@@ -36,6 +36,8 @@ to 44 GiB, excluding spare capacity. The live inventory on 2026-09-05 had about
 37 GiB available to Nova. Do not reduce the 32 GiB per-host reservation used by
 the undercloud and Ceph to make these allocations fit. The runner rollout needs
 additional capacity and sufficient free RAM on the particular Intel host.
+Each Kubernetes node boots from an explicit 80 GiB `rbd1` Cinder volume; the
+flavors do not allocate a local root disk.
 
 This initial installation is **not highly available**: there is one control
 plane, one worker and one data VM. Ceph replication protects disks but does not
