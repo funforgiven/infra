@@ -111,10 +111,16 @@ GitLab uses native ZITADEL OIDC, keeping Git, registry authentication and API
 tokens usable. Newly created OIDC accounts require administrator approval;
 accounts are not automatically linked by email. A security reconciliation Job
 sets private visibility, disables public registration and password-based Git
-access, requires 2FA and blocks local-network webhook requests **before** Flux
-publishes application routes. The root password is encrypted in the bootstrap
-Secret and serves as the initial break-glass login. Configure and retain 2FA
-recovery codes during first login.
+access, requires 2FA for local logins and blocks local-network webhook requests
+**before** Flux publishes application routes. OIDC sessions use ZITADEL's
+authentication policy through `allowBypassTwoFactor: [openid_connect]`, so users
+do not need a separate GitLab 2FA enrollment. This trusts the provider; it does
+not validate an MFA claim. The current ZITADEL login policy has `force_mfa = false`,
+so MFA remains optional there. A fresh OIDC sign-in is needed after changing
+this setting because GitLab records the provider exemption in the session.
+The root password is encrypted in the bootstrap Secret and serves as the initial
+break-glass login. Configure and retain GitLab 2FA recovery codes for that local
+account during first login.
 
 PostgreSQL, Redis and Gitaly require separate authentication tokens. Their ports
 are reachable only from the GitLab tenant; the CI network cannot reach them.
