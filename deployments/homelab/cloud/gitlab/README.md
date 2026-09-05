@@ -163,6 +163,11 @@ retained in Ceph. The native Helm utility includes SQL, repositories and support
 object stores, including registry blobs; the registry metadata database is
 explicitly disabled. Dependency-proxy cache can be regenerated.
 
+During first bootstrap, the reconciler starts `gitlab-initial-backup` after
+database migrations. This binds Cinder's `WaitForFirstConsumer` scratch volume
+and lets Helm finish installation immediately. Subsequent reconciliations reuse
+the bound volume and leave the daily schedule in control.
+
 The data VM copies only a completed archive/secret pair less than 26 hours old,
 adds its backend configuration and bootstrap credentials, and uploads the set to
 its own client-encrypted Restic repository under `services/hosts/gitlab/` in B2.
