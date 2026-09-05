@@ -41,8 +41,8 @@ spec:
         description: The private development service has had no ready replica for
           five minutes.
     - alert: ForgejoBackupStale
-      expr: time() - forge_backup_completed_timestamp_seconds{service="forgejo"} >
-        28800
+      expr: (time() - forge_backup_completed_timestamp_seconds{service="forgejo"} >
+        28800) or absent(forge_backup_completed_timestamp_seconds{service="forgejo"})
       for: 15m
       labels:
         severity: critical
@@ -50,3 +50,25 @@ spec:
         summary: forgejo recovery archive is overdue
         description: No successful local recovery archive in eight hours; inspect
           backup sidecar before relying on Velero.
+    - alert: ForgejoRestoreQualificationFailed
+      expr: kube_job_status_failed{namespace="backup-qualification",job_name=~"forge-restore-qualification-.*"} > 0
+      for: 15m
+      labels:
+        severity: critical
+      annotations:
+        summary: Forgejo offsite restore qualification failed
+        description: Inspect the qualification job and isolated forge-restore verifiers before retiring recovery sources.
+    - alert: ForgejoRestoreQualificationStale
+      expr: (time() - kube_cronjob_status_last_successful_time{namespace="backup-qualification",cronjob="forge-restore-qualification"} > 3456000) or absent(kube_cronjob_status_last_successful_time{namespace="backup-qualification",cronjob="forge-restore-qualification"})
+      for: 1h
+      labels:
+        severity: critical
+      annotations:
+        summary: No successful Forgejo offsite restore in 40 days
+    - alert: ForgejoActionsLauncherFailing
+      expr: kube_job_status_failed{namespace="forge-ci",job_name=~"forge-linux-qualification-.*"} > 0
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: A disposable Forgejo Actions runner failed to finish

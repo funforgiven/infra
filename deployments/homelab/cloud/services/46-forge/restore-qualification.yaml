@@ -1,0 +1,293 @@
+# Disposable restore volumes; only verifier containers run, with no network access.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: forge-restore
+provisioner: cinder.csi.openstack.org
+parameters:
+  availability: nova
+  fstype: ext4
+  type: rbd1
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+---
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: isolate-recovery
+  namespace: forge-restore
+spec:
+  order: 16
+  selector: all()
+  types:
+  - Ingress
+  - Egress
+  ingress:
+  - action: Deny
+  egress:
+  - action: Deny
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: forge-restore-modifiers
+  namespace: velero
+data:
+  resource-modifiers.yaml: |
+    version: v1
+    resourceModifierRules:
+    - conditions:
+        groupResource: persistentvolumeclaims
+        namespaces:
+        - forge
+      mergePatches:
+      - patchData: |
+          spec:
+            storageClassName: forge-restore
+            volumeName: null
+    - conditions:
+        groupResource: pods
+        resourceNameRegex: ^forgejo-0$
+        namespaces:
+        - forge
+      strategicPatches:
+      - patchData: |
+          metadata:
+            ownerReferences: null
+            labels:
+              app.kubernetes.io/name: forge-restore
+              app.kubernetes.io/part-of: backup-qualification
+          spec:
+            nodeName: null
+            initContainers:
+            - name: configure
+              $patch: delete
+            - name: bootstrap
+              $patch: delete
+            containers:
+            - $patch: replace
+            - image: docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                  - ALL
+                runAsNonRoot: true
+                runAsUser: 1000
+                runAsGroup: 1000
+              name: database
+              command:
+              - python
+              - /bootstrap/verify-restore.py
+              resources:
+                requests:
+                  cpu: 25m
+                  memory: 64Mi
+                limits:
+                  cpu: '1'
+                  memory: 512Mi
+              volumeMounts:
+              - name: data
+                mountPath: /restore
+              - name: backups
+                mountPath: /backups
+                readOnly: true
+              - name: bootstrap
+                mountPath: /bootstrap
+                readOnly: true
+              readinessProbe:
+                exec:
+                  command:
+                  - /bin/sh
+                  - -ec
+                  - test -s /restore/.qualified
+                periodSeconds: 10
+            - image: codeberg.org/forgejo/forgejo:15.0.7-rootless@sha256:1131f4c646d6115577b7cb9ccfe8cd2c289bb54a1e1ed42400be0e22916af924
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                  - ALL
+                runAsNonRoot: true
+                runAsUser: 1000
+                runAsGroup: 1000
+              name: git
+              command:
+              - /bin/sh
+              - /bootstrap/verify-git.sh
+              resources:
+                requests:
+                  cpu: 25m
+                  memory: 64Mi
+                limits:
+                  cpu: '1'
+                  memory: 512Mi
+              volumeMounts:
+              - name: data
+                mountPath: /restore
+              - name: backups
+                mountPath: /backups
+                readOnly: true
+              - name: bootstrap
+                mountPath: /bootstrap
+                readOnly: true
+              readinessProbe:
+                exec:
+                  command:
+                  - /bin/sh
+                  - -ec
+                  - test -s /restore/.qualified
+                periodSeconds: 10
+            volumes:
+            - name: secrets
+              $patch: delete
+            - name: bootstrap
+              configMap:
+                name: forge-restore-tools
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: forge-restore-qualification
+  namespace: backup-qualification
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: forge-restore-qualification
+  namespace: velero
+rules:
+- apiGroups:
+  - velero.io
+  resources:
+  - backups
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - velero.io
+  resources:
+  - restores
+  verbs:
+  - create
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: forge-restore-qualification
+  namespace: velero
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: forge-restore-qualification
+subjects:
+- kind: ServiceAccount
+  name: forge-restore-qualification
+  namespace: backup-qualification
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: forge-restore-qualification
+  namespace: forge-restore
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - pods
+  resourceNames:
+  - forgejo-0
+  verbs:
+  - delete
+  - get
+- apiGroups:
+  - ''
+  resources:
+  - persistentvolumeclaims
+  resourceNames:
+  - forgejo-data
+  - forgejo-backups
+  verbs:
+  - delete
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: forge-restore-qualification
+  namespace: forge-restore
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: forge-restore-qualification
+subjects:
+- kind: ServiceAccount
+  name: forge-restore-qualification
+  namespace: backup-qualification
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: forge-restore-qualification
+  namespace: backup-qualification
+spec:
+  schedule: 0 6 1 * *
+  timeZone: Europe/Istanbul
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 5400
+      backoffLimit: 0
+      ttlSecondsAfterFinished: 7776000
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: forge-restore-qualification
+        spec:
+          automountServiceAccountToken: true
+          serviceAccountName: forge-restore-qualification
+          restartPolicy: Never
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+          - name: qualify
+            image: docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4
+            command:
+            - python
+            - /bootstrap/qualify-restore.py
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                cpu: 250m
+                memory: 128Mi
+            volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+          volumes:
+          - name: bootstrap
+            configMap:
+              name: forge-restore-controller

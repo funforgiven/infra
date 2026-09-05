@@ -19,8 +19,6 @@ spec:
     destination:
       ports:
       - 3000
-      - 8000
-      - 9000
       - 2222
   - action: Allow
     protocol: TCP
@@ -29,7 +27,6 @@ spec:
     destination:
       ports:
       - 3000
-      - 8000
       - 9900
   - action: Deny
   egress:

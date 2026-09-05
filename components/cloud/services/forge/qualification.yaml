@@ -3,6 +3,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * 0"
 permissions:
   contents: read
 jobs:
@@ -46,7 +48,7 @@ jobs:
         with:
           name: qualification
           path: qualification.txt
-          retention-days: 7
+          retention-days: 45
   consume:
     needs: produce
     runs-on: linux-x86_64
