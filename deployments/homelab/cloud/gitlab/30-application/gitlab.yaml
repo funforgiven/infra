@@ -311,7 +311,17 @@ spec:
                 set -euo pipefail
                 cp /etc/gitlab/.s3cfg "$HOME/.s3cfg"
                 id=$(cat /recovery/id)
-                backup-utility -t "$id" --maximum-backups 7
+                for bucket in gitlab-lfs gitlab-artifacts gitlab-uploads gitlab-packages gitlab-mr-diffs gitlab-terraform-state gitlab-ci-secure-files gitlab-dependency-proxy gitlab-registry gitlab-pages gitlab-agent-plan-content gitlab-backups gitlab-tmp; do
+                  s3cmd info "s3://$bucket" >/dev/null
+                done
+                backup_log=/srv/gitlab/tmp/backup.log
+                backup-utility -t "$id" --maximum-backups 7 2>&1 | tee "$backup_log"
+                # The native helper can exit zero after skipping an inaccessible
+                # bucket. Such an archive must never receive a completion marker.
+                if grep -Eq 'Unable to check existence of bucket|Skipping backup of|ERROR:' "$backup_log"; then
+                  echo 'Native backup reported skipped or failed object storage' >&2
+                  exit 1
+                fi
                 s3cmd put /recovery/secrets.json "s3://gitlab-backups/${id}_secrets.json" >/dev/null
                 s3cmd put /recovery/id "s3://gitlab-backups/${id}_complete" >/dev/null
           - op: add

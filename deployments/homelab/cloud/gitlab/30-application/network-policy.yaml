@@ -1,121 +1,154 @@
-apiVersion: networking.k8s.io/v1
+# Ordered before CAPI's global egress Allow (20). Explicit final Deny is
+# required because that provider policy otherwise bypasses namespace isolation.
+apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
   name: gitlab
   namespace: gitlab
 spec:
-  podSelector: {}
-  policyTypes:
-    - Ingress
-    - Egress
+  order: 16
+  selector: all()
+  types:
+  - Ingress
+  - Egress
   ingress:
-    - from:
-        - podSelector: {}
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: envoy-gateway-system
+  - action: Allow
+    source:
+      selector: all()
+  - action: Allow
+    source:
+      namespaceSelector: kubernetes.io/metadata.name == 'envoy-gateway-system'
+    protocol: TCP
+    destination:
       ports:
-        - port: 8181
-        - port: 2222
-        - port: 5000
-        - port: 8150
+      - 8181
+      - 2222
+      - 5000
+      - 8150
+  - action: Deny
   egress:
-    - to:
-        - podSelector: {}
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-          podSelector:
-            matchLabels:
-              k8s-app: kube-dns
+  - action: Allow
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'envoy-gateway-system'
+      selector: gateway.envoyproxy.io/owning-gateway-name == 'gitlab' && gateway.envoyproxy.io/owning-gateway-namespace
+        == 'gitlab-network'
       ports:
-        - protocol: UDP
-          port: 53
-        - protocol: TCP
-          port: 53
-    - to:
-        - ipBlock:
-            cidr: 192.168.82.10/32
+      - 10443
+    protocol: TCP
+  - action: Allow
+    destination:
+      selector: all()
+  - action: Allow
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'kube-system'
+      selector: k8s-app == 'kube-dns'
       ports:
-        - port: 5432
-        - port: 6379
-        - port: 8075
-    - to:
-        - ipBlock:
-            cidr: 10.21.20.130/32
-        - ipBlock:
-            cidr: 10.21.20.131/32
-        - ipBlock:
-            cidr: 10.21.40.127/32
+      - 53
+    protocol: UDP
+  - action: Allow
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'kube-system'
+      selector: k8s-app == 'kube-dns'
       ports:
-        - port: 443
-    - to:
-        - ipBlock:
-            cidr: 0.0.0.0/0
-            except:
-              - 10.0.0.0/8
-              - 172.16.0.0/12
-              - 192.168.0.0/16
-              - 169.254.0.0/16
-              - 127.0.0.0/8
-              - 100.64.0.0/10
-              - 224.0.0.0/4
-              - 240.0.0.0/4
+      - 53
+    protocol: TCP
+  - action: Allow
+    destination:
+      nets:
+      - 192.168.82.10/32
       ports:
-        - port: 443
-        - port: 587
+      - 5432
+      - 6379
+      - 8075
+    protocol: TCP
+  - action: Allow
+    destination:
+      nets:
+      - 10.21.20.130/32
+      ports: &id001
+      - 443
+    protocol: TCP
+  - action: Allow
+    destination:
+      nets:
+      - 10.21.20.131/32
+      ports: *id001
+    protocol: TCP
+  - action: Allow
+    destination:
+      nets:
+      - 10.21.40.127/32
+      ports: *id001
+    protocol: TCP
+  - action: Allow
+    destination:
+      nets:
+      - 0.0.0.0/0
+      notNets:
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.0.0/16
+      - 169.254.0.0/16
+      - 127.0.0.0/8
+      - 100.64.0.0/10
+      - 224.0.0.0/4
+      - 240.0.0.0/4
+      ports:
+      - 443
+      - 587
+    protocol: TCP
+  - action: Deny
 ---
-apiVersion: networking.k8s.io/v1
+apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
   name: gitlab-secret-generation
   namespace: gitlab
 spec:
-  podSelector:
-    matchExpressions:
-      - key: app
-        operator: In
-        values:
-          - gitlab
-          - gitlab-recovery
-          - gitlab-security-settings
-  policyTypes:
-    - Egress
+  order: 15
+  selector: app in {'gitlab', 'gitlab-recovery', 'gitlab-security-settings'}
+  types:
+  - Egress
   egress:
-    - to:
-        - ipBlock:
-            cidr: 192.168.82.0/24
+  - action: Allow
+    destination:
+      nets:
+      - 192.168.82.0/24
       ports:
-        - port: 6443
-        - port: 443
-    - to:
-        - ipBlock:
-            cidr: 10.21.40.0/24
+      - 6443
+      - 443
+    protocol: TCP
+  - action: Allow
+    destination:
+      nets:
+      - 10.21.40.0/24
       ports:
-        - port: 6443
+      - 6443
+    protocol: TCP
 ---
-apiVersion: networking.k8s.io/v1
+apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
   name: gitlab-backup-api
   namespace: gitlab
 spec:
+  order: 15
+  selector: gitlab-backup == 'true'
+  types:
+  - Egress
   egress:
-    - ports:
-        - port: 6443
-        - port: 443
-      to:
-        - ipBlock:
-            cidr: 192.168.82.0/24
-    - ports:
-        - port: 6443
-      to:
-        - ipBlock:
-            cidr: 10.21.40.0/24
-  podSelector:
-    matchLabels:
-      gitlab-backup: 'true'
-  policyTypes:
-    - Egress
+  - action: Allow
+    destination:
+      nets:
+      - 192.168.82.0/24
+      ports:
+      - 6443
+      - 443
+    protocol: TCP
+  - action: Allow
+    destination:
+      nets:
+      - 10.21.40.0/24
+      ports:
+      - 6443
+    protocol: TCP
