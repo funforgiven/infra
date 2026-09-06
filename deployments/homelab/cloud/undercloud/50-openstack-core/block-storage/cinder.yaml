@@ -49,6 +49,11 @@ spec:
       cinder:
         DEFAULT:
           backup_driver: cinder.backup.drivers.ceph.CephBackupDriver
+      backends:
+        rbd1:
+          # The sealed Windows desktop disk is 240 GiB virtually. The chart's
+          # 200 GiB bound prevents caching it and repeats conversion per job.
+          image_volume_cache_max_size_gb: 512
     endpoints:
       volumev3:
         scheme:
