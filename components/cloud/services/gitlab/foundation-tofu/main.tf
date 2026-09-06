@@ -30,6 +30,13 @@ resource "openstack_compute_flavor_v2" "gitlab" {
   vcpus     = each.value.vcpus
   disk      = 0
   is_public = false
+  # Windows 11 Pro supports two sockets. Expose native runner CPUs as cores
+  # in one socket; Quickemu also needs a stable nested guest topology.
+  extra_specs = each.value.ci ? {
+    "hw:cpu_sockets" = "1"
+    "hw:cpu_cores"   = "6"
+    "hw:cpu_threads" = "1"
+  } : {}
 }
 
 resource "openstack_compute_flavor_access_v2" "gitlab" {
