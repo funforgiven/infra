@@ -244,7 +244,27 @@ def run(config, secret_dir):
             "description": "Fresh Windows 11 desktop VM; unprivileged single job; externally expired"})
         enrollment = base64.b64encode(json.dumps({"uuid": registered["uuid"], "token": registered["token"],
             "handle": jobs[0]["handle"]}).encode()).decode()
-        userdata = "#ps1_sysnative\n& 'C:\\Forge\\Start-Job.ps1' -EnrollmentBase64 '" + enrollment + "'\nexit $LASTEXITCODE\n"
+        # A terminating error in a called PowerShell script otherwise leaves
+        # LASTEXITCODE unset, which `exit $LASTEXITCODE` reports as success.
+        # Record only sanitized diagnostic fields, never invocation source or
+        # the config-drive enrollment, and preserve Cloudbase's reboot code.
+        userdata = """#ps1_sysnative
+$ErrorActionPreference = 'Stop'
+try {
+    & 'C:\\Forge\\Start-Job.ps1' -EnrollmentBase64 '""" + enrollment + """'
+    if ($LASTEXITCODE -ne 1001) { throw 'Desktop preparation did not request its expected reboot' }
+    exit 1001
+} catch {
+    @{
+        failed_at = (Get-Date).ToUniversalTime().ToString('o')
+        exception = $_.Exception.GetType().FullName
+        message = ($_.Exception.Message -replace '[A-Za-z0-9+/=_-]{32,}', '[redacted]')
+        script = $_.InvocationInfo.ScriptName
+        line = $_.InvocationInfo.ScriptLineNumber
+    } | ConvertTo-Json | Set-Content 'C:\\Forge\\startup-error.json'
+    exit 1
+}
+"""
         created = cloud.call("POST", COMPUTE, "/servers", {"server": {
             "name": name, "flavorRef": config["windows_flavor_id"], "config_drive": True,
             "networks": [{"port": config["windows_port_id"]}],
