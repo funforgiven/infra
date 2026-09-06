@@ -168,6 +168,13 @@ all:
             forward_chain: infra-forward
             final_drop_comment: "infra: forward final drop"
           routeros_access_rules:
+            - comment: "infra: SERVERS to Forgejo registry"
+              chain: infra-forward
+              final_drop_comment: "infra: forward final drop"
+              source_interface: vlan20-servers
+              destination: 10.21.40.122
+              protocol: tcp
+              destination_port: "443"
             - comment: "infra: SERVERS to CAPI management API"
               chain: infra-forward
               final_drop_comment: "infra: forward final drop"
