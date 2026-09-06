@@ -119,6 +119,26 @@ spec:
         live_migration_interface: bond0.31
       hypervisor:
         host_interface: bond0.20
+      # Native Windows 11 and nested macOS require a modern CPU. These
+      # per-host compute overrides leave the default migration baseline on
+      # pecorino. Existing running domains retain their recorded CPU model;
+      # new/rebuilt guests on these hosts require compatible destinations.
+      overrides:
+        nova_compute:
+          hosts:
+            - name: asiago
+              conf:
+                nova:
+                  libvirt:
+                    cpu_mode: host-model
+                    cpu_models: []
+            - name: taleggio
+              conf:
+                nova:
+                  libvirt:
+                    cpu_mode: host-model
+                    cpu_models: []
+                    cpu_model_extra_flags: vmx
       nova:
         DEFAULT:
           reserved_host_memory_mb: 32768

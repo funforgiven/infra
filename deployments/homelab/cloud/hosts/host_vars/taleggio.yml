@@ -17,6 +17,7 @@ cloud_iommu_kernel_parameters:
   - intel_iommu=on
   - iommu=pt
 cloud_cpu_virtualization_module: kvm_intel
+cloud_nested_kvm: true
 
 # sops-nix owns this controller-side runtime file. No plaintext is in Git.
 cloud_console_password_file: /run/secrets/cloud-host-taleggio-ubuntu-console-password
