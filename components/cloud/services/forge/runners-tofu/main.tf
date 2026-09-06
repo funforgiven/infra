@@ -83,7 +83,12 @@ resource "openstack_blockstorage_volume_v3" "macos" {
   name     = "forge-macos-root"
   size     = 240
   image_id = data.openstack_images_image_v2.macos.id
-  lifecycle { prevent_destroy = true }
+  lifecycle {
+    prevent_destroy = true
+    # Runtime Nix upgrades preserve the golden disks on this retained volume.
+    # A newly promoted boot image is used when recovering onto a fresh volume.
+    ignore_changes = [image_id]
+  }
 }
 
 resource "openstack_compute_instance_v2" "macos" {

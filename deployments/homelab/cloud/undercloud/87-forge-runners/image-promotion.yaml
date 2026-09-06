@@ -4,4 +4,4 @@ metadata:
   name: forge-runner-image-promotion
   namespace: openstack
 data:
-  macos_image_revision: 08948624cdcafc2343b42cfcc972141fe3874a57
+  macos_image_revision: fc024c9a63b8064a99bf1317ffda73e7b29d4512

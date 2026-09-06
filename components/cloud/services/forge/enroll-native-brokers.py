@@ -55,21 +55,22 @@ def main():
                     'scope': {'project': {'name': 'forge-ci', 'domain': {'name': 'Default'}}}}})
                 cloud.headers['X-Auth-Token'] = auth.headers['X-Subject-Token']
                 identity = auth.json()['token']
-                if 'member' not in {role['name'] for role in identity['roles']}:
-                    raise RuntimeError('Reconcile the explicit CI member role before enrollment')
+                if not {'member', 'creator'} <= {role['name'] for role in identity['roles']}:
+                    raise RuntimeError('Reconcile the explicit CI member and Barbican creator roles before enrollment')
                 user_id = identity['user']['id']
                 expiry = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=365)).strftime('%Y-%m-%dT%H:%M:%SZ')
                 application = checked(cloud, 'POST', '/users/' + user_id + '/application_credentials', {
                     'application_credential': {'name': name, 'description': 'Disposable Forgejo Windows jobs in forge-ci only',
-                        'roles': [{'name': 'member'}], 'expires_at': expiry, 'unrestricted': False}}).json()['application_credential']
+                        'roles': [{'name': 'member'}, {'name': 'creator'}], 'expires_at': expiry, 'unrestricted': False}}).json()['application_credential']
                 credential = {key: application[key] for key in ('id', 'secret')}
                 verification = checked(requests.Session(), 'POST', '/auth/tokens', {'auth': {'identity': {
                     'methods': ['application_credential'], 'application_credential': credential}}}).json()['token']
                 roles = {role['name'] for role in verification['roles']}
-                if 'admin' in roles or 'member' not in roles or verification['project']['id'] != identity['project']['id']:
+                if roles != {'member', 'creator'} or verification['project']['id'] != identity['project']['id']:
                     raise RuntimeError('Enrolled credential exceeded the required CI member scope')
                 data['cloud-credential.json'] = json.dumps(credential)
                 annotations['forge.fahrican.com/cloud-credential-expires'] = expiry
+                (ROOT / 'native-status.json').write_text(json.dumps({'windows_cloud_credential_expires': expiry}, indent=2) + '\n')
             else:
                 public_path = Path(__file__).parent / 'macos/broker.pub'
                 if public_path.exists():

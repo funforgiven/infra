@@ -159,7 +159,10 @@ class Cloud:
         volume = current["volume"]
         if not self.owned_volume(volume) or volume.get("attachments"):
             raise RuntimeError("Refusing to delete an unowned or attached preparation disk")
-        self.call("DELETE", VOLUME, path)
+        # Nova may already have requested asynchronous deletion even when its
+        # attachment list became empty during a failed build.
+        if volume["status"] != "deleting":
+            self.call("DELETE", VOLUME, path)
         for _ in range(60):
             if self.call("GET", VOLUME, path, missing=True) is None:
                 print("Verified deletion of the Windows preparation disk.", flush=True)

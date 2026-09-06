@@ -78,6 +78,13 @@ class CleanupBoundary(unittest.TestCase):
                 cleanup.assert_called_once_with('preparation')
                 forge.return_value.call.assert_not_called()
 
+    def test_preparation_cleanup_waits_for_nova_deletion_without_reissuing_it(self):
+        deleting = {'volume': {'name': broker.PREFIX + 'disk', 'status': 'deleting',
+                    'metadata': {'managed_by': broker.MANAGER, 'forge_project_id': 'ci-project'}, 'attachments': []}}
+        with patch.object(self.cloud, 'call', side_effect=[deleting, None]) as call:
+            self.cloud.remove_volume('disk-id')
+            self.assertFalse(any(args[0] == 'DELETE' for args, _ in call.call_args_list))
+
     def test_cloud_microversions_are_scoped_to_the_target_service(self):
         self.cloud.headers = {'X-Auth-Token': 'test-only'}
         self.cloud.renew_at = float('inf')

@@ -24,6 +24,17 @@ resource "openstack_identity_role_assignment_v3" "ci_member" {
   role_id    = data.openstack_identity_role_v3.forge_runner_member.id
 }
 
+# This Barbican deployment uses its legacy creator policy for project TPM
+# secrets. Scope that permission to CI instead of giving the broker admin.
+resource "openstack_identity_role_v3" "forge_runner_creator" {
+  name = "creator"
+}
+resource "openstack_identity_role_assignment_v3" "ci_creator" {
+  project_id = openstack_identity_project_v3.ci.id
+  user_id    = data.openstack_identity_user_v3.admin.id
+  role_id    = openstack_identity_role_v3.forge_runner_creator.id
+}
+
 locals {
   gitlab_flavors = {
     gitlab        = { ram = 4096, vcpus = 4, ci = false }
