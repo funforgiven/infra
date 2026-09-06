@@ -7,6 +7,7 @@ from pathlib import Path
 import sqlite3
 import tarfile
 import time
+from native_backup import verify_index
 
 backup = Path("/backups")
 target = Path("/restore")
@@ -62,6 +63,7 @@ if legacy_marker.exists():
                 if hashlib.file_digest(member, "sha256").hexdigest() != expected:
                     raise RuntimeError("Native GitLab backup or recovery secrets failed verification")
     print("Retained native GitLab archive and recovery secrets verified.", flush=True)
+verify_index(backup)
 (target / ".database-verified").write_text(manifest["sha256"] + "\n")
 print("Offsite archive checksum, SQLite, OIDC, repository metadata, Actions history and artifact bytes verified.", flush=True)
 while True:
