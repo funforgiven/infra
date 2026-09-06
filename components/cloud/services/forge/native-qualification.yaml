@@ -1,0 +1,165 @@
+name: Native runner qualification
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Native platform to qualify
+        type: choice
+        default: all
+        options: [all, windows, macos]
+  schedule:
+    - cron: "30 0 * * 0"
+permissions:
+  contents: read
+jobs:
+  windows:
+    if: github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'windows'
+    runs-on: windows-x86_64
+    steps:
+      - uses: https://data.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Verify isolated Windows desktop and software rendering
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ([Security.Principal.WindowsPrincipal]::new([Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Administrator job token' }
+          if ([Diagnostics.Process]::GetCurrentProcess().SessionId -eq 0) { throw 'The job must have an interactive desktop' }
+          if ($env:USERNAME -ne 'forge-job') { throw 'Unexpected job account' }
+          if ((Get-CimInstance Win32_OperatingSystem).Caption -notmatch 'Windows 11 Pro') { throw 'Windows desktop edition required' }
+          if (Get-LocalUser -Name forge-builder -ErrorAction SilentlyContinue) { throw 'Builder account remains' }
+          if ((Get-Service sshd).StartType -ne 'Disabled') { throw 'Builder remote access remains' }
+          if (Test-Path C:\ForgeJob\qualification-marker) { throw 'A previous job left writable state' }
+          Set-Content C:\ForgeJob\qualification-marker 'this file must disappear with this VM'
+          foreach ($Endpoint in @(@('169.254.169.254',80),@('10.21.20.130',443),@('10.21.20.131',443),@('192.168.81.12',22),@('10.21.40.126',22))) {
+            $Client = [Net.Sockets.TcpClient]::new()
+            try {
+              $Attempt = $Client.ConnectAsync([string]$Endpoint[0],[int]$Endpoint[1])
+              try { $null = $Attempt.Wait(2000) } catch {}
+              if ($Client.Connected) { throw "Private endpoint reachable: $($Endpoint[0]):$($Endpoint[1])" }
+            } finally { $Client.Dispose() }
+          }
+          try { Invoke-WebRequest https://git.fahrican.com/api/v1/admin/users -Headers @{'X-Forwarded-For'='10.21.10.20'}; throw 'Administration route reachable' }
+          catch { if ([int]$_.Exception.Response.StatusCode -ne 403) { throw } }
+          Add-Type @'
+          using System;
+          using System.Runtime.InteropServices;
+          public static class WarpProbe {
+            [DllImport("dxgi.dll")]
+            static extern int CreateDXGIFactory1(ref Guid iid, out IntPtr factory);
+            [DllImport("d3d12.dll")]
+            static extern int D3D12CreateDevice(IntPtr adapter, uint minimumFeatureLevel, ref Guid iid, out IntPtr device);
+            [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+            delegate int EnumWarpAdapter(IntPtr factory, ref Guid iid, out IntPtr adapter);
+            public static void Direct3D12() {
+              Guid factoryIid = new Guid("1bc6ea02-ef36-464f-bf0c-21ca39e5168a");
+              Guid adapterIid = new Guid("29038f61-3839-4626-91fd-086879011a05");
+              Guid deviceIid = new Guid("189819f1-1db6-4b57-be54-1821339b85f7");
+              IntPtr factory = IntPtr.Zero, adapter = IntPtr.Zero, device = IntPtr.Zero;
+              try {
+                Marshal.ThrowExceptionForHR(CreateDXGIFactory1(ref factoryIid, out factory));
+                // IDXGIFactory4's EnumWarpAdapter is vtable slot 27, including IUnknown.
+                var enumerate = Marshal.GetDelegateForFunctionPointer<EnumWarpAdapter>(Marshal.ReadIntPtr(Marshal.ReadIntPtr(factory), 27 * IntPtr.Size));
+                Marshal.ThrowExceptionForHR(enumerate(factory, ref adapterIid, out adapter));
+                Marshal.ThrowExceptionForHR(D3D12CreateDevice(adapter, 0xb000, ref deviceIid, out device));
+              } finally {
+                if (device != IntPtr.Zero) Marshal.Release(device);
+                if (adapter != IntPtr.Zero) Marshal.Release(adapter);
+                if (factory != IntPtr.Zero) Marshal.Release(factory);
+              }
+            }
+            [DllImport("d3d11.dll")]
+            static extern int D3D11CreateDevice(IntPtr adapter, uint driverType, IntPtr software, uint flags, IntPtr levels, uint count, uint sdk, out IntPtr device, out uint level, out IntPtr context);
+            public static uint Run() {
+              IntPtr device, context; uint level;
+              int result = D3D11CreateDevice(IntPtr.Zero, 5, IntPtr.Zero, 0, IntPtr.Zero, 0, 7, out device, out level, out context);
+              Marshal.ThrowExceptionForHR(result);
+              Marshal.Release(context); Marshal.Release(device);
+              return level;
+            }
+          }
+          '@
+          $FeatureLevel = [WarpProbe]::Run()
+          if ($FeatureLevel -lt 0xb000) { throw 'WARP lacks Direct3D 11 feature level' }
+          [WarpProbe]::Direct3D12()
+          node --version
+          git --version
+          [IO.File]::WriteAllText('qualification.txt', "forgejo-native-windows-v1`n")
+          @{ session = [Diagnostics.Process]::GetCurrentProcess().SessionId; user = $env:USERNAME; warp_feature_level = ('0x{0:x}' -f $FeatureLevel); warp_d3d12 = $true; os = (Get-CimInstance Win32_OperatingSystem).Caption } | ConvertTo-Json | Set-Content platform.json
+      - uses: https://data.forgejo.org/actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5
+        with:
+          name: native-windows
+          path: |
+            qualification.txt
+            platform.json
+          retention-days: 45
+  macos:
+    if: github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'macos'
+    runs-on: macos-x86_64
+    steps:
+      - uses: https://data.forgejo.org/actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Verify macOS isolation and signed build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -un)" = forge-job
+          test "$(uname -m)" = x86_64
+          if id -Gn | tr ' ' '\n' | grep -qx admin; then exit 1; fi
+          if sudo -n true 2>/dev/null; then exit 1; fi
+          test ! -e /Users/forge-builder
+          test ! -e "$HOME/qualification-marker"
+          touch "$HOME/qualification-marker"
+          csrutil status | grep -q 'enabled'
+          if nvram boot-args | grep -Eq 'amfi_get_out_of_my_way|cs_enforcement_disable'; then exit 1; fi
+          node --version
+          git --version
+          nix --version
+          nix build --no-link github:NixOS/nixpkgs/6713828a351efa628b025a1adf7f43cbf8597513#hello
+          clang --version
+          test "$(nix config show sandbox)" = true
+          node <<'JS'
+          const net = require('node:net');
+          (async () => {
+            for (const [host,port] of [['169.254.169.254',80],['10.21.20.130',443],['10.21.20.131',443],['10.0.2.2',22],['10.0.2.2',9100],['192.168.81.11',3389]]) {
+              await new Promise((resolve,reject) => {
+                const socket = net.createConnection({host,port});
+                socket.setTimeout(2000);
+                socket.on('connect', () => { socket.destroy(); reject(new Error(`Private endpoint reachable: ${host}:${port}`)); });
+                socket.on('error',resolve);
+                socket.on('timeout',() => {socket.destroy();resolve();});
+              });
+            }
+            const response = await fetch('https://git.fahrican.com/api/v1/admin/users',{headers:{'X-Forwarded-For':'10.21.10.20'}});
+            if(response.status !== 403) throw new Error(`Administration route returned ${response.status}`);
+          })().catch(error => {console.error(error.message);process.exitCode=1;});
+          JS
+          printf 'int main(void) { return 0; }\n' > compiler-check.c
+          clang -Wall -Werror compiler-check.c -o compiler-check
+          ./compiler-check
+          printf '%s\n' forgejo-native-macos-v1 > qualification.txt
+          sw_vers > platform.txt
+      - uses: https://data.forgejo.org/actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5
+        with:
+          name: native-macos
+          path: |
+            qualification.txt
+            platform.txt
+          retention-days: 45
+  recover_windows:
+    needs: windows
+    runs-on: linux-x86_64
+    steps:
+      - uses: https://data.forgejo.org/actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
+        with:
+          name: native-windows
+          path: recovered
+      - name: Verify Windows artifact in a separate Linux job
+        run: test "$(cat recovered/qualification.txt)" = forgejo-native-windows-v1
+  recover_macos:
+    needs: macos
+    runs-on: linux-x86_64
+    steps:
+      - uses: https://data.forgejo.org/actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
+        with:
+          name: native-macos
+          path: recovered
+      - name: Verify macOS artifact in a separate Linux job
+        run: test "$(cat recovered/qualification.txt)" = forgejo-native-macos-v1

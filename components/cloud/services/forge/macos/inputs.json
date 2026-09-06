@@ -1,0 +1,12 @@
+[
+  {
+    "name": "nix-2.35.2-x86_64-darwin.tar.xz",
+    "url": "https://releases.nixos.org/nix/nix-2.35.2/nix-2.35.2-x86_64-darwin.tar.xz",
+    "sha256": "d725518d89f3b0b8d4af702a9d38d519814014cbe125afb3ed0545c9d755f6a5"
+  },
+  {
+    "name": "node-v24.20.0-darwin-x64.tar.gz",
+    "url": "https://nodejs.org/dist/v24.20.0/node-v24.20.0-darwin-x64.tar.gz",
+    "sha256": "9e5b2644cf107befb6aefca676b96d3296bc10138096f022ed378d6233ed81f4"
+  }
+]

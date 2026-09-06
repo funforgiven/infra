@@ -1,0 +1,155 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: forge-macos-host
+  namespace: services-observability
+  labels:
+    app.kubernetes.io/name: forge-macos-host
+    monitoring-target: forge-macos-host
+spec:
+  ports:
+  - name: metrics
+    port: 9100
+    targetPort: 9100
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: forge-macos-host
+  namespace: services-observability
+subsets:
+- addresses:
+  - hostname: forge-macos
+    ip: 10.21.40.126
+  ports:
+  - name: metrics
+    port: 9100
+    protocol: TCP
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: forge-macos-host
+  namespace: services-observability
+spec:
+  jobLabel: monitoring-target
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: forge-macos-host
+  endpoints:
+  - port: metrics
+    interval: 60s
+    scrapeTimeout: 15s
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: forge-windows-host
+  namespace: services-observability
+  labels:
+    app.kubernetes.io/name: forge-windows-host
+    monitoring-target: forge-windows-host
+spec:
+  ports:
+  - name: metrics
+    port: 9182
+    targetPort: 9182
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: forge-windows-host
+  namespace: services-observability
+subsets:
+- addresses:
+  - hostname: forge-windows
+    ip: 10.21.40.125
+  ports:
+  - name: metrics
+    port: 9182
+    protocol: TCP
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: forge-windows-host
+  namespace: services-observability
+spec:
+  jobLabel: monitoring-target
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: forge-windows-host
+  endpoints:
+  - port: metrics
+    interval: 60s
+    scrapeTimeout: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: forge-native
+  namespace: forge
+spec:
+  groups:
+  - name: forge-native
+    rules:
+    - alert: ForgejoNativeControllerFailed
+      expr: kube_job_status_failed{namespace="forge-control",job_name=~"forge-(windows|macos)-qualification-.*"}
+        > 0
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: A native Actions controller failed
+        description: Inspect the isolated native controller log and confirm its VM
+          or writable overlay was removed.
+    - alert: ForgejoNativeControllerStale
+      expr: (time() - kube_cronjob_status_last_successful_time{namespace="forge-control"}
+        > 10800) and on(namespace,cronjob) (kube_cronjob_spec_suspend{namespace="forge-control"}
+        == 0)
+      for: 15m
+      labels:
+        severity: critical
+      annotations:
+        summary: A native Actions controller has not completed for three hours
+        description: The controller has exceeded the external guest deadline; inspect
+          VM cleanup and queue health.
+    - alert: ForgejoMacHostUnavailable
+      expr: up{job="forge-macos-host"} == 0
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: The macOS runner host is unavailable
+        description: Check the dedicated OpenStack VM, operator SSH, and exporter
+          connectivity through the private network.
+    - alert: ForgejoMacHostSpaceLow
+      expr: node_filesystem_avail_bytes{job="forge-macos-host",mountpoint="/"} / node_filesystem_size_bytes{job="forge-macos-host",mountpoint="/"}
+        < 0.15
+      for: 15m
+      labels:
+        severity: warning
+      annotations:
+        summary: The macOS runner host is running low on storage
+        description: Golden images, one-job overlays, and Nix generations share the
+          retained root volume; inspect usage before pruning anything.
+    - alert: ForgejoMacGuestCleanupFailed
+      expr: node_systemd_unit_state{job="forge-macos-host",name="quickemu-macos.service",state="failed"}
+        == 1
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: A disposable macOS guest exceeded its service limits
+        description: Inspect the forced broker command and root-owned golden-image
+          manifest before starting another job.
+    - alert: ForgejoWindowsExporterUnavailable
+      expr: (up{job="forge-windows-host"} == 0) and on() (sum(kube_cronjob_status_active{namespace="forge-control",cronjob="forge-windows-qualification"})
+        > 0)
+      for: 15m
+      labels:
+        severity: warning
+      annotations:
+        summary: An active Windows job has no host metrics
+        description: The VM may still be starting or Cloudbase enrollment may have
+          failed. Check the private console and controller deadline.

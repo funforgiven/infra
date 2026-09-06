@@ -166,9 +166,8 @@
           ''
             set -euo pipefail
 
-            mkdir -p source/components/cloud source/deployments/homelab
-            cp -R ${source}/components/cloud/tofu-controller-tenant \
-              source/components/cloud/tofu-controller-tenant
+            mkdir -p source/components source/deployments/homelab
+            cp -R ${source}/components/cloud source/components/cloud
             cp -R ${source}/deployments/homelab/cloud \
               source/deployments/homelab/cloud
             chmod -R u+w source

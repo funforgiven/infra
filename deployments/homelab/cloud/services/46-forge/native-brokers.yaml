@@ -1,0 +1,264 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: native-broker
+  namespace: forge-control
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: native-brokers
+  namespace: forge-control
+spec:
+  hard:
+    pods: '6'
+    requests.cpu: '1'
+    requests.memory: 1Gi
+    limits.cpu: '3'
+    limits.memory: 2Gi
+    limits.ephemeral-storage: 1Gi
+    requests.storage: '0'
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: forge-windows-qualification
+  namespace: forge-control
+spec:
+  schedule: '* * * * *'
+  suspend: true
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 60
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      ttlSecondsAfterFinished: 3600
+      activeDeadlineSeconds: 9000
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: forge-native-broker
+            forge.fahrican.com/platform: windows
+        spec:
+          automountServiceAccountToken: false
+          serviceAccountName: native-broker
+          restartPolicy: Never
+          terminationGracePeriodSeconds: 360
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          imagePullSecrets:
+          - name: native-registry
+          volumes:
+          - name: bootstrap
+            configMap:
+              name: forge-native-broker
+          - name: configuration
+            configMap:
+              name: forge-native-configuration
+          - name: enrollment
+            secret:
+              secretName: native-windows-qualification
+              defaultMode: 288
+          - name: tmp
+            emptyDir:
+              medium: Memory
+              sizeLimit: 16Mi
+          containers:
+          - name: broker
+            image: git.fahrican.com/forge-runner/runner-linux:13.1.0@sha256:7c22b2209c8f86e6392d96056dd69b5ef6c8615fd573df7349bc45bba9f2fbca
+            command:
+            - python3
+            - /bootstrap/native-broker.py
+            - --config
+            - /configuration/windows.json
+            env:
+            - name: PYTHONDONTWRITEBYTECODE
+              value: '1'
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+            volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+            - name: configuration
+              mountPath: /configuration
+              readOnly: true
+            - name: enrollment
+              mountPath: /run/broker
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+            resources:
+              requests:
+                cpu: 25m
+                memory: 64Mi
+                ephemeral-storage: 16Mi
+              limits:
+                cpu: 500m
+                memory: 256Mi
+                ephemeral-storage: 64Mi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: forge-macos-qualification
+  namespace: forge-control
+spec:
+  schedule: '* * * * *'
+  suspend: true
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 60
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      ttlSecondsAfterFinished: 3600
+      activeDeadlineSeconds: 9000
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: forge-native-broker
+            forge.fahrican.com/platform: macos
+        spec:
+          automountServiceAccountToken: false
+          serviceAccountName: native-broker
+          restartPolicy: Never
+          terminationGracePeriodSeconds: 360
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          imagePullSecrets:
+          - name: native-registry
+          volumes:
+          - name: bootstrap
+            configMap:
+              name: forge-native-broker
+          - name: configuration
+            configMap:
+              name: forge-native-configuration
+          - name: enrollment
+            secret:
+              secretName: native-macos-qualification
+              defaultMode: 288
+          - name: tmp
+            emptyDir:
+              medium: Memory
+              sizeLimit: 16Mi
+          containers:
+          - name: broker
+            image: git.fahrican.com/forge-runner/runner-linux:13.1.0@sha256:7c22b2209c8f86e6392d96056dd69b5ef6c8615fd573df7349bc45bba9f2fbca
+            command:
+            - python3
+            - /bootstrap/native-broker.py
+            - --config
+            - /configuration/macos.json
+            env:
+            - name: PYTHONDONTWRITEBYTECODE
+              value: '1'
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+            volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+            - name: configuration
+              mountPath: /configuration
+              readOnly: true
+            - name: enrollment
+              mountPath: /run/broker
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+            resources:
+              requests:
+                cpu: 25m
+                memory: 64Mi
+                ephemeral-storage: 16Mi
+              limits:
+                cpu: 500m
+                memory: 256Mi
+                ephemeral-storage: 64Mi
+---
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: native-brokers
+  namespace: forge-control
+spec:
+  order: 16
+  selector: all()
+  types:
+  - Ingress
+  - Egress
+  ingress:
+  - action: Deny
+  egress:
+  - action: Allow
+    protocol: UDP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'kube-system'
+      selector: k8s-app == 'kube-dns'
+      ports:
+      - 53
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'kube-system'
+      selector: k8s-app == 'kube-dns'
+      ports:
+      - 53
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'envoy-gateway-system'
+      selector: gateway.envoyproxy.io/owning-gateway-name == 'services' && gateway.envoyproxy.io/owning-gateway-namespace
+        == 'services-network'
+      ports:
+      - 10443
+  - action: Allow
+    protocol: TCP
+    destination:
+      nets:
+      - 10.21.40.122/32
+      ports:
+      - 443
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: forge.fahrican.com/platform == 'windows'
+    destination:
+      nets:
+      - 10.21.20.130/32
+      ports:
+      - 443
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: forge.fahrican.com/platform == 'macos'
+    destination:
+      nets:
+      - 10.21.40.126/32
+      ports:
+      - 22
+  - action: Deny

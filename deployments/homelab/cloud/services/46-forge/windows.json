@@ -1,0 +1,10 @@
+{
+  "platform": "windows",
+  "repository": "forge-runner/runner-qualification",
+  "qualification_only": true,
+  "project_id": "ad96cba7383a4808a826f54eca53f765",
+  "windows_image_id": "b44c8e8c-1e07-427a-b3cf-c08a10b60d66",
+  "windows_image_revision": "56e8ced33fa5db01ee8d593e9984f57d24e2bf43",
+  "windows_flavor_id": "e585a7b7-8b38-4384-854d-a37ecb30d1a4",
+  "windows_port_id": "a1eff774-e880-4f32-b6f2-88826101cbe2"
+}
