@@ -62,7 +62,10 @@ api("POST", velero + "/restores", {
     "metadata": {"name": name, "namespace": "velero",
                  "labels": {"backup.fahrican.com/qualification": "true"}},
     "spec": {"backupName": backup_name, "includedNamespaces": ["forge"],
-             "includedResources": ["pods", "persistentvolumeclaims"],
+             # Velero 1.18 gates even file-system restores on PV inclusion.
+             # Cluster resources stay excluded and PVC modifiers force fresh
+             # dynamic provisioning; source PVs are never rebound.
+             "includedResources": ["pods", "persistentvolumeclaims", "persistentvolumes"],
              "includeClusterResources": False, "namespaceMapping": {"forge": "forge-restore"},
              "restorePVs": True,
              "resourceModifier": {"kind": "ConfigMap", "name": "forge-restore-modifiers"}},
