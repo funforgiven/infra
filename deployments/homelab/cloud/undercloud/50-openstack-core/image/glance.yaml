@@ -146,6 +146,11 @@ spec:
           threads: 2
           socket-timeout: 900
           http-timeout: 900
+          # Cinder streams captured volumes with Transfer-Encoding: chunked.
+          # Preserve the raw framing consumed by Glance's uWSGI input reader.
+          http-auto-chunked: true
+          http-chunked-input: true
+          http-raw-body: true
       software:
         rbd:
           rbd_store_pool_app_name: rbd
