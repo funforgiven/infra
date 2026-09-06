@@ -77,8 +77,13 @@ try {
     Unregister-ScheduledTask -TaskName 'ForgeImageUpdates' -Confirm:$false
     Unregister-ScheduledTask -TaskName 'ForgeImageSeal' -Confirm:$false
     # Root-owned scripts and tools stay read-only to the eventual job user.
-    & icacls.exe 'C:\Forge' /inheritance:r /grant '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)RX' /T /C | Out-Null
+    # Apply inheritable entries to the directory, then reset descendants to
+    # inherit them. Applying /inheritance:r and directory-only inheritance
+    # flags recursively can leave regular files with an empty protected DACL.
+    & icacls.exe 'C:\Forge' /inheritance:r /grant '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Cannot secure the sealed image tools' }
+    & icacls.exe 'C:\Forge\*' /reset /T /C | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot inherit sealed tool permissions' }
     @{
         sealed_at = (Get-Date).ToUniversalTime().ToString('o')
         build = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').CurrentBuild

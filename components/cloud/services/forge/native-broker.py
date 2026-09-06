@@ -251,6 +251,20 @@ def run(config, secret_dir):
         userdata = """#ps1_sysnative
 $ErrorActionPreference = 'Stop'
 try {
+    if ([Security.Principal.WindowsIdentity]::GetCurrent().User.Value -ne 'S-1-5-18') { throw 'Desktop initialization requires SYSTEM' }
+    # Generalized images may contain protected file DACLs. Establish the
+    # trusted tools' ACL before reading them; job users receive only RX.
+    & takeown.exe /F 'C:\\Forge' /R /D Y | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot own the trusted image tools' }
+    $Acl = New-Object Security.AccessControl.DirectorySecurity
+    $Acl.SetOwner([Security.Principal.SecurityIdentifier]::new('S-1-5-18'))
+    $Acl.SetAccessRuleProtection($true, $false)
+    foreach ($Rule in @(@('S-1-5-18','FullControl'),@('S-1-5-32-544','FullControl'),@('S-1-5-32-545','ReadAndExecute'))) {
+        $Acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new($Rule[0]),$Rule[1],'ContainerInherit,ObjectInherit','None','Allow'))
+    }
+    Set-Acl -LiteralPath 'C:\\Forge' -AclObject $Acl
+    & icacls.exe 'C:\\Forge\\*' /reset /T /C | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot inherit the trusted tools ACL' }
     & 'C:\\Forge\\Start-Job.ps1' -EnrollmentBase64 '""" + enrollment + """'
     if ($LASTEXITCODE -ne 1001) { throw 'Desktop preparation did not request its expected reboot' }
     exit 1001
