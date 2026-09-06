@@ -128,7 +128,7 @@ spec:
         severity: warning
       annotations:
         summary: The scoped Windows broker credential expires within 30 days
-        description: Rotate the CI-project member application credential through SOPS,
+        description: Rotate the CI-project member and TPM-secret creator credential through SOPS,
           update its public expiry record, and requalify before revoking the old credential.
     - alert: ForgejoNativeControllerFailed
       expr: kube_job_status_failed{namespace="forge-control",job_name=~"forge-(windows|macos)-qualification-.*"}

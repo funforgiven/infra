@@ -27,7 +27,8 @@ metadata:
   namespace: forge-control
 spec:
   schedule: '* * * * *'
-  suspend: true
+  # Fresh Windows/macOS guests, artifact recovery and cleanup are qualified.
+  suspend: false
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 60
   successfulJobsHistoryLimit: 1
@@ -117,7 +118,8 @@ metadata:
   namespace: forge-control
 spec:
   schedule: '* * * * *'
-  suspend: true
+  # Fresh Windows/macOS guests, artifact recovery and cleanup are qualified.
+  suspend: false
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 60
   successfulJobsHistoryLimit: 1
