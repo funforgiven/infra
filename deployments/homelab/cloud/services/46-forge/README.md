@@ -200,7 +200,21 @@ Velero's injected `restore-wait` init container when changing modifiers.
 
 Qualification requires archive SHA256, SQLite integrity, an active ZITADEL
 provider, Git object integrity, the qualification branch, successful Actions
-history and exact artifact bytes. If `legacy-gitlab.json` is present, it also
+history and exact artifact bytes. After Atollion cutover it also requires the
+hashed `atollion-migration` source export, original issue/PR namespace and merge
+history, all eight unfinished files in the checkpoint, distinct active agent
+accounts, protected main and fast-forward-only merge settings. The Git verifier
+requires both the original source and cutover commits to be ancestors of the
+restored main branch and every original PR commit to exist.
+
+The monthly restore requires native images and application data together.
+`verify-restore.py --application-only` is reserved for an explicitly identified
+application subset restore when unchanged native images have separate full
+restore evidence. It still requires all Atollion, database, Git, OIDC and Actions
+checks; it does not qualify native image recovery. Record its backup and restore
+IDs separately from the full image backup.
+
+If `legacy-gitlab.json` is present, qualification also
 verifies the retained native GitLab backup and recovery secrets. The retained
 `legacy-gitlab-infrastructure` manifest additionally verifies the old backend
 boot image and SOPS-encrypted cloud state checkpoints. The

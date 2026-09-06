@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Validate an offsite-restored archive before the Git verifier can mark it ready."""
 
+import argparse
 import hashlib
 import json
 from pathlib import Path
@@ -8,6 +9,12 @@ import sqlite3
 import tarfile
 import time
 from native_backup import verify_index
+from verify_atollion import verify_atollion
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--application-only", action="store_true",
+                    help="Qualify a separate application backup; native image recovery must have independent evidence")
+arguments = parser.parse_args()
 
 backup = Path("/backups")
 target = Path("/restore")
@@ -94,7 +101,11 @@ if legacy_objects.exists():
     # Age recovery keys stay with operators; retirement also required a separate
     # offsite restore, decryption and verification of every object in this bundle.
     print("Encrypted final GitLab object-store export verified.", flush=True)
-verify_index(backup)
+verify_atollion(backup, target)
+if arguments.application_only:
+    print("Application-only restore: native image recovery is covered by its separate full restore evidence.", flush=True)
+else:
+    verify_index(backup)
 (target / ".database-verified").write_text(manifest["sha256"] + "\n")
 print("Offsite archive checksum, SQLite, OIDC, repository metadata, Actions history and artifact bytes verified.", flush=True)
 while True:

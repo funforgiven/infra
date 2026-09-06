@@ -10,7 +10,9 @@ GitHub remains a recovery source. Its managed credential was never sent to
 Forgejo. The active checkout and its eight unfinished files have a separate
 Git bundle, patch, file archive and SHA-256 checkpoint. Issue #116 stays open.
 
-CI PR #119 and orchestration PR #120 are undergoing real hosted validation.
+Combined migration PR #120 contains the CI and orchestration agents' signed
+commits and is undergoing real hosted validation. It supersedes CI PR #119
+after a successful protected merge; both original authors remain in Git history.
 The active checkout must remain paused until validation, remote cutover and
 application backup/restore verification finish. This migration record does
 not claim that the application qualification has already passed.
@@ -77,11 +79,11 @@ The owner has authorized this sequence:
    repository-scoped runners. Run the actual Linux, Windows and macOS checks
    and verify artifact transfer before treating those platforms as supported.
 5. Switch the active checkout and agent integration to the verified Forgejo
-   destination. Confirm fetch, push and pull request behavior and resume the
-   agent. Preserve the GitHub source and the cutover record for recovery.
+   destination. Confirm fetch, push and pull request behavior while preserving
+   unfinished files. Preserve the GitHub source and cutover record for recovery.
 6. Take a new backup containing the application and verify restoration of its
    repository and LFS data. Record the result with the existing restore
-   qualification evidence.
+   qualification evidence. Only then hand the paused goal back for continuation.
 
 ## Agent and merge policy
 
@@ -97,8 +99,9 @@ they are not separate OS security boundaries.
 Forgejo 15's native Actions web evidence routes require browser sessions;
 repository PATs cannot authenticate them. Each account has its own secure,
 mode-0600 `web-session.json`, bound to the enrolled username and user ID.
-The application CLI sends these cookies only to fixed read-only Atollion
-Actions routes and persists secure same-origin refreshes. API/review tokens
+The application CLI sends these cookies only to fixed Atollion Actions evidence
+routes and an explicit, source-checked retry route for a completed run. It
+persists secure same-origin refreshes. API/review tokens
 remain repository-scoped. Renew expired sessions from this repository's
 development shell with `python3 components/cloud/services/forge/enroll-agent-sessions.py`.
 The operator helper reads each password from SOPS into memory, verifies its
