@@ -64,3 +64,21 @@ resource "openstack_networking_secgroup_rule_v2" "runner_monitoring" {
   port_range_min    = tonumber(each.value)
   port_range_max    = tonumber(each.value)
 }
+
+# Only the Quickemu host accepts the services controller's forced SSH command.
+# The Windows job port does not receive this additional management permission.
+resource "openstack_networking_secgroup_v2" "macos_broker" {
+  provider             = openstack.ci
+  name                 = "forge-macos-broker"
+  delete_default_rules = true
+}
+resource "openstack_networking_secgroup_rule_v2" "macos_broker" {
+  provider          = openstack.ci
+  security_group_id = openstack_networking_secgroup_v2.macos_broker.id
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  remote_ip_prefix  = "10.21.40.154/32"
+  port_range_min    = 22
+  port_range_max    = 22
+}

@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: native-windows-qualification
+    namespace: forge-control
+    annotations:
+        forge.fahrican.com/cloud-credential-expires: "2027-09-06T03:31:05Z"
+    labels:
+        velero.io/exclude-from-backup: "true"
+type: Opaque
+stringData:
+    forge-token: ENC[AES256_GCM,data://bOVE0lXLt+4gfu3YmghPtCMdN3QafrqsFTvI5nAGpFXKQtHTwgVA==,iv:gwwNcO/lDHXPbg3duMBcAy/oOamB5BTRb0AhV0odnhA=,tag:yToZZp3yV55/e3O8Fnm3wQ==,type:str]
+    cloud-credential.json: ENC[AES256_GCM,data:DcWZCY3sEqyj2SxhwXJrMuJvgv5wdlxLKXAx09pXZLUE49cPXgCDyesBHJTca9BI7s+epw/oERPex8Mv9KpEqQc8Oqd8rm147OM5Kx1hX+02/1d99MKoAmb+yq1NetzBMGXpwgEPpH88F/8DgnrFsfk3Jokno5sslrmU9CM07RcrE14BZlylCY+loK92rA==,iv:2PpisgXPC7thS7a0pq93eYi4vqsB4udYq0vR8t5bCVQ=,tag:zye3h+j2TrEigS90DSmdBw==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBxS1cvTzZYbk1ydkdqTEM0
+            TGg2S2ttTVRMWWM3bC9zcEROUXROSXdZcUR3Cm9xWVRQYy9xSHVIbklKeWJmK0NI
+            UHA2MTFDMjNtY1FZRUhTRmpwYnAxaEUKLS0tIDE2ampBb0lGUGtQS1RzZngxbjFM
+            VDFsdnphOXladHdUVjVMSzkyaHZNSDgKR0C1iLQOW0lp3auQvdw5c+a3Hr551XV8
+            qrlwIQF+Mxjbu9jGl1YDe652gHz2nokXLERPQ5nbdAsGo6dzxt84UQ==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSB3OFBidFlzMm9KdE5tbkNG
+            eHVqT3BTNVgxRndBZ2c3M1QxVk5tWWpMdTNZClQrbEJtZnZzNm9sVWdsOUQ5TGx0
+            ZHVod0N2UUd6eXZNY1B3UUlBMWJnUGMKLS0tIGY3b2Roa2xoei82RlRnbzIwVEpG
+            M05LUlp4TDdiVUpITk0xeEFuL1dVS0EKXyiE5RuPDMgKGCKvoI58XKUi9Ey+nwdG
+            w4WBv+LBU3mYX3N10kQ6xIAuXH1NOPLutRU1FIEreInNaBJSQLt9/g==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1vfxeaxdj7jze5p5ytff0peyjm3rusn8naacfudklvzwknv4yk5wq3qqg3v
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-09-06T03:31:06Z"
+    mac: ENC[AES256_GCM,data:p5nFCD39ZfrKXOkppaWS2WGvuGNl/lwjV4qG7+N7xg/L6VJfRIg6klVnY2pRcMwV6SXTic2jqu5iOTdr6Wf16KkeVdTBRS+Vx7YhPf6+q1c+kAU/Abae3Zx6Gt4ZglWoCaUZul/RtnBTSth6VpqiL1BK4d+hyWSeESV4LsNvUMg=,iv:v73E2YZdSZTD9luFKNw51puFQuHBJJox+K+8DnpUaQg=,tag:PXunfe/HpRTD+LEyQbvPEg==,type:str]
+    version: 3.13.3

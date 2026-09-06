@@ -1,0 +1,8 @@
+{
+  "forge-macos": {
+    "address": "10.21.40.126",
+    "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICobfx4+/18WOYmIz1rWwhfqU5x6KHwCNZvHpLVLgwer",
+    "nova_server_id": "69d67dc1-61f3-472b-948d-5b3faacf0862",
+    "enrollment": "Authenticated Nova console after signed Nix image promotion"
+  }
+}

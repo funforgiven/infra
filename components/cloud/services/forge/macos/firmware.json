@@ -1,0 +1,17 @@
+[
+  {
+    "name": "OpenCore.qcow2",
+    "url": "https://raw.githubusercontent.com/kholia/OSX-KVM/da4b23b5e92c5b939568700034367e8b7649fe90/OpenCore/OpenCore.qcow2",
+    "digest": "sha256:719837249bd479ffe644f80c64169966115bde69e8f5360fa68d23b169ccb3ac"
+  },
+  {
+    "name": "OVMF_CODE.fd",
+    "url": "https://raw.githubusercontent.com/kholia/OSX-KVM/da4b23b5e92c5b939568700034367e8b7649fe90/OVMF_CODE.fd",
+    "digest": "sha256:52a625db5a45329bf8005232db33e94781787d92ae8d088f2f73332dd4ded3a9"
+  },
+  {
+    "name": "OVMF_VARS-1920x1080.fd",
+    "url": "https://raw.githubusercontent.com/kholia/OSX-KVM/da4b23b5e92c5b939568700034367e8b7649fe90/OVMF_VARS-1920x1080.fd",
+    "digest": "sha256:6ed987af3a3c155be71665f510eae3e007eda9b8b94afd59d45e91c4a11565cc"
+  }
+]
