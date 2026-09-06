@@ -93,7 +93,7 @@
           )
         ];
       };
-      security.sudo.extraRules = [
+      security.sudo-rs.extraRules = [
         {
           users = [ "forge-broker" ];
           commands = [
