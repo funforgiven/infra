@@ -61,12 +61,13 @@ def main():
             "description": "Infrastructure-owned Actions execution and recovery qualification",
             "auto_init": True, "default_branch": "main"})
     call(owner, "PATCH", "/repos/" + repository, {"has_actions": True})
-    for filename, name, scopes, repositories in [
-        ("runner-qualification.sops.yaml", "runner-qualification", ["write:repository"],
-         [{"owner": "forge-runner", "name": "runner-qualification"}]),
-        ("runner-registry.sops.yaml", "runner-registry", ["read:package"], []),
+    for target, name, scopes, repositories, namespace in [
+        (ROOT / "runner-qualification.sops.yaml", "runner-qualification", ["write:repository"],
+         [{"owner": "forge-runner", "name": "runner-qualification"}], "forge-ci"),
+        (ROOT / "runner-registry.sops.yaml", "runner-registry", ["read:package"], [], "forge-ci"),
+        (Path("deployments/homelab/cloud/undercloud/50-openstack-core/compute/compute-registry.sops.yaml"),
+         "compute-registry", ["read:package"], [], "openstack"),
     ]:
-        target = ROOT / filename
         if target.exists():
             print(f"{name}: encrypted credential already enrolled")
             continue
@@ -74,9 +75,10 @@ def main():
         if repositories:
             options["repositories"] = repositories
         token = call(owner, "POST", "/users/forge-runner/tokens", options)
-        document = {"apiVersion": "v1", "kind": "Secret", "metadata": {"name": name, "namespace": "forge-ci"},
+        document = {"apiVersion": "v1", "kind": "Secret", "metadata": {"name": name, "namespace": namespace,
+                    "labels": {"velero.io/exclude-from-backup": "true"}},
                     "type": "Opaque", "stringData": {"token": token["sha1"]}}
-        if name == "runner-registry":
+        if name in {"runner-registry", "compute-registry"}:
             document["type"] = "kubernetes.io/dockerconfigjson"
             authentication = base64.b64encode(("forge-runner:" + token["sha1"]).encode()).decode()
             document["stringData"] = {".dockerconfigjson": json.dumps({"auths": {

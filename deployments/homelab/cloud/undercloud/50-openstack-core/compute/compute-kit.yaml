@@ -41,15 +41,38 @@ spec:
         - values_overrides/libvirt/2026.1-ubuntu_noble.yaml
         - values_overrides/libvirt/ovn.yaml
   values:
+    images:
+      tags:
+        libvirt: git.fahrican.com/forge-runner/libvirt-tpm:2026.1-swtpm-0.10.1@sha256:07986ad34d90b9f2f763986154f8e233c709cf57712139ae15adb392eb9dd844
     conf:
+      qemu:
+        swtpm_user: tss
+        swtpm_group: tss
       dynamic_options:
         libvirt:
           listen_interface: bond0.31
     manifests:
       job_image_repo_sync: false
     pod:
+      # First qualify the daemon restart on asiago while watching its guest
+      # PID/uptime, then roll the remaining hosts one at a time.
+      lifecycle:
+        upgrades:
+          daemonsets:
+            pod_replacement_strategy: OnDelete
       resources:
         enabled: true
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: DaemonSet
+              name: libvirt-libvirt-default
+            patch: |-
+              - op: add
+                path: /spec/template/spec/imagePullSecrets
+                value:
+                  - name: compute-registry
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease

@@ -77,6 +77,36 @@ Quickemu macOS hosts must pass real workflows before receiving application
 jobs. A job must receive only an ephemeral identity and a disposable guest
 disk; reusable enrollment or cloud credentials must remain outside the guest.
 
+### Native installation prerequisites
+
+`native-inputs.json` pins the owner-supplied Windows 11 25H2 English x64 ISO,
+VirtIO drivers, Apple recovery media and the upstream Apple signature verifier.
+Run `verify-native-inputs.py --help` for the five local input paths. It checks
+every SHA256 and exhausts the upstream chunklist verifier so the final Apple
+RSA signature is checked as well as every image chunk. Installer verification
+does not qualify the resulting VM or activate Windows.
+
+Nova uses `host-model` on asiago for Windows 11 and taleggio for nested macOS,
+with explicit Intel VMX on taleggio. Pecorino retains the default Westmere
+baseline. The 32 GiB per-host reservation is unchanged. New/rebuilt guests on
+the selected hosts require compatible migration destinations; do not assume
+that host-model guests can move between Intel and AMD. Nested KVM is persisted
+through the host role's `kernel` tag without unloading KVM or rebooting hosts.
+
+The original OpenStack libvirt image lacks the TPM emulator. The Nix package
+`libvirt-tpm-image` extends its exact deployed digest with the pinned `swtpm`
+closure and a `tss` account matching Nova's UID/GID 42434. Its isolated test
+qualified TPM 2.0 provisioning, certificates, initialization and shutdown as
+that non-root identity. `compute-registry` can only read packages, is encrypted
+for undercloud Flux, and is never mounted into a VM. Compute host addresses
+are allowed only on the registry `/v2` route, without extending UI/admin access.
+
+The initial libvirt image rollout uses `OnDelete` so one host can be qualified
+before further restarts. OpenStack-Helm starts VM processes outside the pod
+cgroup; still verify the existing guest PID/uptime and cluster health across
+the first daemon restart. Enable Nova's TPM support only after libvirt reports
+the emulator and TPM 2.0 in its domain capabilities.
+
 ## Backup and recovery
 
 `backup.py` creates a native archive every six hours and before each Velero
@@ -141,6 +171,15 @@ Atollion continues on GitHub while the destination and native runners are
 qualified. Stage Git refs and GitHub metadata separately from its active
 checkout. Do not transfer the managed `gh` credential into Forgejo; use the
 repository-scoped CLI to export metadata and an offline migration dump.
-The owner can pause the active agent for the final catch-up and cutover once
-the destination is ready. Keep the retained GitLab recovery bundle until its
-declared retention expires and the migration has been accepted.
+The owner explicitly deferred migration: do not import Atollion or change its
+workflows, remotes or active agent setup until separately instructed. Finish
+infrastructure qualification and stop at migration readiness. The owner can
+pause the active agent for the final catch-up once they request the cutover.
+
+GitLab provisioning and cluster bootstrap are suspended, and its CAPI Cluster
+is paused. Its three volume-backed VMs were gracefully shelved/offloaded after
+offsite restore qualification, releasing 20 GiB of compute allocation. Their
+attached disks remain a temporary rollback checkpoint during runner rollout;
+final cloud/resource retirement is still separate from this staging step.
+Keep the retained native GitLab recovery bundle until its declared retention
+expires and the replacement has been accepted.
