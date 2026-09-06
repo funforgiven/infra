@@ -12,6 +12,7 @@ if [ "${1:-}" = --schedule ]; then
   csrutil authenticated-root status | grep -q enabled
   /usr/local/bin/forgejo-runner --version
   /usr/bin/xcrun --find clang
+  su -l forge-job -c 'test -x /usr/local/libexec/forge/run-job.sh'
   plutil -lint /Library/LaunchDaemons/com.fahrican.forge-job.plist
   install -o root -g wheel -m 0700 "$0" /usr/local/libexec/forge/seal-image.sh
   cat > /Library/LaunchDaemons/com.fahrican.forge-seal.plist <<'PLIST'
