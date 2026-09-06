@@ -1,0 +1,40 @@
+[
+  {
+    "name": "Git-2.55.0.5-64-bit.exe",
+    "url": "https://github.com/git-for-windows/git/releases/download/v2.55.0.windows.5/Git-2.55.0.5-64-bit.exe",
+    "digest": "sha256:d065a4e23c3d9a6b5073d609b5be0830227ec3ca053c083ba385061ddfaf94c6",
+    "version": "v2.55.0.windows.5"
+  },
+  {
+    "name": "PowerShell-7.6.5-win-x64.msi",
+    "url": "https://github.com/PowerShell/PowerShell/releases/download/v7.6.5/PowerShell-7.6.5-win-x64.msi",
+    "digest": "sha256:3a87c24e044ec792047d734c841917ee4323a535e25f645ae6c33141a35fca8d",
+    "version": "v7.6.5"
+  },
+  {
+    "name": "node-v24.20.0-x64.msi",
+    "url": "https://nodejs.org/dist/v24.20.0/node-v24.20.0-x64.msi",
+    "digest": "sha256:28b69132c35ccc033bf8f2a67cd10c9d75ef5822593363309da448f2afff2d8a",
+    "version": "v24.20.0"
+  },
+  {
+    "name": "CloudbaseInitSetup_Stable_x64.msi",
+    "url": "https://cloudbase.it/downloads/CloudbaseInitSetup_Stable_x64.msi",
+    "digest": "sha256:0e7fa42e0cbc0ce7657f85730b0c6cc7afc4087a3639df0ff51a721a0be19bd5"
+  },
+  {
+    "name": "Autologon.zip",
+    "url": "https://download.sysinternals.com/files/AutoLogon.zip",
+    "digest": "sha256:9a477624ea6488acfbd2cefcc392fac082383a3a8db1c6d867af1b410f4731b7"
+  },
+  {
+    "name": "windows_exporter-0.31.8-amd64.msi",
+    "url": "https://github.com/prometheus-community/windows_exporter/releases/download/v0.31.8/windows_exporter-0.31.8-amd64.msi",
+    "digest": "sha256:0aadce6afb20182b678bfca9e8f2e8464ef48c469b28b4cf02e99d82158f5d40"
+  },
+  {
+    "name": "windows-exporter-codesign.cer",
+    "url": "https://raw.githubusercontent.com/prometheus-community/windows_exporter/v0.31.8/installer/codesign.cer",
+    "digest": "sha256:1a5e0398379ab64d680a297a0a1578883ad557bd148b8076cae586c89cfd6d8b"
+  }
+]

@@ -63,7 +63,7 @@ resource "openstack_networking_port_v2" "runner" {
   for_each           = local.runners
   name               = "forge-${each.key}"
   network_id         = data.openstack_networking_network_v2.ci.id
-  security_group_ids = [openstack_networking_secgroup_v2.runner.id]
+  security_group_ids = concat([openstack_networking_secgroup_v2.runner.id], each.key == "macos" ? [openstack_networking_secgroup_v2.macos_broker.id] : [])
   fixed_ip {
     subnet_id  = data.openstack_networking_subnet_v2.ci.id
     ip_address = each.value.address
