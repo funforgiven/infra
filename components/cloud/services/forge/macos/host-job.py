@@ -25,6 +25,27 @@ def run(*args, **kwargs):
     return subprocess.run(args, check=True, **kwargs)
 
 
+def acquire_job_lock(lock, timeout=180, interval=5):
+    """Wait for preceding cleanup without taking ownership of its guest."""
+    if not 0 < timeout <= 180 or not 0 < interval <= 10:
+        raise ValueError('Invalid macOS job lock wait limits')
+    end = time.monotonic() + timeout
+    while time.monotonic() < end:
+        # Check the SSH output channel before every acquisition attempt. A
+        # disconnected queued controller must not acquire ownership or touch
+        # ACTIVE after the preceding launcher releases its cleanup lock.
+        print('Checking macOS job lock; broker channel checked.', flush=True)
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return
+        except BlockingIOError:
+            print('Waiting for previous macOS job cleanup to release its lock.', flush=True)
+            remaining = end - time.monotonic()
+            if remaining > 0:
+                time.sleep(min(interval, remaining))
+    raise RuntimeError('Previous macOS job cleanup did not release its lock within the deadline')
+
+
 def main():
     if os.geteuid() != 0 or len(sys.argv) != 1:
         raise RuntimeError('Only the authorized no-argument broker command may run')
@@ -39,7 +60,7 @@ def main():
         if not isinstance(value, str) or not 1 <= len(value) <= 4096 or any(ord(c) <= 32 for c in value):
             raise ValueError('Invalid ephemeral enrollment')
     lock = open('/run/forge-macos-job.lock', 'w')
-    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    acquire_job_lock(lock)
     # The installer and a preceding job must be completely stopped. The broker
     # never interrupts a maintenance VM or reuses its writable disk.
     state = subprocess.run(['systemctl', 'is-active', UNIT], capture_output=True, text=True).stdout.strip()
