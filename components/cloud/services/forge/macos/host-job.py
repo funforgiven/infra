@@ -62,6 +62,8 @@ def main():
     try:
         for name in required - {'disk.qcow2'}:
             shutil.copy2(GOLDEN / name, ACTIVE / name)
+            # Golden firmware is read-only; each guest owns mutable copies.
+            (ACTIVE / name).chmod(0o600)
         run('qemu-img', 'create', '-q', '-f', 'qcow2', '-F', 'qcow2', '-b', str(GOLDEN / 'disk.qcow2'), str(ACTIVE / 'disk.qcow2'))
         (ACTIVE / 'firmware.sha256').write_text(''.join(manifest['sha256'][name] + '  ' + name + '\n' for name in ['OpenCore.qcow2', 'OVMF_CODE.fd']))
         with tempfile.TemporaryDirectory(prefix='forge-enrollment-', dir='/run') as staging:

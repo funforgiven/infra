@@ -150,6 +150,9 @@
         viewer="none"
         public_dir="none"
         ssh_port="22220"
+        # The QEMU user cannot probe loopback ports through the isolation
+        # firewall. One guest is allowed, so reserve its console port directly.
+        spice_port="5930"
         monitor="socket"
         serial="none"
         sound_card="none"
