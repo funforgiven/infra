@@ -42,6 +42,7 @@ configMapGenerator:
     disableNameSuffixHash: true
   files:
   - verify-restore.py
+  - verify_atollion.py
   - verify-git.sh
   - native_backup.py
 - name: forge-restore-controller

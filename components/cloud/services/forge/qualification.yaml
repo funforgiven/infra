@@ -46,7 +46,7 @@ jobs:
           nix build --no-link github:NixOS/nixpkgs/2fcb964de67fcf60b43471c55d5d99e61a9ccb5a#hello
           # A cache hit does not verify local builder or build-log permissions.
           nix build --no-link --expr '
-            let pkgs = import (builtins.getFlake "github:NixOS/nixpkgs/2fcb964de67fcf60b43471c55d5d99e61a9ccb5a").outPath {};
+            let pkgs = import (builtins.getFlake "github:NixOS/nixpkgs/2fcb964de67fcf60b43471c55d5d99e61a9ccb5a").outPath { system = "x86_64-linux"; };
             in pkgs.runCommand "forge-runner-local-build-qualification"
               { preferLocalBuild = true; allowSubstitutes = false; }
               "echo local-unprivileged-build > $out"'
