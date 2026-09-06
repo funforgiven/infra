@@ -40,6 +40,7 @@
       # Quickemu's SSH forward otherwise binds every interface. Patch the
       # pinned package to require loopback, even if the guest firewall changes.
       quickemu = pkgs.quickemu.overrideAttrs (old: {
+        patches = (old.patches or [ ]) ++ [ ../../cloud/services/forge/macos/quickemu-overlay.patch ];
         postPatch = (old.postPatch or "") + ''
           substituteInPlace quickemu \
             --replace-fail 'hostfwd=tcp::' 'hostfwd=tcp:127.0.0.1:' \

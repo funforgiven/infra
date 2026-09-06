@@ -1,0 +1,14 @@
+--- a/quickemu
++++ b/quickemu
+@@ -1180,7 +1180,10 @@
+         # Only check disk image size if preallocation is off
+         if [ "${preallocation}" == "off" ]; then
+             DISK_CURR_SIZE=$(${STAT} -c%s "${disk_img}")
+-            if [ "${DISK_CURR_SIZE}" -le "${DISK_MIN_SIZE}" ]; then
++            # A fresh overlay is small even when its backing image contains
++            # an installed OS. The caller verifies that immutable base.
++            if [ "${DISK_CURR_SIZE}" -le "${DISK_MIN_SIZE}" ] && \
++                ! "${QEMU_IMG}" info --output=json "${disk_img}" | jq --exit-status 'has("backing-filename")' >/dev/null; then
+                 echo "             Looks unused, booting from ${iso}${img}"
+                 if [ -z "${iso}" ] && [ -z "${img}" ]; then
+                     echo "ERROR! You haven't specified a .iso or .img image to boot from."
