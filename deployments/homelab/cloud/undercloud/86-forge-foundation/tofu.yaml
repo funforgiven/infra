@@ -8,7 +8,7 @@ spec:
   interval: 10m
   retryInterval: 1m
   # Review the one-time removal of the retired GitLab project.
-  suspend: true
+  suspend: false
   approvePlan: ""
   destroyResourcesOnDeletion: false
   path: ./components/cloud/services/forge/foundation-tofu
