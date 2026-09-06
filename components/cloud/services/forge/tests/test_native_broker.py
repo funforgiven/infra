@@ -48,6 +48,16 @@ class CleanupBoundary(unittest.TestCase):
                 self.cloud.call('GET', broker.COMPUTE, '/servers/detail')
             self.assertEqual(request.call_count, 1)
 
+    def test_cloud_microversions_are_scoped_to_the_target_service(self):
+        self.cloud.headers = {'X-Auth-Token': 'test-only'}
+        self.cloud.renew_at = float('inf')
+        with patch.object(broker, 'request', return_value=({}, {})) as request:
+            for base, version in ((broker.COMPUTE, 'compute 2.90'),
+                                  (broker.VOLUME, 'volume 3.1'), (broker.IMAGE, None)):
+                self.cloud.call('GET', base, '/qualification')
+                self.assertEqual(request.call_args.args[2].get('OpenStack-API-Version'), version)
+                self.assertEqual(request.call_args.args[2]['X-Auth-Token'], 'test-only')
+
     def test_application_repository_remains_blocked_during_qualification(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(broker, 'request') as request:
             with self.assertRaisesRegex(RuntimeError, 'qualification must finish'):

@@ -97,9 +97,14 @@ class Cloud:
             roles = {role["name"] for role in auth["token"]["roles"]}
             if "admin" in roles or "member" not in roles:
                 raise RuntimeError("Broker requires a non-administrator project member credential")
-            self.headers = {"X-Auth-Token": headers["X-Subject-Token"], "OpenStack-API-Version": "compute 2.90"}
+            self.headers = {"X-Auth-Token": headers["X-Subject-Token"]}
             self.renew_at = time.monotonic() + 600
-        return request(method, base + path, self.headers, body, missing)[0]
+        headers = dict(self.headers)
+        if base == COMPUTE:
+            headers["OpenStack-API-Version"] = "compute 2.90"
+        elif base == VOLUME:
+            headers["OpenStack-API-Version"] = "volume 3.1"
+        return request(method, base + path, headers, body, missing)[0]
 
     def owned(self, server):
         return (server["name"].startswith(PREFIX)

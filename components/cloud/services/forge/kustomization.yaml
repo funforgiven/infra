@@ -1,0 +1,7 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+configMapGenerator:
+- name: forge-native-broker
+  namespace: forge-control
+  files:
+  - native-broker.py

@@ -11,6 +11,12 @@ resources:
 - runner-qualification.sops.yaml
 - runner-registry.sops.yaml
 - restore-qualification.yaml
+- native-monitoring.yaml
+- ../../../../../components/cloud/services/forge
+- native-brokers.yaml
+- native-windows-qualification.sops.yaml
+- native-macos-qualification.sops.yaml
+- native-registry.sops.yaml
 configMapGenerator:
 - name: forge-bootstrap
   namespace: forge
@@ -37,3 +43,9 @@ configMapGenerator:
   namespace: backup-qualification
   files:
   - qualify-restore.py
+- name: forge-native-configuration
+  namespace: forge-control
+  files:
+  - windows.json
+  - macos.json
+  - native-known-hosts
