@@ -37,6 +37,10 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+class TransientRequestError(RuntimeError):
+    """A monitoring outage provides no evidence that a job was cancelled."""
+
+
 def request(method, url, headers=None, body=None, missing=False):
     req = urllib.request.Request(url, method=method,
         headers={"Content-Type": "application/json", **(headers or {})},
@@ -49,7 +53,10 @@ def request(method, url, headers=None, body=None, missing=False):
         if missing and error.code == 404:
             return None, error.headers
         # Never include secret-bearing request bodies or remote error details.
-        raise RuntimeError(f"{method} {urllib.parse.urlsplit(url).path}: HTTP {error.code}") from None
+        error_type = TransientRequestError if error.code >= 500 or error.code in {408, 429} else RuntimeError
+        raise error_type(f"{method} {urllib.parse.urlsplit(url).path}: HTTP {error.code}") from None
+    except (urllib.error.URLError, TimeoutError, ConnectionError):
+        raise TransientRequestError("Service request temporarily unavailable") from None
 
 
 class Forge:
@@ -222,6 +229,66 @@ def next_assignment(forges):
     return repository, forge, [job]
 
 
+class RunnerLease:
+    """A revoked ephemeral enrollment cannot finish another job or recover."""
+    def __init__(self, forge, identity):
+        self.forge, self.identity, self.ended_at = forge, identity, None
+
+    def expired(self):
+        try:
+            runner = self.forge.call("GET", "/" + str(self.identity), missing=True)
+        except TransientRequestError:
+            # Quiesced backups and temporary outages are not revocations. A
+            # fresh consecutive-404 grace starts after monitoring recovers.
+            self.ended_at = None
+            print("Native enrollment status temporarily unavailable; retaining current job.", flush=True)
+            return False
+        if runner is not None:
+            if runner.get("id") != self.identity:
+                raise RuntimeError("Unexpected native runner identity")
+            self.ended_at = None
+            return False
+        if self.ended_at is None:
+            self.ended_at = time.monotonic()
+        # Successful jobs normally shut down themselves. Allow that path time
+        # to finish; cancelled jobs must not hold a native slot for two hours.
+        return time.monotonic() - self.ended_at >= 60
+
+
+def stop_process(process):
+    if process.poll() is None:
+        process.terminate()
+        try:
+            process.wait(timeout=20)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=10)
+
+
+def run_registered_process(forge, identity, command, enrollment):
+    lease = RunnerLease(forge, identity)
+    process = subprocess.Popen(command, stdin=subprocess.PIPE)
+    pending = json.dumps(enrollment).encode()
+    deadline = time.monotonic() + DEADLINE + 120
+    try:
+        while time.monotonic() < deadline:
+            try:
+                process.communicate(input=pending, timeout=15)
+                if process.returncode:
+                    raise RuntimeError("Native broker connection failed")
+                return
+            except subprocess.TimeoutExpired:
+                pending = None
+            if lease.expired():
+                print("Native runner enrollment ended; disposing its writable state.", flush=True)
+                return
+        raise RuntimeError("Native broker connection exceeded its external deadline")
+    finally:
+        # The forced host command writes a heartbeat to this SSH channel. A
+        # disconnected channel raises BrokenPipe there and executes its cleanup.
+        stop_process(process)
+
+
 def run_macos(config, secret_dir, forge, jobs):
     name = forge.prefix + str(int(time.time())) + "-" + uuid.uuid4().hex[:8]
     registered = forge.call("POST", body={"name": name, "ephemeral": True,
@@ -232,11 +299,11 @@ def run_macos(config, secret_dir, forge, jobs):
             key = Path(directory) / "id_ed25519"
             key.write_bytes((secret_dir / "ssh-key").read_bytes())
             key.chmod(0o600)
-            subprocess.run(["ssh", "-T", "-i", str(key), "-o", "BatchMode=yes", "-o", "IdentitiesOnly=yes",
+            run_registered_process(forge, registered["id"], ["ssh", "-T", "-i", str(key), "-o", "BatchMode=yes", "-o", "IdentitiesOnly=yes",
                 "-o", "StrictHostKeyChecking=yes", "-o", "UserKnownHostsFile=" + config["macos_known_hosts"],
                 "-o", "ForwardAgent=no", "-o", "ClearAllForwardings=yes", "-o", "ConnectTimeout=10",
                 "-o", "ServerAliveInterval=30", "-o", "ServerAliveCountMax=3", "forge-broker@10.21.40.126"],
-                input=json.dumps(enrollment).encode(), check=True, timeout=DEADLINE + 120)
+                enrollment)
     finally:
         forge.call("DELETE", "/" + str(registered["id"]), missing=True)
 
@@ -328,6 +395,7 @@ try {
         server = cloud.call("GET", COMPUTE, "/servers/" + created["id"])["server"]
         print("Created fresh Windows VM", server["id"], "for", repository, "job", jobs[0]["id"], flush=True)
         end = time.monotonic() + DEADLINE
+        lease = RunnerLease(forge, registered["id"])
         while time.monotonic() < end:
             current = cloud.call("GET", COMPUTE, "/servers/" + server["id"], missing=True)
             if current is None:
@@ -337,6 +405,9 @@ try {
                 raise RuntimeError("Windows job VM entered ERROR")
             if server["status"] == "SHUTOFF":
                 print("Windows job VM shut down; disposing its writable state.", flush=True)
+                return
+            if lease.expired():
+                print("Windows runner enrollment ended; disposing its writable state.", flush=True)
                 return
             time.sleep(15)
         raise RuntimeError("Windows job exceeded its external deadline")

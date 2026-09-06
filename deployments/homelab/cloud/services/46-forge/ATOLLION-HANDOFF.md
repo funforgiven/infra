@@ -126,6 +126,16 @@ The template stays suspended; only the launcher copies its reconciled spec.
 Generic ephemeral PVCs and their disks are deleted with completed job pods.
 Do not back up disposable CI workspaces.
 
+Runner 13.1.0 can continue reporting after Forgejo revokes a cancelled job's
+ephemeral identity. The Linux process supervisor recognizes that exact terminal
+diagnostic and terminates its process group within a bounded grace period.
+Native controllers check only their own registered runner; an enrollment absent
+for 60 seconds releases its disposable environment. The macOS forced host
+command writes a heartbeat to the SSH channel so a disconnected controller
+reliably enters overlay cleanup even without a PTY. Keep the host's Nix system
+configuration current when restoring its base image before enabling the broker.
+These controller changes do not change Windows or macOS guest golden files.
+
 Forgejo 15 requires repository ownership for runner management, including
 queue reads; a collaborator's admin role is insufficient. Atollion controller
 tokens therefore belong to repository owner `funforgiven` and explicitly
