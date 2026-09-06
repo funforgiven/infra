@@ -320,6 +320,7 @@ def run(config, secret_dir):
         print("No eligible " + platform + " job is waiting.")
         return
     repository, forge, jobs = assignment
+    print("Selected", platform, "assignment for", repository, "job", jobs[0]["id"], flush=True)
     if platform == "macos":
         return run_macos(config, secret_dir, forge, jobs)
     golden = cloud.call("GET", IMAGE, "/images/" + config["windows_image_id"])
@@ -336,6 +337,12 @@ def run(config, secret_dir):
                          "expires_unix": str(int(time.time()) + DEADLINE)}}})["volume"]
         print("Preparing a fresh Windows job disk", volume["id"], flush=True)
         cloud.prepare_volume(volume["id"])
+        # The image-to-volume copy can take minutes. A PR update may cancel
+        # its queued handle during that period, before any runner is enrolled.
+        if not any(job["id"] == jobs[0]["id"] and job.get("handle") == jobs[0]["handle"]
+                   for job in forge.waiting()):
+            print("Prepared Windows assignment ended before enrollment; disposing its disk.", flush=True)
+            return
         registered = forge.call("POST", body={"name": name, "ephemeral": True,
             "description": "Fresh Windows 11 desktop VM; unprivileged single job; externally expired"})
         enrollment = base64.b64encode(json.dumps({"uuid": registered["uuid"], "token": registered["token"],
