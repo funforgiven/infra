@@ -85,6 +85,31 @@ class CleanupBoundary(unittest.TestCase):
             self.cloud.remove_volume('disk-id')
             self.assertFalse(any(args[0] == 'DELETE' for args, _ in call.call_args_list))
 
+    def assert_preparation_does_not_enroll_or_boot(self, waiting):
+        golden = {'id': 'golden', 'status': 'active', 'protected': True, 'visibility': 'private',
+                  'owner': 'ci-project', 'image_role': 'forge-windows', 'image_source_revision': 'signed'}
+        with tempfile.TemporaryDirectory() as directory:
+            Path(directory, 'forge-token').write_text('fixture')
+            Path(directory, 'cloud-credential.json').write_text('{}')
+            with patch.object(broker, 'Cloud', return_value=self.cloud), patch.object(broker, 'Forge') as forge, \
+                    patch.object(self.cloud, 'reap'), patch.object(self.cloud, 'call',
+                        side_effect=[golden, {'volume': {'id': 'preparation'}}]) as cloud_call, \
+                    patch.object(self.cloud, 'prepare_volume'), \
+                    patch.object(self.cloud, 'remove_volume') as cleanup:
+                forge.return_value.waiting.side_effect = [[{'id': 1, 'handle': 'fixture'}], waiting]
+                forge.return_value.prefix = broker.PREFIX
+                broker.run({'repository': 'forge-runner/runner-qualification', 'project_id': 'ci-project',
+                            'windows_image_id': 'golden', 'windows_image_revision': 'signed'}, Path(directory))
+                cleanup.assert_called_once_with('preparation')
+                forge.return_value.call.assert_not_called()
+                self.assertEqual(cloud_call.call_count, 2)
+
+    def test_cancelled_preparation_does_not_enroll_or_boot_a_vm(self):
+        self.assert_preparation_does_not_enroll_or_boot([])
+
+    def test_retried_job_with_new_handle_cannot_boot_old_attempt(self):
+        self.assert_preparation_does_not_enroll_or_boot([{'id': 1, 'handle': 'next-attempt'}])
+
     def test_cloud_microversions_are_scoped_to_the_target_service(self):
         self.cloud.headers = {'X-Auth-Token': 'test-only'}
         self.cloud.renew_at = float('inf')
