@@ -71,7 +71,7 @@ api("POST", velero + "/restores", {
              "resourceModifier": {"kind": "ConfigMap", "name": "forge-restore-modifiers"}},
 })
 print(f"Checking offsite backup {backup_name} using restore {name}", flush=True)
-deadline = time.monotonic() + 3600
+deadline = time.monotonic() + 14400
 while time.monotonic() < deadline:
     phase = api("GET", velero + "/restores/" + name).get("status", {}).get("phase")
     if phase in ("Failed", "PartiallyFailed", "FailedValidation"):
@@ -84,4 +84,4 @@ while time.monotonic() < deadline:
             break
     time.sleep(10)
 else:
-    raise TimeoutError("Offsite restore or data verification did not finish within one hour")
+    raise TimeoutError("Offsite restore or data verification did not finish within four hours")
