@@ -116,11 +116,6 @@ locals {
       redirect_uri = "https://git.fahrican.com/user/oauth2/ZITADEL/callback"
       post_logout  = "https://git.fahrican.com/"
     }
-    gitlab = {
-      name         = "GitLab"
-      redirect_uri = "https://gitlab.fahrican.com/users/auth/openid_connect/callback"
-      post_logout  = "https://gitlab.fahrican.com/"
-    }
     grafana = {
       name         = "Grafana"
       redirect_uri = "https://grafana.cloud.fahrican.com/login/generic_oauth"
@@ -241,16 +236,6 @@ output "forgejo_client_id" {
 
 output "forgejo_client_secret" {
   value     = zitadel_application_oidc.web["forgejo"].client_secret
-  sensitive = true
-}
-
-output "gitlab_client_id" {
-  value     = zitadel_application_oidc.web["gitlab"].client_id
-  sensitive = true
-}
-
-output "gitlab_client_secret" {
-  value     = zitadel_application_oidc.web["gitlab"].client_secret
   sensitive = true
 }
 

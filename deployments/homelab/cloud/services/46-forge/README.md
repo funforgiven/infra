@@ -239,10 +239,15 @@ workflows, remotes or active agent setup until separately instructed. Finish
 infrastructure qualification and stop at migration readiness. The owner can
 pause the active agent for the final catch-up once they request the cutover.
 
-GitLab provisioning and cluster bootstrap are suspended, and its CAPI Cluster
-is paused. Its three volume-backed VMs were gracefully shelved/offloaded after
-offsite restore qualification, releasing 20 GiB of compute allocation. Their
-attached disks remain a temporary rollback checkpoint during runner rollout;
-final cloud/resource retirement is still separate from this staging step.
-Keep the retained native GitLab recovery bundle until its declared retention
-expires and the replacement has been accepted.
+The GitLab application and cluster have been retired. Retained recovery files
+include its native backup, recovery secrets, backend boot image and encrypted
+cloud state checkpoints. The CI foundation retains the historical Terraform
+controller name `gitlab-foundation` to preserve its existing state; that name
+no longer provisions a GitLab service. Its source is
+`components/cloud/services/forge/foundation-tofu` and its native flavor IDs are
+preserved with explicit state moves.
+
+Keep the retained recovery bundle and existing offsite Restic history until
+their declared retention expires and the replacement has been accepted. The
+old Restic password stays SOPS-encrypted for historical recovery; removal of
+its writer declaration must not delete the bucket's retained objects.

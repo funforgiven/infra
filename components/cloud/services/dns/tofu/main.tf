@@ -47,9 +47,6 @@ locals {
     "audiomuse",
     "git",
     "home",
-    "gitlab",
-    "kas",
-    "registry",
     "music",
     "upload",
     "wallos",
@@ -78,7 +75,7 @@ resource "cloudflare_dns_record" "private_services" {
   zone_id = data.cloudflare_zone.fahrican.zone_id
   name    = "${each.key}.fahrican.com"
   type    = "A"
-  content = contains(["gitlab", "registry", "kas"], each.key) ? "10.21.40.127" : local.services_gateway_address
+  content = local.services_gateway_address
   ttl     = 300
   proxied = false
   comment = "Git-managed routed-LAN endpoint; intentionally not Internet-routable"
@@ -169,13 +166,4 @@ output "services_gateway_address" {
 output "mail_ipv4_address" {
   description = "Public mail address published by this root"
   value       = var.mail_ipv4_address
-}
-
-resource "cloudflare_dns_record" "gitlab_s3" {
-  zone_id = data.cloudflare_zone.fahrican.zone_id
-  name    = "gitlab-s3.cloud.fahrican.com"
-  type    = "A"
-  content = "10.21.20.130"
-  proxied = false
-  ttl     = 300
 }

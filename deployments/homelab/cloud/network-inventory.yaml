@@ -292,20 +292,6 @@ all:
               destination: 10.21.40.100
               protocol: tcp
               destination_port: "6443"
-            - comment: "infra: WireGuard GitLab HTTPS and Git SSH"
-              chain: infra-forward
-              final_drop_comment: "infra: forward final drop"
-              source_interface: wg-admin
-              destination: 10.21.40.127
-              protocol: tcp
-              destination_port: "443,2222"
-            - comment: "infra: WireGuard GitLab management SSH"
-              chain: infra-forward
-              final_drop_comment: "infra: forward final drop"
-              source_interface: wg-admin
-              destination: 10.21.40.128
-              protocol: tcp
-              destination_port: "22"
             - comment: "infra: WireGuard CI host management"
               chain: infra-forward
               final_drop_comment: "infra: forward final drop"
