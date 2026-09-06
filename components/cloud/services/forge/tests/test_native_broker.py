@@ -3,7 +3,7 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 spec = importlib.util.spec_from_file_location('native_broker', Path(__file__).resolve().parents[1] / 'native-broker.py')
 broker = importlib.util.module_from_spec(spec)
@@ -100,6 +100,47 @@ class CleanupBoundary(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'qualification must finish'):
                 broker.run({'repository': 'owner/application', 'qualification_only': True}, Path(directory))
             request.assert_not_called()
+
+    def test_multi_repository_configuration_is_validated_before_credentials(self):
+        entries = [
+            {'repository': 'forge-runner/runner-qualification', 'token_file': 'forge-token'},
+            {'repository': 'funforgiven/atollion', 'token_file': 'atollion-token'},
+        ]
+        with tempfile.TemporaryDirectory() as directory, patch.object(broker, 'Forge') as forge:
+            with self.assertRaisesRegex(RuntimeError, 'qualification must finish'):
+                broker.eligible_forges({'repositories': entries}, Path(directory))
+            for invalid in ('../other/token', '/run/secret', '..'):
+                with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                    broker.eligible_forges({'repositories': [{**entries[0], 'token_file': invalid}],
+                                           'qualification_only': False}, Path(directory))
+            with self.assertRaisesRegex(ValueError, 'duplicate'):
+                broker.eligible_forges({'repositories': [entries[0], entries[0]],
+                                       'qualification_only': False}, Path(directory))
+            forge.assert_not_called()
+
+    def test_enrolled_repositories_use_distinct_credentials(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(broker, 'Forge') as forge:
+            Path(directory, 'qualification').write_text('qualification-fixture')
+            Path(directory, 'atollion').write_text('atollion-fixture')
+            broker.eligible_forges({'qualification_only': False, 'platform': 'macos', 'repositories': [
+                {'repository': 'forge-runner/runner-qualification', 'token_file': 'qualification'},
+                {'repository': 'funforgiven/atollion', 'token_file': 'atollion'},
+            ]}, Path(directory))
+            self.assertEqual([call.args for call in forge.call_args_list], [
+                ('forge-runner/runner-qualification', 'qualification-fixture', 'macos'),
+                ('funforgiven/atollion', 'atollion-fixture', 'macos')])
+
+    def test_native_dispatch_picks_oldest_job_across_repositories(self):
+        qualification, application = Mock(), Mock()
+        qualification.waiting.return_value = [{'id': 20, 'handle': 'q'}]
+        application.waiting.return_value = [{'id': 30, 'handle': 'later'}, {'id': 10, 'handle': 'first'}]
+        repository, forge, jobs = broker.next_assignment([('qualification', qualification), ('application', application)])
+        self.assertEqual((repository, forge, jobs), ('application', application, [{'id': 10, 'handle': 'first'}]))
+        qualification.reap.assert_called_once()
+        application.reap.assert_called_once()
+        qualification.waiting.return_value = []
+        application.waiting.return_value = []
+        self.assertIsNone(broker.next_assignment([('qualification', qualification), ('application', application)]))
 
 
 if __name__ == '__main__':

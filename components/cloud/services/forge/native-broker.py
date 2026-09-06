@@ -187,12 +187,42 @@ class Cloud:
         raise RuntimeError("Windows job disk preparation exceeded thirty minutes")
 
 
-def run_macos(config, secret_dir, forge):
-    forge.reap()
-    jobs = forge.waiting()
-    if not jobs:
-        print("No eligible macOS job is waiting.")
-        return
+def eligible_forges(config, secret_dir):
+    """Keep each repository credential scoped while sharing one native queue."""
+    entries = config.get("repositories")
+    if entries is None:
+        entries = [{"repository": config["repository"], "token_file": "forge-token"}]
+    if not isinstance(entries, list) or not entries:
+        raise ValueError("At least one explicitly enrolled repository is required")
+    seen = set()
+    # Validate the entire enrollment before reading credentials or making requests.
+    for entry in entries:
+        repository, token_file = entry["repository"], entry["token_file"]
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository) or repository in seen:
+            raise ValueError("Invalid or duplicate enrolled repository")
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", token_file):
+            raise ValueError("Invalid repository credential filename")
+        if config.get("qualification_only", True) and repository != "forge-runner/runner-qualification":
+            raise RuntimeError("Native qualification must finish before enrolling application repositories")
+        seen.add(repository)
+    return [(entry["repository"], Forge(entry["repository"],
+             (secret_dir / entry["token_file"]).read_text(), config.get("platform", "windows")))
+            for entry in entries]
+
+
+def next_assignment(forges):
+    """Choose the oldest global job ID so qualification cannot be starved."""
+    waiting = []
+    for repository, forge in forges:
+        forge.reap()
+        waiting.extend((job["id"], repository, forge, job) for job in forge.waiting())
+    if not waiting:
+        return None
+    _, repository, forge, job = min(waiting, key=lambda entry: entry[0])
+    return repository, forge, [job]
+
+
+def run_macos(config, secret_dir, forge, jobs):
     name = forge.prefix + str(int(time.time())) + "-" + uuid.uuid4().hex[:8]
     registered = forge.call("POST", body={"name": name, "ephemeral": True,
         "description": "Fresh macOS disk overlay; rootless Quickemu; unprivileged single job"})
@@ -213,19 +243,18 @@ def run_macos(config, secret_dir, forge):
 
 def run(config, secret_dir):
     os.umask(0o077)
-    repository = config["repository"]
-    if config.get("qualification_only", True) and repository != "forge-runner/runner-qualification":
-        raise RuntimeError("Native qualification must finish before enrolling application repositories")
-    forge = Forge(repository, (secret_dir / "forge-token").read_text(), config.get("platform", "windows"))
-    if forge.platform == "macos":
-        return run_macos(config, secret_dir, forge)
-    cloud = Cloud(json.loads((secret_dir / "cloud-credential.json").read_text()), config["project_id"])
-    cloud.reap()
-    forge.reap()
-    jobs = forge.waiting()
-    if not jobs:
-        print("No eligible Windows job is waiting.")
+    forges = eligible_forges(config, secret_dir)
+    platform = config.get("platform", "windows")
+    if platform == "windows":
+        cloud = Cloud(json.loads((secret_dir / "cloud-credential.json").read_text()), config["project_id"])
+        cloud.reap()
+    assignment = next_assignment(forges)
+    if assignment is None:
+        print("No eligible " + platform + " job is waiting.")
         return
+    repository, forge, jobs = assignment
+    if platform == "macos":
+        return run_macos(config, secret_dir, forge, jobs)
     golden = cloud.call("GET", IMAGE, "/images/" + config["windows_image_id"])
     if not (golden["status"] == "active" and golden["protected"] and golden["visibility"] == "private"
             and golden["owner"] == config["project_id"] and golden.get("image_role") == "forge-windows"
@@ -297,7 +326,7 @@ try {
                 "delete_on_termination": True}]}})["server"]
         # Retrieve authoritative ownership fields before any cleanup operation.
         server = cloud.call("GET", COMPUTE, "/servers/" + created["id"])["server"]
-        print("Created fresh Windows VM", server["id"], "for qualification job", jobs[0]["id"], flush=True)
+        print("Created fresh Windows VM", server["id"], "for", repository, "job", jobs[0]["id"], flush=True)
         end = time.monotonic() + DEADLINE
         while time.monotonic() < end:
             current = cloud.call("GET", COMPUTE, "/servers/" + server["id"], missing=True)

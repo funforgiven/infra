@@ -1,10 +1,11 @@
 # Forgejo readiness and retirement record
 
-Atollion remains on GitHub. The owner must explicitly authorize its migration;
-follow [ATOLLION-HANDOFF.md](ATOLLION-HANDOFF.md) only after that instruction.
-This record concerns the infrastructure qualification repository exclusively.
-A read-only check confirmed that the active Atollion checkout still has
-`github.com/funforgiven/atollion` as its origin.
+The owner authorized Atollion migration after pausing its agent on 2026-09-06.
+Its GitHub history is imported and checked; application workflows and agent
+orchestration are in PRs #119 and #120. The paused checkout's unfinished files
+are checkpointed and remain intact. Follow [ATOLLION-HANDOFF.md](ATOLLION-HANDOFF.md)
+for application validation and cutover progress. The completed native results
+below remain infrastructure qualification evidence.
 
 ## Deployed service
 
@@ -16,7 +17,7 @@ A read-only check confirmed that the active Atollion checkout still has
   credential; automation has a separate non-administrator identity.
 - Linux Actions use disposable unprivileged Kubernetes pods. Native controller
   credentials stay in `forge-control`, outside repository execution.
-- Native polling runs every minute, scoped to `forge-runner/runner-qualification`.
+- Native polling runs every minute with separate Atollion and qualification tokens.
   Its native platform qualification workflow runs weekly.
 
 ## Native qualification

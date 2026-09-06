@@ -67,12 +67,20 @@ spec:
       annotations:
         summary: No successful Forgejo offsite restore in 40 days
     - alert: ForgejoActionsLauncherFailing
-      expr: kube_job_status_failed{namespace="forge-ci",job_name=~"forge-linux-qualification-.*"} > 0
+      expr: kube_job_status_failed{namespace="forge-ci",job_name=~"forge-linux-(qualification|atollion)-.*"} > 0
       for: 5m
       labels:
         severity: warning
       annotations:
         summary: A disposable Forgejo Actions runner failed to finish
+    - alert: ForgejoLinuxControllerFailed
+      expr: kube_job_status_failed{namespace="forge-control",job_name=~"forge-linux-atollion-launcher-.*"} > 0
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: The Atollion Linux queue launcher failed
+        description: Inspect launcher logs, job quota and disposable volume provisioning.
     - alert: ForgejoActionsQueueStalled
       expr: (time() - forge_actions_oldest_waiting_timestamp_seconds > 900) and ignoring(status) (forge_actions_jobs{status="waiting"} > 0)
       for: 5m

@@ -27,7 +27,6 @@ metadata:
   namespace: forge-control
 spec:
   schedule: '* * * * *'
-  # Fresh Windows/macOS guests, artifact recovery and cleanup are qualified.
   suspend: false
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 60
@@ -118,7 +117,6 @@ metadata:
   namespace: forge-control
 spec:
   schedule: '* * * * *'
-  # Fresh Windows/macOS guests, artifact recovery and cleanup are qualified.
   suspend: false
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 60
@@ -263,4 +261,11 @@ spec:
       - 10.21.40.126/32
       ports:
       - 22
+  - action: Allow
+    source:
+      selector: forge.fahrican.com/platform == 'linux'
+    destination:
+      services:
+        name: kubernetes
+        namespace: default
   - action: Deny

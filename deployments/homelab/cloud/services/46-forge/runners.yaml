@@ -13,12 +13,13 @@ metadata:
 spec:
   hard:
     pods: '6'
-    requests.cpu: '3'
-    requests.memory: 6Gi
+    requests.cpu: '5'
+    requests.memory: 9Gi
     limits.cpu: '10'
-    limits.memory: 12Gi
+    limits.memory: 16Gi
     limits.ephemeral-storage: 72Gi
-    requests.storage: '0'
+    requests.storage: 576Gi
+    persistentvolumeclaims: '6'
 ---
 apiVersion: batch/v1
 kind: CronJob

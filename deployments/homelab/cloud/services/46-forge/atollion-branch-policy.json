@@ -1,0 +1,34 @@
+{
+  "rule_name": "main",
+  "enable_push": false,
+  "enable_push_whitelist": false,
+  "enable_merge_whitelist": true,
+  "merge_whitelist_usernames": [
+    "funforgiven",
+    "atollion-coordinator"
+  ],
+  "enable_status_check": true,
+  "status_check_contexts": [
+    "Atollion validation / linux-quality (pull_request)",
+    "Atollion validation / windows-build (pull_request)",
+    "Atollion validation / windows-native (pull_request)",
+    "Atollion validation / macos-native (pull_request)",
+    "Atollion validation / validation (pull_request)"
+  ],
+  "required_approvals": 1,
+  "enable_approvals_whitelist": true,
+  "approvals_whitelist_username": [
+    "funforgiven",
+    "atollion-coordinator",
+    "atollion-worker-1",
+    "atollion-worker-2",
+    "atollion-worker-3"
+  ],
+  "dismiss_stale_approvals": true,
+  "ignore_stale_approvals": true,
+  "block_on_rejected_reviews": true,
+  "block_on_official_review_requests": true,
+  "block_on_outdated_branch": true,
+  "require_signed_commits": true,
+  "apply_to_admins": true
+}

@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: runner-atollion
+    namespace: forge-ci
+    labels:
+        velero.io/exclude-from-backup: "true"
+type: Opaque
+stringData:
+    token: ENC[AES256_GCM,data:Z9s5g70Xbk56JXMjC/KpJgN1Re8yqsnyn2TIpz7IbILG1Ud0Fciypw==,iv:MFZqpQd0WkPAuOoPhReU3aFR+i4oFtQC1LkomA+guAM=,tag:ra+R8uP6PHV2WKIQ0bYsCw==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBzQ0lrZ08rdzcxWXBUQlpO
+            ZCtnR3F4ckFwVksrMzdRbWJsTWIwTzUrZnhJCmRrV2F6cld2QkU5VHJVRHg1NGhJ
+            U2F5WFJ6ZHJiWkRLUUtESXo4cjNDWnMKLS0tIFRsa2ZNTkw5OUdpSTNiQlVTbkJi
+            K0RrU094OUsxR1lzUm5XZ3BKL0FCa0EKf9j5zIzVKxj6OElNHrmMov2JF7GRe7Dj
+            bXXGlQEELO8ZEYKTRPS28+9rOXtsWp+/szbww5nsuA50vjgOJVOZWg==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSB5MlhhRllZV0UvS09oeHI4
+            a0VOaGUwb0pLd3lPVzhQYmJUWk55OWYybDNBCnRSSTErN1VabVZjZ1hGUmhBbXhI
+            Y0xDOTVmR0tCSzlWN3hFSkxUNy84ZUEKLS0tIGlpUXRUem0wWGcyR24vbm9SckJ1
+            ZGtxZEIxQzhjTThXdmJiY3czZCtlOTgK0jMWNSBnf3AvlKucICYRz4yOsB+SjURW
+            94WX3YSaSEicM66OAwNRPlfnGA1vQ8AyIxYMeyz1batz8t4aBOwIjw==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1vfxeaxdj7jze5p5ytff0peyjm3rusn8naacfudklvzwknv4yk5wq3qqg3v
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-09-06T14:24:02Z"
+    mac: ENC[AES256_GCM,data:CxOpryvkJFAbbQJEqYejz6mTbplEERYFlIoYw8UPZXf5Qcwc7w0wFuoKLpxmjayzW55A5lYRrZOG+LpONHkwVsQwxJhbuDs//KUTXMGt1nKpF3gh9A01roz08+tqdewPx3LfyDFdtNAHkE8KP+SkrscGRdKBnyszS37hToMkEjI=,iv:VobLEogb/bbdg6OVAxHfqC+N82HeE4bmLa5F+IxUYoI=,tag:/Wkr7L2YRJv76ahdLYSOfw==,type:str]
+    version: 3.13.3
