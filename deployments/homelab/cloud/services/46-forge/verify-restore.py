@@ -78,6 +78,22 @@ if legacy_infrastructure.exists():
             if hashlib.file_digest(source, "sha256").hexdigest() != expected["sha256"]:
                 raise RuntimeError("Retained GitLab infrastructure checksum mismatch")
     print("Retired GitLab boot image and encrypted cloud state checkpoints verified.", flush=True)
+legacy_objects = backup / "legacy-gitlab-object-store"
+if legacy_objects.exists():
+    objects = json.loads((legacy_objects / "manifest.json").read_text())
+    name = "objects.tar.gz.sops.json"
+    if objects.get("schema") != 1 or set(objects["files"]) != {name}:
+        raise RuntimeError("Invalid retained GitLab object-store manifest")
+    expected = objects["files"][name]
+    path = legacy_objects / name
+    if path.is_symlink() or path.stat().st_size != expected["size"]:
+        raise RuntimeError("Retained GitLab object-store file size mismatch")
+    with path.open("rb") as source:
+        if hashlib.file_digest(source, "sha256").hexdigest() != expected["sha256"]:
+            raise RuntimeError("Retained GitLab object-store checksum mismatch")
+    # Age recovery keys stay with operators; retirement also required a separate
+    # offsite restore, decryption and verification of every object in this bundle.
+    print("Encrypted final GitLab object-store export verified.", flush=True)
 verify_index(backup)
 (target / ".database-verified").write_text(manifest["sha256"] + "\n")
 print("Offsite archive checksum, SQLite, OIDC, repository metadata, Actions history and artifact bytes verified.", flush=True)

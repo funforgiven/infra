@@ -144,7 +144,10 @@ quiescence. The backup checks SQLite integrity and captures the complete data
 volume, including Git, LFS, packages, identity configuration, Actions logs and
 artifacts. A checksum manifest is the completion marker. Seven local archives
 are retained; an abandoned maintenance window automatically resumes the app.
-These backups briefly interrupt HTTP/SSH access.
+These backups briefly interrupt HTTP/SSH access. The backup PVC is 800 GiB,
+budgeted for seven archives plus the next archive, two native-image
+generations and recovery headroom for the 80 GiB application volume. Review
+this budget when expanding application storage or native images.
 
 Velero copies only the backup volume, never the live SQLite/Git volume. Daily
 offsite retention is 30 days; weekly retention is 90 days. The application and
@@ -170,7 +173,10 @@ python3 deployments/homelab/cloud/services/46-forge/native_backup.py --publish \
 Repeat for Windows. The utility checks the local files, refuses publication
 during an active Velero backup, streams through authenticated Kubernetes exec,
 checks the received bytes, and publishes the version index last. It preserves
-previous completed versions and rejects interrupted or corrupt transfers. No
+previous completed versions and rejects interrupted or corrupt transfers.
+After a newer offsite restore passes, retain the current and previous native
+image generations locally; remove older unreferenced version directories
+through operator access. Offsite retention remains unchanged. No
 cloud or host credentials are installed in the backup pod. Keep at least 5 GiB
 free and retain the previous qualified image until a new offsite restore passes.
 Start a fresh Velero backup and isolated restore after every image publication;
@@ -181,7 +187,11 @@ the latest completed daily backup into fresh `forge-restore` volumes. Its
 service account can delete only the two test PVCs and the test pod. Calico
 denies all ingress and egress in that namespace. Restore modifiers remove
 production bootstrap and replace application containers with verification
-processes; no duplicate Forgejo or OAuth callback runs during the test.
+processes; no duplicate Forgejo or OAuth callback runs during the test. The
+controller allows four hours for offsite transfer and verification, with a
+five-hour Kubernetes Job deadline for cleanup and shutdown. The qualified
+46 GB image set took about an hour to restore; review timeout and bandwidth
+budgets when the retained data set grows.
 
 Velero 1.18 requires `persistentvolumes` in the resource inclusion list even
 for filesystem restoration. `includeClusterResources: false` and the PVC
@@ -193,7 +203,11 @@ provider, Git object integrity, the qualification branch, successful Actions
 history and exact artifact bytes. If `legacy-gitlab.json` is present, it also
 verifies the retained native GitLab backup and recovery secrets. The retained
 `legacy-gitlab-infrastructure` manifest additionally verifies the old backend
-boot image and SOPS-encrypted cloud state checkpoints. A Velero
+boot image and SOPS-encrypted cloud state checkpoints. The
+`legacy-gitlab-object-store` manifest verifies the encrypted final export of
+all remaining GitLab bucket objects, including the newest native backup.
+Its retirement qualification separately restored, decrypted and checked every
+object; the monthly verifier does not receive operator age keys. A Velero
 `Completed` result alone is insufficient; both verifiers must become ready.
 The database verifier also requires both native platform images, their public
 provenance and qualification records, and all macOS firmware files to match
@@ -234,6 +248,7 @@ Atollion continues on GitHub until the owner explicitly requests cutover.
 Follow [ATOLLION-HANDOFF.md](ATOLLION-HANDOFF.md) for the authorization boundary,
 platform compatibility checks and future cutover sequence. Do not transfer the managed `gh` credential into Forgejo; use the
 repository-scoped CLI to export metadata and an offline migration dump.
+See [READINESS.md](READINESS.md) for the deployment and recovery evidence.
 The owner explicitly deferred migration: do not import Atollion or change its
 workflows, remotes or active agent setup until separately instructed. Finish
 infrastructure qualification and stop at migration readiness. The owner can
@@ -241,13 +256,36 @@ pause the active agent for the final catch-up once they request the cutover.
 
 The GitLab application and cluster have been retired. Retained recovery files
 include its native backup, recovery secrets, backend boot image and encrypted
-cloud state checkpoints. The CI foundation retains the historical Terraform
+cloud state checkpoints, plus the final complete object-store export. The
+dedicated project, network, GitLab flavors, image, load balancer, RGW service
+and buckets have been deleted. The CI foundation retains the historical Terraform
 controller name `gitlab-foundation` to preserve its existing state; that name
 no longer provisions a GitLab service. Its source is
 `components/cloud/services/forge/foundation-tofu` and its native flavor IDs are
 preserved with explicit state moves.
 
-Keep the retained recovery bundle and existing offsite Restic history until
-their declared retention expires and the replacement has been accepted. The
+Keep the retained recovery bundle and any older Restic objects under
+`services/hosts/gitlab/` until their declared retention expires and the
+replacement has been accepted. The
 old Restic password stays SOPS-encrypted for historical recovery; removal of
 its writer declaration must not delete the bucket's retained objects.
+
+Historical GitLab deployment and recovery instructions are preserved at signed
+revision `cc12dad6fc668158892239d1849b3cdeb8dd2891`, including
+`deployments/homelab/cloud/gitlab/RECOVERY.md`. Use those files only for an
+explicitly authorized, isolated historical recovery. The encrypted foundation
+checkpoint includes the then-shared CI state: never restore it over the active
+Forge CI Terraform backend. The current Forge service remains authoritative.
+
+The final object-store export lives at
+`/backups/legacy-gitlab-object-store/objects.tar.gz.sops.json`. Check its size
+and SHA-256 against the adjacent `manifest.json` before recovery. An authorized
+operator can decrypt it using an existing administrator or undercloud age
+identity with `sops decrypt --input-type json --output-type binary`. The
+resulting tar archive contains `manifest.json` and `objects/<bucket>/<key>`;
+the inner manifest records each original object's size, SHA-256, ETag and
+content type. It includes the newest native backup,
+`1788653718_2026_09_06_19.3.1-ee_gitlab_backup.tar`, and its matching secrets.
+Keep decrypted recovery material private. The supplementary offsite backup
+and restore evidence are recorded in [READINESS.md](READINESS.md); subsequent
+daily and weekly Forgejo backups include the same encrypted export.
