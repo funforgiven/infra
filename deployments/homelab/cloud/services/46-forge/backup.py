@@ -35,7 +35,20 @@ class Metrics(BaseHTTPRequestHandler):
             except (ValueError, KeyError, FileNotFoundError):
                 continue
         body = (f'forge_backup_completed_timestamp_seconds{{service="{service}"}} {completed}\n'
-                f'forge_backup_error_timestamp_seconds{{service="{service}"}} {last_error}\n').encode()
+                f'forge_backup_error_timestamp_seconds{{service="{service}"}} {last_error}\n')
+        if service == "forgejo":
+            # Forgejo 15 does not export Actions queue metrics. Read only
+            # aggregate job state; never expose workflow contents or identities.
+            try:
+                with sqlite3.connect((data / database).as_uri() + "?mode=ro", uri=True, timeout=2) as db:
+                    counts = dict(db.execute("SELECT status, COUNT(*) FROM action_run_job GROUP BY status"))
+                    oldest = db.execute("SELECT COALESCE(MIN(updated), 0) FROM action_run_job WHERE status = 5").fetchone()[0]
+                for status, name in [(1, "success"), (2, "failure"), (5, "waiting"), (6, "running"), (7, "blocked")]:
+                    body += f'forge_actions_jobs{{status="{name}"}} {counts.get(status, 0)}\n'
+                body += f'forge_actions_oldest_waiting_timestamp_seconds {oldest}\nforge_actions_metrics_up 1\n'
+            except (OSError, sqlite3.Error):
+                body += 'forge_actions_metrics_up 0\n'
+        body = body.encode()
         self.send_response(200)
         self.send_header("Content-Type", "text/plain; version=0.0.4")
         self.end_headers()

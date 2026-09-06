@@ -30,6 +30,9 @@ def main():
         document = {"apiVersion": "v1", "kind": "Secret", "metadata": {
             "name": "forge-runtime", "namespace": "forge"}, "type": "Opaque", "stringData": {}}
     values = document["stringData"]
+    # Secrets recover from SOPS; the complete application archive is encrypted
+    # by Kopia. Avoid also putting plaintext Secret objects in Velero metadata.
+    document["metadata"].setdefault("labels", {})["velero.io/exclude-from-backup"] = "true"
     for name in ("forgejo-secret-key", "forgejo-internal-token", "forgejo-admin-password",
                  "forgejo-metrics-token"):
         values.setdefault(name, secrets.token_hex(32))
