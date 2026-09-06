@@ -139,6 +139,49 @@ class Cloud:
                 self.remove(server)
             else:
                 raise RuntimeError("A managed Windows job is still active")
+        volumes = self.call("GET", VOLUME, "/" + self.project + "/volumes/detail")["volumes"]
+        for volume in volumes:
+            if self.owned_volume(volume):
+                if int(volume["metadata"].get("expires_unix", "0")) > time.time():
+                    raise RuntimeError("A managed Windows job disk is still being prepared")
+                self.remove_volume(volume["id"])
+
+    def owned_volume(self, volume):
+        return (volume.get("name", "").startswith(PREFIX)
+                and volume.get("metadata", {}).get("managed_by") == MANAGER
+                and volume["metadata"].get("forge_project_id") == self.project)
+
+    def remove_volume(self, identity):
+        path = "/" + self.project + "/volumes/" + identity
+        current = self.call("GET", VOLUME, path, missing=True)
+        if current is None:
+            return
+        volume = current["volume"]
+        if not self.owned_volume(volume) or volume.get("attachments"):
+            raise RuntimeError("Refusing to delete an unowned or attached preparation disk")
+        self.call("DELETE", VOLUME, path)
+        for _ in range(60):
+            if self.call("GET", VOLUME, path, missing=True) is None:
+                print("Verified deletion of the Windows preparation disk.", flush=True)
+                return
+            time.sleep(5)
+        raise RuntimeError("Windows preparation disk deletion did not finish")
+
+    def prepare_volume(self, identity):
+        # Nova's default image-to-volume wait is only three minutes. Prepare
+        # this large desktop disk before Nova attaches it, without changing
+        # shared compute-service timeouts.
+        deadline = time.monotonic() + 1800
+        while time.monotonic() < deadline:
+            volume = self.call("GET", VOLUME, "/" + self.project + "/volumes/" + identity)["volume"]
+            if not self.owned_volume(volume) or volume.get("attachments"):
+                raise RuntimeError("Preparation disk ownership or attachment changed")
+            if volume["status"] == "available":
+                return
+            if volume["status"].startswith("error"):
+                raise RuntimeError("Windows job disk preparation failed")
+            time.sleep(15)
+        raise RuntimeError("Windows job disk preparation exceeded thirty minutes")
 
 
 def run_macos(config, secret_dir, forge):
@@ -186,8 +229,14 @@ def run(config, secret_dir):
             and golden.get("image_source_revision") == config["windows_image_revision"]):
         raise RuntimeError("Windows golden image does not match the promoted protected image")
     name = PREFIX + str(int(time.time())) + "-" + uuid.uuid4().hex[:8]
-    registered, server = None, None
+    registered, server, volume = None, None, None
     try:
+        volume = cloud.call("POST", VOLUME, "/" + cloud.project + "/volumes", {"volume": {
+            "name": name, "size": 240, "imageRef": golden["id"],
+            "metadata": {"managed_by": MANAGER, "forge_project_id": cloud.project,
+                         "expires_unix": str(int(time.time()) + DEADLINE)}}})["volume"]
+        print("Preparing a fresh Windows job disk", volume["id"], flush=True)
+        cloud.prepare_volume(volume["id"])
         registered = forge.call("POST", body={"name": name, "ephemeral": True,
             "description": "Fresh Windows 11 desktop VM; unprivileged single job; externally expired"})
         enrollment = base64.b64encode(json.dumps({"uuid": registered["uuid"], "token": registered["token"],
@@ -199,8 +248,8 @@ def run(config, secret_dir):
             "user_data": base64.b64encode(userdata.encode()).decode(),
             "metadata": {"managed_by": MANAGER, "expires_unix": str(int(time.time()) + DEADLINE),
                 "forge_repository": repository, "forge_runner_id": str(registered["id"])},
-            "block_device_mapping_v2": [{"uuid": golden["id"], "source_type": "image",
-                "destination_type": "volume", "volume_size": 240, "boot_index": 0,
+            "block_device_mapping_v2": [{"uuid": volume["id"], "source_type": "volume",
+                "destination_type": "volume", "boot_index": 0,
                 "delete_on_termination": True}]}})["server"]
         # Retrieve authoritative ownership fields before any cleanup operation.
         server = cloud.call("GET", COMPUTE, "/servers/" + created["id"])["server"]
@@ -222,6 +271,8 @@ def run(config, secret_dir):
         try:
             if server is not None:
                 cloud.remove(server)
+            if volume is not None:
+                cloud.remove_volume(volume["id"])
         finally:
             if registered is not None:
                 forge.call("DELETE", "/" + str(registered["id"]), missing=True)

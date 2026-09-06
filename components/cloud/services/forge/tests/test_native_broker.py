@@ -48,6 +48,36 @@ class CleanupBoundary(unittest.TestCase):
                 self.cloud.call('GET', broker.COMPUTE, '/servers/detail')
             self.assertEqual(request.call_count, 1)
 
+    def test_preparation_cleanup_refuses_foreign_or_attached_disks(self):
+        owned = {'name': broker.PREFIX + 'disk', 'metadata': {
+            'managed_by': broker.MANAGER, 'forge_project_id': 'ci-project'}, 'attachments': []}
+        for changed in ({'name': 'retained-golden'}, {'metadata': {}},
+                        {'attachments': [{'server_id': 'running-job'}]}):
+            with self.subTest(changed=changed), patch.object(self.cloud, 'call',
+                    return_value={'volume': {**owned, **changed}}) as call:
+                with self.assertRaisesRegex(RuntimeError, 'unowned or attached'):
+                    self.cloud.remove_volume('disk-id')
+                self.assertFalse(any(args[0] == 'DELETE' for args, _ in call.call_args_list))
+
+    def test_preparation_failure_cleans_disk_before_registering_runner(self):
+        golden = {'id': 'golden', 'status': 'active', 'protected': True, 'visibility': 'private',
+                  'owner': 'ci-project', 'image_role': 'forge-windows', 'image_source_revision': 'signed'}
+        with tempfile.TemporaryDirectory() as directory:
+            Path(directory, 'forge-token').write_text('fixture')
+            Path(directory, 'cloud-credential.json').write_text('{}')
+            with patch.object(broker, 'Cloud', return_value=self.cloud), patch.object(broker, 'Forge') as forge, \
+                    patch.object(self.cloud, 'reap'), patch.object(self.cloud, 'call',
+                        side_effect=[golden, {'volume': {'id': 'preparation'}}]), \
+                    patch.object(self.cloud, 'prepare_volume', side_effect=RuntimeError('preparation failed')), \
+                    patch.object(self.cloud, 'remove_volume') as cleanup:
+                forge.return_value.waiting.return_value = [{'id': 1, 'handle': 'fixture'}]
+                forge.return_value.prefix = broker.PREFIX
+                with self.assertRaisesRegex(RuntimeError, 'preparation failed'):
+                    broker.run({'repository': 'forge-runner/runner-qualification', 'project_id': 'ci-project',
+                                'windows_image_id': 'golden', 'windows_image_revision': 'signed'}, Path(directory))
+                cleanup.assert_called_once_with('preparation')
+                forge.return_value.call.assert_not_called()
+
     def test_cloud_microversions_are_scoped_to_the_target_service(self):
         self.cloud.headers = {'X-Auth-Token': 'test-only'}
         self.cloud.renew_at = float('inf')
