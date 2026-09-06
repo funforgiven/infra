@@ -250,6 +250,11 @@ def run(config, secret_dir):
         # the config-drive enrollment, and preserve Cloudbase's reboot code.
         userdata = """#ps1_sysnative
 $ErrorActionPreference = 'Stop'
+# Cloudbase's GeneralizationState check can finish before the specialize pass
+# has initialized the local account database. Let Windows finish its own
+# required reboot, and ask Cloudbase to retry this plugin on that next boot.
+$Setup = Get-ItemProperty 'HKLM:\\SYSTEM\\Setup'
+if ($Setup.SystemSetupInProgress -ne 0 -or $Setup.OOBEInProgress -ne 0) { exit 1002 }
 try {
     if ([Security.Principal.WindowsIdentity]::GetCurrent().User.Value -ne 'S-1-5-18') { throw 'Desktop initialization requires SYSTEM' }
     # Generalized images may contain protected file DACLs. Establish the
