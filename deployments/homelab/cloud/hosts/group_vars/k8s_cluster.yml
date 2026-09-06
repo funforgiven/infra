@@ -79,6 +79,11 @@ kube_vip_enabled: true
 kube_vip_arp_enabled: true
 kube_vip_bgp_enabled: false
 kube_vip_controlplane_enabled: true
+# API delays during image preparation exceeded the default three-second
+# renewal window. Tolerate brief stalls; a failed owner expires within 30s.
+kube_vip_leaseduration: 30
+kube_vip_renewdeadline: 20
+kube_vip_retryperiod: 4
 kube_vip_services_interface: br-manila
 kube_vip_services_enabled: true
 kube_vip_enableServicesElection: true
