@@ -138,6 +138,14 @@ spec:
           'ubuntu-jammy-kube-v1.36.2-260705-1940.qcow2' \
           'c3445a1c9e01fb6b4be2ea7296f423f5d16d9cc8be6f146fadc0448bbd507fa3'
     conf:
+      glance_api_uwsgi:
+        uwsgi:
+          # A single synchronous worker blocks /healthcheck during large
+          # uploads, causing kubelet to kill a healthy image transfer.
+          processes: 2
+          threads: 2
+          socket-timeout: 900
+          http-timeout: 900
       software:
         rbd:
           rbd_store_pool_app_name: rbd
@@ -171,6 +179,13 @@ spec:
             min_available: 2
       resources:
         enabled: true
+        api:
+          requests:
+            memory: 512Mi
+            cpu: 200m
+          limits:
+            memory: 2Gi
+            cpu: "2"
     extraObjects:
       - apiVersion: gateway.networking.k8s.io/v1
         kind: HTTPRoute
@@ -185,6 +200,9 @@ spec:
           hostnames:
             - image.cloud.fahrican.com
           rules:
-            - backendRefs:
+            - timeouts:
+                request: 1800s
+                backendRequest: 1800s
+              backendRefs:
                 - name: glance-api
                   port: 9292
