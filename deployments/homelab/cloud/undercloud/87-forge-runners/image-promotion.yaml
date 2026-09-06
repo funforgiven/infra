@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: forge-runner-image-promotion
+  namespace: openstack
+data:
+  macos_image_revision: 08948624cdcafc2343b42cfcc972141fe3874a57

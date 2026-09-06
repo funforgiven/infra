@@ -1,0 +1,27 @@
+apiVersion: infra.contrib.fluxcd.io/v1alpha2
+kind: Terraform
+metadata:
+  name: forge-runners
+  namespace: openstack
+spec:
+  interval: 10m
+  retryInterval: 1m
+  approvePlan: auto
+  destroyResourcesOnDeletion: false
+  path: ./components/cloud/services/forge/runners-tofu
+  sourceRef:
+    kind: GitRepository
+    name: services-tofu-source
+  varsFrom:
+    - kind: ConfigMap
+      name: forge-runner-image-promotion
+      varsKeys: [macos_image_revision]
+  runnerPodTemplate:
+    spec:
+      envFrom:
+        - secretRef:
+            name: magnum-keystone-admin
+  writeOutputsToSecret:
+    name: forge-runner-infrastructure-outputs
+  remediation:
+    retries: 3

@@ -1424,3 +1424,25 @@ spec:
       kind: Terraform
       name: gitlab-foundation
       namespace: openstack
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: wave87-forge-runners
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./deployments/homelab/cloud/undercloud/87-forge-runners
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: wave86-gitlab-foundation
+  healthChecks:
+    - apiVersion: infra.contrib.fluxcd.io/v1alpha2
+      kind: Terraform
+      name: forge-runners
+      namespace: openstack
