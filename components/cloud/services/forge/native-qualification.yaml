@@ -27,6 +27,15 @@ jobs:
           if ((Get-CimInstance Win32_OperatingSystem).Caption -notmatch 'Windows 11 Pro') { throw 'Windows desktop edition required' }
           if (Get-LocalUser -Name forge-builder -ErrorAction SilentlyContinue) { throw 'Builder account remains' }
           if ((Get-Service sshd).StartType -ne 'Disabled') { throw 'Builder remote access remains' }
+          foreach ($TrustedTool in @('C:\Forge\Start-Job.ps1','C:\Forge\Run-Job.ps1','C:\Forge\forgejo-runner.exe')) {
+            $Writable = $false
+            try {
+              $Stream = [IO.File]::Open($TrustedTool,[IO.FileMode]::Open,[IO.FileAccess]::Write,[IO.FileShare]::ReadWrite)
+              $Stream.Dispose()
+              $Writable = $true
+            } catch [UnauthorizedAccessException] {}
+            if ($Writable) { throw "Job account can modify trusted image tool: $TrustedTool" }
+          }
           if (Test-Path C:\ForgeJob\qualification-marker) { throw 'A previous job left writable state' }
           Set-Content C:\ForgeJob\qualification-marker 'this file must disappear with this VM'
           foreach ($Endpoint in @(@('169.254.169.254',80),@('10.21.20.130',443),@('10.21.20.131',443),@('192.168.81.12',22),@('10.21.40.126',22))) {
