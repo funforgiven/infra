@@ -2,7 +2,7 @@
 """Create separate, encrypted native-controller credentials for qualification.
 
 Run in the infrastructure development shell. Cloud administrator credentials
-are used only for enrollment; controllers receive a CI-project member token.
+are used only for enrollment; controllers receive a CI-project member and TPM-secret creator token.
 """
 import datetime
 import importlib.util
