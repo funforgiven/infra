@@ -1,6 +1,6 @@
 { lib, inputs, ... }:
 {
-  dendritic.hosts = lib.genAttrs [ "gitlab-macos" ] (name: {
+  dendritic.hosts = lib.genAttrs [ "forge-macos" ] (name: {
     system = "x86_64-linux";
     stateVersion = "26.05";
     user = "funforgiven";
@@ -31,7 +31,7 @@
     ];
   };
 
-  nixos.modules.services-gitlab-macos =
+  nixos.modules.services-forge-macos =
     { pkgs, ... }:
     let
       # Quickemu's SSH forward otherwise binds every interface. Patch the
@@ -58,7 +58,19 @@
         home = "/var/lib/quickemu";
         createHome = true;
       };
-      environment.etc."gitlab/macos.conf".text = ''
+      # Provisioning records this public key through the authenticated Nova
+      # console before enrolling it into pinned SSH known-hosts.
+      systemd.services.forge-host-identity = {
+        description = "Publish the native host SSH public identity to its private console";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "sshd-keygen.service" ];
+        requires = [ "sshd-keygen.service" ];
+        serviceConfig.Type = "oneshot";
+        script = ''
+          printf 'FORGE_HOST_KEY=%s\n' "$(cat /etc/ssh/ssh_host_ed25519_key.pub)" > /dev/ttyS0
+        '';
+      };
+      environment.etc."forge/macos.conf".text = ''
         guest_os="macos"
         macos_release="sequoia"
         disk_img="/var/lib/quickemu/macos/disk.qcow2"
@@ -73,8 +85,9 @@
         sound_card="none"
       '';
       systemd.services.quickemu-macos = {
-        description = "macOS GitLab guest on nested KVM";
-        wantedBy = [ "multi-user.target" ];
+        description = "Disposable macOS Forgejo guest on nested KVM";
+        # The broker prepares a fresh disk overlay and starts one guest per
+        # job. Do not automatically boot a previous job's writable state.
         after = [ "network-online.target" ];
         wants = [ "network-online.target" ];
         path = with pkgs; [
@@ -99,7 +112,7 @@
           Group = "quickemu";
           WorkingDirectory = "/var/lib/quickemu";
           PIDFile = "/var/lib/quickemu/macos/macos.pid";
-          ExecStart = "${quickemu}/bin/quickemu --vm /etc/gitlab/macos.conf --display none --viewer none";
+          ExecStart = "${quickemu}/bin/quickemu --vm /etc/forge/macos.conf --display none --viewer none";
           KillMode = "control-group";
           KillSignal = "SIGTERM";
           TimeoutStopSec = 120;

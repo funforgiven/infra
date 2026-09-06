@@ -31,8 +31,8 @@
           case "$host" in
             home-assistant) project=services ;;
             gitlab) project=gitlab ;;
-            gitlab-macos) project=gitlab-ci ;;
-            *) echo 'Expected home-assistant, gitlab or gitlab-macos.' >&2; exit 64 ;;
+            forge-macos) project=forge-ci ;;
+            *) echo 'Expected home-assistant, gitlab or forge-macos.' >&2; exit 64 ;;
           esac
 
           repository_root="$(git rev-parse --show-toplevel)"
@@ -235,8 +235,8 @@
           inputs.self.nixosConfigurations.home-assistant.config.system.build.images.openstack;
         gitlab-openstack-image =
           inputs.self.nixosConfigurations.gitlab.config.system.build.images.openstack;
-        gitlab-macos-openstack-image =
-          inputs.self.nixosConfigurations.gitlab-macos.config.system.build.images.openstack;
+        forge-macos-openstack-image =
+          inputs.self.nixosConfigurations.forge-macos.config.system.build.images.openstack;
       };
     };
 }

@@ -101,11 +101,12 @@ that non-root identity. `compute-registry` can only read packages, is encrypted
 for undercloud Flux, and is never mounted into a VM. Compute host addresses
 are allowed only on the registry `/v2` route, without extending UI/admin access.
 
-The initial libvirt image rollout uses `OnDelete` so one host can be qualified
-before further restarts. OpenStack-Helm starts VM processes outside the pod
-cgroup; still verify the existing guest PID/uptime and cluster health across
-the first daemon restart. Enable Nova's TPM support only after libvirt reports
-the emulator and TPM 2.0 in its domain capabilities.
+The first libvirt daemon restart on asiago preserved the existing guest's
+exact PID and uptime, kept all CAPI management nodes ready, and exposed TPM 2.0
+emulation. Subsequent updates roll one daemon at a time. OpenStack-Helm starts
+VM processes outside the pod cgroup; keep checking guest and cluster health
+across image upgrades. Nova enables TPM scheduling on asiago and uses Barbican
+for TPM secret storage. Other hosts do not advertise TPM scheduling yet.
 
 ## Backup and recovery
 
