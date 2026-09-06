@@ -1337,6 +1337,7 @@ metadata:
   name: wave86-gitlab
   namespace: flux-system
 spec:
+  suspend: true
   interval: 10m
   retryInterval: 1m
   timeout: 20m
@@ -1387,6 +1388,8 @@ metadata:
   name: wave88-gitlab-cluster
   namespace: flux-system
 spec:
+  # Prevent recreation during the replacement's staged cloud retirement.
+  suspend: true
   interval: 10m
   retryInterval: 1m
   timeout: 125m

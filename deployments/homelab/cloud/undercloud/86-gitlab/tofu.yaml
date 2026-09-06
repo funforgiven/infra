@@ -4,6 +4,8 @@ metadata:
   name: gitlab
   namespace: openstack
 spec:
+  # Forgejo replacement: preserve retained disks while compute is retired.
+  suspend: true
   interval: 10m
   retryInterval: 1m
   approvePlan: auto
