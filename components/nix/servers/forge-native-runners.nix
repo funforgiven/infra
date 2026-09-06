@@ -40,11 +40,15 @@
         postPatch = (old.postPatch or "") + ''
           substituteInPlace quickemu \
             --replace-fail 'hostfwd=tcp::' 'hostfwd=tcp:127.0.0.1:' \
-            --replace-fail 'hostfwd=udp::' 'hostfwd=udp:127.0.0.1:'
+            --replace-fail 'hostfwd=udp::' 'hostfwd=udp:127.0.0.1:' \
+            --replace-fail "HOST_CPU_SOCKETS=\$(get_cpu_info 'Socket')" 'HOST_CPU_SOCKETS=1'
         '';
       });
     in
     {
+      # Applied inside this dedicated nested hypervisor, never to the physical
+      # compute hosts. macOS probes MSRs that KVM does not implement.
+      boot.extraModprobeConfig = "options kvm ignore_msrs=1";
       environment.systemPackages = [
         quickemu
         pkgs.qemu
@@ -76,6 +80,7 @@
         disk_img="/var/lib/quickemu/macos/disk.qcow2"
         ram="8G"
         cpu_cores="4"
+        disk_size="160G"
         display="none"
         viewer="none"
         public_dir="none"
@@ -91,6 +96,7 @@
         after = [ "network-online.target" ];
         wants = [ "network-online.target" ];
         path = with pkgs; [
+          bash
           coreutils
           gnugrep
         ];
