@@ -72,3 +72,18 @@ spec:
         severity: warning
       annotations:
         summary: A disposable Forgejo Actions runner failed to finish
+    - alert: ForgejoActionsQueueStalled
+      expr: (time() - forge_actions_oldest_waiting_timestamp_seconds > 900) and ignoring(status) (forge_actions_jobs{status="waiting"} > 0)
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: A Forgejo Actions job has waited over 15 minutes
+        description: Check runner launchers, platform labels, image pulls and native guest availability.
+    - alert: ForgejoActionsMetricsUnavailable
+      expr: (forge_actions_metrics_up == 0) or absent(forge_actions_metrics_up)
+      for: 15m
+      labels:
+        severity: warning
+      annotations:
+        summary: Forgejo Actions queue monitoring is unavailable
