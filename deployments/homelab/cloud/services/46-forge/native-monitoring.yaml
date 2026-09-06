@@ -93,6 +93,43 @@ spec:
   groups:
   - name: forge-native
     rules:
+    - alert: ForgejoNativeImageBackupMissing
+      expr: forge_native_backup_completed_timestamp_seconds == 0
+      for: 1h
+      labels:
+        severity: critical
+      annotations:
+        summary: A native runner image has no completed local backup
+        description: Publish the qualified Windows and macOS golden images and firmware,
+          then verify a new offsite backup and restore before retiring checkpoints.
+    - alert: ForgejoNativeImageMaintenanceDue
+      expr: (time() - forge_native_image_created_timestamp_seconds > 3024000) and
+        (forge_native_image_created_timestamp_seconds > 0)
+      for: 1h
+      labels:
+        severity: warning
+      annotations:
+        summary: A native runner golden image is over 35 days old
+        description: Apply operating-system and tool security updates in maintenance,
+          reseal, qualify fresh guests, and replace the offsite image backup.
+    - alert: ForgejoNativeQualificationStale
+      expr: time() - forge_native_qualification_completed_timestamp_seconds > 777600
+      for: 1h
+      labels:
+        severity: warning
+      annotations:
+        summary: A native runner has no successful qualification in nine days
+        description: Inspect the weekly infrastructure qualification workflow and its
+          artifact recovery job before enrolling application repositories.
+    - alert: ForgejoNativeCloudCredentialExpiring
+      expr: forge_native_cloud_credential_expires_timestamp_seconds - time() < 2592000
+      for: 1h
+      labels:
+        severity: warning
+      annotations:
+        summary: The scoped Windows broker credential expires within 30 days
+        description: Rotate the CI-project member application credential through SOPS,
+          update its public expiry record, and requalify before revoking the old credential.
     - alert: ForgejoNativeControllerFailed
       expr: kube_job_status_failed{namespace="forge-control",job_name=~"forge-(windows|macos)-qualification-.*"}
         > 0

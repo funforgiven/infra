@@ -2,6 +2,7 @@
 """Quiesced, checked recovery archives; Velero copies only completed archives."""
 
 import fcntl
+import datetime
 import hashlib
 import json
 import os
@@ -43,11 +44,31 @@ class Metrics(BaseHTTPRequestHandler):
                 with sqlite3.connect((data / database).as_uri() + "?mode=ro", uri=True, timeout=2) as db:
                     counts = dict(db.execute("SELECT status, COUNT(*) FROM action_run_job GROUP BY status"))
                     oldest = db.execute("SELECT COALESCE(MIN(updated), 0) FROM action_run_job WHERE status = 5").fetchone()[0]
+                    native = dict(db.execute("SELECT j.name, MAX(j.stopped) FROM action_run_job j "
+                        "JOIN repository r ON r.id = j.repo_id WHERE j.status = 1 "
+                        "AND r.owner_name = 'forge-runner' AND r.name = 'runner-qualification' "
+                        "AND j.name IN ('windows', 'macos') GROUP BY j.name"))
                 for status, name in [(1, "success"), (2, "failure"), (5, "waiting"), (6, "running"), (7, "blocked")]:
                     body += f'forge_actions_jobs{{status="{name}"}} {counts.get(status, 0)}\n'
                 body += f'forge_actions_oldest_waiting_timestamp_seconds {oldest}\nforge_actions_metrics_up 1\n'
+                for platform in ('windows', 'macos'):
+                    body += f'forge_native_qualification_completed_timestamp_seconds{{platform="{platform}"}} {native.get(platform, 0)}\n'
             except (OSError, sqlite3.Error):
                 body += 'forge_actions_metrics_up 0\n'
+            try:
+                images = json.loads((destination / 'native-index.json').read_text())['platforms']
+            except (OSError, ValueError, KeyError):
+                images = {}
+            for platform in ('windows', 'macos'):
+                entry = images.get(platform, {})
+                for field, metric in [('backed_up_at', 'backup_completed'), ('created_at', 'image_created')]:
+                    body += f'forge_native_{metric}_timestamp_seconds{{platform="{platform}"}} {entry.get(field, 0)}\n'
+            try:
+                status = json.loads(Path(__file__).with_name('native-status.json').read_text())
+                expiry = int(datetime.datetime.fromisoformat(status['windows_cloud_credential_expires']).timestamp())
+            except (OSError, ValueError, KeyError):
+                expiry = 0
+            body += f'forge_native_cloud_credential_expires_timestamp_seconds{{platform="windows"}} {expiry}\n'
         body = body.encode()
         self.send_response(200)
         self.send_header("Content-Type", "text/plain; version=0.0.4")

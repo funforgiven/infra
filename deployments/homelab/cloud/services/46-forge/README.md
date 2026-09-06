@@ -108,6 +108,33 @@ VM processes outside the pod cgroup; keep checking guest and cluster health
 across image upgrades. Nova enables TPM scheduling on asiago and uses Barbican
 for TPM secret storage. Other hosts do not advertise TPM scheduling yet.
 
+### Native execution
+
+Native jobs are launched by separate controllers in `forge-control`. Windows
+uses a fresh Cinder disk and Windows 11 desktop VM for each job; the controller
+waits for image conversion before asking Nova to boot. Cleanup verifies both
+VM and disk deletion, including a disk whose preparation failed before any VM
+existed. The controller refuses to delete foreign or attached preparation disks.
+
+macOS uses the retained `forge-macos` NixOS host on taleggio. A forced SSH
+command creates a QCOW2 overlay and private copies of the pinned firmware for
+one guest, then deletes them after shutdown. The golden files stay root-owned
+and read-only. The sealed guest has SIP, authenticated-root and AMFI enabled,
+no builder administrator, and no SSH service. A fixed launch daemon mounts
+only the read-only enrollment CD before login and starts the runner as
+`forge-job`. The host console is loopback-only and accessible through the
+operator SSH connection. Guest network traffic cannot use Slirp to reach host
+services. Labels are `windows-x86_64` and `macos-x86_64`, with native `host`
+execution; Windows runs in an unprivileged interactive desktop session.
+
+Keep native qualification controllers suspended until fresh guests pass the
+platform workflow, artifact recovery, isolation and cleanup checks. The
+qualification repository is separate from Atollion and has its own scoped
+enrollment credentials. The Windows cloud credential is a CI-project member
+application credential; its public expiry is recorded in `native-status.json`.
+Rotate that record with the encrypted credential so expiry monitoring remains
+accurate. Neither native guest receives the cloud credential or enrollment PAT.
+
 ## Backup and recovery
 
 `backup.py` creates a native archive every six hours and before each Velero
@@ -121,6 +148,32 @@ These backups briefly interrupt HTTP/SSH access.
 Velero copies only the backup volume, never the live SQLite/Git volume. Daily
 offsite retention is 30 days; weekly retention is 90 days. The application and
 backup PVCs use retained Cinder volumes and are excluded from Flux pruning.
+
+The same backup PVC contains versioned native golden images and macOS
+firmware. Acquire the Windows image from its private protected Glance record
+and verify Glance's SHA-512; copy the macOS files through pinned operator SSH
+and verify the golden manifest. Never back up an active writable job overlay.
+Record the full signed source revision, creation/qualification Unix timestamps,
+two distinct passing fresh-guest qualification run IDs, and each fixed file's
+size and SHA-256 in a public backup manifest. `native_backup.py` documents and
+validates the manifest fields and exact allowed files for each platform.
+
+Publish a completed image set from restricted operator staging:
+
+```sh
+python3 deployments/homelab/cloud/services/46-forge/native_backup.py --publish \
+  --kubectl /path/to/services-kubectl --source /restricted/staging/macos \
+  --manifest /restricted/staging/macos-backup-manifest.json
+```
+
+Repeat for Windows. The utility checks the local files, refuses publication
+during an active Velero backup, streams through authenticated Kubernetes exec,
+checks the received bytes, and publishes the version index last. It preserves
+previous completed versions and rejects interrupted or corrupt transfers. No
+cloud or host credentials are installed in the backup pod. Keep at least 5 GiB
+free and retain the previous qualified image until a new offsite restore passes.
+Start a fresh Velero backup and isolated restore after every image publication;
+a local copy alone is not an offsite recovery qualification.
 
 The monthly `backup-qualification/forge-restore-qualification` CronJob restores
 the latest completed daily backup into fresh `forge-restore` volumes. Its
@@ -139,6 +192,12 @@ provider, Git object integrity, the qualification branch, successful Actions
 history and exact artifact bytes. If `legacy-gitlab.json` is present, it also
 verifies the retained native GitLab backup and recovery secrets. A Velero
 `Completed` result alone is insufficient; both verifiers must become ready.
+The database verifier also requires both native platform images, their public
+provenance and qualification records, and all macOS firmware files to match
+their restored SHA-256 manifests. Recover the macOS files root-owned/read-only
+under `/var/lib/forge-golden/macos` on a host rebuilt from its pinned Nix image.
+Reimport Windows as a private protected Glance image with the saved hardware
+properties; update `windows.json` to its new ID before starting any controller.
 
 For actual disaster recovery, suspend `services-forge` reconciliation, restore
 the backup PVC, verify a completed archive, then extract its `data/` contents
