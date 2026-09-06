@@ -1,0 +1,9 @@
+{
+  "default_merge_style": "fast-forward-only",
+  "allow_fast_forward_only_merge": true,
+  "allow_merge_commits": false,
+  "allow_squash_merge": false,
+  "allow_rebase": false,
+  "allow_rebase_explicit": false,
+  "allow_manual_merge": false
+}

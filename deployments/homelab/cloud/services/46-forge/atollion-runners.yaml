@@ -105,7 +105,7 @@ spec:
               sizeLimit: 16Mi
           containers:
           - name: launcher
-            image: git.fahrican.com/forge-runner/runner-linux:13.1.0@sha256:7c22b2209c8f86e6392d96056dd69b5ef6c8615fd573df7349bc45bba9f2fbca
+            image: git.fahrican.com/forge-runner/runner-linux:13.1.0@sha256:e0498a0f7bd3f52a40ec40aeb2defb29e9cd9e1b8984ad05d12fc60782064ece
             command:
             - python3
             - /bootstrap/linux-launcher.py
@@ -243,7 +243,7 @@ spec:
                 memory: 128Mi
           containers:
           - name: runner
-            image: git.fahrican.com/forge-runner/runner-linux:13.1.0@sha256:7c22b2209c8f86e6392d96056dd69b5ef6c8615fd573df7349bc45bba9f2fbca
+            image: git.fahrican.com/forge-runner/runner-linux:13.1.0@sha256:e0498a0f7bd3f52a40ec40aeb2defb29e9cd9e1b8984ad05d12fc60782064ece
             command:
             - /bin/sh
             - /bootstrap/run-job.sh

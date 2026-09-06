@@ -1,0 +1,14 @@
+{
+  "url": "https://git.fahrican.com",
+  "repository": "funforgiven/atollion",
+  "workflow_id": "validation.yml",
+  "required_approvals": 1,
+  "status_contexts": {
+    "linux-quality": "Atollion validation / linux-quality (pull_request)",
+    "windows-build": "Atollion validation / windows-build (pull_request)",
+    "windows-native": "Atollion validation / windows-native (pull_request)",
+    "macos-native": "Atollion validation / macos-native (pull_request)",
+    "validation": "Atollion validation / validation (pull_request)"
+  },
+  "merge_style": "fast-forward-only"
+}
