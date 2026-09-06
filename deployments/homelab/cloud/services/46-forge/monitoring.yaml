@@ -51,7 +51,8 @@ spec:
         description: No successful local recovery archive in eight hours; inspect
           backup sidecar before relying on Velero.
     - alert: ForgejoRestoreQualificationFailed
-      expr: kube_job_status_failed{namespace="backup-qualification",job_name=~"forge-restore-qualification-.*"} > 0
+      expr: (kube_job_status_failed{namespace="backup-qualification"} > 0) and
+        on(namespace, job_name) kube_job_owner{namespace="backup-qualification",owner_kind="CronJob",owner_name="forge-restore-qualification"}
       for: 15m
       labels:
         severity: critical
