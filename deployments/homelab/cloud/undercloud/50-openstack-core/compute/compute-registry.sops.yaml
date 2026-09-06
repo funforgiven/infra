@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: compute-registry
+    namespace: openstack
+    labels:
+        velero.io/exclude-from-backup: "true"
+type: kubernetes.io/dockerconfigjson
+stringData:
+    .dockerconfigjson: ENC[AES256_GCM,data:6b2CzYPKVKaFoXpnjg2r0ocmdv+KD/niZHhqjj2iB07yFVJkqaMs72whX4BxdqDz+q/YTw2NZg7oVHbrKNbBRPoVDzhNZHfzK6BIEP2vhrDtnqyPtBCKtltsChvdXSuSTUn+P9/7a05YAR+jB6BokdkrPSVE,iv:mBZPU7p3z3vnwYA9h33kpgJeQA35AaZqa7HsLadLXgE=,tag:qIgxytdDaluFv/Ov8PvdVg==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBJQmx6bUkzcFNqR2QzcXZk
+            SW4wMm9NblF1L3hUZHFGaEN1a1YvbkU0K1drClZYVEVIb3Y2ZnI3MGN2VmxlbnA0
+            QkMrNmRMWkY3VUQ2RjRma1VLek9RNjQKLS0tIDluUGRSTXR5V0FiK0FFREx3dzZp
+            Tnp4NkdWMjAvbm03Tzl1dm80bngzRmcKyr/Mx4hxoJdY06p5Eya/6nPq7kXLh848
+            SsItO2hecMr+4KDTWH2aH8Jdm/vdDuJmZaIIf5TZJ5om4LKMl9jbIQ==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA1NGtCdG94RFpxT1F3Mm1n
+            eDNRRFFUemd3ZXNNNlVneVZIejdmVzFqVDJJCmRqSDZlVm5YeXd6QjlnTFBzMGV0
+            VWNzeTVwYWNRK2dZc2UxS081amdWNkkKLS0tIC9LQjhJcjMzYXZVcUZjd1E3VW11
+            djRZOFQveU9reUFIbm4xUUVNMFZuWGMKehmdeZQD7TCEpdHUwIXZMxgXWR04dM9X
+            2543dPrM/gWXsOIylWFf6HVdxASd0DDitPwnXYhK0dxHqpi1y99cTA==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-09-06T00:59:43Z"
+    mac: ENC[AES256_GCM,data:ign292Y5nWjkIA5GVxR7TxxHt278vqwSl+oaHo+kMej9/Jm1oLC4SwvHvXLpeXJVfXQX/NuPLt4bWs0Cy+l40LMXC3UYCD/eHS2hH0zAWopsSmfNQlbxa9lyLOcIA+VvyD7ybUIwaze89VNvmSgnPZbk3eV5yyzdECV6odL196Q=,iv:Ipy2f+rilwtFuX9IJyELoo1PrB43rLaEtw/cL7elcf0=,tag:HFzyUiAFkoY1g1NDHDN2wg==,type:str]
+    version: 3.13.3

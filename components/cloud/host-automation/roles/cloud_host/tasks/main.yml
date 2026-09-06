@@ -27,6 +27,7 @@
 
 - name: Configure kernel prerequisites
   ansible.builtin.import_tasks: kernel.yml
+  tags: [kernel]
 
 - name: Maintain redundant EFI boot files
   ansible.builtin.import_tasks: storage.yml

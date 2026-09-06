@@ -1,0 +1,30 @@
+{
+  "windows_iso": {
+    "name": "Win11_25H2_English_x64_v2.iso",
+    "sha256": "768984706b909479417b2368438909440f2967ff05c6a9195ed2667254e465e3",
+    "source": "https://www.microsoft.com/en-us/software-download/windows11",
+    "edition": "Windows 11 Pro",
+    "verification": "Microsoft-published SHA256; activation is separate"
+  },
+  "virtio_iso": {
+    "name": "virtio-win-0.1.302.iso",
+    "sha256": "303f7ae40dad495d6ae474fdc571df58958a4dbc5c37a522d80f9a203867949d",
+    "source": "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.302-1/virtio-win-0.1.302.iso",
+    "verification": "Fetched over verified HTTPS; guest must validate driver signatures"
+  },
+  "macos_recovery": {
+    "name": "RecoveryImage.dmg",
+    "sha256": "7314eb401f5e84087f621b3599f0ad21ca3cdcc2685ea2da7f76806792328e20",
+    "source": "http://oscdn.apple.com/content/downloads/04/11/082-33203/orvwro1v8xhjrakr7tvl5hu1s1ew3epxne/RecoveryImage/BaseSystem.dmg",
+    "verification": "Apple RSA-signed chunklist and all 85 image chunks"
+  },
+  "macos_chunklist": {
+    "name": "RecoveryImage.chunklist",
+    "sha256": "dbf262b83a16d55f1b2d8ce8ce95986561f8e889719524ea4b7aa22a2417ca27"
+  },
+  "apple_verifier": {
+    "name": "macrecovery.py",
+    "sha256": "68edc6c44b7f2b65bb23d5e5083cd1227a7f52f4bfaa716f7faa58d25be554b9",
+    "source": "https://raw.githubusercontent.com/acidanthera/OpenCorePkg/1.0.5/Utilities/macrecovery/macrecovery.py"
+  }
+}
