@@ -1412,7 +1412,7 @@ spec:
   interval: 10m
   retryInterval: 1m
   timeout: 20m
-  path: ./deployments/homelab/cloud/undercloud/86-gitlab-foundation
+  path: ./deployments/homelab/cloud/undercloud/86-forge-foundation
   prune: true
   sourceRef:
     kind: GitRepository
