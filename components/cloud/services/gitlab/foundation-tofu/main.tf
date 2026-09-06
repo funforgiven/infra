@@ -1,10 +1,10 @@
 # CI gets its own project, network, quota and application-specific egress rules.
 # Guest job code never receives cloud credentials or access to the services LAN.
 resource "openstack_identity_project_v3" "ci" {
-  name        = "gitlab-ci"
-  description = "Isolated GitLab build and game-test runners"
+  name        = "forge-ci"
+  description = "Isolated Forgejo Actions build and game-test runners"
   domain_id   = "default"
-  tags        = ["managed-by-opentofu", "gitlab-ci"]
+  tags        = ["managed-by-opentofu", "forge-ci"]
 }
 
 resource "openstack_identity_role_assignment_v3" "ci_admin" {
@@ -15,11 +15,11 @@ resource "openstack_identity_role_assignment_v3" "ci_admin" {
 
 locals {
   gitlab_flavors = {
-    gitlab         = { ram = 4096, vcpus = 4, ci = false }
-    gitlab-master  = { ram = 4096, vcpus = 2, ci = false }
-    gitlab-worker  = { ram = 12288, vcpus = 6, ci = false }
-    gitlab-windows = { ram = 12288, vcpus = 6, ci = true }
-    gitlab-macos   = { ram = 12288, vcpus = 6, ci = true }
+    gitlab        = { ram = 4096, vcpus = 4, ci = false }
+    gitlab-master = { ram = 4096, vcpus = 2, ci = false }
+    gitlab-worker = { ram = 12288, vcpus = 6, ci = false }
+    forge-windows = { ram = 12288, vcpus = 6, ci = true }
+    forge-macos   = { ram = 12288, vcpus = 6, ci = true }
   }
 }
 
@@ -39,14 +39,14 @@ resource "openstack_compute_flavor_access_v2" "gitlab" {
 }
 
 resource "openstack_networking_network_v2" "ci" {
-  name                  = "gitlab-ci"
+  name                  = "forge-ci"
   tenant_id             = openstack_identity_project_v3.ci.id
   port_security_enabled = true
   mtu                   = 1442
 }
 
 resource "openstack_networking_subnet_v2" "ci" {
-  name            = "gitlab-ci-v4"
+  name            = "forge-ci-v4"
   tenant_id       = openstack_identity_project_v3.ci.id
   network_id      = openstack_networking_network_v2.ci.id
   cidr            = "192.168.81.0/24"
@@ -61,7 +61,7 @@ resource "openstack_networking_subnet_v2" "ci" {
 }
 
 resource "openstack_networking_router_v2" "ci" {
-  name                = "gitlab-ci"
+  name                = "forge-ci"
   tenant_id           = openstack_identity_project_v3.ci.id
   external_network_id = data.openstack_networking_network_v2.public.id
   enable_snat         = true

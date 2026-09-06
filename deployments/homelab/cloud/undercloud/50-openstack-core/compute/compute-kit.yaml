@@ -54,12 +54,12 @@ spec:
     manifests:
       job_image_repo_sync: false
     pod:
-      # First qualify the daemon restart on asiago while watching its guest
-      # PID/uptime, then roll the remaining hosts one at a time.
+      # The asiago qualification preserved the existing guest PID/uptime.
+      # The chart rolls remaining daemon pods with maxUnavailable: 1.
       lifecycle:
         upgrades:
           daemonsets:
-            pod_replacement_strategy: OnDelete
+            pod_replacement_strategy: RollingUpdate
       resources:
         enabled: true
   postRenderers:
@@ -155,6 +155,9 @@ spec:
                   libvirt:
                     cpu_mode: host-model
                     cpu_models: []
+                    swtpm_enabled: true
+                    swtpm_user: tss
+                    swtpm_group: tss
             - name: taleggio
               conf:
                 nova:
@@ -165,6 +168,8 @@ spec:
       nova:
         DEFAULT:
           reserved_host_memory_mb: 32768
+        key_manager:
+          backend: barbican
         libvirt:
           cpu_mode: custom
           cpu_models: Westmere
