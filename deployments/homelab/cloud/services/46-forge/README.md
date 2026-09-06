@@ -127,10 +127,10 @@ operator SSH connection. Guest network traffic cannot use Slirp to reach host
 services. Labels are `windows-x86_64` and `macos-x86_64`, with native `host`
 execution; Windows runs in an unprivileged interactive desktop session.
 
-Keep native qualification controllers suspended until fresh guests pass the
-platform workflow, artifact recovery, isolation and cleanup checks. The
-qualification repository is separate from Atollion and has its own scoped
-enrollment credentials. The Windows cloud credential is a CI-project member
+Native qualification controllers poll the queue every minute. Fresh guests
+have passed the platform workflow, artifact recovery, isolation and cleanup
+checks, and the workflow repeats weekly. The qualification repository is
+separate from Atollion and has its own scoped enrollment credentials. The Windows cloud credential is a CI-project member
 and Barbican TPM-secret creator application credential (with implied reader);
 its public expiry is recorded in `native-status.json`.
 Rotate that record with the encrypted credential so expiry monitoring remains
