@@ -37,9 +37,26 @@
       # Preserve the enrolled host UID and let nftables validate in the Nix
       # build sandbox, where the target system's user database is absent.
       quickemuUid = 996;
+      # This host runs only Intel macOS. Keep one QEMU derivation for Quickemu
+      # and the overlay broker, including Quickemu's required SMB support.
+      # macOS 15.4+ enumerates SMC keys until the device returns error 0xb8.
+      # Complete the protocol associated with upstream reports of
+      # PerfPowerServices retrying unsupported enumeration continuously.
+      macosQemu =
+        (pkgs.qemu.override {
+          hostCpuTargets = [ "x86_64-softmmu" ];
+          smbdSupport = true;
+        }).overrideAttrs
+          (old: {
+            patches = (old.patches or [ ]) ++ [ ../../cloud/services/forge/macos/qemu-applesmc-index.patch ];
+            postBuild = (old.postBuild or "") + ''
+              ${pkgs.python3}/bin/python3 ${../../cloud/services/forge/macos/test-applesmc.py} \
+                ./qemu-system-x86_64
+            '';
+          });
       # Quickemu's SSH forward otherwise binds every interface. Patch the
       # pinned package to require loopback, even if the guest firewall changes.
-      quickemu = pkgs.quickemu.overrideAttrs (old: {
+      quickemu = (pkgs.quickemu.override { qemu = macosQemu; }).overrideAttrs (old: {
         patches = (old.patches or [ ]) ++ [ ../../cloud/services/forge/macos/quickemu-overlay.patch ];
         postPatch = (old.postPatch or "") + ''
           substituteInPlace quickemu \
@@ -50,11 +67,11 @@
       });
       macosJob = pkgs.writeShellApplication {
         name = "forge-macos-job";
-        runtimeInputs = with pkgs; [
-          python3
-          qemu
-          cdrtools
-          systemd
+        runtimeInputs = [
+          pkgs.python3
+          macosQemu
+          pkgs.cdrtools
+          pkgs.systemd
         ];
         text = ''
           exec python3 ${../../cloud/services/forge/macos/host-job.py}
@@ -67,7 +84,7 @@
       boot.extraModprobeConfig = "options kvm ignore_msrs=1";
       environment.systemPackages = [
         quickemu
-        pkgs.qemu
+        macosQemu
         pkgs.socat
         macosJob
       ];
