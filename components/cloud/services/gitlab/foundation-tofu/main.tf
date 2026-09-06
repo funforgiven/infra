@@ -13,6 +13,17 @@ resource "openstack_identity_role_assignment_v3" "ci_admin" {
   role_id    = data.openstack_identity_role_v3.admin.id
 }
 
+# Native job controllers receive a project-member application credential.
+# Never give the controller the administrator role used for provisioning.
+data "openstack_identity_role_v3" "forge_runner_member" {
+  name = "member"
+}
+resource "openstack_identity_role_assignment_v3" "ci_member" {
+  project_id = openstack_identity_project_v3.ci.id
+  user_id    = data.openstack_identity_user_v3.admin.id
+  role_id    = data.openstack_identity_role_v3.forge_runner_member.id
+}
+
 locals {
   gitlab_flavors = {
     gitlab        = { ram = 4096, vcpus = 4, ci = false }
