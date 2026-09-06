@@ -1,6 +1,15 @@
 {
   "platform": "macos",
-  "repository": "forge-runner/runner-qualification",
-  "qualification_only": true,
-  "macos_known_hosts": "/configuration/native-known-hosts"
+  "qualification_only": false,
+  "macos_known_hosts": "/configuration/native-known-hosts",
+  "repositories": [
+    {
+      "repository": "forge-runner/runner-qualification",
+      "token_file": "forge-token"
+    },
+    {
+      "repository": "funforgiven/atollion",
+      "token_file": "atollion-token"
+    }
+  ]
 }

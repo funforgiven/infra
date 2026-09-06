@@ -244,15 +244,17 @@ kubectl -n forge-restore logs forgejo-0 -c git
 
 ## Migration handoff
 
-Atollion continues on GitHub until the owner explicitly requests cutover.
-Follow [ATOLLION-HANDOFF.md](ATOLLION-HANDOFF.md) for the authorization boundary,
-platform compatibility checks and future cutover sequence. Do not transfer the managed `gh` credential into Forgejo; use the
-repository-scoped CLI to export metadata and an offline migration dump.
+The owner paused the Atollion agent and authorized migration on 2026-09-06.
+The repository history is imported into private `funforgiven/atollion`.
+Follow [ATOLLION-HANDOFF.md](ATOLLION-HANDOFF.md) for the import record,
+separate agent identities, branch protection and remaining validation/cutover
+sequence. The managed `gh` credential stays local; export uses the
+repository-scoped CLI and an offline migration dump.
 See [READINESS.md](READINESS.md) for the deployment and recovery evidence.
-The owner explicitly deferred migration: do not import Atollion or change its
-workflows, remotes or active agent setup until separately instructed. Finish
-infrastructure qualification and stop at migration readiness. The owner can
-pause the active agent for the final catch-up once they request the cutover.
+Atollion has two bounded Linux build slots with fresh 96 GiB disposable PVCs.
+The native brokers retain separate enrollment tokens for Atollion and weekly
+qualification, selecting the oldest waiting job across both repositories.
+Application CI and recovery evidence must pass before resuming the paused agent.
 
 The GitLab application and cluster have been retired. Retained recovery files
 include its native backup, recovery secrets, backend boot image and encrypted

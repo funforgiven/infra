@@ -17,6 +17,9 @@ resources:
 - native-windows-qualification.sops.yaml
 - native-macos-qualification.sops.yaml
 - native-registry.sops.yaml
+- atollion-runners.yaml
+- runner-atollion.sops.yaml
+- atollion-launcher.sops.yaml
 configMapGenerator:
 - name: forge-bootstrap
   namespace: forge
@@ -51,3 +54,7 @@ configMapGenerator:
   - windows.json
   - macos.json
   - native-known-hosts
+- name: forge-linux-launcher
+  namespace: forge-control
+  files:
+  - linux-launcher.py=../../../../../components/cloud/services/forge/linux-launcher.py

@@ -1,11 +1,19 @@
-# Atollion migration boundary
+# Atollion migration record
 
-The owner has explicitly postponed migration. Atollion's active repository is
-`git@github.com:funforgiven/atollion.git`; its working checkout and the agent
-using it stay on GitHub until the owner instructs the cutover. Infrastructure
-qualification uses only `forge-runner/runner-qualification` on Forgejo.
-Do not import an application repository, change its remotes or workflows, or
-redirect an agent as part of infrastructure readiness work.
+The owner paused the Atollion agent and authorized migration on 2026-09-06.
+The private destination is `https://git.fahrican.com/funforgiven/atollion`.
+The offline import preserves GitHub main `6501d61d33a59bdc782f70e9e101f1a791050bad`,
+59 issues, 57 pull requests and 10 labels. Issue/PR numbers, bodies, states,
+creation timestamps, labels, PR head commits and merge commits were compared
+with the final GitHub export. There were no tags, releases, comments or reviews.
+GitHub remains a recovery source. Its managed credential was never sent to
+Forgejo. The active checkout and its eight unfinished files have a separate
+Git bundle, patch, file archive and SHA-256 checkpoint. Issue #116 stays open.
+
+CI PR #119 and orchestration PR #120 are undergoing real hosted validation.
+The active checkout must remain paused until validation, remote cutover and
+application backup/restore verification finish. This migration record does
+not claim that the application qualification has already passed.
 
 ## Destination and execution model
 
@@ -24,8 +32,9 @@ Actions execute in disposable environments with these labels:
 | `windows-x86_64` | Windows 11 Pro desktop VM, unprivileged interactive user | Run downloaded Windows artifacts and application tests; Direct3D software rendering is qualified separately from game compatibility |
 | `macos-x86_64` | Intel macOS in Quickemu, unprivileged user, Nix and Apple command line tools | Native compilation and tests that do not require GPU acceleration |
 
-The native brokers remain scoped to the qualification repository during this
-hold. Guest jobs receive a one-job enrollment identity. OpenStack credentials
+The native brokers dispatch the oldest waiting job across explicitly enrolled
+Atollion and qualification repositories, each with its own scoped PAT.
+Guest jobs receive a one-job enrollment identity. OpenStack credentials
 and the macOS host's restricted SSH key stay in the separate controller
 namespace, outside repository job execution.
 
@@ -54,7 +63,7 @@ or allow privileged workflows to execute unreviewed pull request code.
 
 ## Authorized cutover sequence
 
-Run this sequence only after the owner requests migration:
+The owner has authorized this sequence:
 
 1. Coordinate the final pause with the active Atollion agent. Record the
    current GitHub refs and inspect uncommitted work without discarding it.
@@ -74,5 +83,35 @@ Run this sequence only after the owner requests migration:
    repository and LFS data. Record the result with the existing restore
    qualification evidence.
 
-Until that instruction arrives, complete infrastructure work and stop at this
-boundary. Nothing in this document authorizes an Atollion import or cutover.
+## Agent and merge policy
+
+`atollion-coordinator` and `atollion-worker-1`, `atollion-worker-2`,
+`atollion-worker-3` are distinct restricted, non-administrator accounts.
+Each has an individual SSH signing/push key and a PAT restricted to Atollion.
+Encrypted recovery is in `host-runtime/atollion-agents.sops.yaml`; local
+credentials are under `~/.local/state/atollion-forge/<account>/`, outside Git.
+The coordinator leases one persistent agent and worktree per worker account.
+These are separate Forgejo identities sharing an operator's Unix account;
+they are not separate OS security boundaries.
+
+`atollion-branch-policy.json` records the applied main protection: no direct
+pushes, signed commits, one independent whitelisted approval, dismissed stale
+approvals, all five named PR checks and an up-to-date branch. Only the owner
+and coordinator may merge. The policy applies to administrators too. The
+application's merge tool additionally verifies current-head actual Actions
+runs/tasks and serializes merges using the expected head SHA. Forgejo's
+same-repository workflow token has write permissions; the Actions bot is
+excluded from both approval and merge whitelists.
+
+Linux application jobs have two concurrent slots, each with 2 requested CPUs,
+a 3 CPU/6 GiB limit and a fresh 96 GiB Cinder scratch volume. A separate trusted
+launcher creates jobs only when work is waiting. Its service account can list
+and create jobs in `forge-ci` and read only the suspended Atollion template;
+job containers have no Kubernetes token or reusable enrollment credential.
+The template stays suspended; only the launcher copies its reconciled spec.
+Generic ephemeral PVCs and their disks are deleted with completed job pods.
+Do not back up disposable CI workspaces.
+
+Quickemu provides Intel macOS validation. The GDD's ARM64 macOS certification
+and physical GPU/calibrated performance requirements remain explicit separate
+evidence; Intel software-rendered CI does not establish those results.

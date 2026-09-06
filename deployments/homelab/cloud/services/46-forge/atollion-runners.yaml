@@ -1,0 +1,286 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: forge-ci-scratch
+provisioner: cinder.csi.openstack.org
+parameters:
+  availability: nova
+  fstype: ext4
+  type: rbd1
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: linux-launcher
+  namespace: forge-control
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: linux-launcher
+  namespace: forge-ci
+rules:
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - get
+  - list
+  - create
+- apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  resourceNames:
+  - forge-linux-atollion-template
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: linux-launcher
+  namespace: forge-ci
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: linux-launcher
+subjects:
+- kind: ServiceAccount
+  name: linux-launcher
+  namespace: forge-control
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: forge-linux-atollion-launcher
+  namespace: forge-control
+spec:
+  schedule: '* * * * *'
+  suspend: false
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 60
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      ttlSecondsAfterFinished: 600
+      activeDeadlineSeconds: 120
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: forge-native-broker
+            forge.fahrican.com/platform: linux
+        spec:
+          automountServiceAccountToken: true
+          serviceAccountName: linux-launcher
+          restartPolicy: Never
+          terminationGracePeriodSeconds: 30
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          imagePullSecrets:
+          - name: native-registry
+          volumes:
+          - name: bootstrap
+            configMap:
+              name: forge-linux-launcher
+          - name: enrollment
+            secret:
+              secretName: atollion-launcher
+              defaultMode: 288
+          - name: tmp
+            emptyDir:
+              medium: Memory
+              sizeLimit: 16Mi
+          containers:
+          - name: launcher
+            image: git.fahrican.com/forge-runner/runner-linux:13.1.0@sha256:7c22b2209c8f86e6392d96056dd69b5ef6c8615fd573df7349bc45bba9f2fbca
+            command:
+            - python3
+            - /bootstrap/linux-launcher.py
+            env:
+            - name: PYTHONDONTWRITEBYTECODE
+              value: '1'
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+            volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+            - name: enrollment
+              mountPath: /run/enrollment
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+            resources:
+              requests:
+                cpu: 25m
+                memory: 64Mi
+                ephemeral-storage: 16Mi
+              limits:
+                cpu: 500m
+                memory: 256Mi
+                ephemeral-storage: 64Mi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: forge-linux-atollion-template
+  namespace: forge-ci
+spec:
+  suspend: true
+  schedule: 0 0 1 1 *
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      ttlSecondsAfterFinished: 60
+      activeDeadlineSeconds: 9000
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: forge-runner
+            app.kubernetes.io/component: job
+            forge.fahrican.com/repository: atollion
+            velero.io/exclude-from-backup: 'true'
+        spec:
+          automountServiceAccountToken: false
+          serviceAccountName: runner-job
+          restartPolicy: Never
+          terminationGracePeriodSeconds: 45
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          imagePullSecrets:
+          - name: runner-registry
+          volumes:
+          - name: bootstrap
+            configMap:
+              name: forge-runner-bootstrap
+          - name: enrollment
+            secret:
+              secretName: runner-atollion
+              defaultMode: 288
+          - name: runner
+            emptyDir:
+              medium: Memory
+              sizeLimit: 1Mi
+          - name: workspace
+            ephemeral:
+              volumeClaimTemplate:
+                metadata:
+                  labels:
+                    velero.io/exclude-from-backup: 'true'
+                spec:
+                  accessModes:
+                  - ReadWriteOnce
+                  storageClassName: forge-ci-scratch
+                  resources:
+                    requests:
+                      storage: 96Gi
+          - name: home
+            emptyDir:
+              sizeLimit: 8Gi
+          - name: tmp
+            emptyDir:
+              sizeLimit: 2Gi
+          initContainers:
+          - name: register
+            image: docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4
+            command:
+            - python
+            - /bootstrap/register-job.py
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                - ALL
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              readOnlyRootFilesystem: true
+            env:
+            - name: FORGE_REPOSITORY
+              value: funforgiven/atollion
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+            - name: enrollment
+              mountPath: /run/enrollment
+              readOnly: true
+            - name: runner
+              mountPath: /run/runner
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                cpu: 250m
+                memory: 128Mi
+          containers:
+          - name: runner
+            image: git.fahrican.com/forge-runner/runner-linux:13.1.0@sha256:7c22b2209c8f86e6392d96056dd69b5ef6c8615fd573df7349bc45bba9f2fbca
+            command:
+            - /bin/sh
+            - /bootstrap/run-job.sh
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                - ALL
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+            volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+            - name: runner
+              mountPath: /run/runner
+              readOnly: true
+            - name: workspace
+              mountPath: /workspace
+            - name: home
+              mountPath: /home/runner
+            - name: tmp
+              mountPath: /tmp
+            resources:
+              requests:
+                cpu: '2'
+                memory: 4Gi
+                ephemeral-storage: 12Gi
+              limits:
+                cpu: '3'
+                memory: 6Gi
+                ephemeral-storage: 24Gi
+          affinity:
+            podAntiAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+              - labelSelector:
+                  matchLabels:
+                    forge.fahrican.com/repository: atollion
+                topologyKey: kubernetes.io/hostname

@@ -4,9 +4,15 @@
 import json
 import os
 from pathlib import Path
+import re
 import sys
 import time
 import urllib.request
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        return None
 
 os.umask(0o077)
 repository = os.environ["FORGE_REPOSITORY"]
@@ -19,7 +25,7 @@ def request(method, path="", body=None):
     request = urllib.request.Request(base + path, method=method,
         data=json.dumps(body).encode() if body is not None else None,
         headers={"Authorization": "token " + token, "Content-Type": "application/json"})
-    with urllib.request.urlopen(request, timeout=30) as response:
+    with urllib.request.build_opener(NoRedirect).open(request, timeout=30) as response:
         return json.load(response) if response.status != 204 else None
 
 
@@ -28,10 +34,11 @@ def request(method, path="", body=None):
 for runner in request("GET", "?limit=50") or []:
     if not runner["ephemeral"] or runner["status"] != "offline":
         continue
-    if not runner["name"].startswith("forge-linux-qualification-"):
+    match = re.match(r"^forge-linux-(?:qualification|atollion)-(\d+)-", runner["name"])
+    if not match:
         continue
     try:
-        minute = int(runner["name"].split("-")[-2])
+        minute = int(match.group(1))
     except ValueError:
         continue
     if time.time() - minute * 60 > 21600:
@@ -39,7 +46,9 @@ for runner in request("GET", "?limit=50") or []:
 
 jobs = request("GET", "/jobs?labels=linux-x86_64") or []
 waiting = [job for job in jobs if job["status"] == "waiting"
-           and set(job["runs_on"]) <= {"linux", "linux-x86_64"}]
+           and job["runs_on"] and set(job["runs_on"]) <= {"linux", "linux-x86_64"}]
+if os.environ.get("FORGE_JOB_HANDLE"):
+    waiting = [job for job in waiting if job["handle"] == os.environ["FORGE_JOB_HANDLE"]]
 if not waiting:
     print("No eligible Linux jobs are waiting.")
     sys.exit(0)
