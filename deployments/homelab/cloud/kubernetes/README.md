@@ -11,6 +11,14 @@ at `10.21.20.129`; MetalLB announces the private Gateway addresses at
 are disjoint. The documented fallback may move `.129` to MetalLB only through a
 controlled no-owner transition.
 
+kube-vip uses a 30-second lease, a 20-second renewal deadline and a four-second
+retry interval. With the previous five/three/one-second defaults, lease
+renewal timeouts repeatedly dropped the VIP during native image preparation
+even while individual API servers remained ready. These values trade a longer failed-host detection window for
+tolerance of brief API latency. Keep the three static pod manifests consistent
+with the inventory; change one non-leader at a time and the current leader
+last, checking API readiness and lease ownership between hosts.
+
 Cilium uses native routing through `bond0.20`, includes `br-manila` for the
 Manila service path, uses pod MTU 1500, enables socket load balancing, and
 replaces kube-proxy. It must not select VLANs 30-32.
