@@ -28,7 +28,7 @@ fi
 if id -Gn forge-job | tr ' ' '\n' | grep -qx admin; then exit 1; fi
 install -d -o forge-job -g staff -m 0700 /Users/forge-job
 install -d -o root -g wheel -m 0755 /usr/local/libexec/forge
-for name in start-job.sh run-job.sh enroll-job.js; do
+for name in start-job.sh run-job.sh enroll-job.js mount-job.js; do
   install -o root -g wheel -m 0755 "$source_dir/$name" "/usr/local/libexec/forge/$name"
 done
 install -o root -g wheel -m 0644 "$source_dir/com.fahrican.forge-job.plist" /Library/LaunchDaemons/com.fahrican.forge-job.plist
