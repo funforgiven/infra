@@ -54,6 +54,11 @@ spec:
       name: RetryOnFailure
       retryInterval: 1m
   values:
+    defaultRules:
+      disabled:
+        # Replaced by persistent-targets.yaml. Disposable Windows VMs have
+        # their own alert that requires an active Actions controller.
+        TargetDown: true
     prometheus-node-exporter:
       image:
         digest: sha256:8c9bac11973b94b59be88d6e11fee4429aa743c8846cdc75d65b18db33f6a106

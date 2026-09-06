@@ -72,7 +72,10 @@ def main():
             shutil.chown(root, user='quickemu', group='quickemu')
             for name in files:
                 shutil.chown(Path(root, name), user='quickemu', group='quickemu')
-        run('systemctl', 'reset-failed', UNIT, stdout=subprocess.DEVNULL)
+        # An inactive unit may have been garbage-collected by systemd. In that
+        # case reset-failed reports "not loaded"; starting the unit is valid.
+        subprocess.run(['systemctl', 'reset-failed', UNIT], check=False,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         run('systemctl', 'start', UNIT, stdout=subprocess.DEVNULL)
         print('Started fresh macOS overlay with one-job enrollment media.', flush=True)
         end = time.monotonic() + 8100
