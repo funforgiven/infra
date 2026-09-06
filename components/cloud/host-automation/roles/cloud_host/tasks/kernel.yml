@@ -19,10 +19,16 @@
 - name: Persist explicitly selected nested KVM support
   ansible.builtin.copy:
     content: "options {{ cloud_cpu_virtualization_module }} nested=1\n"
-    dest: /etc/modprobe.d/90-gitlab-nested-kvm.conf
+    dest: /etc/modprobe.d/90-cloud-nested-kvm.conf
     owner: root
     group: root
     mode: "0644"
+  when: cloud_nested_kvm | bool
+
+- name: Remove the superseded GitLab-specific nested KVM configuration
+  ansible.builtin.file:
+    path: /etc/modprobe.d/90-gitlab-nested-kvm.conf
+    state: absent
   when: cloud_nested_kvm | bool
 
 - name: Load required kernel modules
