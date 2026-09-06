@@ -398,6 +398,14 @@ class NetworkInventoryTests(unittest.TestCase):
         self.assertEqual(
             [
                 (
+                    "infra: SERVERS to Forgejo registry",
+                    "infra-forward",
+                    "vlan20-servers",
+                    "10.21.40.122",
+                    "tcp",
+                    "443",
+                ),
+                (
                     "infra: SERVERS to CAPI management API",
                     "infra-forward",
                     "vlan20-servers",
