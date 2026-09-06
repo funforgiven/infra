@@ -63,6 +63,21 @@ if legacy_marker.exists():
                 if hashlib.file_digest(member, "sha256").hexdigest() != expected:
                     raise RuntimeError("Native GitLab backup or recovery secrets failed verification")
     print("Retained native GitLab archive and recovery secrets verified.", flush=True)
+legacy_infrastructure = backup / "legacy-gitlab-infrastructure"
+if legacy_infrastructure.exists():
+    infrastructure = json.loads((legacy_infrastructure / "manifest.json").read_text())
+    expected_files = {"backend.qcow2", "image-properties.json",
+                      "retired-gitlab-state.sops.json", "retired-gitlab-foundation-state.sops.json"}
+    if infrastructure.get("schema") != 1 or set(infrastructure["files"]) != expected_files:
+        raise RuntimeError("Invalid retained GitLab infrastructure manifest")
+    for name, expected in infrastructure["files"].items():
+        path = legacy_infrastructure / name
+        if path.is_symlink() or path.stat().st_size != expected["size"]:
+            raise RuntimeError("Retained GitLab infrastructure file size mismatch")
+        with path.open("rb") as source:
+            if hashlib.file_digest(source, "sha256").hexdigest() != expected["sha256"]:
+                raise RuntimeError("Retained GitLab infrastructure checksum mismatch")
+    print("Retired GitLab boot image and encrypted cloud state checkpoints verified.", flush=True)
 verify_index(backup)
 (target / ".database-verified").write_text(manifest["sha256"] + "\n")
 print("Offsite archive checksum, SQLite, OIDC, repository metadata, Actions history and artifact bytes verified.", flush=True)

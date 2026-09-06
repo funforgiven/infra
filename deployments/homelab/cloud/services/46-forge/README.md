@@ -131,7 +131,8 @@ Keep native qualification controllers suspended until fresh guests pass the
 platform workflow, artifact recovery, isolation and cleanup checks. The
 qualification repository is separate from Atollion and has its own scoped
 enrollment credentials. The Windows cloud credential is a CI-project member
-application credential; its public expiry is recorded in `native-status.json`.
+and Barbican TPM-secret creator application credential (with implied reader);
+its public expiry is recorded in `native-status.json`.
 Rotate that record with the encrypted credential so expiry monitoring remains
 accurate. Neither native guest receives the cloud credential or enrollment PAT.
 
@@ -190,7 +191,9 @@ Velero's injected `restore-wait` init container when changing modifiers.
 Qualification requires archive SHA256, SQLite integrity, an active ZITADEL
 provider, Git object integrity, the qualification branch, successful Actions
 history and exact artifact bytes. If `legacy-gitlab.json` is present, it also
-verifies the retained native GitLab backup and recovery secrets. A Velero
+verifies the retained native GitLab backup and recovery secrets. The retained
+`legacy-gitlab-infrastructure` manifest additionally verifies the old backend
+boot image and SOPS-encrypted cloud state checkpoints. A Velero
 `Completed` result alone is insufficient; both verifiers must become ready.
 The database verifier also requires both native platform images, their public
 provenance and qualification records, and all macOS firmware files to match
@@ -227,9 +230,9 @@ kubectl -n forge-restore logs forgejo-0 -c git
 
 ## Migration handoff
 
-Atollion continues on GitHub while the destination and native runners are
-qualified. Stage Git refs and GitHub metadata separately from its active
-checkout. Do not transfer the managed `gh` credential into Forgejo; use the
+Atollion continues on GitHub until the owner explicitly requests cutover.
+Follow [ATOLLION-HANDOFF.md](ATOLLION-HANDOFF.md) for the authorization boundary,
+platform compatibility checks and future cutover sequence. Do not transfer the managed `gh` credential into Forgejo; use the
 repository-scoped CLI to export metadata and an offline migration dump.
 The owner explicitly deferred migration: do not import Atollion or change its
 workflows, remotes or active agent setup until separately instructed. Finish
