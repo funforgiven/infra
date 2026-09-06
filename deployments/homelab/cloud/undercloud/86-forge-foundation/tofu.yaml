@@ -1,14 +1,17 @@
 apiVersion: infra.contrib.fluxcd.io/v1alpha2
 kind: Terraform
 metadata:
+  # Keep the controller identity and its existing backend; resources are CI only.
   name: gitlab-foundation
   namespace: openstack
 spec:
   interval: 10m
   retryInterval: 1m
-  approvePlan: auto
+  # Review the one-time removal of the retired GitLab project.
+  suspend: true
+  approvePlan: ""
   destroyResourcesOnDeletion: false
-  path: ./components/cloud/services/gitlab/foundation-tofu
+  path: ./components/cloud/services/forge/foundation-tofu
   sourceRef:
     kind: GitRepository
     name: services-tofu-source
