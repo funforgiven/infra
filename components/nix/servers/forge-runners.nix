@@ -50,7 +50,7 @@ _: {
             };
             closure = pkgs.closureInfo { rootPaths = [ tools ]; };
             root = pkgs.runCommand "forge-runner-root" { } ''
-              mkdir -p "$out/etc/nix" "$out/home/runner" "$out/tmp" "$out/workspace" "$out/run/runner" "$out/nix/var/nix"
+              mkdir -p "$out/etc/nix" "$out/home/runner" "$out/tmp" "$out/workspace" "$out/run/runner" "$out/nix/var/nix" "$out/nix/var/log/nix/drvs"
               printf '%s\n' 'root:x:0:0:root:/root:/bin/bash' 'runner:x:1000:1000:runner:/home/runner:/bin/bash' > "$out/etc/passwd"
               printf '%s\n' 'root:x:0:' 'runner:x:1000:' > "$out/etc/group"
               printf '%s\n' 'hosts: files dns' > "$out/etc/nsswitch.conf"
@@ -69,7 +69,7 @@ _: {
               chmod 1777 tmp
               mkdir -p nix/store
               chown 1000:1000 nix/store
-              chown -R 1000:1000 home/runner workspace run/runner nix/var/nix
+              chown -R 1000:1000 home/runner workspace run/runner nix/var/nix nix/var/log/nix
             '';
             config = {
               User = "1000:1000";
