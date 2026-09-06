@@ -1,0 +1,171 @@
+Subject: [PATCH] hw/misc/applesmc: support bounded public-key enumeration
+
+Local patch against QEMU 11.0.3, hw/misc/applesmc.c SHA-256
+26d3cc32f69038a9d3e0f72a05616540227975b01240bd72b78e6a59e2b3ac6d.
+
+Modern macOS enumerates keys with command 0x12 and stops on result 0xb8.
+QEMU acknowledges only READ and instead returns BAD_CMD (0x82). The
+VirtualSMC fix below establishes the required range result; its PMIO
+implementation receives a four-byte big-endian index and returns four
+zero bytes with the range error when exhausted. The error persists
+through those reads. An undrained reply uses existing command-collision
+recovery, as it does in VirtualSMC.
+
+Enumerate the existing four public keys in lexical order, retain named
+OSK reads while hiding OSK names from enumeration, and share the existing
+data-read path. Rejected commands cannot reuse the previous command.
+There are no new AppleSMCState fields or VMState/wire-format changes.
+This does not add or claim live-migration support for the existing device.
+
+This is a deliberately narrower local implementation, not a backport of
+the unmerged QEMU v4 series below. It adds no fabricated sensors, #KEY,
+TYPE/WRITE support, or success for missing READ keys. The real macOS
+disposable-guest diagnostic and complete native CI remain required to
+prove that correcting enumeration resolves the observed service loop.
+
+Primary references:
+https://gitlab.com/qemu-project/qemu/-/blob/v11.0.3/hw/misc/applesmc.c
+https://github.com/acidanthera/VirtualSMC/commit/03ff31014d1e0388b2714479add66b01817f5362
+https://github.com/acidanthera/VirtualSMC/blob/1.3.6/VirtualSMC/kern_pmio.cpp
+https://patchew.org/QEMU/20260720164930.68383-1-matthew@pq.io/
+
+---
+--- a/hw/misc/applesmc.c
++++ b/hw/misc/applesmc.c
+@@ -35,6 +35,7 @@
+ #include "hw/core/qdev-properties.h"
+ #include "ui/console.h"
+ #include "qemu/error-report.h"
++#include "qemu/bswap.h"
+ #include "qemu/module.h"
+ #include "qemu/timer.h"
+ #include "qom/object.h"
+@@ -90,6 +91,7 @@
+ 
+ struct AppleSMCData {
+     uint8_t len;
++    bool hidden;
+     const char *key;
+     const char *data;
+     QLIST_ENTRY(AppleSMCData) node;
+@@ -124,7 +126,12 @@
+     uint8_t status = s->status & 0x0f;
+ 
+     smc_debug("CMD received: 0x%02x\n", (uint8_t)val);
++    /* A rejected command must not continue the preceding transaction. */
++    s->cmd = 0;
+     switch (val) {
++    case APPLESMC_GET_KEY_BY_INDEX_CMD:
++        s->last_ret = 0;
++        /* fall through */
+     case APPLESMC_READ_CMD:
+         /* did last command run through OK? */
+         if (status == APPLESMC_ST_CMD_DONE || status == APPLESMC_ST_NEW_CMD) {
+@@ -143,6 +150,7 @@
+     }
+     s->read_pos = 0;
+     s->data_pos = 0;
++    s->data_len = 0;
+ }
+ 
+ static const struct AppleSMCData *applesmc_find_key(AppleSMCState *s)
+@@ -157,6 +165,23 @@
+     return NULL;
+ }
+ 
++static const struct AppleSMCData *applesmc_find_key_by_index(AppleSMCState *s,
++                                                          uint32_t index)
++{
++    struct AppleSMCData *d;
++
++    /* The public keys are realized in reverse lexical order. */
++    QLIST_FOREACH(d, &s->data_def, node) {
++        if (!d->hidden) {
++            if (index == 0) {
++                return d;
++            }
++            index--;
++        }
++    }
++    return NULL;
++}
++
+ static void applesmc_io_data_write(void *opaque, hwaddr addr, uint64_t val,
+                                    unsigned size)
+ {
+@@ -165,6 +190,30 @@
+ 
+     smc_debug("DATA received: 0x%02x\n", (uint8_t)val);
+     switch (s->cmd) {
++    case APPLESMC_GET_KEY_BY_INDEX_CMD:
++        if ((s->status & 0x0f) == APPLESMC_ST_CMD_DONE ||
++            s->read_pos >= sizeof(s->key)) {
++            /* Older clients append a length byte; it is not an index byte. */
++            break;
++        }
++        s->key[s->read_pos++] = val;
++        s->status = APPLESMC_ST_ACK;
++        if (s->read_pos == sizeof(s->key)) {
++            d = applesmc_find_key_by_index(s, ldl_be_p(s->key));
++            s->data_len = sizeof(s->key);
++            s->data_pos = 0;
++            s->last_ret = 0;
++            memset(s->data, 0, s->data_len);
++            if (d != NULL) {
++                memcpy(s->data, d->key, s->data_len);
++                s->status_1e = APPLESMC_ST_CMD_DONE;
++            } else {
++                /* Enumeration ends on this result, not NOEXIST/BAD_CMD. */
++                s->status_1e = APPLESMC_ST_1E_BAD_INDEX;
++            }
++            s->status = APPLESMC_ST_ACK | APPLESMC_ST_DATA_READY;
++        }
++        break;
+     case APPLESMC_READ_CMD:
+         if ((s->status & 0x0f) == APPLESMC_ST_CMD_DONE) {
+             break;
+@@ -207,6 +256,7 @@
+     AppleSMCState *s = opaque;
+ 
+     switch (s->cmd) {
++    case APPLESMC_GET_KEY_BY_INDEX_CMD:
+     case APPLESMC_READ_CMD:
+         if (!(s->status & APPLESMC_ST_DATA_READY)) {
+             break;
+@@ -254,7 +304,7 @@
+ }
+ 
+ static void applesmc_add_key(AppleSMCState *s, const char *key,
+-                             int len, const char *data)
++                             int len, const char *data, bool hidden)
+ {
+     struct AppleSMCData *def;
+ 
+@@ -262,6 +312,7 @@
+     def->key = key;
+     def->len = len;
+     def->data = data;
++    def->hidden = hidden;
+ 
+     QLIST_INSERT_HEAD(&s->data_def, def, node);
+ }
+@@ -330,12 +381,13 @@
+     }
+ 
+     QLIST_INIT(&s->data_def);
+-    applesmc_add_key(s, "REV ", 6, "\x01\x13\x0f\x00\x00\x03");
+-    applesmc_add_key(s, "OSK0", 32, s->osk);
+-    applesmc_add_key(s, "OSK1", 32, s->osk + 32);
+-    applesmc_add_key(s, "NATJ", 1, "\x00");
+-    applesmc_add_key(s, "MSSP", 1, "\x00");
+-    applesmc_add_key(s, "MSSD", 1, "\x03");
++    /* Keep public keys in reverse lexical order for index enumeration. */
++    applesmc_add_key(s, "REV ", 6, "\x01\x13\x0f\x00\x00\x03", false);
++    applesmc_add_key(s, "OSK0", 32, s->osk, true);
++    applesmc_add_key(s, "OSK1", 32, s->osk + 32, true);
++    applesmc_add_key(s, "NATJ", 1, "\x00", false);
++    applesmc_add_key(s, "MSSP", 1, "\x00", false);
++    applesmc_add_key(s, "MSSD", 1, "\x03", false);
+ }
+ 
+ static void applesmc_unrealize(DeviceState *dev)
