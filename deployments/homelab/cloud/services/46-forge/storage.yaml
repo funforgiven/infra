@@ -26,4 +26,6 @@ spec:
   storageClassName: rbd1
   resources:
     requests:
-      storage: 100Gi
+      # Seven archives plus the next archive, two native-image generations,
+      # and recovery headroom for the 80 GiB application volume.
+      storage: 800Gi
