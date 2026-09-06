@@ -2,7 +2,7 @@
 set -eu
 test -s /run/runner/handle || exit 0
 nix-store --load-db < /etc/nix/registration
-exec forgejo-runner --config /bootstrap/runner.yaml one-job \
+exec python3 /bootstrap/run-one-job.py -- forgejo-runner --config /bootstrap/runner.yaml one-job \
   --handle "$(cat /run/runner/handle)" \
   --url https://git.fahrican.com --uuid "$(cat /run/runner/uuid)" \
   --token-url file:/run/runner/token \

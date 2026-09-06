@@ -35,6 +35,7 @@ configMapGenerator:
   files:
   - register-job.py
   - run-job.sh
+  - run-one-job.py=../../../../../components/cloud/services/forge/run-one-job.py
   - runner.yaml
 - name: forge-restore-tools
   namespace: forge-restore

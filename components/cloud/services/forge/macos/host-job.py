@@ -88,6 +88,10 @@ def main():
                 return
             if state == 'failed':
                 raise RuntimeError('macOS guest failed')
+            # SSH without a PTY need not deliver SIGHUP when its client exits.
+            # A write detects the closed broker channel and enters the same
+            # finally cleanup as a timeout, without any guest credential access.
+            print('macOS guest running; broker channel checked.', flush=True)
             time.sleep(10)
         raise RuntimeError('macOS guest exceeded its external deadline')
     finally:
