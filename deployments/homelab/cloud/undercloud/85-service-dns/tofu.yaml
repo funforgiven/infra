@@ -22,8 +22,7 @@ spec:
   suspend: false
   interval: 10m
   retryInterval: 1m
-  # Review the one-time removal of the retired GitLab integration.
-  approvePlan: ""
+  approvePlan: auto
   destroyResourcesOnDeletion: false
   path: ./components/cloud/services/dns/tofu
   sourceRef:

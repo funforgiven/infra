@@ -16,8 +16,7 @@ metadata:
   namespace: tofu-system
 spec:
   interval: 10m
-  # Review the one-time removal of the retired GitLab integration.
-  approvePlan: ""
+  approvePlan: auto
   path: ./components/cloud/identity/tofu
   sourceRef:
     kind: GitRepository
