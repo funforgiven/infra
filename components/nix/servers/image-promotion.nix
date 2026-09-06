@@ -30,9 +30,8 @@
           host="''${1:-home-assistant}"
           case "$host" in
             home-assistant) project=services ;;
-            gitlab) project=gitlab ;;
             forge-macos) project=forge-ci ;;
-            *) echo 'Expected home-assistant, gitlab or forge-macos.' >&2; exit 64 ;;
+            *) echo 'Expected home-assistant or forge-macos.' >&2; exit 64 ;;
           esac
 
           repository_root="$(git rev-parse --show-toplevel)"
@@ -233,8 +232,6 @@
       // lib.optionalAttrs (system == config.dendritic.hosts.home-assistant.system) {
         home-assistant-openstack-image =
           inputs.self.nixosConfigurations.home-assistant.config.system.build.images.openstack;
-        gitlab-openstack-image =
-          inputs.self.nixosConfigurations.gitlab.config.system.build.images.openstack;
         forge-macos-openstack-image =
           inputs.self.nixosConfigurations.forge-macos.config.system.build.images.openstack;
       };

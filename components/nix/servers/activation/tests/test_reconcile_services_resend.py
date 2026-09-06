@@ -65,11 +65,11 @@ class ResendKeyReconcilerTest(unittest.TestCase):
         self.assertNotIn("new-secret", report)
         self.assertNotIn("new-id", report)
 
-    def test_gitlab_key_does_not_rotate_stalwart(self) -> None:
+    def test_forgejo_key_does_not_rotate_stalwart(self) -> None:
         client = FakeClient()
         client.inventory = [{"id": "stalwart-id", "name": SPEC.name}]
-        spec = replace(SPEC, name="fahrican-gitlab-smtp",
-                       output_credential="GITLAB_RESEND_API_KEY")
+        spec = replace(SPEC, name="fahrican-forgejo-smtp",
+                       output_credential="FORGEJO_RESEND_API_KEY")
         store = FakeStore()
         report = ResendKeyReconciler(spec, client, store).reconcile(
             apply=True, rotate=False

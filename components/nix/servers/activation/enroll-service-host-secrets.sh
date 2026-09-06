@@ -11,7 +11,6 @@ Install one SOPS-backed secret profile on a service host over SSH.
 Profiles:
   monitoring             Infrastructure Telegram alerts
   home-assistant-backup   Home Assistant Restic repository
-  gitlab-backup           GitLab native backups in Restic
 EOF
 }
 
@@ -130,13 +129,6 @@ case "$profile" in
       HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD \
       HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID \
       HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY
-    ;;
-  gitlab-backup)
-    enroll_backup \
-      services/hosts/gitlab \
-      GITLAB_BACKUP_RESTIC_PASSWORD \
-      GITLAB_BACKUP_B2_APPLICATION_KEY_ID \
-      GITLAB_BACKUP_B2_APPLICATION_KEY
     ;;
   *)
     echo "Unknown host enrollment profile: $profile" >&2

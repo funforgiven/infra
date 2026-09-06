@@ -21,8 +21,6 @@ subsets:
   - addresses:
       - hostname: home-assistant
         ip: 192.168.80.10
-      - hostname: gitlab
-        ip: 10.21.40.128
     ports:
       - name: metrics
         port: 9100

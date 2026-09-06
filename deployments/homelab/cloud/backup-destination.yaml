@@ -152,13 +152,6 @@ services:
       idField: HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID
       valueField: HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY
       resticPasswordField: HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD
-    - host: gitlab
-      keyName: infra-services-gitlab-backup-writer
-      namePrefix: services/hosts/gitlab/
-      secretFile: deployments/homelab/cloud/host-runtime/backups.sops.yaml
-      idField: GITLAB_BACKUP_B2_APPLICATION_KEY_ID
-      valueField: GITLAB_BACKUP_B2_APPLICATION_KEY
-      resticPasswordField: GITLAB_BACKUP_RESTIC_PASSWORD
   hostCapabilities:
     - deleteFiles
     - listAllBucketNames

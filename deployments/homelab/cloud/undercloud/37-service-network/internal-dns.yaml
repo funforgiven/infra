@@ -43,7 +43,6 @@ data:
     share IN A 10.21.20.130
     key-manager IN A 10.21.20.130
     container-infra IN A 10.21.20.130
-    gitlab-s3 IN A 10.21.20.130
     dashboard IN A 10.21.20.131
     grafana IN A 10.21.20.131
     auth IN A 10.21.20.131

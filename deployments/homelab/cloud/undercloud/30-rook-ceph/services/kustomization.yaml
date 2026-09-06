@@ -5,4 +5,3 @@ resources:
   - filesystem.yaml
   - nfs.yaml
   - undercloud-storage.yaml
-  - gitlab-object-storage.yaml

@@ -15,9 +15,3 @@ keys:
     domain: fahrican.com
     administrationCredential: RESEND_ADMIN_API_KEY
     outputCredential: STALWART_RESEND_API_KEY
-  gitlab:
-    name: fahrican-gitlab-smtp
-    permission: sending_access
-    domain: fahrican.com
-    administrationCredential: RESEND_ADMIN_API_KEY
-    outputCredential: GITLAB_RESEND_API_KEY
