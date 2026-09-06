@@ -27,11 +27,13 @@ if ! id forge-job >/dev/null 2>&1; then
 fi
 if id -Gn forge-job | tr ' ' '\n' | grep -qx admin; then exit 1; fi
 install -d -o forge-job -g staff -m 0700 /Users/forge-job
-install -d -o root -g wheel -m 0755 /usr/local/libexec/forge
+# install -d honors the restrictive umask for intermediate directories.
+# The job account must traverse libexec while only root can modify it.
+install -d -o root -g wheel -m 0755 /usr/local/libexec /usr/local/libexec/forge
 for name in start-job.sh run-job.sh enroll-job.js mount-job.js; do
   install -o root -g wheel -m 0755 "$source_dir/$name" "/usr/local/libexec/forge/$name"
 done
 install -o root -g wheel -m 0644 "$source_dir/com.fahrican.forge-job.plist" /Library/LaunchDaemons/com.fahrican.forge-job.plist
 plutil -lint /Library/LaunchDaemons/com.fahrican.forge-job.plist
-su -l forge-job -c 'id; /usr/local/bin/node --version; /usr/local/bin/forgejo-runner --version; /nix/var/nix/profiles/default/bin/nix store info'
+su -l forge-job -c 'set -e; test -x /usr/local/libexec/forge/run-job.sh; id; /usr/local/bin/node --version; /usr/local/bin/forgejo-runner --version; /nix/var/nix/profiles/default/bin/nix store info'
 echo 'Native job account and immutable launch daemon installed.'

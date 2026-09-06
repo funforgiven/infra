@@ -66,7 +66,9 @@ def main():
                 verification = checked(requests.Session(), 'POST', '/auth/tokens', {'auth': {'identity': {
                     'methods': ['application_credential'], 'application_credential': credential}}}).json()['token']
                 roles = {role['name'] for role in verification['roles']}
-                if roles != {'member', 'creator'} or verification['project']['id'] != identity['project']['id']:
+                # Keystone may add the reader role implied by member.
+                if (not {'member', 'creator'} <= roles or not roles <= {'member', 'creator', 'reader'}
+                        or verification['project']['id'] != identity['project']['id']):
                     raise RuntimeError('Enrolled credential exceeded the required CI member scope')
                 data['cloud-credential.json'] = json.dumps(credential)
                 annotations['forge.fahrican.com/cloud-credential-expires'] = expiry

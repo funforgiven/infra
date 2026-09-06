@@ -95,7 +95,7 @@ class Cloud:
             if auth["token"]["project"]["id"] != self.project:
                 raise RuntimeError("Cloud credential is scoped to the wrong project")
             roles = {role["name"] for role in auth["token"]["roles"]}
-            if "admin" in roles or "member" not in roles:
+            if not {"member", "creator"} <= roles or not roles <= {"member", "creator", "reader"}:
                 raise RuntimeError("Broker requires a non-administrator project member credential")
             self.headers = {"X-Auth-Token": headers["X-Subject-Token"]}
             self.renew_at = time.monotonic() + 600
