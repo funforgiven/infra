@@ -94,6 +94,17 @@ The coordinator leases one persistent agent and worktree per worker account.
 These are separate Forgejo identities sharing an operator's Unix account;
 they are not separate OS security boundaries.
 
+Forgejo 15's native Actions web evidence routes require browser sessions;
+repository PATs cannot authenticate them. Each account has its own secure,
+mode-0600 `web-session.json`, bound to the enrolled username and user ID.
+The application CLI sends these cookies only to fixed read-only Atollion
+Actions routes and persists secure same-origin refreshes. API/review tokens
+remain repository-scoped. Renew expired sessions from this repository's
+development shell with `python3 components/cloud/services/forge/enroll-agent-sessions.py`.
+The operator helper reads each password from SOPS into memory, verifies its
+own login/settings/identity and artifact access, and writes no plaintext
+passwords. Human ZITADEL sign-in is unchanged.
+
 `atollion-branch-policy.json` records the applied main protection: no direct
 pushes, signed commits, one independent whitelisted approval, dismissed stale
 approvals, all five named PR checks and an up-to-date branch. Only the owner
@@ -111,6 +122,16 @@ job containers have no Kubernetes token or reusable enrollment credential.
 The template stays suspended; only the launcher copies its reconciled spec.
 Generic ephemeral PVCs and their disks are deleted with completed job pods.
 Do not back up disposable CI workspaces.
+
+Forgejo 15 requires repository ownership for runner management, including
+queue reads; a collaborator's admin role is insufficient. Atollion controller
+tokens therefore belong to repository owner `funforgiven` and explicitly
+target only `funforgiven/atollion`. The queue launcher has `read:repository`;
+the isolated registration/native controllers have `write:repository`.
+These credentials never enter agent worktrees or execution containers.
+The unnecessary `forge-runner` application collaborator and its unusable
+Atollion controller tokens were removed; qualification credentials remain
+owned by `forge-runner` for its own qualification repository.
 
 Quickemu provides Intel macOS validation. The GDD's ARM64 macOS certification
 and physical GPU/calibrated performance requirements remain explicit separate
