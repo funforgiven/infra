@@ -13,6 +13,13 @@ spec:
   - action: Allow
     protocol: TCP
     source:
+      namespaceSelector: kubernetes.io/metadata.name == 'forge-control'
+      selector: app.kubernetes.io/name == 'forge-native-broker'
+    destination:
+      ports: [8083]
+  - action: Allow
+    protocol: TCP
+    source:
       namespaceSelector: kubernetes.io/metadata.name == 'envoy-gateway-system'
       selector: gateway.envoyproxy.io/owning-gateway-name == 'services' && gateway.envoyproxy.io/owning-gateway-namespace
         == 'services-network'

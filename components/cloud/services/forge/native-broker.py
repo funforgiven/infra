@@ -22,6 +22,9 @@ import urllib.parse
 import urllib.request
 import uuid
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from broker_cache import CacheBroker, carrier
+
 FORGE = "https://git.fahrican.com/api/v1"
 IDENTITY = "https://identity.cloud.fahrican.com/v3"
 COMPUTE = "https://compute.cloud.fahrican.com/v2.1"
@@ -64,6 +67,7 @@ class Forge:
         if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
             raise ValueError("Invalid repository")
         self.base = FORGE + "/repos/" + repository + "/actions/runners"
+        self.repository = repository
         self.headers = {"Authorization": "token " + token.strip()}
         if platform not in {"windows", "macos"}:
             raise ValueError("Unsupported native platform")
@@ -293,8 +297,12 @@ def run_macos(config, secret_dir, forge, jobs):
     name = forge.prefix + str(int(time.time())) + "-" + uuid.uuid4().hex[:8]
     registered = forge.call("POST", body={"name": name, "ephemeral": True,
         "description": "Fresh macOS disk overlay; rootless Quickemu; unprivileged single job"})
+    cache, cache_lease = CacheBroker(), None
     try:
         enrollment = {"uuid": registered["uuid"], "token": registered["token"], "handle": jobs[0]["handle"]}
+        cache_lease = cache.issue(forge.repository, jobs[0])
+        if cache_lease:
+            enrollment['cache'] = carrier(cache_lease, time.time())
         with tempfile.TemporaryDirectory(prefix="forge-broker-key-") as directory:
             key = Path(directory) / "id_ed25519"
             key.write_bytes((secret_dir / "ssh-key").read_bytes())
@@ -305,7 +313,11 @@ def run_macos(config, secret_dir, forge, jobs):
                 "-o", "ServerAliveInterval=30", "-o", "ServerAliveCountMax=3", "forge-broker@10.21.40.126"],
                 enrollment)
     finally:
-        forge.call("DELETE", "/" + str(registered["id"]), missing=True)
+        try:
+            forge.call("DELETE", "/" + str(registered["id"]), missing=True)
+        finally:
+            if cache_lease:
+                cache.revoke(cache_lease['lease_id'])
 
 
 def run(config, secret_dir):

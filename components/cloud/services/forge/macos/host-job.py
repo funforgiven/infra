@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import signal
 import subprocess
@@ -19,6 +20,31 @@ import time
 GOLDEN = Path('/var/lib/forge-golden/macos')
 ACTIVE = Path('/var/lib/quickemu/macos')
 UNIT = 'quickemu-macos.service'
+
+
+def validate_enrollment(enrollment, now=None):
+    """Accept only ephemeral identity and an optional job-scoped cache URL."""
+    if not isinstance(enrollment, dict) or set(enrollment) not in (
+            {'uuid', 'token', 'handle'}, {'uuid', 'token', 'handle', 'cache'}):
+        raise ValueError('Unexpected enrollment fields')
+    for field in ('uuid', 'token', 'handle'):
+        value = enrollment[field]
+        if not isinstance(value, str) or not 1 <= len(value) <= 4096 or any(ord(c) <= 32 for c in value):
+            raise ValueError('Invalid ephemeral enrollment')
+    if 'cache' in enrollment:
+        cache = enrollment['cache']
+        now = time.time() if now is None else now
+        if (not isinstance(cache, dict) or set(cache) != {'actions_cache_url', 'cache_mode', 'expires_unix'}
+                or not isinstance(cache.get('actions_cache_url'), str)
+                or not re.fullmatch(r'https://cache\.fahrican\.com/[0-9a-f]{64}/', cache['actions_cache_url'])
+                or cache.get('cache_mode') != 'broker-scoped-v1'
+                or type(cache.get('expires_unix')) is not int
+                or not now < cache['expires_unix'] <= now + 7200):
+            # Cache availability cannot prevent native validation. Never emit
+            # a rejected value: it may contain an opaque job capability.
+            print('Optional cache capability unavailable; continuing with a cold job.', flush=True)
+            enrollment = {key: value for key, value in enrollment.items() if key != 'cache'}
+    return enrollment
 
 
 def run(*args, **kwargs):
@@ -53,12 +79,7 @@ def main():
     raw = sys.stdin.buffer.read(16385)
     if len(raw) > 16384:
         raise ValueError('Enrollment exceeds its size limit')
-    enrollment = json.loads(raw)
-    if set(enrollment) != {'uuid', 'token', 'handle'}:
-        raise ValueError('Unexpected enrollment fields')
-    for value in enrollment.values():
-        if not isinstance(value, str) or not 1 <= len(value) <= 4096 or any(ord(c) <= 32 for c in value):
-            raise ValueError('Invalid ephemeral enrollment')
+    enrollment = validate_enrollment(json.loads(raw))
     lock = open('/run/forge-macos-job.lock', 'w')
     acquire_job_lock(lock)
     # The installer and a preceding job must be completely stopped. The broker

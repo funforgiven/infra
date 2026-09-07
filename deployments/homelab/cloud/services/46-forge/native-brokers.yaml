@@ -231,6 +231,12 @@ spec:
   - action: Allow
     protocol: TCP
     destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'forge'
+      selector: app.kubernetes.io/name == 'forgejo'
+      ports: [8083]
+  - action: Allow
+    protocol: TCP
+    destination:
       namespaceSelector: kubernetes.io/metadata.name == 'forge-cache'
       selector: app.kubernetes.io/name == 'forge-cache'
       ports:

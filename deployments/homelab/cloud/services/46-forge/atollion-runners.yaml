@@ -156,7 +156,8 @@ spec:
   jobTemplate:
     spec:
       backoffLimit: 0
-      ttlSecondsAfterFinished: 60
+      # Keep completion metadata long enough for the next controller lease cleanup.
+      ttlSecondsAfterFinished: 600
       activeDeadlineSeconds: 9000
       template:
         metadata:
