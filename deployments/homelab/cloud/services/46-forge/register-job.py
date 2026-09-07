@@ -1,18 +1,45 @@
 #!/usr/bin/env python3
 """Exchange the init-only repository credential for a one-job runner identity."""
 
+from http.client import IncompleteRead
 import json
 import os
 from pathlib import Path
 import re
+import ssl
 import sys
 import time
+import urllib.error
 import urllib.request
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *args, **kwargs):
         return None
+
+
+def registration_request(opener, request, deadline):
+    """Wait out short maintenance pauses without replaying enrollment writes."""
+    readable = request.get_method() == "GET"
+    while True:
+        remaining = deadline - time.monotonic()
+        if readable and remaining <= 0:
+            raise TimeoutError("Forgejo registration read recovery deadline expired")
+        try:
+            with opener.open(request, timeout=min(30, remaining) if readable else 30) as response:
+                return json.load(response) if response.status != 204 else None
+        except urllib.error.HTTPError as error:
+            if not readable or error.code not in {502, 503, 504}:
+                raise
+            error.close()
+        except (urllib.error.URLError, TimeoutError, ConnectionError, IncompleteRead) as error:
+            if not readable or isinstance(getattr(error, "reason", error), ssl.SSLError):
+                raise
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError("Forgejo registration read recovery deadline expired")
+        time.sleep(min(5, remaining))
+
 
 def runner_configuration(base, raw_cache, now=None):
     """Copy the immutable configuration, adding only a validated job capability."""
@@ -46,14 +73,17 @@ def main():
     name = os.environ["POD_NAME"]
     base = "https://git.fahrican.com/api/v1/repos/" + repository + "/actions/runners"
     token = Path("/run/enrollment/token").read_text().strip()
+    opener = urllib.request.build_opener(NoRedirect)
+    # One budget covers both discovery reads, including their response bodies.
+    # POST/DELETE are attempted once; uncertain writes are never replayed.
+    deadline = time.monotonic() + 180
 
 
     def request(method, path="", body=None):
         request = urllib.request.Request(base + path, method=method,
             data=json.dumps(body).encode() if body is not None else None,
             headers={"Authorization": "token " + token, "Content-Type": "application/json"})
-        with urllib.request.build_opener(NoRedirect).open(request, timeout=30) as response:
-            return json.load(response) if response.status != 204 else None
+        return registration_request(opener, request, deadline)
 
 
     # Kubernetes expires idle/failed job pods after three hours. Remove only
