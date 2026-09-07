@@ -74,6 +74,10 @@ spec:
         secret:
           secretName: forge-runtime
           defaultMode: 288
+      - name: signing
+        secret:
+          secretName: forge-signing
+          defaultMode: 288
       - name: cache-descriptor-keys
         secret:
           secretName: cache-descriptors
@@ -101,6 +105,9 @@ spec:
           readOnly: true
         - name: secrets
           mountPath: /run/forge-secrets
+          readOnly: true
+        - name: signing
+          mountPath: /run/forge-signing
           readOnly: true
         resources:
           requests:
