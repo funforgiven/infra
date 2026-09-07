@@ -1,11 +1,15 @@
 # Forgejo readiness and retirement record
 
 The owner authorized Atollion migration after pausing its agent on 2026-09-06.
-Its GitHub history is imported and checked; application workflows and agent
-orchestration are in PRs #119 and #120. The paused checkout's unfinished files
-are checkpointed and remain intact. Follow [ATOLLION-HANDOFF.md](ATOLLION-HANDOFF.md)
-for application validation and cutover progress. The completed native results
-below remain infrastructure qualification evidence.
+Its GitHub history is imported and checked. Application workflows and agent
+orchestration passed all five required checks and merged in protected PR #120
+at 2026-09-07 23:02:34 UTC, preserving the exact reviewed head
+`0d71e0c699999359edd882af1d617ec24eaf7ce8`. Protected-main run 12 also passed
+all five checks and published all nine trusted compiler cache parts. The real
+checkout and goal handoff completed and passed its live audit at 23:45 UTC;
+all eight unfinished files are preserved in worker 1. The original goal remains
+paused. [ATOLLION-HANDOFF.md](ATOLLION-HANDOFF.md) records worktree identities,
+merge rules, validation results and measured cache performance.
 
 ## Deployed service
 
@@ -19,6 +23,11 @@ below remain infrastructure qualification evidence.
   credentials stay in `forge-control`, outside repository execution.
 - Native polling runs every minute with separate Atollion and qualification tokens.
   Its native platform qualification workflow runs weekly.
+- Persistent compiler caches use private `https://cache.fahrican.com` and a
+  separate 320 GiB volume. Trusted controllers grant capabilities scoped to
+  the actual repository, job and attempt; pull requests cannot write the
+  protected-main cache baseline. The service alerts on unavailable replicas
+  and low free space. Disposable builds remain complete when caching is unavailable.
 
 ## Native qualification
 
@@ -32,9 +41,17 @@ removal and macOS overlay, enrollment-media and mutable-firmware removal.
 | Windows x86_64 | Windows 11 Pro 25H2, unprivileged interactive desktop, immutable trusted tools, private-network isolation, Direct3D 11/12 WARP | Private protected Glance image `e8f8b4f6-3956-44fe-80cc-1bd99bde08be` |
 | macOS x86_64 | macOS 15.7.9, Nix and Clang native build, SIP/authenticated-root/AMFI, non-administrator job identity, host/private-network isolation | Root-owned read-only Quickemu golden files on `forge-macos`, mirrored in the backup set |
 
-The macOS runner has no GPU acceleration. These infrastructure results do not
-establish Atollion game compatibility; review its current Intel Darwin flake
-outputs and run its real platform tests when migration is authorized.
+The macOS runner has no GPU acceleration. Atollion's separate application
+checks passed in migration PR #120; these results do not establish physical
+GPU behavior or ARM64 macOS certification.
+
+Dedicated cancellation qualifications also passed on 2026-09-06. Windows run
+14 was canceled at 16:42:15 UTC; the controller verified deletion of its owned
+VM and attached disks at 16:43:39. macOS run 13 was canceled at 16:56:44;
+its controller completed at 16:57:47, with QEMU inactive and the writable
+overlay absent. Both checks bound the actual running task to its controller
+and used no manual controller or guest cleanup. Their complete proofs are
+retained under `/backups/native-lifecycle-20260906/` for offsite backup.
 
 ## Backup evidence
 
@@ -45,6 +62,26 @@ Encrypted offsite copies retain daily backups for 30 days and weekly backups
 for 90 days. Monthly recovery qualification runs in a namespace with all
 network ingress and egress denied; test volumes are dynamically provisioned
 and cannot bind production volumes.
+
+The post-merge Atollion archive
+`forgejo-20260907T230308Z-a81f2c3e.tar.gz` is 2,029,026,764 bytes, SHA-256
+`2b8c8021975f7f12532b2039001f0e3a1a456163b0d9946496ed805ba61622fa`.
+Its isolated backup `forge-atollion-application-20260907230539` and restore
+`forge-atollion-application-20260907230539-check` completed successfully.
+Qualification passed at 2026-09-07 23:19:23 UTC: database and Git checks,
+all 11 migration manifest files, all eight original unfinished files, three
+separate recovery volumes, no service-account token, and denied ingress and
+egress. Actual TCP probes confirmed private Forgejo and API access was blocked.
+The restore proof is retained at `/backups/atollion-migration/restore-proof.json`.
+Both isolated namespaces, their three temporary volumes and the restore
+modifier were subsequently removed through normal UID-guarded deletion.
+Production storage and the completed backup/restore records were preserved.
+
+The fresh complete backup `forge-atollion-complete-20260907232101` finished
+at 2026-09-07 23:29:23 UTC with 53,491,574,375 bytes and 90-day retention.
+Its filesystem snapshot is `2e61fa485e19fa2981f8d57a75a36c69`. It includes the
+post-merge application archive, migration evidence and unchanged native
+recovery images. Disposable compiler caches are excluded from backups.
 
 The complete offsite backup `forge-native-complete-20260906082922` finished at
 2026-09-06 08:49:28 UTC. It contains the application archives, both qualified
@@ -102,7 +139,9 @@ No GitLab-specific Backblaze writer credential was enrolled in the credential
 store. Its unused writer declaration has been removed; existing backup
 retention rules and encrypted historical recovery material remain.
 
-Cloud configuration and Kustomize checks passed, including the existing native
-broker and image-backup integrity tests. All 43 service credential and runtime
-contract tests passed. Commits use the repository's signed conventional commit
+Cloud Python, YAML and Kustomize checks passed for the infrastructure changes.
+Focused tests also covered cache isolation and archive compatibility, native
+process supervision, signing-key persistence and maintenance recovery. The
+application's complete required matrix passed on both the reviewed PR and
+protected main. Commits use the repository's signed conventional commit
 workflow. Unrelated workstation configuration edits were preserved.
