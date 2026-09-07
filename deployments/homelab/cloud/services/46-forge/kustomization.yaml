@@ -24,6 +24,7 @@ resources:
 - cache-runtime.sops.yaml
 - cache-registry.sops.yaml
 - cache-brokers.sops.yaml
+- cache-descriptors.sops.yaml
 configMapGenerator:
 - name: forge-cache
   namespace: forge-cache
@@ -40,6 +41,7 @@ configMapGenerator:
   - render-forgejo.py
   - forgejo.ini
   - bootstrap-forgejo.sh
+  - cache-descriptors.py=../../../../../components/cloud/services/forge/cache-descriptors.py
 - name: forge-runner-bootstrap
   namespace: forge-ci
   files:
@@ -70,3 +72,4 @@ configMapGenerator:
   namespace: forge-control
   files:
   - linux-launcher.py=../../../../../components/cloud/services/forge/linux-launcher.py
+  - broker_cache.py=../../../../../components/cloud/services/forge/broker_cache.py

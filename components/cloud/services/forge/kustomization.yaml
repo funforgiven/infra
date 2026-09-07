@@ -5,3 +5,4 @@ configMapGenerator:
   namespace: forge-control
   files:
   - native-broker.py
+  - broker_cache.py

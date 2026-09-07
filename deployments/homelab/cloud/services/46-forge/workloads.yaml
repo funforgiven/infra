@@ -16,6 +16,9 @@ spec:
   - name: backup-metrics
     port: 9900
     targetPort: backup-metrics
+  - name: cache-scope
+    port: 8083
+    targetPort: cache-scope
   - name: ssh
     port: 2222
     targetPort: ssh
@@ -70,6 +73,10 @@ spec:
       - name: secrets
         secret:
           secretName: forge-runtime
+          defaultMode: 288
+      - name: cache-descriptor-keys
+        secret:
+          secretName: cache-descriptors
           defaultMode: 288
       initContainers:
       - name: configure
@@ -210,6 +217,33 @@ spec:
           failureThreshold: 3
           timeoutSeconds: 5
         env: *id001
+      - name: cache-descriptors
+        image: docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4
+        command: [python, /bootstrap/cache-descriptors.py]
+        env:
+        - name: PYTHONDONTWRITEBYTECODE
+          value: '1'
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          capabilities:
+            drop: [ALL]
+        ports:
+        - name: cache-scope
+          containerPort: 8083
+        readinessProbe:
+          httpGet: {path: /healthz, port: cache-scope}
+          periodSeconds: 10
+        volumeMounts:
+        - {name: data, mountPath: /data, readOnly: true}
+        - {name: bootstrap, mountPath: /bootstrap, readOnly: true}
+        - {name: cache-descriptor-keys, mountPath: /run/cache-descriptors, readOnly: true}
+        resources:
+          requests: {cpu: 10m, memory: 32Mi}
+          limits: {cpu: 100m, memory: 64Mi}
       - name: backup
         image: docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4
         command:

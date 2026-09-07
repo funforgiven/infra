@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Private cache gateway for trusted brokers and disposable Forgejo jobs.
 
-Only brokers issue scopes derived from authoritative Forgejo task/run metadata.
+Only brokers issue scopes derived from authoritative Forgejo run-job/run metadata.
 The job receives an expiring opaque URL, never the backend HMAC or broker key.
 The patched Forgejo Runner13 cache backend is reachable only on loopback8081.
 """
@@ -49,9 +49,9 @@ def canonical(value):
 
 
 def scope(value, broker, now):
-    require(set(value) == {"repository", "task_id", "run_id", "head", "event_name", "ref", "cache_lane", "expires_unix"}, 400)
+    require(set(value) == {"repository", "job_id", "attempt", "run_id", "head", "event_name", "ref", "cache_lane", "expires_unix"}, 400)
     require(value["repository"] in broker["repositories"] and value["cache_lane"] in broker["lanes"])
-    require(all(type(value[k]) is int and value[k] > 0 for k in ("task_id", "run_id")), 400)
+    require(all(type(value[k]) is int and value[k] > 0 for k in ("job_id", "attempt", "run_id")), 400)
     require(re.fullmatch(r"[0-9a-f]{40}", value["head"]) is not None, 400)
     require(type(value["expires_unix"]) is int and now < value["expires_unix"] <= now + MAX_LEASE, 400)
     event, ref = value["event_name"], value["ref"]
@@ -147,6 +147,16 @@ class Store:
             size INTEGER, used INTEGER, created INTEGER, complete INTEGER, owner TEXT);
           CREATE TABLE IF NOT EXISTS chunks (id INTEGER, start INTEGER, finish INTEGER, complete INTEGER, PRIMARY KEY(id,start));
         """)
+        # The initial deployment used task_id before a task existed in Forgejo.
+        # Keep its unused nullable task column, but never reinterpret issued leases.
+        columns = {row[1] for row in self.db.execute("PRAGMA table_info(leases)")}
+        missing = {"job_id", "attempt"} - columns
+        if missing:
+            require(self.db.execute("SELECT COUNT(*) FROM leases").fetchone()[0] == 0, 500)
+            with self.db:
+                for name in sorted(missing):
+                    self.db.execute(f"ALTER TABLE leases ADD COLUMN {name} INTEGER")
+        self.db.execute("CREATE UNIQUE INDEX IF NOT EXISTS leases_job_attempt ON leases(job_id,attempt)")
         self.db.commit()
         self.brokers = [(Path(path).read_bytes().strip(), policy) for path, policy in configuration["broker_tokens"].items()]
         require(all(len(token) >= 32 and set(policy["lanes"]) <= LANES for token, policy in self.brokers), 500)
@@ -161,7 +171,8 @@ class Store:
         with self.lock:
             self.db.execute("DELETE FROM leases WHERE CAST(json_extract(value,'$.expires_unix') AS INTEGER) < ?",
                             (int(time.time()) - 86400,))
-            previous = self.db.execute("SELECT id,value FROM leases WHERE task=?", (approved["task_id"],)).fetchone()
+            previous = self.db.execute("SELECT id,value FROM leases WHERE job_id=? AND attempt=?",
+                                       (approved["job_id"], approved["attempt"])).fetchone()
             if previous:
                 require(json.loads(previous[1]) == approved, 409)
                 identity = previous[0]
@@ -169,7 +180,8 @@ class Store:
                 require(self.db.execute("SELECT COUNT(*) FROM leases").fetchone()[0] < 4096, 503)
                 identity = secrets.token_hex(16)
                 cap_hash = hashlib.sha256(self.capability(identity).encode()).hexdigest()
-                self.db.execute("INSERT INTO leases VALUES (?,?,?,?)", (identity, approved["task_id"], canonical(approved), cap_hash))
+                self.db.execute("INSERT INTO leases (id,value,capability_hash,job_id,attempt) VALUES (?,?,?,?,?)",
+                                (identity, canonical(approved), cap_hash, approved["job_id"], approved["attempt"]))
             self.db.commit()
         return {"lease_id": identity, "actions_cache_url": self.public + "/" + self.capability(identity) + "/",
                 "cache_mode": "broker-scoped-v1", "expires_unix": approved["expires_unix"]}

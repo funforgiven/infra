@@ -5,14 +5,20 @@ import copy
 import json
 from pathlib import Path
 import ssl
+import sys
 import time
 import urllib.error
 import urllib.request
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from broker_cache import CacheBroker, LEASE_ANNOTATION, carrier
 
 REPOSITORY = "funforgiven/atollion"
 JOBS = "/apis/batch/v1/namespaces/forge-ci/jobs"
 LABEL = "forge.fahrican.com/repository=atollion"
 CAPACITY = 2
+JOB_ID_ANNOTATION = "forge.fahrican.com/job-id"
+ATTEMPT_ANNOTATION = "forge.fahrican.com/job-attempt"
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -36,9 +42,21 @@ def select_jobs(existing, waiting):
     active = [job for job in existing if not any(
         condition.get("status") == "True" and condition.get("type") in {"Complete", "Failed"}
         for condition in job.get("status", {}).get("conditions", []))]
-    claimed = {job["metadata"].get("annotations", {}).get("forge.fahrican.com/job-id") for job in existing}
+    claimed, legacy_claimed = set(), set()
+    for job in existing:
+        annotations = job["metadata"].get("annotations", {})
+        identity, attempt = annotations.get(JOB_ID_ANNOTATION), annotations.get(ATTEMPT_ANNOTATION)
+        if attempt is None:
+            # Existing jobs created before attempt annotations remain conservative
+            # claims until Kubernetes cleans them up.
+            legacy_claimed.add(identity)
+        else:
+            claimed.add((identity, attempt))
     eligible = [job for job in waiting if job.get("status") == "waiting" and job.get("runs_on")
-        and set(job["runs_on"]) <= {"linux", "linux-x86_64"} and str(job["id"]) not in claimed]
+        and type(job.get("attempt")) is int and job["attempt"] > 0
+        and set(job["runs_on"]) <= {"linux", "linux-x86_64"}
+        and str(job["id"]) not in legacy_claimed
+        and (str(job["id"]), str(job["attempt"])) not in claimed]
     return sorted(eligible, key=lambda job: job["id"])[:max(0, CAPACITY - len(active))]
 
 
@@ -49,6 +67,11 @@ def main():
     def kube(method, path, body=None):
         return request(method, "https://kubernetes.default.svc" + path, kube_token, body, context)
     existing = kube("GET", JOBS + "?labelSelector=" + LABEL)["items"]
+    cache = CacheBroker()
+    for job in existing:
+        if any(condition.get('status') == 'True' and condition.get('type') in {'Complete', 'Failed'}
+               for condition in job.get('status', {}).get('conditions', [])):
+            cache.revoke(job['metadata'].get('annotations', {}).get(LEASE_ANNOTATION))
     waiting = request("GET", "https://git.fahrican.com/api/v1/repos/" + REPOSITORY
                       + "/actions/runners/jobs?labels=linux-x86_64", Path("/run/enrollment/token").read_text())
     # Kustomize rewrites this suspended template's ConfigMap references. Read
@@ -62,11 +85,22 @@ def main():
                 "spec": suspended["spec"]["jobTemplate"]["spec"]}
     for assignment in select_jobs(existing, waiting or []):
         job = copy.deepcopy(template)
-        job["metadata"]["name"] = "forge-linux-atollion-" + str(int(time.time() // 60)) + "-" + str(assignment["id"])
-        job["metadata"]["annotations"] = {"forge.fahrican.com/job-id": str(assignment["id"])}
+        job["metadata"]["name"] = "forge-linux-atollion-" + str(int(time.time() // 60)) + "-" + str(assignment["id"]) + "-" + str(assignment["attempt"])
+        job["metadata"]["annotations"] = {JOB_ID_ANNOTATION: str(assignment["id"]),
+                                           ATTEMPT_ANNOTATION: str(assignment["attempt"])}
         job["spec"]["template"]["spec"]["initContainers"][0]["env"].append(
             {"name": "FORGE_JOB_HANDLE", "value": assignment["handle"]})
-        kube("POST", JOBS, job)
+        lease = cache.issue(REPOSITORY, assignment)
+        if lease:
+            job['metadata']['annotations'][LEASE_ANNOTATION] = lease['lease_id']
+            job['spec']['template']['spec']['initContainers'][0]['env'].append(
+                {'name': 'FORGE_CACHE_CONFIG', 'value': json.dumps(carrier(lease, time.time()))})
+        try:
+            kube("POST", JOBS, job)
+        except BaseException:
+            if lease:
+                cache.revoke(lease['lease_id'])
+            raise
         print("Created disposable Atollion Linux job", assignment["id"], flush=True)
 
 

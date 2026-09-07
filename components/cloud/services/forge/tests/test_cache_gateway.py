@@ -5,6 +5,7 @@ import http.client
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import io
+import sqlite3
 from pathlib import Path
 import tempfile
 import threading
@@ -68,7 +69,7 @@ class GatewayTests(unittest.TestCase):
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True); self.thread.start()
         self.addCleanup(self.stop)
         self.auth = b"Bearer " + b"b" * 64
-        self.request_value = {"repository": "owner/repo", "task_id": 1, "run_id": 22, "head": "a" * 40,
+        self.request_value = {"repository": "owner/repo", "job_id": 1, "attempt": 1, "run_id": 22, "head": "a" * 40,
                               "event_name": "pull_request", "ref": "refs/pull/120/head", "cache_lane": "linux-quality",
                               "expires_unix": int(time.time()) + 3600}
         self.issued = self.store.issue(self.request_value, self.auth)
@@ -94,6 +95,41 @@ class GatewayTests(unittest.TestCase):
                          {"Content-Range": f"bytes 0-{len(content)-1}/*"})[0], 200)
         self.assertEqual(self.request("POST", f"/caches/{identity}", {"size": len(content)})[0], 200)
         return identity
+
+    def test_job_attempt_retry_gets_distinct_capability_without_reinterpreting_claims(self):
+        self.assertEqual(self.store.issue(self.request_value, self.auth), self.issued)
+        retry = self.store.issue({**self.request_value, "attempt": 2}, self.auth)
+        self.assertNotEqual(retry["lease_id"], self.issued["lease_id"])
+        self.assertNotEqual(retry["actions_cache_url"], self.issued["actions_cache_url"])
+        with self.assertRaises(gateway.Refused) as changed:
+            self.store.issue({**self.request_value, "head": "b" * 40}, self.auth)
+        self.assertEqual(changed.exception.status, 409)
+        for invalid in ({"job_id": 0}, {"attempt": 0}, {"attempt": True}):
+            with self.subTest(invalid=invalid), self.assertRaises(gateway.Refused):
+                self.store.issue({**self.request_value, **invalid}, self.auth)
+        legacy = {**self.request_value, "task_id": 1};del legacy["job_id"];del legacy["attempt"]
+        with self.assertRaises(gateway.Refused): self.store.issue(legacy, self.auth)
+        self.assertEqual(self.store.db.execute("SELECT task,job_id,attempt FROM leases ORDER BY attempt").fetchall(),
+                         [(None,1,1),(None,1,2)])
+
+    def test_empty_legacy_database_migrates_but_issued_legacy_leases_refuse(self):
+        for issued in (False, True):
+            path=self.root/("legacy-issued.sqlite3" if issued else "legacy-empty.sqlite3")
+            with sqlite3.connect(path) as db:
+                db.execute("CREATE TABLE leases (id TEXT PRIMARY KEY, task INTEGER UNIQUE, value TEXT NOT NULL, capability_hash TEXT UNIQUE NOT NULL)")
+                if issued: db.execute("INSERT INTO leases VALUES ('old',1,'{}','old-hash')")
+            configuration={**self.config,"state_path":str(path)}
+            if issued:
+                with self.assertRaises(gateway.Refused): gateway.Store(configuration)
+                with sqlite3.connect(path) as db:
+                    self.assertEqual(db.execute("SELECT COUNT(*) FROM leases").fetchone()[0],1)
+                    self.assertNotIn("job_id",{row[1] for row in db.execute("PRAGMA table_info(leases)")})
+            else:
+                migrated=gateway.Store(configuration)
+                try:
+                    self.assertTrue({"task","job_id","attempt"} <= {row[1] for row in migrated.db.execute("PRAGMA table_info(leases)")})
+                    self.assertTrue(migrated.issue(self.request_value,self.auth)["lease_id"])
+                finally: migrated.db.close()
 
     def test_real_http_reserve_stream_commit_lookup_and_download(self):
         self.assertEqual(self.request("GET", "/cache?keys=test-key&version=v1")[0], 204)
@@ -125,17 +161,17 @@ class GatewayTests(unittest.TestCase):
     def test_cross_pr_and_platform_ids_refused_before_backend(self):
         identity = self.complete()
         for change in ({"ref": "refs/pull/121/head"}, {"cache_lane": "macos-native"}):
-            value = {**self.request_value, **change, "task_id": self.request_value["task_id"] + 1}
+            value = {**self.request_value, **change, "job_id": self.request_value["job_id"] + 1}
             issued = self.store.issue(value, self.auth); cap = issued["actions_cache_url"].split("/")[-2]
             self.assertEqual(self.request("GET", f"/artifacts/{identity}", cap=cap)[0], 404)
-            self.store.revoke(issued["lease_id"], self.auth); self.request_value["task_id"] += 1
+            self.store.revoke(issued["lease_id"], self.auth); self.request_value["job_id"] += 1
 
     def test_only_protected_main_push_gets_shared_scope_and_pr_can_read_it(self):
         policy = next(iter(self.config["broker_tokens"].values()))
         for event, ref in [("workflow_dispatch", "refs/heads/main"), ("push", "refs/heads/worker")]:
             value = gateway.scope({**self.request_value, "event_name": event, "ref": ref}, policy, int(time.time()))
             self.assertNotEqual(value["isolation"], "")
-        value = {**self.request_value, "task_id": 2, "event_name": "push", "ref": "refs/heads/main"}
+        value = {**self.request_value, "job_id": 2, "event_name": "push", "ref": "refs/heads/main"}
         issued = self.store.issue(value, self.auth); original = self.cap; self.cap = issued["actions_cache_url"].split("/")[-2]
         identity = self.complete(); self.cap = original
         self.assertEqual(self.request("GET", f"/artifacts/{identity}")[0], 200)
@@ -181,7 +217,7 @@ class GatewayTests(unittest.TestCase):
         for change in ({"repository": "foreign/repo"}, {"expires_unix": int(time.time()) + 7201},
                        {"head": "not-a-head"}, {"event_name": "pull_request_target"}, {"cache_lane": "foreign"}):
             with self.subTest(change=change), self.assertRaises(gateway.Refused):
-                self.store.issue({**self.request_value, **change, "task_id": 2}, self.auth)
+                self.store.issue({**self.request_value, **change, "job_id": 2}, self.auth)
 
     def test_entry_and_range_counts_are_bounded_even_for_tiny_archives(self):
         with patch.object(gateway, "MAX_ACTIVE_ENTRIES_PER_LEASE", 1):
