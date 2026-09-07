@@ -77,7 +77,7 @@ spec:
               sizeLimit: 16Mi
           containers:
           - name: broker
-            image: git.fahrican.com/forge-runner/runner-linux:13.1.0@sha256:e0498a0f7bd3f52a40ec40aeb2defb29e9cd9e1b8984ad05d12fc60782064ece
+            image: git.fahrican.com/forge-runner/runner-linux:13.1.0-gzip.1@sha256:b0d2adcb64e13b15ecdd2b7c89830c827f4e2112b54aa1b8e45f964cf643e74f
             command:
             - python3
             - /bootstrap/native-broker.py
@@ -174,7 +174,7 @@ spec:
               sizeLimit: 16Mi
           containers:
           - name: broker
-            image: git.fahrican.com/forge-runner/runner-linux:13.1.0@sha256:e0498a0f7bd3f52a40ec40aeb2defb29e9cd9e1b8984ad05d12fc60782064ece
+            image: git.fahrican.com/forge-runner/runner-linux:13.1.0-gzip.1@sha256:b0d2adcb64e13b15ecdd2b7c89830c827f4e2112b54aa1b8e45f964cf643e74f
             command:
             - python3
             - /bootstrap/native-broker.py
