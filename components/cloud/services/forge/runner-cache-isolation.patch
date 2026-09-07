@@ -1,0 +1,202 @@
+--- a/act/artifactcache/caches.go
++++ b/act/artifactcache/caches.go
+@@ -174,7 +174,7 @@
+ 		return nil, fmt.Errorf("readCache: Get(%v): %w", id, err)
+ 	}
+ 	if cache.Repo != repo {
+-		return nil, fmt.Errorf("readCache: Get(%v): cache.Repo %s != repo %s", id, cache.Repo, repo)
++		return nil, fmt.Errorf("readCache: Get(%v): %w", id, bolthold.ErrNotFound)
+ 	}
+ 
+ 	return cache, nil
+@@ -293,12 +293,12 @@
+ 		}
+ 	}
+ 
+-	// Remove the old caches with the same key and version, keep the latest one.
++	// Keep the latest key/version separately for each repository and write scope.
+ 	// Also keep the olds which have been used recently for a while in case of the cache is still in use.
+ 	if results, err := db.FindAggregate(
+ 		&Cache{},
+ 		bolthold.Where("Complete").Eq(true),
+-		"Key", "Version",
++		"Repo", "WriteIsolationKey", "Key", "Version",
+ 	); err != nil {
+ 		fatal(c.logger, fmt.Errorf("gc aggregate caches: %v", err))
+ 	} else {
+--- a/act/artifactcache/caches_test.go
++++ b/act/artifactcache/caches_test.go
+@@ -48,6 +48,6 @@
+ 		invalidRepo := "INVALID REPO"
+ 		found, err := caches.readCache(cache.ID, invalidRepo)
+ 		assert.Nil(t, found)
+-		assert.ErrorContains(t, err, invalidRepo)
++		assert.ErrorIs(t, err, bolthold.ErrNotFound)
+ 	})
+ }
+--- a/act/artifactcache/handler.go
++++ b/act/artifactcache/handler.go
+@@ -56,6 +56,16 @@
+ }
+ 
+ func StartHandler(dir, outboundIP string, port uint16, secret string, logger logrus.FieldLogger) (Handler, error) {
++	return startHandler(dir, outboundIP, port, secret, logger, "")
++}
++
++// StartLoopbackHandler keeps the standalone backend behind its trusted gateway.
++// The ordinary runner's internal cache listener retains its existing behavior.
++func StartLoopbackHandler(dir, outboundIP string, port uint16, secret string, logger logrus.FieldLogger) (Handler, error) {
++	return startHandler(dir, outboundIP, port, secret, logger, "127.0.0.1")
++}
++
++func startHandler(dir, outboundIP string, port uint16, secret string, logger logrus.FieldLogger, listenHost string) (Handler, error) {
+ 	h := &handler{}
+ 
+ 	if logger == nil {
+@@ -90,7 +100,7 @@
+ 
+ 	h.router = router
+ 
+-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port)) // listen on all interfaces
++	listener, err := net.Listen("tcp", net.JoinHostPort(listenHost, strconv.Itoa(int(port))))
+ 	if err != nil {
+ 		return nil, err
+ 	}
+--- a/internal/app/cmd/cache-server.go
++++ b/internal/app/cmd/cache-server.go
+@@ -60,7 +60,7 @@
+ 			return nil
+ 		}
+ 
+-		cacheHandler, err := artifactcache.StartHandler(
++		cacheHandler, err := artifactcache.StartLoopbackHandler(
+ 			dir,
+ 			host,
+ 			port,
+--- /dev/null
++++ b/act/artifactcache/availability_test.go
+@@ -0,0 +1,102 @@
++// Local availability regressions for the pinned Forgejo Runner cache backend.
++package artifactcache
++
++import (
++	"errors"
++	"fmt"
++	"net/http"
++	"net/http/httptest"
++	"os"
++	"path/filepath"
++	"strconv"
++	"testing"
++	"time"
++
++	"github.com/julienschmidt/httprouter"
++	"github.com/sirupsen/logrus"
++	"github.com/stretchr/testify/require"
++	"github.com/timshannon/bolthold"
++)
++
++func TestAvailabilityGCKeepsRepositoryAndPullRequestScopes(t *testing.T) {
++	raw, err := newCaches(t.TempDir(), "fixture-secret", logrus.New())
++	require.NoError(t, err)
++	c := raw.(*cachesImpl)
++	defer c.close()
++	now := time.Now()
++	rows := []*Cache{
++		{Repo: "owner/a", WriteIsolationKey: "", CreatedAt: now.Add(-6 * time.Hour).Unix()},
++		{Repo: "owner/a", WriteIsolationKey: "", CreatedAt: now.Add(-5 * time.Hour).Unix()},
++		{Repo: "owner/a", WriteIsolationKey: "refs/pull/1/head", CreatedAt: now.Add(-4 * time.Hour).Unix()},
++		{Repo: "owner/a", WriteIsolationKey: "refs/pull/1/head", CreatedAt: now.Add(-3 * time.Hour).Unix()},
++		{Repo: "owner/a", WriteIsolationKey: "refs/pull/2/head", CreatedAt: now.Add(-2 * time.Hour).Unix()},
++		{Repo: "owner/b", WriteIsolationKey: "", CreatedAt: now.Add(-time.Hour).Unix()},
++	}
++	for _, row := range rows {
++		row.Key, row.Version, row.Complete = "same-cache-key", "same-version", true
++		row.UsedAt, row.Size = now.Add(-10*time.Minute).Unix(), 7
++		require.NoError(t, insertCache(c.db, row))
++		path := c.storage.filename(row.ID)
++		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
++		require.NoError(t, os.WriteFile(path, []byte("fixture"), 0o600))
++	}
++	c.setgcAt(now.Add(-2 * time.Hour))
++	c.gcCache()
++	for i, row := range rows {
++		cached, err := c.readCache(row.ID, row.Repo)
++		_, fileErr := os.Stat(c.storage.filename(row.ID))
++		if i == 0 || i == 2 {
++			require.True(t, errors.Is(err, bolthold.ErrNotFound), "superseded entry %d should be collected", i)
++			require.True(t, os.IsNotExist(fileErr))
++		} else {
++			require.NoError(t, err, "another repository or PR must not evict scope %d", i)
++			require.Equal(t, row.ID, cached.ID)
++			require.NoError(t, fileErr)
++		}
++	}
++	ownPR, err := findCacheWithIsolationKeyFallback(c.db, "owner/a", []string{"same-cache-key"}, "same-version", "refs/pull/1/head")
++	require.NoError(t, err)
++	require.Equal(t, rows[3].ID, ownPR.ID)
++	base, err := findCacheWithIsolationKeyFallback(c.db, "owner/a", []string{"same-cache-key"}, "same-version", "refs/pull/3/head")
++	require.NoError(t, err)
++	require.Equal(t, rows[1].ID, base.ID)
++}
++
++func TestAvailabilityForeignCacheIDDoesNotTerminateBackend(t *testing.T) {
++	raw, err := newCaches(t.TempDir(), "fixture-secret", logrus.New())
++	require.NoError(t, err)
++	c := raw.(*cachesImpl)
++	defer c.close()
++	row := &Cache{Repo: "owner/private", Key: "private-key", Version: "v1"}
++	require.NoError(t, insertCache(c.db, row))
++	h := &handler{caches: c, logger: logrus.New()}
++	fatalCalls := 0
++	previousFatal := fatal
++	fatal = func(_ logrus.FieldLogger, _ error) { fatalCalls++ }
++	defer func() { fatal = previousFatal }()
++	for _, method := range []string{http.MethodGet, http.MethodPatch, http.MethodPost} {
++		t.Run(method, func(t *testing.T) {
++			request := httptest.NewRequest(method, fmt.Sprintf("http://cache.test/_apis/artifactcache/artifacts/%d", row.ID), nil)
++			request.Header.Set("Forgejo-Cache-Repo", "owner/other")
++			request.Header.Set("Forgejo-Cache-RunNumber", "1")
++			request.Header.Set("Forgejo-Cache-Timestamp", "0")
++			request.Header.Set("Forgejo-Cache-MAC", ComputeMac("fixture-secret", "owner/other", "1", "0", ""))
++			result := httptest.NewRecorder()
++			params := httprouter.Params{{Key: "id", Value: strconv.FormatUint(row.ID, 10)}}
++			switch method {
++			case http.MethodGet:
++				h.get(result, request, params)
++			case http.MethodPatch:
++				h.upload(result, request, params)
++			case http.MethodPost:
++				h.commit(result, request, params)
++			}
++			require.Equal(t, http.StatusNotFound, result.Code)
++			require.Zero(t, fatalCalls, "untrusted cache ID must never stop the shared backend")
++			require.NotContains(t, result.Body.String(), "owner/private")
++			same, err := c.readCache(row.ID, row.Repo)
++			require.NoError(t, err)
++			require.Equal(t, row.ID, same.ID)
++		})
++	}
++}
+--- /dev/null
++++ b/act/artifactcache/loopback_test.go
+@@ -0,0 +1,19 @@
++// Local regression for the dedicated backend's network boundary.
++package artifactcache
++
++import (
++	"net"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++)
++
++func TestAvailabilityStandaloneBackendBindsLoopback(t *testing.T) {
++	h, err := StartLoopbackHandler(t.TempDir(), "127.0.0.1", 0, "fixture-secret", nil)
++	require.NoError(t, err)
++	defer h.Close()
++	address := h.(*handler).listener.Addr().(*net.TCPAddr)
++	require.True(t, address.IP.IsLoopback())
++	require.Equal(t, "127.0.0.1", address.IP.String())
++	require.NotZero(t, address.Port)
++}

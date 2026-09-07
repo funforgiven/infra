@@ -20,7 +20,17 @@ resources:
 - atollion-runners.yaml
 - runner-atollion.sops.yaml
 - atollion-launcher.sops.yaml
+- cache.yaml
+- cache-runtime.sops.yaml
+- cache-registry.sops.yaml
+- cache-brokers.sops.yaml
 configMapGenerator:
+- name: forge-cache
+  namespace: forge-cache
+  files:
+  - cache-config.json
+  - cache-runner.yaml
+  - cache-gateway.py=../../../../../components/cloud/services/forge/cache-gateway.py
 - name: forge-bootstrap
   namespace: forge
   files:

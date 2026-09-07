@@ -67,6 +67,10 @@ spec:
             secret:
               secretName: native-windows-qualification
               defaultMode: 288
+          - name: cache-broker
+            secret:
+              secretName: cache-windows-broker
+              defaultMode: 288
           - name: tmp
             emptyDir:
               medium: Memory
@@ -97,6 +101,9 @@ spec:
               readOnly: true
             - name: enrollment
               mountPath: /run/broker
+              readOnly: true
+            - name: cache-broker
+              mountPath: /run/cache
               readOnly: true
             - name: tmp
               mountPath: /tmp
@@ -157,6 +164,10 @@ spec:
             secret:
               secretName: native-macos-qualification
               defaultMode: 288
+          - name: cache-broker
+            secret:
+              secretName: cache-macos-broker
+              defaultMode: 288
           - name: tmp
             emptyDir:
               medium: Memory
@@ -188,6 +199,9 @@ spec:
             - name: enrollment
               mountPath: /run/broker
               readOnly: true
+            - name: cache-broker
+              mountPath: /run/cache
+              readOnly: true
             - name: tmp
               mountPath: /tmp
             resources:
@@ -214,6 +228,13 @@ spec:
   ingress:
   - action: Deny
   egress:
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'forge-cache'
+      selector: app.kubernetes.io/name == 'forge-cache'
+      ports:
+      - 8082
   - action: Allow
     protocol: UDP
     destination:
