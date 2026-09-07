@@ -1,0 +1,8 @@
+log:
+  level: error
+cache:
+  enabled: true
+  dir: /var/lib/forge-cache/backend
+  host: 127.0.0.1
+  port: 8081
+  secret_url: file:///run/secrets/cache-backend-hmac

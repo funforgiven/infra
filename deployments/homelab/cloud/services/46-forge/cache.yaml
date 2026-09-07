@@ -1,0 +1,216 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: forge-cache
+  namespace: forge-cache
+  labels:
+    velero.io/exclude-from-backup: 'true'
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: rbd1
+  resources:
+    requests:
+      storage: 320Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: forge-cache
+  namespace: forge-cache
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: forge-cache
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: forge-cache
+        velero.io/exclude-from-backup: 'true'
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      imagePullSecrets:
+      - name: cache-registry
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: cache
+        persistentVolumeClaim:
+          claimName: forge-cache
+      - name: bootstrap
+        configMap:
+          name: forge-cache
+      - name: secrets
+        secret:
+          secretName: forge-cache
+          defaultMode: 288
+      - name: tmp
+        emptyDir:
+          sizeLimit: 64Mi
+      initContainers:
+      - name: prepare
+        image: git.fahrican.com/forge-runner/cache:13.1.0-isolation.1@sha256:c4b37636db5c01aa7e9e4f59219b9be272f60c6d5da26f526c6a246a1451966d
+        command: [python3, -c, "from pathlib import Path; Path('/var/lib/forge-cache/backend/cache').mkdir(parents=True,exist_ok=True)"]
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: [ALL]
+        volumeMounts:
+        - name: cache
+          mountPath: /var/lib/forge-cache
+        resources:
+          requests: {cpu: 10m, memory: 32Mi}
+          limits: {cpu: 100m, memory: 64Mi}
+      containers:
+      - name: gateway
+        image: git.fahrican.com/forge-runner/cache:13.1.0-isolation.1@sha256:c4b37636db5c01aa7e9e4f59219b9be272f60c6d5da26f526c6a246a1451966d
+        command: [python3, /bootstrap/cache-gateway.py, --config, /bootstrap/cache-config.json]
+        ports:
+        - {name: data, containerPort: 8080}
+        - {name: control, containerPort: 8082}
+        readinessProbe:
+          httpGet: {path: /healthz, port: data}
+          periodSeconds: 10
+        livenessProbe:
+          httpGet: {path: /healthz, port: data}
+          periodSeconds: 30
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: [ALL]
+        volumeMounts:
+        - {name: cache, mountPath: /var/lib/forge-cache}
+        - {name: bootstrap, mountPath: /bootstrap, readOnly: true}
+        - {name: secrets, mountPath: /run/secrets, readOnly: true}
+        - {name: tmp, mountPath: /tmp}
+        resources:
+          requests: {cpu: 100m, memory: 128Mi}
+          limits: {cpu: '2', memory: 512Mi}
+      - name: backend
+        image: git.fahrican.com/forge-runner/cache:13.1.0-isolation.1@sha256:c4b37636db5c01aa7e9e4f59219b9be272f60c6d5da26f526c6a246a1451966d
+        command: [forgejo-runner, --config, /bootstrap/cache-runner.yaml, cache-server]
+        # Backend accepts only loopback traffic from the gateway in this Pod.
+        readinessProbe:
+          exec:
+            command: [python3, -c, "import socket; socket.create_connection(('127.0.0.1',8081),2).close()"]
+          periodSeconds: 10
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: [ALL]
+        volumeMounts:
+        - {name: cache, mountPath: /var/lib/forge-cache}
+        - {name: bootstrap, mountPath: /bootstrap, readOnly: true}
+        - name: secrets
+          mountPath: /run/secrets/cache-backend-hmac
+          subPath: cache-backend-hmac
+          readOnly: true
+        - {name: tmp, mountPath: /tmp}
+        resources:
+          requests: {cpu: 100m, memory: 128Mi}
+          limits: {cpu: '2', memory: 512Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: forge-cache
+  namespace: forge-cache
+spec:
+  selector:
+    app.kubernetes.io/name: forge-cache
+  ports:
+  - {name: data, port: 8080, targetPort: data}
+  - {name: control, port: 8082, targetPort: control}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: forge-cache
+  namespace: forge-cache
+spec:
+  parentRefs:
+  - {name: services, namespace: services-network, sectionName: https}
+  hostnames: [cache.fahrican.com]
+  rules:
+  - backendRefs:
+    - {name: forge-cache, port: 8080}
+    timeouts: {request: 120s, backendRequest: 120s}
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: forge-cache-private
+  namespace: forge-cache
+spec:
+  targetRefs:
+  - {group: gateway.networking.k8s.io, kind: HTTPRoute, name: forge-cache}
+  authorization:
+    defaultAction: Deny
+    rules:
+    - name: private-build-clients
+      action: Allow
+      principal:
+        clientCIDRs: [10.21.10.0/24, 10.21.91.0/24, 172.16.0.0/13, 192.168.80.0/24, 10.21.40.154/32, 10.21.40.125/32, 10.21.40.126/32]
+---
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: forge-cache
+  namespace: forge-cache
+spec:
+  order: 16
+  selector: all()
+  types: [Ingress, Egress]
+  ingress:
+  - action: Allow
+    protocol: TCP
+    source:
+      namespaceSelector: kubernetes.io/metadata.name == 'envoy-gateway-system'
+      selector: gateway.envoyproxy.io/owning-gateway-name == 'services' && gateway.envoyproxy.io/owning-gateway-namespace == 'services-network'
+    destination:
+      ports: [8080]
+  - action: Allow
+    protocol: TCP
+    source:
+      namespaceSelector: kubernetes.io/metadata.name == 'forge-control'
+      selector: app.kubernetes.io/name == 'forge-native-broker'
+    destination:
+      ports: [8082]
+  - action: Deny
+  egress:
+  - action: Deny
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: forge-cache
+  namespace: forge-cache
+spec:
+  groups:
+  - name: forge-cache
+    rules:
+    - alert: ForgejoBuildCacheUnavailable
+      expr: kube_deployment_status_replicas_available{namespace="forge-cache",deployment="forge-cache"} < 1
+      for: 5m
+      labels: {severity: warning}
+      annotations:
+        summary: Persistent build cache is unavailable
+        description: Runners fall back to cold builds; inspect the cache deployment before attributing slow CI to compilation.
+    - alert: ForgejoBuildCacheDiskLow
+      expr: kubelet_volume_stats_available_bytes{namespace="forge-cache",persistentvolumeclaim="forge-cache"} < 21474836480
+      for: 10m
+      labels: {severity: warning}
+      annotations:
+        summary: Build cache volume is near its reserved free-space floor
+        description: The cache evicts old entries and rejects new reservations below its16GiB free-space floor.

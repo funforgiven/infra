@@ -27,6 +27,16 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
+  name: forge-cache
+  labels:
+    gateway.fahrican.com/services: allowed
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.35
+    velero.io/exclude-from-backup: 'true'
+---
+apiVersion: v1
+kind: Namespace
+metadata:
   name: forge-control
   labels:
     pod-security.kubernetes.io/enforce: restricted

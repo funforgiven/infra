@@ -4,6 +4,27 @@ metadata:
   name: services
   namespace: envoy-gateway-system
 spec:
+  telemetry:
+    accessLog:
+      settings:
+        # Keep traffic diagnostics without logging capability URLs or query secrets.
+        - format:
+            type: JSON
+            json:
+              time: "%START_TIME%"
+              method: "%REQ(:METHOD)%"
+              host: "%REQ(:AUTHORITY)%"
+              route: "%ROUTE_NAME%"
+              status: "%RESPONSE_CODE%"
+              flags: "%RESPONSE_FLAGS%"
+              bytes_received: "%BYTES_RECEIVED%"
+              bytes_sent: "%BYTES_SENT%"
+              duration_ms: "%DURATION%"
+              client: "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
+          sinks:
+            - type: File
+              file:
+                path: /dev/stdout
   provider:
     type: Kubernetes
     kubernetes:
@@ -64,6 +85,7 @@ spec:
     - home.fahrican.com
     - wallos.fahrican.com
     - git.fahrican.com
+    - cache.fahrican.com
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway

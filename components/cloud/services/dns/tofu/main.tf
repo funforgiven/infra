@@ -45,6 +45,7 @@ locals {
   services_gateway_address = "10.21.40.122"
   private_services = toset([
     "audiomuse",
+    "cache",
     "git",
     "home",
     "music",

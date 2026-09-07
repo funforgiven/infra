@@ -99,6 +99,10 @@ spec:
             secret:
               secretName: atollion-launcher
               defaultMode: 288
+          - name: cache-broker
+            secret:
+              secretName: cache-linux-broker
+              defaultMode: 288
           - name: tmp
             emptyDir:
               medium: Memory
@@ -124,6 +128,9 @@ spec:
               readOnly: true
             - name: enrollment
               mountPath: /run/enrollment
+              readOnly: true
+            - name: cache-broker
+              mountPath: /run/cache
               readOnly: true
             - name: tmp
               mountPath: /tmp

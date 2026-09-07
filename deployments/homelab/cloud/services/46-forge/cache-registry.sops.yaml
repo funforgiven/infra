@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: cache-registry
+    namespace: forge-cache
+stringData:
+    .dockerconfigjson: ENC[AES256_GCM,data:hYrPab9qOd5AC5+J2b9IZiDf/hjE6K7NYXxzMEZyvcLVQ5x+85NzCIT2QRpRFYLJvvEmYOLroHiGV/Ef6hnEHNOjMBFGa8ftu8tn8GMWaKvVb4vALitrM7Pq/ZsqpeWgiz/ZL4olKcDH2AlEd3yjeZTbvfb8,iv:e5oFF75bGhw2QmZz9hQ12Qw096cQm17gzJxFuq5CBSY=,tag:sReX8thi5i8UNYmMF2djkA==,type:str]
+type: kubernetes.io/dockerconfigjson
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBBYW1BQXJURDFrdHFMU3RW
+            NlNmY3Fhc0M3MTdMVWpPUVNyd2p3TUhKU0JnCjNpcFNUbTRyR1BFa2d2bzF4TUZO
+            LzRMYVAxaDdGZXlmaENSTlJGbitzanMKLS0tIDFrRWtYMm9nR3BuNmswV2ZWR1o1
+            emJucmVBd2Z3M1NNZnBNNjNObmdNU3cKzoGSTTxmge2q+BcRzIMZKVwkymIigkHK
+            U7tX+qf/82CyCua8rO0L2O+qmzHJV1fvD56M9a82+e9HJ/9zUVUFZg==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBCak9PM3VyVW5vZTNvSTdU
+            VUJsUFdaUVZDVlZNOFZIZlBlQ093aTY2cjA0CnVYbFJvbjJyMktDQVdpeVNlQ3lU
+            WXU1bUtyUjJMaTdEYWVJcGFwTEVvcWMKLS0tIE5JVkZQSW5hVjNSaUgzbEp3TStp
+            S0pvRitxcXg0OEJ1M2FmMC94cXZ3eUEKnyykNvBB4zWyIYtOWolcT3xmv8UjWnZi
+            jaif+0fHEvbOvPxi66a2DmDMxnSBw4Cq/IqtbRmTcPU4cfNImeZpvQ==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1vfxeaxdj7jze5p5ytff0peyjm3rusn8naacfudklvzwknv4yk5wq3qqg3v
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-09-07T20:07:38Z"
+    mac: ENC[AES256_GCM,data:XR9xTtT6x0oNdnbqOtja1OCby15VqvExsVJ+FyKdI9BNBIn5OKIQOZ5Jsk5eqzryuokZBkWuvqJDijUYzvcrGx8FMz8Y8i9leUQ7KkwiSW/z1uGEH6fsGRiPXXs5kkG5ot1Tf845BmUy8j/T/H+jBJnkzsu830q8SVDcJAxTA3c=,iv:YInK4TLksTpWA1uqoaO+el2na3voNea1kW+qAX6DkcA=,tag:v+NfnHlJueiHqf4opMs4qg==,type:str]
+    version: 3.13.3
