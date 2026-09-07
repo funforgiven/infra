@@ -82,6 +82,9 @@
       # Applied inside this dedicated nested hypervisor, never to the physical
       # compute hosts. macOS probes MSRs that KVM does not implement.
       boot.extraModprobeConfig = "options kvm ignore_msrs=1";
+      # Whole-memory access sampling adds overhead to this nested KVM host.
+      # Keep the optional statistics monitor disabled across host reboots.
+      boot.kernelParams = [ "damon_stat.enabled=0" ];
       environment.systemPackages = [
         quickemu
         macosQemu
