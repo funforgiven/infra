@@ -17,10 +17,16 @@ _: {
             runner = pkgs.runCommand "forgejo-runner-13.1.0" { } ''
               install -Dm755 ${runnerBinary} "$out/bin/forgejo-runner"
             '';
+            # Keep the existing Actions gzip archive format/cache version while
+            # using the pod's three CPUs to avoid minutes of serial compression.
+            parallelGzip = pkgs.writeShellScriptBin "gzip" ''
+              exec ${pkgs.pigz}/bin/pigz --processes 3 --fast "$@"
+            '';
             tools = pkgs.buildEnv {
               name = "forge-runner-tools";
               paths = [
                 runner
+                (lib.hiPrio parallelGzip)
               ]
               ++ (with pkgs; [
                 bashInteractive
@@ -60,7 +66,7 @@ _: {
           in
           pkgs.dockerTools.buildLayeredImage {
             name = "git.fahrican.com/forge-runner/runner-linux";
-            tag = "13.1.0";
+            tag = "13.1.0-gzip.1";
             contents = [
               tools
               root

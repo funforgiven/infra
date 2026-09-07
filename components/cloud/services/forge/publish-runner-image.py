@@ -14,8 +14,9 @@ import yaml
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("image", type=Path, help="Nix-built Docker archive")
-    parser.add_argument("--destination", default="runner-linux:13.1.0", choices=[
-        "runner-linux:13.1.0", "libvirt-tpm:2026.1-swtpm-0.10.1", "cache:13.1.0-isolation.1"])
+    parser.add_argument("--destination", default="runner-linux:13.1.0-gzip.1", choices=[
+        "runner-linux:13.1.0", "runner-linux:13.1.0-gzip.1",
+        "libvirt-tpm:2026.1-swtpm-0.10.1", "cache:13.1.0-isolation.1"])
     args = parser.parse_args()
     destination = "git.fahrican.com/forge-runner/" + args.destination
     secret = yaml.safe_load(subprocess.run(["sops", "decrypt",
