@@ -17,10 +17,13 @@ as environment variables. They are not module inputs or outputs.
 The root manages:
 
 - the `services` Keystone project and the `admin` user's role assignment;
-- three private flavors available only to that project:
+- four private flavors available only to that project:
   `services.master` (2 vCPU, 4 GiB RAM, 20 GiB disk),
-  `services.master.v2` (2 vCPU, 8 GiB RAM, 20 GiB disk), and
-  `services.worker` (4 vCPU, 12 GiB RAM, 40 GiB disk);
+  `services.master.v2` (2 vCPU, 8 GiB RAM, 20 GiB disk),
+  `services.worker` (4 vCPU, 12 GiB RAM, 40 GiB disk), and
+  `services.worker.v2` (8 vCPU, 12 GiB RAM, 40 GiB disk);
+- the services project's `services-ci-workers` Nova server group, with hard
+  anti-affinity so its worker VMs use distinct physical hosts;
 - the `services` Neutron network with MTU 1442;
 - the `services-v4` subnet, `192.168.80.0/24`, with gateway
   `192.168.80.1`, DHCP range `192.168.80.20`–`192.168.80.239`, and DNS
@@ -66,6 +69,12 @@ Flavor IDs are referenced by Magnum cluster templates and machines. Review
 flavor removal or replacement carefully; changing CPU, memory, or disk values
 can replace a flavor that an existing cluster still references. Network,
 subnet, router, and project changes can also replace shared infrastructure.
+
+The larger worker flavor and server group are additive. They do not resize or
+replace existing machines automatically. The original worker flavor stays
+available for the existing node group and recovery. Worker replacement uses
+Magnum and the services-cluster maintenance procedure; never mutate a live
+flavor or lower the physical host's memory reservation to fit a CI job.
 
 ## Validate
 
