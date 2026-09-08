@@ -1,11 +1,51 @@
 """Bound queue concurrency and prevent duplicate or wrong-platform job launch."""
 import importlib.util
+from decimal import Decimal
 from pathlib import Path
 import unittest
+
+import yaml
 
 spec = importlib.util.spec_from_file_location('launcher', Path(__file__).resolve().parents[1] / 'linux-launcher.py')
 launcher = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(launcher)
+
+
+class NamespaceBudget(unittest.TestCase):
+    def test_quota_admits_all_launcher_slots_and_qualification(self):
+        manifests = Path(__file__).resolve().parents[5] / 'deployments/homelab/cloud/services/46-forge'
+        with (manifests / 'runners.yaml').open() as source:
+            runners = list(yaml.safe_load_all(source))
+        with (manifests / 'atollion-runners.yaml').open() as source:
+            atollion = list(yaml.safe_load_all(source))
+        quota = next(item['spec']['hard'] for item in runners if item['kind'] == 'ResourceQuota')
+
+        def pod(documents, name):
+            job = next(item for item in documents if item['metadata']['name'] == name)
+            return job['spec']['jobTemplate']['spec']['template']['spec']
+
+        def quantity(value):
+            value = str(value)
+            for suffix, factor in [('Gi', 1024**3), ('Mi', 1024**2), ('Ki', 1024), ('m', Decimal('0.001'))]:
+                if value.endswith(suffix):
+                    return Decimal(value[:-len(suffix)]) * factor
+            return Decimal(value)
+
+        def budget(spec, kind, resource):
+            def value(container):
+                return quantity(container.get('resources', {}).get(kind, {}).get(resource, '0'))
+            return max(sum(value(container) for container in spec['containers']),
+                       max((value(container) for container in spec.get('initContainers', [])), default=0))
+
+        application = pod(atollion, 'forge-linux-atollion-template')
+        qualification = pod(runners, 'forge-linux-qualification')
+        for key in ['requests.cpu', 'limits.cpu', 'requests.memory', 'limits.memory', 'limits.ephemeral-storage']:
+            with self.subTest(quota=key):
+                kind, resource = key.split('.')
+                required = launcher.CAPACITY * budget(application, kind, resource) + budget(qualification, kind, resource)
+                self.assertGreaterEqual(quantity(quota[key]), required,
+                                        f'{key} must admit every Atollion slot plus qualification')
+        self.assertGreaterEqual(int(quota['pods']), launcher.CAPACITY + 1)
 
 
 class QueueBounds(unittest.TestCase):

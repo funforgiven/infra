@@ -12,6 +12,12 @@ and the v2 flavor; pod anti-affinity keeps the slots on different VMs. The
 host anti-affinity. Different Kubernetes node names alone do not prove that
 jobs run on different physical machines.
 
+The `forge-ci` quota admits both slots and the generic qualification runner:
+9 requested CPUs and 16 CPU limits, with the existing 9 GiB request and 16 GiB
+limit memory budgets. A cross-manifest test checks this budget against the
+launcher concurrency and actual pod resources. Check node memory requests too;
+Kubernetes does not automatically rebalance existing services onto a new node.
+
 The cloud reconciler labels these nodes with the verified Nova hypervisor
 under the NodeRestriction-protected
 `fahrican.com.node-restriction.kubernetes.io/hypervisor` prefix. Scheduling
