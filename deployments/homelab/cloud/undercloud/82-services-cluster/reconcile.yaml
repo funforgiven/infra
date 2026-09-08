@@ -136,11 +136,17 @@ data:
     set -eu
 
     cluster=services-v1
-    template=services-kubernetes-v1.36.2-v2
+    template=services-kubernetes-v1.36.2-v3
     desired_control_planes=3
     # Keep enough worker capacity to reschedule production requests after one
     # worker failure without borrowing from tainted control-plane nodes.
     desired_workers=3
+    # The pinned chart requires at least one machine in every node group.
+    # Two larger workers serve CI; the original group retains one worker.
+    desired_default_workers=1
+    desired_ci_workers=2
+    worker_group=cpu-workers
+    worker_flavor=services.worker.v2
     desired_nodes=$((desired_control_planes + desired_workers))
     undercloud_kubeconfig=/tmp/undercloud-kubeconfig
     kubeconfig=/tmp/kube/config
@@ -208,7 +214,7 @@ data:
       openstack coe cluster create "$cluster" \
         --cluster-template "$template" \
         --master-count "$desired_control_planes" \
-        --node-count "$desired_workers" \
+        --node-count "$desired_default_workers" \
         --timeout 90
     fi
 
@@ -227,10 +233,27 @@ data:
 
     test "$(openstack coe cluster show "$cluster" -f value -c master_count)" \
       -eq "$desired_control_planes"
-    node_count="$(openstack coe cluster show "$cluster" -f value -c node_count)"
-    if test "$node_count" -lt "$desired_workers"; then
-      openstack coe cluster resize "$cluster" "$desired_workers"
-    elif test "$node_count" -gt "$desired_workers"; then
+    # Flavor changes use Magnum's supported replacement node group. The
+    # operator drains/replaces old workers one at a time before reconciliation
+    # resumes; ordinary reconciliation must never perform that scale-down.
+    old_workers="$(openstack coe nodegroup show "$cluster" default-worker -f value -c node_count)"
+    if test "$old_workers" -ne "$desired_default_workers"; then
+      echo "Complete the documented worker migration before reconciliation" >&2
+      exit 1
+    fi
+    server_group="$(openstack server group show services-ci-workers -f value -c id)"
+    if ! openstack coe nodegroup show "$cluster" "$worker_group" >/dev/null 2>&1; then
+      openstack coe nodegroup create "$cluster" "$worker_group" \
+        --flavor "$worker_flavor" --node-count "$desired_ci_workers" \
+        --labels "server_group_id=$server_group"
+    fi
+    test "$(openstack coe nodegroup show "$cluster" "$worker_group" -f value -c flavor_id)" = "$worker_flavor"
+    node_count="$(openstack coe nodegroup show "$cluster" "$worker_group" -f value -c node_count)"
+    openstack coe nodegroup show "$cluster" "$worker_group" -f json -c labels | \
+      python3 -c 'import json,sys; assert json.load(sys.stdin)["labels"]["server_group_id"] == sys.argv[1]' "$server_group"
+    if test "$node_count" -lt "$desired_ci_workers"; then
+      openstack coe cluster resize "$cluster" "$desired_ci_workers" --nodegroup "$worker_group"
+    elif test "$node_count" -gt "$desired_ci_workers"; then
       echo "$cluster has $node_count workers; refusing a destructive scale-down" >&2
       exit 1
     fi
@@ -349,6 +372,25 @@ data:
       test "$attempt" -lt 240
       sleep 5
     done
+
+    # VM anti-affinity alone cannot distinguish two VMs sharing one CPU host.
+    # The cloud operator owns this NodeRestriction-protected topology label;
+    # job credentials and kubelets cannot assign it. These labels express the
+    # CPU preference; Nova's server group enforces physical separation even
+    # before a replacement node receives its optional preference label.
+    "$kubectl" get nodes -l "capi.stackhpc.com/node-group=$worker_group" \
+      -o 'jsonpath={range .items[*]}{.metadata.name}{" "}{.spec.providerID}{"\n"}{end}' \
+      > /tmp/worker-placement
+    test "$(wc -l < /tmp/worker-placement | tr -d ' ')" -eq "$desired_ci_workers"
+    while read -r node provider; do
+      instance="${provider#openstack:///}"
+      test "$instance" != "$provider"
+      printf '%s\n' "$instance" | grep -Eq '^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$'
+      hypervisor="$(openstack server show "$instance" -f value -c OS-EXT-SRV-ATTR:hypervisor_hostname)"
+      case "$hypervisor" in pecorino|asiago|taleggio) ;; *) exit 1 ;; esac
+      "$kubectl" label node "$node" \
+        "fahrican.com.node-restriction.kubernetes.io/hypervisor=$hypervisor" --overwrite
+    done < /tmp/worker-placement
 
     "$flux" install --namespace=flux-system
     "$kubectl" -n flux-system create secret generic sops-age \

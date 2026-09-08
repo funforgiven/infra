@@ -57,6 +57,7 @@ configuration.
 - Purchased-media import and recovery: [media workflow](40-media/README.md)
 - Wallos first login and recovery: [Wallos runbook](45-wallos/README.md)
 - Private Git, Actions and offsite recovery: [Forgejo runbook](46-forge/README.md)
+- Linux runner sizing and physical placement: [worker capacity](46-forge/WORKER_CAPACITY.md)
 - Backup and isolated restore behavior: [backup policy](16-backup-policy/README.md)
 - AWS mail operation and recovery:
   [mail runbook](../../../../components/cloud/services/mail-aws/README.md)
