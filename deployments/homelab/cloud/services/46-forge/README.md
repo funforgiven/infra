@@ -1,5 +1,8 @@
 # Private Forgejo and Actions
 
+See [worker capacity and replacement](WORKER_CAPACITY.md) for the two 8-vCPU
+Linux workers, physical host separation, resource budgets and maintenance.
+
 Forgejo runs in `services-v1`, with disposable Linux Actions jobs in `forge-ci`.
 The private service is `https://git.fahrican.com`; Git SSH uses port `2222` on
 the same services Gateway at `10.21.40.122`. Access is limited to the trusted

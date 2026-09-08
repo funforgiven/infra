@@ -278,17 +278,40 @@ spec:
               mountPath: /tmp
             resources:
               requests:
-                cpu: '2'
+                cpu: '4'
                 memory: 4Gi
                 ephemeral-storage: 12Gi
               limits:
-                cpu: '3'
+                cpu: '6'
                 memory: 6Gi
                 ephemeral-storage: 24Gi
           affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: node.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                    - services.worker.v2
+                  - key: capi.stackhpc.com/node-group
+                    operator: In
+                    values:
+                    - cpu-workers
+              preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 100
+                preference:
+                  matchExpressions:
+                  - key: fahrican.com.node-restriction.kubernetes.io/hypervisor
+                    operator: In
+                    values:
+                    - pecorino
+                    - asiago
             podAntiAffinity:
               requiredDuringSchedulingIgnoredDuringExecution:
               - labelSelector:
                   matchLabels:
                     forge.fahrican.com/repository: atollion
+                # Nova places the cpu-workers VMs in one hard anti-affinity
+                # server group, so distinct nodes are distinct physical hosts.
                 topologyKey: kubernetes.io/hostname
