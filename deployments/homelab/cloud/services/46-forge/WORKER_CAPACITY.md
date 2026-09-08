@@ -90,6 +90,12 @@ or a rendered machine template's flavor.
    Preserve timing and placement evidence. Do not invalidate caches simply
    because CPU allocation changed.
 
+The September replacement needed Prometheus and the AudioMuse frontend moved
+off the first new worker to leave room for its 4 GiB CI request. Both controller
+replacements became Ready and the temporarily cordoned worker was restored to
+scheduling. AudioMuse exposed a pre-existing malformed internal configuration
+override on restart; see the [targeted recovery](../40-media/README.md#audiomuse-startup-recovery).
+
 If a replacement fails, retain the remaining healthy workers and suspension
 records, diagnose through Magnum/CAPI/Nova, and recover via those controllers.
 Restore the original node count only when capacity and physical placement
