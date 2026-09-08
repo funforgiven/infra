@@ -11,6 +11,13 @@ terraform {
 
 provider "openstack" {}
 
+provider "openstack" {
+  alias               = "services"
+  tenant_id           = openstack_identity_role_assignment_v3.services_admin.project_id
+  tenant_name         = ""
+  project_domain_name = "Default"
+}
+
 locals {
   region = "RegionOne"
   tags   = ["managed-by-opentofu", "platform-services"]
@@ -76,6 +83,16 @@ resource "openstack_compute_flavor_v2" "services_worker" {
   is_public   = false
 }
 
+# Keep the original flavor available for existing machines and rollback.
+resource "openstack_compute_flavor_v2" "services_worker_v2" {
+  name        = "services.worker.v2"
+  description = "Magnum services worker v2: 8 vCPU, 12 GiB RAM, 40 GiB root"
+  ram         = 12288
+  vcpus       = 8
+  disk        = 40
+  is_public   = false
+}
+
 resource "openstack_compute_flavor_access_v2" "services_master" {
   flavor_id = openstack_compute_flavor_v2.services_master.id
   tenant_id = openstack_identity_project_v3.services.id
@@ -89,6 +106,19 @@ resource "openstack_compute_flavor_access_v2" "services_master_v2" {
 resource "openstack_compute_flavor_access_v2" "services_worker" {
   flavor_id = openstack_compute_flavor_v2.services_worker.id
   tenant_id = openstack_identity_project_v3.services.id
+}
+
+resource "openstack_compute_flavor_access_v2" "services_worker_v2" {
+  flavor_id = openstack_compute_flavor_v2.services_worker_v2.id
+  tenant_id = openstack_identity_project_v3.services.id
+}
+
+resource "openstack_compute_servergroup_v2" "services_ci_workers" {
+  provider = openstack.services
+  name     = "services-ci-workers"
+  policies = ["anti-affinity"]
+
+  depends_on = [openstack_identity_role_assignment_v3.services_admin]
 }
 
 resource "openstack_networking_network_v2" "services" {
