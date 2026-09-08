@@ -15,6 +15,22 @@ data:
     assert hashlib.sha256(content).hexdigest() == expected
     text = content.decode()
 
+    # The chart supports Nova server groups, but this pinned driver does not
+    # pass that node-group setting through. Keep placement with the Magnum
+    # controller so a later reconciliation cannot erase physical anti-affinity.
+    node_group = (
+        '                    machineCount=ng.node_count,\n'
+        '                )\n'
+    )
+    assert text.count(node_group) == 1
+    text = text.replace(
+        node_group,
+        node_group
+        + '                server_group_id = (ng.labels or {}).get("server_group_id")\n'
+        + '                if server_group_id:\n'
+        + '                    nodegroup_item["serverGroupId"] = server_group_id\n',
+    )
+
     packages = '            "etcd": self._get_etcd_config(cluster),'
     assert text.count(packages) == 1
     text = text.replace(
