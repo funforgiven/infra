@@ -93,9 +93,16 @@ class RunnerLifecycle(unittest.TestCase):
                 status = Path(f'/proc/{pid}/status')
                 # An adopted zombie has terminated; PID 1 performs final reaping.
                 deadline = time.monotonic() + 1
-                while status.exists() and '\nState:\tZ ' not in status.read_text() and time.monotonic() < deadline:
+                def terminated():
+                    try:
+                        return '\nState:\tZ ' in status.read_text()
+                    except (FileNotFoundError, ProcessLookupError):
+                        # PID 1 may reap the process while /proc is being read.
+                        return True
+
+                while not terminated() and time.monotonic() < deadline:
                     time.sleep(0.01)
-                self.assertTrue(not status.exists() or '\nState:\tZ ' in status.read_text())
+                self.assertTrue(terminated())
             finally:
                 try:
                     os.kill(pid, signal.SIGKILL)

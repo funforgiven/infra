@@ -1,3 +1,4 @@
+import importlib.util
 import hashlib
 import shutil
 from unittest.mock import patch
@@ -153,6 +154,19 @@ while True:
                 recovery_archive.require_recent_archive(destination)
         with self.assertRaises(ValueError):
             recovery_archive.export_snapshot(Path('/data'), destination, 'fixture', int(time.time()))
+
+    def test_legacy_metrics_bridge_cannot_be_selected_as_a_recovery_archive(self):
+        snapshot = self.capture_fixture()
+        destination = self.root / 'backups'
+        original = recovery_archive.export_snapshot(snapshot, destination, 'fixture', int(time.time()))
+        spec = importlib.util.spec_from_file_location('legacy_bridge', SCRIPTS / 'legacy-backup-bridge.py')
+        bridge = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(bridge)
+        bridge.publish_status(destination)
+        marker = destination / 'forgejo-online-status.tar.gz.json'
+        self.assertEqual(json.loads(marker.read_text())['completed_at'], original['completed_at'])
+        self.assertEqual(len(recovery_archive.completed_archives(destination)), 1)
+        self.assertEqual(recovery_archive.require_recent_archive(destination)['archive'], original['archive'])
 
     def test_abandoned_backup_cannot_leave_service_paused(self):
         (self.root / "control/request").write_text(f"{int(time.time()) + 3} abandoned\n")
