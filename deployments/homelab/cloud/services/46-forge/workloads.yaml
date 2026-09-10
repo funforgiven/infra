@@ -30,6 +30,10 @@ metadata:
   namespace: forge
 spec:
   serviceName: forgejo
+  # Single-instance service upgrades require a planned maintenance window.
+  # Backup and monitoring updates must not restart active agents or runners.
+  updateStrategy:
+    type: OnDelete
   replicas: 1
   selector:
     matchLabels:

@@ -4,3 +4,4 @@ resources:
   - cert-manager.yaml
   - envoy-gateway.yaml
   - manila-csi-policy.yaml
+  - ../../../../../components/cloud/storage-snapshots

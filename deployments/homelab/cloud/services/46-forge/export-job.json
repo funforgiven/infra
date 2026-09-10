@@ -1,0 +1,108 @@
+{
+  "apiVersion": "batch/v1",
+  "kind": "Job",
+  "spec": {
+    "backoffLimit": 0,
+    "activeDeadlineSeconds": 2400,
+    "template": {
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/name": "forge-snapshot-export",
+          "velero.io/exclude-from-backup": "true"
+        }
+      },
+      "spec": {
+        "automountServiceAccountToken": false,
+        "restartPolicy": "Never",
+        "securityContext": {
+          "fsGroup": 1000,
+          "fsGroupChangePolicy": "OnRootMismatch",
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "affinity": {
+          "podAffinity": {
+            "requiredDuringSchedulingIgnoredDuringExecution": [
+              {
+                "labelSelector": {
+                  "matchLabels": {
+                    "app.kubernetes.io/name": "forgejo"
+                  }
+                },
+                "topologyKey": "kubernetes.io/hostname"
+              }
+            ]
+          }
+        },
+        "containers": [
+          {
+            "name": "export",
+            "image": "docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4",
+            "command": [
+              "python",
+              "/bootstrap/snapshot-backup.py"
+            ],
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "readOnlyRootFilesystem": true,
+              "runAsNonRoot": true,
+              "runAsUser": 1000,
+              "runAsGroup": 1000,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              }
+            },
+            "resources": {
+              "requests": {
+                "cpu": "25m",
+                "memory": "64Mi"
+              },
+              "limits": {
+                "cpu": "500m",
+                "memory": "256Mi"
+              }
+            },
+            "volumeMounts": [
+              {
+                "name": "snapshot",
+                "mountPath": "/snapshot"
+              },
+              {
+                "name": "backups",
+                "mountPath": "/backups"
+              },
+              {
+                "name": "bootstrap",
+                "mountPath": "/bootstrap",
+                "readOnly": true
+              }
+            ]
+          }
+        ],
+        "volumes": [
+          {
+            "name": "snapshot",
+            "persistentVolumeClaim": {
+              "claimName": "set-by-controller"
+            }
+          },
+          {
+            "name": "backups",
+            "persistentVolumeClaim": {
+              "claimName": "forgejo-backups"
+            }
+          },
+          {
+            "name": "bootstrap",
+            "configMap": {
+              "name": "set-by-controller"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

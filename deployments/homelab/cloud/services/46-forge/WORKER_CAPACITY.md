@@ -83,9 +83,9 @@ or a rendered machine template's flavor.
    settings. Verify retained volume identities, Forgejo/OIDC routes, cache
    health, node readiness and physical host headroom. Resume the recorded
    Flux/CronJob states; temporary suspension is not desired configuration.
-   Forgejo's backup sidecar takes a quiesced archive shortly after startup,
-   temporarily withdrawing its HTTP endpoint. Let that backup complete and
-   verify authenticated API/Git access before publishing application changes.
+   Backups now export an online storage snapshot; the metrics sidecar does not
+   pause Forgejo at startup. Verify authenticated API/Git access and a recent
+   completed snapshot archive before publishing application changes.
 8. Verify a real job uses the new resources and restores its compatible cache.
    Preserve timing and placement evidence. Do not invalidate caches simply
    because CPU allocation changed.

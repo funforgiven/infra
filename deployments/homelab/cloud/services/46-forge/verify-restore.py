@@ -9,6 +9,7 @@ import sqlite3
 import tarfile
 import time
 from native_backup import verify_index
+from recovery_archive import completed_archives
 from verify_atollion import verify_atollion
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -21,13 +22,11 @@ target = Path("/restore")
 # A failed/restarted verifier must never reuse a readiness marker.
 for marker in [".qualified", ".database-verified"]:
     (target / marker).unlink(missing_ok=True)
-markers = sorted(backup.glob("forgejo-*.tar.gz.json"))
+markers = completed_archives(backup)
 if not markers:
     raise RuntimeError("No completed Forgejo recovery archive was restored")
-manifest = json.loads(markers[-1].read_text())
+manifest = markers[-1][2]
 archive = backup / manifest["archive"]
-if archive.parent != backup or not manifest["quiesced"]:
-    raise RuntimeError("Invalid recovery manifest")
 if manifest["database"] != "data/forgejo.db":
     raise RuntimeError("Unexpected recovery database path")
 with archive.open("rb") as source:

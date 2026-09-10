@@ -35,13 +35,13 @@ spec:
       expr: >-
         max by (namespace, cronjob) (
           label_replace(
-            (kube_job_status_start_time{namespace=~"forge-ci|forge-control"}
+            (kube_job_status_start_time{namespace=~"forge|forge-ci|forge-control"}
              and on (namespace, job_name)
-             (kube_job_status_failed{namespace=~"forge-ci|forge-control"} > 0))
+             (kube_job_status_failed{namespace=~"forge|forge-ci|forge-control"} > 0))
             * on (namespace, job_name) group_left (owner_name)
             max by (namespace, job_name, owner_name) (
-              kube_job_owner{namespace=~"forge-ci|forge-control",owner_kind="CronJob",
-                owner_name=~"forge-linux-qualification|forge-linux-atollion-launcher|forge-(windows|macos)-qualification"}
+              kube_job_owner{namespace=~"forge|forge-ci|forge-control",owner_kind="CronJob",
+                owner_name=~"forge-linux-qualification|forge-linux-atollion-launcher|forge-(windows|macos)-qualification|forge-snapshot-backup"}
             ), "cronjob", "$1", "owner_name", "(.+)"
           )
         )
@@ -69,6 +69,22 @@ spec:
         summary: forgejo is unavailable
         description: The private development service has had no ready replica for
           five minutes.
+    - alert: ForgejoSnapshotBackupFailed
+      expr: forge_controller_unrecovered_failure{namespace="forge",cronjob="forge-snapshot-backup"}
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: The online Forgejo backup has failed
+        description: Inspect snapshot/export controller logs and disposable volume cleanup. Existing archives are retained and Forgejo stays online.
+    - alert: ForgejoSnapshotControllerUnavailable
+      expr: kube_deployment_status_replicas_available{namespace="kube-system",deployment="snapshot-controller"} < 1
+      for: 15m
+      labels:
+        severity: critical
+      annotations:
+        summary: Storage snapshot controller is unavailable
+        description: Online Forgejo backups require this controller; existing offsite restores remain independent of it.
     - alert: ForgejoBackupStale
       expr: (time() - forge_backup_completed_timestamp_seconds{service="forgejo"} >
         28800) or absent(forge_backup_completed_timestamp_seconds{service="forgejo"})

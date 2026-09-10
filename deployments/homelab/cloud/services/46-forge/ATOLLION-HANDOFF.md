@@ -151,7 +151,7 @@ merges. The instance has a dedicated SSH signing key, encrypted in
 `SHA256:GSzjKt3JxXg1yN3zTJ5RN/4m2ole2pK+cNBorJqBsf4`.
 The initialization container installs it without replacing an existing key;
 its private file is mode 0600 on the application volume and is included in
-quiesced application archives. `MERGES = always` enables server signing
+consistent application recovery archives. `MERGES = always` enables server signing
 without requiring a second native MFA enrollment alongside ZITADEL.
 Protected fast-forward merges still preserve the exact reviewed commit and
 all existing approval, signature and hosted-validation requirements.
