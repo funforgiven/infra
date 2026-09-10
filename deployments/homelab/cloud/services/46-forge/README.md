@@ -178,6 +178,9 @@ changing the local layout does not immediately reduce the bucket's stored bytes.
 Both legacy quiesced `.tar.gz` and online snapshot `.tar` manifests are supported
 by the isolated restore verifier.
 
+See [the September 10 online-backup recovery record](BACKUP_RECOVERY.md) for
+the rollout, measured storage reduction and isolated Backblaze restore evidence.
+
 Forgejo's single-replica StatefulSet uses `OnDelete` updates: applying manifests
 must not automatically restart agents' Git/API connections or running CI.
 Apply application/image upgrades during an explicit maintenance window. For a

@@ -24,8 +24,10 @@ object by hand; use the credential procedure in
 [`../ACTIVATION.md`](../ACTIVATION.md).
 
 Velero uses Kopia filesystem backups and deploys a node agent on every node.
-Cinder and Manila snapshots are disabled, so recovery does not depend on
-snapshots from the source OpenStack control plane. The `velero` namespace is
+Velero's Cinder and Manila snapshots are disabled, so offsite recovery does not
+depend on snapshots from the source OpenStack control plane. Forgejo separately
+uses temporary local CSI snapshots to export portable recovery archives while
+remaining online; Velero copies those archives. The `velero` namespace is
 privileged only because the node agents need kubelet host paths.
 
 The B2 bucket uses server-side encryption and a 30-day lifecycle for hidden
