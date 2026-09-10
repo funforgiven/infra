@@ -18,7 +18,7 @@ class MonitoringTests(unittest.TestCase):
         if not promtool:
             self.fail('promtool is required; run the repository cloud-python Nix check')
         selected = {'ForgejoActionsLauncherFailing', 'ForgejoLinuxControllerFailed',
-                    'ForgejoNativeControllerFailed', 'ForgejoLinuxRunnerFailed'}
+                    'ForgejoNativeControllerFailed', 'ForgejoLinuxRunnerFailed', 'ForgejoSnapshotBackupFailed'}
         rules = []
         for name in ['monitoring.yaml', 'native-monitoring.yaml']:
             for document in yaml.safe_load_all((SCRIPTS / name).read_text()):
@@ -28,6 +28,7 @@ class MonitoringTests(unittest.TestCase):
         by_name = {r['alert']: r for r in rules if 'alert' in r}
         tests = []
         for namespace, cronjob, alert in [
+            ('forge', 'forge-snapshot-backup', 'ForgejoSnapshotBackupFailed'),
             ('forge-ci', 'forge-linux-qualification', 'ForgejoActionsLauncherFailing'),
             ('forge-control', 'forge-linux-atollion-launcher', 'ForgejoLinuxControllerFailed'),
             ('forge-control', 'forge-windows-qualification', 'ForgejoNativeControllerFailed'),

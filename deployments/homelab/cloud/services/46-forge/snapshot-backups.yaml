@@ -1,0 +1,204 @@
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: forge-online-backup
+driver: cinder.csi.openstack.org
+deletionPolicy: Delete
+parameters:
+  force-create: 'true'
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: forge-backup-scratch
+provisioner: cinder.csi.openstack.org
+parameters:
+  availability: nova
+  fstype: ext4
+  type: rbd1
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: forge-snapshot-backup
+  namespace: forge
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: forge-snapshot-backup
+  namespace: forge
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - persistentvolumeclaims
+  verbs:
+  - get
+  - create
+  - delete
+- apiGroups:
+  - snapshot.storage.k8s.io
+  resources:
+  - volumesnapshots
+  verbs:
+  - get
+  - create
+  - delete
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - get
+  - create
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: forge-snapshot-backup
+  namespace: velero
+rules:
+- apiGroups:
+  - velero.io
+  resources:
+  - backups
+  verbs:
+  - get
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: forge-snapshot-backup
+  namespace: forge
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: forge-snapshot-backup
+subjects:
+- kind: ServiceAccount
+  name: forge-snapshot-backup
+  namespace: forge
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: forge-snapshot-backup
+  namespace: velero
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: forge-snapshot-backup
+subjects:
+- kind: ServiceAccount
+  name: forge-snapshot-backup
+  namespace: forge
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: forge-snapshot-backup
+  namespace: forge
+spec:
+  schedule: 13 */6 * * *
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 1800
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 3600
+      ttlSecondsAfterFinished: 600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: forge-snapshot-backup
+            velero.io/exclude-from-backup: 'true'
+        spec:
+          automountServiceAccountToken: true
+          serviceAccountName: forge-snapshot-backup
+          restartPolicy: Never
+          securityContext:
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+          - name: controller
+            image: docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4
+            command:
+            - python
+            - /bootstrap/snapshot-backup.py
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              capabilities:
+                drop:
+                - ALL
+            env:
+            - name: JOB_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['batch.kubernetes.io/job-name']
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                cpu: 250m
+                memory: 128Mi
+            volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+          volumes:
+          - name: bootstrap
+            configMap:
+              name: forge-snapshot-tools
+---
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: forge-snapshot-backup
+  namespace: forge
+spec:
+  order: 15
+  selector: app.kubernetes.io/name == 'forge-snapshot-backup'
+  types:
+  - Ingress
+  - Egress
+  ingress:
+  - action: Deny
+  egress:
+  - action: Allow
+    destination:
+      services:
+        name: kubernetes
+        namespace: default
+  - action: Deny
+---
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: forge-snapshot-export
+  namespace: forge
+spec:
+  order: 15
+  selector: app.kubernetes.io/name == 'forge-snapshot-export'
+  types:
+  - Ingress
+  - Egress
+  ingress:
+  - action: Deny
+  egress:
+  - action: Deny

@@ -141,20 +141,48 @@ accurate. Neither native guest receives the cloud credential or enrollment PAT.
 
 ## Backup and recovery
 
-`backup.py` creates a native archive every six hours and before each Velero
-backup. A supervisor stops Forgejo and its Git subprocesses, then acknowledges
-quiescence. The backup checks SQLite integrity and captures the complete data
-volume, including Git, LFS, packages, identity configuration, Actions logs and
-artifacts. A checksum manifest is the completion marker. Seven local archives
-are retained; an abandoned maintenance window automatically resumes the app.
-These backups briefly interrupt HTTP/SSH access. The backup PVC is 800 GiB,
-budgeted for seven archives plus the next archive, two native-image
-generations and recovery headroom for the 80 GiB application volume. Review
-this budget when expanding application storage or native images.
+`forge-snapshot-backup` runs every six hours. The existing Cinder CSI driver
+captures a point-in-time snapshot of the single volume containing SQLite, Git,
+LFS, packages, identity configuration, Actions logs and artifacts. A disposable
+volume is restored from that snapshot. Only the clone is mounted by an isolated
+exporter, which recovers/checkpoints SQLite's WAL, checks integrity, and writes
+a portable tar archive with a SHA-256 completion manifest. Forgejo stays online.
+Temporary exporter Jobs, the clone and the snapshot are deleted in that order;
+owner references and the controller Job's TTL also cover interrupted cleanup.
 
-Velero copies only the backup volume, never the live SQLite/Git volume. Daily
-offsite retention is 30 days; weekly retention is 90 days. The application and
-backup PVCs use retained Cinder volumes and are excluded from Flux pruning.
+Archives use uncompressed tar so Kopia can deduplicate unchanged contents
+between exports. Keep the two newest completed local archives; prune only after
+a successful new export and outside an active offsite backup. The pre-backup
+hook also holds a one-hour retention lease to cover a prune Job already
+starting when offsite backup begins. Kopia ignores unfinished `*.partial`
+exports through its default `.kopiaignore` support. The native golden
+images and migration recovery material have separate retention and are preserved.
+The 800 GiB retained backup volume provides staging and recovery headroom; its
+provisioned size is not the amount uploaded to Backblaze. Do not shrink it in place.
+
+`backup.py` now serves recovery metrics. Its Velero `--once` hook checks that a
+completed recovery source is less than eight hours old and never pauses the app.
+The export controller has only namespace-scoped access to its Jobs, PVCs and
+snapshots, plus read-only Velero backup status; the exporter has no Kubernetes
+credential and no network access. A failed snapshot/export remains an alert,
+while the application and existing recovery archives remain available.
+
+Velero still copies the backup volume using Kopia, never the live SQLite/Git
+volume. Offsite retention remains 30 days for daily and 90 days for weekly
+backups. Recovery uses portable files and does not need the original OpenStack
+cloud or any retained CSI snapshot. Old compressed archive chunks in Backblaze
+expire with their retained backups and are reclaimed by Kopia maintenance;
+changing the local layout does not immediately reduce the bucket's stored bytes.
+Both legacy quiesced `.tar.gz` and online snapshot `.tar` manifests are supported
+by the isolated restore verifier.
+
+Forgejo's single-replica StatefulSet uses `OnDelete` updates: applying manifests
+must not automatically restart agents' Git/API connections or running CI.
+Apply application/image upgrades during an explicit maintenance window. For a
+backup-script-only update, protect the mounted bootstrap ConfigMap from pruning,
+update its reviewed backup files in place, verify their hashes, and restart only
+the `backup` container. Remove the retained old ConfigMap after the next planned
+Forgejo pod replacement. Do not delete or roll the Forgejo pod during active work.
 
 The same backup PVC contains versioned native golden images and macOS
 firmware. Acquire the Windows image from its private protected Glance record
