@@ -17,6 +17,7 @@
             nativeBuildInputs = [
               python
               pkgs.util-linux
+              pkgs.prometheus.cli
             ];
           }
           ''

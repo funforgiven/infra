@@ -131,15 +131,13 @@ spec:
         description: Rotate the CI-project member and TPM-secret creator credential through SOPS,
           update its public expiry record, and requalify before revoking the old credential.
     - alert: ForgejoNativeControllerFailed
-      expr: kube_job_status_failed{namespace="forge-control",job_name=~"forge-(windows|macos)-qualification-.*"}
-        > 0
+      expr: forge_controller_unrecovered_failure{namespace="forge-control",cronjob=~"forge-(windows|macos)-qualification"}
       for: 5m
       labels:
         severity: warning
       annotations:
         summary: A native Actions controller failed
-        description: Inspect the isolated native controller log and confirm its VM
-          or writable overlay was removed.
+        description: No successful controller completion since its latest failed attempt for five minutes. Inspect the isolated native controller log and confirm its VM or writable overlay was removed.
     - alert: ForgejoNativeControllerStale
       expr: (time() - kube_cronjob_status_last_successful_time{namespace="forge-control"}
         > 10800) and on(namespace,cronjob) (kube_cronjob_spec_suspend{namespace="forge-control"}
