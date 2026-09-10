@@ -167,8 +167,10 @@ snapshots, plus read-only Velero backup status; the exporter has no Kubernetes
 credential and no network access. A failed snapshot/export remains an alert,
 while the application and existing recovery archives remain available.
 
-Velero still copies the backup volume using Kopia, never the live SQLite/Git
-volume. Offsite retention remains 30 days for daily and 90 days for weekly
+Velero copies the backup volume using Kopia. Because the global policy uses
+`defaultVolumesToFsBackup: true`, the pod explicitly excludes `data,tmp,control`;
+the opt-in `backup-volumes: backups` annotation alone does not protect the live
+SQLite/Git volume from that global opt-out policy. Offsite retention remains 30 days for daily and 90 days for weekly
 backups. Recovery uses portable files and does not need the original OpenStack
 cloud or any retained CSI snapshot. Old compressed archive chunks in Backblaze
 expire with their retained backups and are reclaimed by Kopia maintenance;
