@@ -39,6 +39,7 @@ configMapGenerator:
   files:
   - run-service.sh
   - backup.py
+  - legacy-backup-bridge.py
   - recovery_archive.py
   - native-status.json
   - render-forgejo.py

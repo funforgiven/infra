@@ -180,9 +180,14 @@ Forgejo's single-replica StatefulSet uses `OnDelete` updates: applying manifests
 must not automatically restart agents' Git/API connections or running CI.
 Apply application/image upgrades during an explicit maintenance window. For a
 backup-script-only update, protect the mounted bootstrap ConfigMap from pruning,
-update its reviewed backup files in place, verify their hashes, and restart only
-the `backup` container. Remove the retained old ConfigMap after the next planned
-Forgejo pod replacement. Do not delete or roll the Forgejo pod during active work.
+update its reviewed backup files in place and verify their hashes. During the
+initial transition, run `legacy-backup-bridge.py` in that container: it holds
+the old timer's maintenance lock and publishes real completion timestamps for
+its existing metrics thread, without restarting any container or withdrawing
+the pod's service endpoint. The compatibility status marker is excluded from
+archive selection and retention. A later planned container/pod replacement
+starts the new metrics-only process and needs no bridge. Remove the retained
+old ConfigMap after the next planned Forgejo pod replacement. Do not delete or roll the Forgejo pod during active work.
 
 The same backup PVC contains versioned native golden images and macOS
 firmware. Acquire the Windows image from its private protected Glance record
