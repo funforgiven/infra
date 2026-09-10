@@ -46,6 +46,9 @@ spec:
         app.kubernetes.io/part-of: forge
       annotations:
         backup.velero.io/backup-volumes: backups
+        # The global Velero policy is opt-out: naming backups alone does not
+        # exclude the live database or temporary/control files.
+        backup.velero.io/backup-volumes-excludes: data,tmp,control
         pre.hook.backup.velero.io/command: '["python", "/bootstrap/backup.py", "--once"]'
         pre.hook.backup.velero.io/container: backup
         pre.hook.backup.velero.io/on-error: Fail

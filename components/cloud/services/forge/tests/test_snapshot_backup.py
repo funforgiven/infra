@@ -6,6 +6,8 @@ from pathlib import Path
 import sys
 import unittest
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[5]
 SCRIPTS = ROOT / 'deployments/homelab/cloud/services/46-forge'
 sys.path.insert(0, str(SCRIPTS))
@@ -49,6 +51,19 @@ class FakeAPI:
 class SnapshotControllerTests(unittest.TestCase):
     def setUp(self):
         self.template = json.loads((SCRIPTS / 'export-job.json').read_text())
+
+    def test_opt_out_velero_policy_only_copies_the_recovery_volume(self):
+        workload = next(d for d in yaml.safe_load_all((SCRIPTS / 'workloads.yaml').read_text())
+                        if d['kind'] == 'StatefulSet')
+        pod = workload['spec']['template']
+        annotations = pod['metadata']['annotations']
+        exclusions = set(annotations['backup.velero.io/backup-volumes-excludes'].split(','))
+        # With global defaultVolumesToFsBackup=true, the opt-in annotation
+        # alone is ignored. Include PVCs and emptyDirs in this independent check.
+        eligible = {v['name'] for v in pod['spec']['volumes']
+                    if 'persistentVolumeClaim' in v or 'emptyDir' in v}
+        self.assertEqual(eligible - exclusions, {'backups'})
+        self.assertEqual(annotations['backup.velero.io/backup-volumes'], 'backups')
 
     def test_export_cleanup_never_deletes_source_and_orders_readers_before_storage(self):
         api = FakeAPI()
