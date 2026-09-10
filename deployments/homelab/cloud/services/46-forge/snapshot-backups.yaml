@@ -107,6 +107,7 @@ metadata:
   namespace: forge
 spec:
   schedule: 13 */6 * * *
+  suspend: false
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 1800
   successfulJobsHistoryLimit: 1
