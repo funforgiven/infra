@@ -34,6 +34,7 @@ spec:
   # Backup and monitoring updates must not restart active agents or runners.
   updateStrategy:
     type: OnDelete
+    rollingUpdate: null
   replicas: 1
   selector:
     matchLabels:
