@@ -19,6 +19,7 @@ data:
     FACTORIO_GAME_PASSWORD: ENC[AES256_GCM,data:385qej3tloyerGacYTnNZItp3h7Q5Wp4Bo5nZLH9kp0yWJRsXWafloj4Yp0=,iv:gdGmemJzvhVKsNKwi0hH716cswGzOeyyeNujWzq8Dbc=,tag:/laGiMEzqB1NhNVVT8fhgg==,type:str]
     DISCORD_MUSIC_BOT_TOKEN: ENC[AES256_GCM,data:x5sVDWeEAKphHvqA6Rdf4WSxHN1dLQgyNbqK1e+QDkR/LPqGoOghDYMG/GY7oYLCMD0TJ9vYYWEHoomOKVAeu0hLrBJxqN0hLLzrhPEGzAwkHnx/vQLSPmtWqCwcoywW,iv:tpTABmB+Mkf/TZRxi31GOxwnRFJ+u3+ZWWjHYZOcqvg=,tag:/ADJ7kFBeEDjJRhjvvZGew==,type:str]
     DISCORD_MUSIC_YOUTUBE_API_KEY: ENC[AES256_GCM,data:/cvanxHDODicoNq9DGKOzlNklLCjjiLyOTK3u+F+PqFrwtIo7O8RQlvn3wz62i+5Ui4dDA==,iv:fT9AYpWUoXBFsZbULoCOQI/4jC/A7iPgkVnQFqCAi7c=,tag:oapzqoX/YkHW19ae9xn8xw==,type:str]
+    VALHEIM_GAME_PASSWORD: ENC[AES256_GCM,data:F+UdHk6vTGy1h+in3JbUPWHS9w2gQZkhwUhGIZ77feA=,iv:8SHKooQuvI+EGbouflxRLcoHfFXNSXwn4FCrUiSsv8Q=,tag:ZuAc9S0jHcLNbaYE0JqRNw==,type:str]
 kind: Secret
 metadata:
     name: services-runtime-bootstrap
@@ -44,6 +45,6 @@ sops:
             -----END AGE ENCRYPTED FILE-----
           recipient: age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-08-30T20:46:52Z"
-    mac: ENC[AES256_GCM,data:SwbtJAKyGYUMmrQpOhlnX4zeWmiCIBlTBOcWoKrVfMrh7cRNdOuvdd646dLWPeNQcnSg6fTjnfNSX0sBBD1Lx20mB8N0uY4sTk6aX1gjyeTigseOfkfdT9n6pr1YaS1A4mvePpLM1derYP7UB2AvOndc0vJuJR92svAA1tUcFZk=,iv:spaM4E6T26Tmn9kn6InPjInN+oaxrvt/WgTgKS2b2tA=,tag:AZzr2jk6ICIPpRPqPOh3Pw==,type:str]
+    lastmodified: "2026-09-11T20:17:02Z"
+    mac: ENC[AES256_GCM,data:JiG7MsiNdoAHPL//CxMPaV/ofLFS+tWU6mzgqSAsrgoqGqzCgRTBOxdjy8vMT4yIdB7o3AE92/tZ4vmlcKykvAeYgz5vuiAwUFPgl2V1AeXlqLy+TuHW6hR2IhSy4b3LRXMGeVUSHvP2vAmVigQOsPpByoxivkMaQQpl/BpIyE4=,iv:uSaG+i02CSAaFxUCtui0aAwUqOJZfP2hUwSvpMCoA8o=,tag:BgYPBnxMxxgQn9bRQdicIg==,type:str]
     version: 3.13.3

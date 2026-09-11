@@ -184,6 +184,7 @@ data:
     require_file FACTORIO_TOKEN '^[A-Za-z0-9_-]+$' 20 128
     require_file FACTORIO_GAME_PASSWORD '^[^[:cntrl:]]+$' 12 128
     require_file FACTORIO_RCON_PASSWORD '^[A-Za-z0-9_-]+$' 32 128
+    require_file VALHEIM_GAME_PASSWORD '^[^[:cntrl:]]+$' 12 128
     require_file RESEND_ADMIN_API_KEY '^re_[A-Za-z0-9_-]+$' 23 512
 
     export OS_PROJECT_NAME=services
@@ -519,6 +520,9 @@ data:
       --from-file=FACTORIO_TOKEN=/runtime-bootstrap/FACTORIO_TOKEN \
       --from-file=FACTORIO_GAME_PASSWORD=/runtime-bootstrap/FACTORIO_GAME_PASSWORD \
       --from-file=FACTORIO_RCON_PASSWORD=/runtime-bootstrap/FACTORIO_RCON_PASSWORD \
+      --dry-run=client -o yaml | "$kubectl" apply -f -
+    "$kubectl" -n games create secret generic valheim-runtime \
+      --from-file=VALHEIM_GAME_PASSWORD=/runtime-bootstrap/VALHEIM_GAME_PASSWORD \
       --dry-run=client -o yaml | "$kubectl" apply -f -
     "$kubectl" -n finance create secret generic wallos-runtime \
       --from-file=OIDC_CLIENT_ID=/tmp/wallos_client_id \

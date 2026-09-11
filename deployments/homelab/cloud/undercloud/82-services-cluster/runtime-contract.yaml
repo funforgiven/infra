@@ -21,6 +21,7 @@ data:
         - FACTORIO_USERNAME
         - FACTORIO_TOKEN
         - FACTORIO_GAME_PASSWORD
+        - VALHEIM_GAME_PASSWORD
       mailProvisioning:
         - RESEND_ADMIN_API_KEY
     generatedSecrets:

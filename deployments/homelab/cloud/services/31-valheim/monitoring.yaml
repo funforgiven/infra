@@ -1,0 +1,33 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: valheim
+  namespace: games
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: valheim
+      rules:
+        - alert: ValheimUnavailable
+          expr: >-
+            kube_statefulset_status_replicas_ready{namespace="games",
+            statefulset="valheim"} != 1
+            or absent(kube_statefulset_status_replicas_ready{
+            namespace="games",statefulset="valheim"})
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: The Valheim server is not ready.
+        - alert: ValheimLoadBalancerUnavailable
+          expr: >-
+            kube_service_status_load_balancer_ingress{namespace="games",
+            service="valheim"} < 1
+            or absent(kube_service_status_load_balancer_ingress{
+            namespace="games",service="valheim"})
+          for: 15m
+          labels:
+            severity: critical
+          annotations:
+            summary: The Valheim UDP load balancer has no provider address.

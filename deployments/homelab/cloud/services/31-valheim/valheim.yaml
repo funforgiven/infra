@@ -1,0 +1,176 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: valheim
+  namespace: games
+  labels:
+    app.kubernetes.io/name: valheim
+spec:
+  type: LoadBalancer
+  loadBalancerIP: 10.21.40.124
+  externalTrafficPolicy: Cluster
+  selector:
+    app.kubernetes.io/name: valheim
+  ports:
+    - name: game
+      protocol: UDP
+      port: 2456
+      targetPort: game
+    - name: query
+      protocol: UDP
+      port: 2457
+      targetPort: query
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: valheim
+  namespace: games
+spec:
+  serviceName: valheim
+  replicas: 1
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: valheim
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: valheim
+        app.kubernetes.io/part-of: game-servers
+      annotations:
+        backup.velero.io/backup-volumes: data
+        pre.hook.backup.velero.io/command: '["/bootstrap/backup.sh"]'
+        pre.hook.backup.velero.io/container: valheim
+        pre.hook.backup.velero.io/on-error: Fail
+        pre.hook.backup.velero.io/timeout: 5m
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 180
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: install-server
+          # The image supplies libraries and SteamCMD; the public Steam branch
+          # supplies the game at pod initialization. See the upgrade runbook.
+          image: &valheimImage ghcr.io/community-valheim-tools/valheim-server@sha256:138c6f10759e8342309cfefe0b191221a956771ada1ea87157013d62e2befa19
+          command:
+            - /bootstrap/install.sh
+          env: &valheimEnv
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: HOME
+              value: /data/home
+            - name: SERVER_NAME
+              value: Fahrican Valheim
+            - name: WORLD_NAME
+              value: Fahrican
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          securityContext: &valheimSecurityContext
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          volumeMounts: &valheimMounts
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+            - name: credentials
+              mountPath: /credentials
+              readOnly: true
+      containers:
+        - name: valheim
+          image: *valheimImage
+          command:
+            - /bootstrap/start.sh
+          env: *valheimEnv
+          ports:
+            - name: game
+              protocol: UDP
+              containerPort: 2456
+            - name: query
+              protocol: UDP
+              containerPort: 2457
+          startupProbe:
+            exec: &valheimReady
+              command:
+                - /bootstrap/ready.py
+            timeoutSeconds: 5
+            periodSeconds: 10
+            failureThreshold: 120
+          readinessProbe:
+            exec: *valheimReady
+            timeoutSeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          # Readiness removes the endpoint during the backup's graceful stop.
+          # Supervisor stays healthy and restarts a crashed child itself.
+          livenessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -ec
+                - >-
+                  if [[ "$POD_NAMESPACE" != games ]]; then
+                    test -f /tmp/restore-ready;
+                  else
+                    supervisorctl -c /bootstrap/supervisord.conf status valheim |
+                    grep -Eq ' (RUNNING|STARTING|BACKOFF|STOPPING) ' ||
+                    test -d /tmp/valheim-backup.lock;
+                  fi
+            timeoutSeconds: 5
+            periodSeconds: 30
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: "2"
+              memory: 4Gi
+            limits:
+              memory: 8Gi
+          securityContext: *valheimSecurityContext
+          volumeMounts: *valheimMounts
+      volumes:
+        - name: bootstrap
+          configMap:
+            name: valheim-bootstrap
+            defaultMode: 0555
+        - name: credentials
+          secret:
+            secretName: valheim-runtime
+            defaultMode: 0440
+        - name: tmp
+          emptyDir:
+            sizeLimit: 512Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: rbd1
+        resources:
+          requests:
+            storage: 20Gi

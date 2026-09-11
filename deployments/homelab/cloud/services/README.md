@@ -17,9 +17,9 @@ capacity.
 The OpenStack `public` network is RFC1918 provider space. Floating addresses
 provide routed LAN access, not direct Internet exposure. Public DNS records are
 explicitly declared; HTTP application routes remain reachable only from the LAN
-and administration WireGuard network. Factorio is the narrow exception: the
-CCR2004 forwards only WAN UDP 34197 to its dedicated provider VIP. No game
-management surface is exposed.
+and administration WireGuard network. The game servers have narrow exceptions:
+the CCR2004 forwards WAN UDP 34197 to Factorio and UDP 2456-2457 to Valheim,
+each at its own provider VIP. No game management surface is exposed.
 
 ## Service catalog
 
@@ -31,6 +31,7 @@ management surface is exposed.
 | AudioMuse | Services cluster | `https://audiomuse.fahrican.com`; LAN/WireGuard only, with ZITADEL OIDC |
 | Discord music (Muse) | Services cluster | Discord guild after credential enrollment and an owner-authorized Guild Install using Manage Server; no HTTP endpoint |
 | Factorio Space Age | Services cluster | Public browser; verified Factorio account and shared game password |
+| Valheim 1.0 | Services cluster | Steam public browser or direct UDP connection; shared game password |
 | Home Assistant | Dedicated VM | `https://home.fahrican.com`; native local account and MFA |
 | Wallos | Services cluster | `https://wallos.fahrican.com`; LAN/WireGuard only, with ZITADEL OIDC |
 | Forgejo and Actions | Services cluster | `https://git.fahrican.com`, Git SSH port `2222`; private LAN/WireGuard and native ZITADEL OIDC |
@@ -56,6 +57,7 @@ configuration.
 - Telegram alert-bot creation and target enrollment: [Telegram bootstrap](TELEGRAM.md)
 - Purchased-media import and recovery: [media workflow](40-media/README.md)
 - Wallos first login and recovery: [Wallos runbook](45-wallos/README.md)
+- Valheim access, updates, and world recovery: [Valheim runbook](31-valheim/README.md)
 - Private Git, Actions and offsite recovery: [Forgejo runbook](46-forge/README.md)
 - Linux runner sizing and physical placement: [worker capacity](46-forge/WORKER_CAPACITY.md)
 - Backup and isolated restore behavior: [backup policy](16-backup-policy/README.md)
