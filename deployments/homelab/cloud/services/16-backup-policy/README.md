@@ -51,7 +51,9 @@ missing.
 The source `backup-qualification` namespace contains a 1 GiB `rbd1` PVC. Its
 canary writes a fixed file only in that source namespace and verifies its
 SHA-256 checksum whenever it starts. Factorio's backup hook creates a completed
-named save before the filesystem copy begins.
+named save before the filesystem copy begins. Valheim's hook briefly stops the
+game, archives the entire 1.0 world directory with a checksum, and resumes play
+before the filesystem copy. Its archive is the coordinated recovery source.
 
 On the first day of each month, the restore job selects the newest
 `services-daily` backup. It fails if that backup is not `Completed`; it does not
@@ -64,8 +66,12 @@ fall back to an older backup. The job then:
 4. removes the backed-up PVCs' `spec.volumeName` fields so `rbd1` provisions
    new volumes;
 5. gives the isolated sleepers small qualification-only resource requests;
-6. waits for the restored canary Deployment and Factorio StatefulSet to become
+6. waits for the restored canary Deployment and both game StatefulSets to become
    ready and verifies those resource requests were applied.
+
+The restored Valheim container skips installation and gameplay, verifies its
+recovery archive checksum and committed world marker, and only then becomes
+ready. This checks archive integrity without launching a second public server.
 
 The restored Factorio container detects that it is outside the production
 `games` namespace and sleeps instead of starting a public server. Its integrity

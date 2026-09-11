@@ -106,6 +106,15 @@ Keep the bootstrap password for identity-provider recovery, and use only the
 HTTPS APILayer currency provider; the workload's egress policy deliberately
 blocks the legacy Fixer provider's cleartext HTTP API.
 
+## Valheim credentials
+
+The Valheim game password is enrolled as `VALHEIM_GAME_PASSWORD` in the shared
+runtime SOPS document. The services-cluster reconciler creates
+`games/valheim-runtime` from it. For rotation use
+`nix run .#enroll-services-credential -- VALHEIM_GAME_PASSWORD`; no Steam account
+credentials are needed. See the [Valheim runbook](31-valheim/README.md) for
+activation, the UDP forward, private password retrieval, and world recovery.
+
 ## Factorio credentials
 
 Factorio's public matching service needs the host account name and the service

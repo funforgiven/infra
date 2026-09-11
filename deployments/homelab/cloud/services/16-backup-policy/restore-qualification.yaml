@@ -132,7 +132,7 @@ data:
             value: 16Mi
       - conditions:
           groupResource: statefulsets.apps
-          resourceNameRegex: ^factorio$
+          resourceNameRegex: ^(factorio|valheim)$
           namespaces:
             - games
         patches:
@@ -195,6 +195,7 @@ rules:
       - statefulsets
     resourceNames:
       - factorio
+      - valheim
     verbs:
       - get
       - list
@@ -279,6 +280,8 @@ data:
       --timeout=10m
     "$kubectl" -n games-restore rollout status statefulset/factorio \
       --timeout=10m
+    "$kubectl" -n games-restore rollout status statefulset/valheim \
+      --timeout=10m
     test "$($kubectl -n backup-qualification-restore get deployment backup-canary \
       -o jsonpath='{.spec.template.spec.containers[0].resources.requests.cpu}')" = 10m
     test "$($kubectl -n backup-qualification-restore get deployment backup-canary \
@@ -286,6 +289,10 @@ data:
     test "$($kubectl -n games-restore get statefulset factorio \
       -o jsonpath='{.spec.template.spec.containers[0].resources.requests.cpu}')" = 10m
     test "$($kubectl -n games-restore get statefulset factorio \
+      -o jsonpath='{.spec.template.spec.containers[0].resources.requests.memory}')" = 64Mi
+    test "$($kubectl -n games-restore get statefulset valheim \
+      -o jsonpath='{.spec.template.spec.containers[0].resources.requests.cpu}')" = 10m
+    test "$($kubectl -n games-restore get statefulset valheim \
       -o jsonpath='{.spec.template.spec.containers[0].resources.requests.memory}')" = 64Mi
     echo "Restore qualification completed for application data in backup $backup."
   restore.yaml: |

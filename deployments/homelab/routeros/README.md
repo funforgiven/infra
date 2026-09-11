@@ -69,6 +69,11 @@ loopback-only RCON. One UDP-only NAT-reflection rule lets local LAN interfaces
 use the same public address and port as WAN players; it matches only a local
 non-LAN destination address and does not grant general inter-VLAN access.
 
+Valheim uses the same forwarding model at `10.21.40.124`, with UDP ports
+`2456-2457` preserved for game traffic and Steam queries. Its own LAN reflection
+rule lets local players use the public endpoint. Joining requires the Valheim
+game password; no administration ports are forwarded.
+
 ## OTOTOY Mullvad egress
 
 The CCR2004 terminates a separate Mullvad WireGuard client interface named
@@ -133,7 +138,7 @@ ansible-playbook reconcile-routeros.yaml --limit core_router --tags apply
 Use `--limit core_router --tags mullvad` to select only the destination-scoped
 Mullvad objects while retaining the standard read-only CCR preflight.
 Use `--limit core_router --tags wan-port-forwards` to reconcile only the
-declared Factorio WAN/reflection and Syncthing destination-NAT rows after the
+declared Factorio/Valheim WAN/reflection and Syncthing destination-NAT rows after the
 usual preflight.
 Use `--limit core_router --tags private-access` to reconcile and verify routed
 access rules while retaining the read-only preflight. An `--extra-vars` file

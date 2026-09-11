@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: valheim-game-ingress
+  namespace: games
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: valheim
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: UDP
+          port: 2456
+        - protocol: UDP
+          port: 2457

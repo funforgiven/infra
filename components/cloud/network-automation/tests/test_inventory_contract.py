@@ -258,6 +258,27 @@ class NetworkInventoryTests(unittest.TestCase):
             self.assertIn(f"{host}.mgmt IN A {address}", self.internal_dns)
         self.assertNotIn("pecorino.mgmt IN A 10.21.20.13", self.internal_dns)
 
+    def test_valheim_forwarding_matches_service_ports_and_address(self) -> None:
+        documents = list(yaml.safe_load_all(
+            (ROOT / "deployments/homelab/cloud/services/31-valheim/valheim.yaml").read_text()
+        ))
+        service = next(item for item in documents if item["kind"] == "Service")
+        self.assertEqual("Cluster", service["spec"]["externalTrafficPolicy"])
+        ports = {item["port"] for item in service["spec"]["ports"]}
+        self.assertEqual({2456, 2457}, ports)
+        self.assertTrue(all(item["protocol"] == "UDP" for item in service["spec"]["ports"]))
+        for section, comment in (
+            ("routeros_port_forwards", "infra: Valheim"),
+            ("routeros_nat_reflections", "infra: Valheim LAN reflection"),
+        ):
+            rows = [row for row in self.router[section] if row["comment"] == comment]
+            self.assertEqual(1, len(rows))
+            row = rows[0]
+            self.assertEqual(service["spec"]["loadBalancerIP"], row["to_address"])
+            self.assertEqual("udp", row["protocol"])
+            self.assertEqual("2456-2457", row["destination_port"])
+            self.assertEqual(row["destination_port"], row["to_port"])
+
     def test_factorio_has_port_preserving_wan_and_lan_reflection(self) -> None:
         factorio_forwards = [
             item
@@ -290,7 +311,8 @@ class NetworkInventoryTests(unittest.TestCase):
                     "to_port": "34197",
                 }
             ],
-            self.router["routeros_nat_reflections"],
+            [item for item in self.router["routeros_nat_reflections"]
+             if item["comment"] == "infra: Factorio Space Age LAN reflection"],
         )
         self.assertEqual(
             [
