@@ -90,3 +90,29 @@ Full `nix flake check --accept-flake-config --no-write-lock-file -L` passed,
 including 126 Forge tests and the Promtool cases. All published fixes use signed
 conventional commits. The six unrelated modified files in the shared infra
 checkout were verified unchanged by SHA-256 before and after its fast-forward.
+
+## Scheduled follow-up — 2026-09-11
+
+The first automatic six-hour backup ran at 00:13 UTC and succeeded at
+00:17:16 UTC: 4m 16s including cleanup. Its snapshot was captured at 00:13:04
+and the archive completed at 00:16:34. The new archive is
+`forgejo-20260911T001304Z-2103dea8.tar`, SHA-256
+`7822447187de4699518f07b7c9c52ec99059ba8565135e2ed4f535cd6e81dfd4`.
+SQLite integrity passed on the clone. Local retention now contains the two
+completed online archives; the final legacy gzip application archive was
+pruned by the normal successful-export policy. Retained native images and
+migration recovery sources were preserved.
+
+At 00:59 UTC, local backup usage was 61,140,389,888 bytes (56.94 GiB), including
+application data added since the first export. Forgejo's pod and all container
+identities remained unchanged, with no maintenance request or pause marker.
+The Actions queue was empty, all three latest workflows had passed, and no
+Forgejo alerts were firing. Both relevant Flux reconciliations were healthy
+at `c1cf1991ec40b0024c723a52acfb3d0a415160ae`.
+
+A subsequent B2 listing measured 96,428,167,238 current bytes and 83,551,783
+noncurrent bytes. This remains retained historical data, not a measured
+reduction in bucket usage. The new automatic archive had not yet reached the
+next scheduled offsite backup, so it is not a second offsite-restore proof.
+The earlier completed Backblaze restore remains the qualification for the
+online archive format.

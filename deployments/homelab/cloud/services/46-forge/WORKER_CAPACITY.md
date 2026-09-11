@@ -38,6 +38,41 @@ protected PR review and validation. Cached compilation is only part of job
 duration: serialized tests, native VM startup, archive transfer and validation
 also contribute. Measure an actual warm run before promising a duration.
 
+## Completed run measurements — 2026-09-11
+
+At 00:59 UTC the queue was empty, all disposable CI resources had been
+released, and no Forgejo alerts were firing. The previously delayed public
+workflow runs [73](https://git.fahrican.com/funforgiven/atollion/actions/runs/73)
+and [74](https://git.fahrican.com/funforgiven/atollion/actions/runs/74) had both
+succeeded. The subsequent protected-main
+[run 75](https://git.fahrican.com/funforgiven/atollion/actions/runs/75), at
+`d6b47a870741a786c7ca6e773a8fa3cbab327402`, also passed all five jobs.
+Its complete workflow took 28m 28s from creation to completion.
+
+| Job | Assigned job duration | Measured substantial step |
+| --- | --- | --- |
+| Linux quality | 23m 01s | Cache restore 32s; full validation 21m 36s |
+| Windows producer on Linux | 7m 30s | Debug/release cache restore 49s; cross-build 3m 29s |
+| Windows native | 11m 26s | Handoff verification and execution 10m 26s |
+| macOS native | 24m 26s | Registry/debug/release restore 1m 12s; native validation 17m 01s |
+| Aggregate validation | 26s | Independent comparison 19s |
+
+Durations come from completed Forgejo task/step timestamps, not estimates.
+Job totals include runner setup and cleanup outside the named workflow steps.
+Creation-to-start intervals for dependent jobs also include prerequisite
+execution; they must not all be counted as runner-allocation delay. Linux's
+three conditional legacy-cache seed steps were skipped after rust-cache
+restore, consistent with an exact candidate hit.
+
+Prometheus's maximum two-minute CPU rates for run 75 were 2.64 cores for
+Linux quality and 3.27 for the Windows producer, below their six-core limits.
+These samples do not exclude short bursts or prove every validation command
+is CPU-independent. They do not justify increasing pod limits by themselves;
+the workflow still sets `CARGO_BUILD_JOBS=4`. Investigate the measured validation
+commands and startup/cleanup costs before changing concurrency, worker memory
+reservations or cache compatibility. No jobs were retried or interrupted, and
+no application workflow or cache was modified for this measurement.
+
 ## Replacing the original workers
 
 The pinned Magnum node-group API cannot update `flavor_id`, and Nova flavors
