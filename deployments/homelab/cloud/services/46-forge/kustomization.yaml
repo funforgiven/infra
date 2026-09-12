@@ -61,6 +61,7 @@ configMapGenerator:
   - verify-restore.py
   - recovery_archive.py
   - verify_atollion.py
+  - atollion-agent-policy.json
   - verify-git.sh
   - native_backup.py
 - name: forge-restore-controller

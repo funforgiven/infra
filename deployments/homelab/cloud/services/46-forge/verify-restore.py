@@ -100,7 +100,8 @@ if legacy_objects.exists():
     # Age recovery keys stay with operators; retirement also required a separate
     # offsite restore, decryption and verification of every object in this bundle.
     print("Encrypted final GitLab object-store export verified.", flush=True)
-verify_atollion(backup, target)
+verify_atollion(backup, target, validation_policy=json.loads(
+    Path(__file__).with_name("atollion-agent-policy.json").read_text()))
 if arguments.application_only:
     print("Application-only restore: native image recovery is covered by its separate full restore evidence.", flush=True)
 else:

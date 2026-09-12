@@ -129,12 +129,12 @@ class AtollionRecoveryTests(unittest.TestCase):
         with sqlite3.connect(self.database) as db:
             db.execute(statement, values)
 
-    def verify(self):
-        return RECOVERY.verify_atollion(self.backup, self.target)
+    def verify(self, **kwargs):
+        return RECOVERY.verify_atollion(self.backup, self.target, **kwargs)
 
-    def assert_failure(self):
+    def assert_failure(self, **kwargs):
         with self.assertRaises((RuntimeError, ValueError, FileNotFoundError)):
-            self.verify()
+            self.verify(**kwargs)
         for name in RECOVERY.MARKERS:
             self.assertFalse((self.target / name).exists(), name)
 
@@ -272,6 +272,50 @@ class AtollionRecoveryTests(unittest.TestCase):
                 self.mutate_database(f"UPDATE protected_branch SET {column} = ?", (value,))
                 self.assert_failure()
                 self.database.write_bytes(original)
+
+    def local_policy(self):
+        return json.loads((ROOT / "deployments/homelab/cloud/services/46-forge/atollion-agent-policy.json").read_text())
+
+    def enable_local_policy(self):
+        self.mutate_database("UPDATE protected_branch SET enable_status_check = 0, status_check_contexts = '[]'")
+
+    def test_local_validation_requires_explicit_operator_enrollment(self):
+        self.enable_local_policy()
+        self.assert_failure()
+        result = self.verify(validation_policy=self.local_policy())
+        self.assertEqual(result["repository"], "funforgiven/atollion")
+
+    def test_local_enrollment_preserves_historical_actions_archives(self):
+        self.verify(validation_policy=self.local_policy())
+
+    def test_local_enrollment_never_accepts_partial_actions_protection(self):
+        self.mutate_database("UPDATE protected_branch SET status_check_contexts = '[]'")
+        self.assert_failure(validation_policy=self.local_policy())
+        self.mutate_database("UPDATE protected_branch SET enable_status_check = 0, status_check_contexts = ?",
+                             (json.dumps(sorted(RECOVERY.CONTEXTS)),))
+        self.assert_failure(validation_policy=self.local_policy())
+
+    def test_local_validation_keeps_other_protections_mandatory(self):
+        self.enable_local_policy()
+        original = self.database.read_bytes()
+        for column, value in [("can_push", 1), ("required_approvals", 0), ("apply_to_admins", 0),
+                              ("dismiss_stale_approvals", 0), ("require_signed_commits", 0),
+                              ("block_on_rejected_reviews", 0), ("block_on_outdated_branch", 0),
+                              ("merge_whitelist_user_i_ds", "[1,2,3]")]:
+            with self.subTest(protection=column):
+                self.mutate_database(f"UPDATE protected_branch SET {column} = ?", (value,))
+                self.assert_failure(validation_policy=self.local_policy())
+                self.database.write_bytes(original)
+
+    def test_local_enrollment_is_scoped_and_cannot_weaken_approval(self):
+        self.enable_local_policy()
+        for key, value in [("url", "https://example.com"), ("repository", "someone/else"),
+                           ("validation_mode", "automatic"), ("validation_mode", "actions"),
+                           ("workflow_id", "other.yml"), ("status_contexts", {"x": "y"}),
+                           ("merge_style", "merge"), ("required_approvals", 0),
+                           ("required_approvals", 2)]:
+            with self.subTest(enrollment=key, value=value):
+                self.assert_failure(validation_policy={**self.local_policy(), key: value})
 
     def test_cutover_head_cannot_inject_git_arguments(self):
         self.manifest["cutover_head"] = "--all\n" + "a" * 40

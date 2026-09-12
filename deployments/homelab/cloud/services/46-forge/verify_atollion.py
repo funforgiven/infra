@@ -183,7 +183,27 @@ def verify_merge_style(db, repo_id):
         require(config.get(name) is False, "alternate or automatic manual merge mode must remain disabled: " + name)
 
 
-def verify_policy(db, repo_id):
+def local_validation_enrolled(enrollment):
+    if enrollment is None:
+        return False
+    require(enrollment.get("url") == "https://git.fahrican.com"
+            and enrollment.get("repository") == REPOSITORY
+            and enrollment.get("workflow_id") == "validation.yml"
+            and enrollment.get("merge_style") == "fast-forward-only"
+            and type(enrollment.get("required_approvals")) is int
+            and enrollment["required_approvals"] >= 1,
+            "invalid operator validation enrollment")
+    mode = enrollment.get("validation_mode", "actions")
+    contexts = enrollment.get("status_contexts")
+    require(mode in {"actions", "local"} and isinstance(contexts, dict),
+            "invalid operator validation mode or contexts")
+    require(contexts == {} if mode == "local" else set(contexts.values()) == CONTEXTS,
+            "operator validation contexts differ from the enrolled mode")
+    return mode == "local"
+
+
+def verify_policy(db, repo_id, validation_policy=None):
+    local_enrolled = local_validation_enrolled(validation_policy)
     users = db.execute('SELECT id, name, is_active, is_admin, prohibit_login FROM "user" '
                        'WHERE lower_name IN (?, ?, ?, ?, ?)', tuple(sorted(AGENTS | {"funforgiven"}))).fetchall()
     by_name = {row["name"]: row for row in users}
@@ -198,12 +218,20 @@ def verify_policy(db, repo_id):
     policy = rows[0]
     for name in ("can_push", "enable_whitelist", "whitelist_deploy_keys"):
         require(policy[name] == 0, "direct pushes to main must remain disabled")
-    for name in ("enable_merge_whitelist", "enable_status_check", "enable_approvals_whitelist",
+    for name in ("enable_merge_whitelist", "enable_approvals_whitelist",
                  "block_on_rejected_reviews", "block_on_official_review_requests", "block_on_outdated_branch",
                  "dismiss_stale_approvals", "ignore_stale_approvals", "require_signed_commits", "apply_to_admins"):
         require(policy[name] == 1, "required main branch protection is disabled: " + name)
-    require(policy["required_approvals"] >= 1, "main must require an independent approval")
-    require(CONTEXTS <= set(stored_list(policy["status_check_contexts"])), "required CI protection is incomplete")
+    minimum_approvals = validation_policy["required_approvals"] if validation_policy is not None else 1
+    require(policy["required_approvals"] >= minimum_approvals, "main must require the enrolled independent approvals")
+    contexts = set(stored_list(policy["status_check_contexts"]))
+    if local_enrolled and policy["enable_status_check"] == 0:
+        require(not contexts, "local validation protection must have no Actions contexts")
+    else:
+        # Historical Actions-protected archives remain recoverable after the
+        # explicit operator migration. Partial Actions protection never passes.
+        require(policy["enable_status_check"] == 1 and CONTEXTS <= contexts,
+                "required CI protection is incomplete; local validation needs operator enrollment")
     for column, names in (("merge_whitelist_user_i_ds", {"funforgiven", "atollion-coordinator"}),
                           ("approvals_whitelist_user_i_ds", AGENTS | {"funforgiven"})):
         require(set(stored_list(policy[column])) == {by_name[name]["id"] for name in names},
@@ -213,7 +241,7 @@ def verify_policy(db, repo_id):
     require(not policy["unprotected_file_patterns"], "main must not allow unprotected file exceptions")
 
 
-def verify_database(database, issues, pulls):
+def verify_database(database, issues, pulls, validation_policy=None):
     commits = {SOURCE_MAIN}
     with sqlite3.connect(database.as_uri() + "?mode=ro", uri=True) as db:
         db.row_factory = sqlite3.Row
@@ -224,7 +252,7 @@ def verify_database(database, issues, pulls):
         require(repo["is_private"] == 1 and repo["is_empty"] == 0 and repo["default_branch"] == "main",
                 "restored repository privacy or default branch differs")
         verify_merge_style(db, repo["id"])
-        verify_policy(db, repo["id"])
+        verify_policy(db, repo["id"], validation_policy)
         # Titles, bodies, labels and issue states can legitimately change after
         # cutover. The hashed original export retains their initial values.
         for number, source in {**issues, **pulls}.items():
@@ -249,7 +277,7 @@ def verify_database(database, issues, pulls):
     return commits
 
 
-def verify_atollion(backup, target):
+def verify_atollion(backup, target, *, validation_policy=None):
     """Raise on missing/tampered evidence; emit Git expectations only on success."""
     backup, target = Path(backup).absolute(), Path(target).absolute()
     require(target.resolve() == target, "restore target must not contain symbolic links")
@@ -284,7 +312,7 @@ def verify_atollion(backup, target):
     # This is evidence for the original imported history only. It does not claim
     # to verify LFS content that may be introduced by future development.
     safe_path(target, "data/git/repositories/funforgiven/atollion.git", directory=True)
-    commits = verify_database(safe_path(target, "data/data/forgejo.db"), issues, pulls)
+    commits = verify_database(safe_path(target, "data/data/forgejo.db"), issues, pulls, validation_policy)
     commits.add(cutover)
     result = {"schema": 1, "repository": REPOSITORY, "source_main": SOURCE_MAIN,
               "cutover_head": cutover, "required_commits": sorted(commits), "source_lfs_objects": 0}
