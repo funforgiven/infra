@@ -138,12 +138,25 @@ passwords. Human ZITADEL sign-in is unchanged.
 
 `atollion-branch-policy.json` records the applied main protection: no direct
 pushes, signed commits, one independent whitelisted approval, dismissed stale
-approvals, all five named PR checks and an up-to-date branch. Only the owner
+approvals and an up-to-date branch. Only the owner
 and coordinator may merge. The policy applies to administrators too. The
-application's merge tool additionally verifies current-head actual Actions
-runs/tasks and serializes merges using the expected head SHA. Forgejo's
+September 12 operator migration enrolls local validation: required Actions
+statuses are disabled and their contexts empty. The application's merge tool
+verifies a receipt and logs bound to the exact head/tree, plus an independent
+approval containing that receipt's SHA-256, and serializes protected merges
+using the expected head SHA. The full native Actions matrix remains available
+for manually scheduled certification. Forgejo's
 same-repository workflow token has write permissions; the Actions bot is
 excluded from both approval and merge whitelists.
+
+`atollion-agent-policy.json` is the public enrollment snapshot installed at
+`~/.local/state/atollion-forge/merge-policy.json` with mode 0600. The restore
+verifier receives the same operator policy through `forge-restore-tools`.
+It accepts local-mode protection only with this explicit enrollment and empty
+contexts, retains all other safeguards, and continues to accept complete
+historical Actions-mode protection in older recovery archives. Missing or
+partial Actions protection never implies local mode. See
+[the reviewed operator migration](https://git.fahrican.com/funforgiven/atollion/src/branch/ci/185-focused-local-validation/docs/LOCAL_VALIDATION.md#operator-migration).
 
 Forgejo 15 checks instance merge-signing readiness even for fast-forward-only
 merges. The instance has a dedicated SSH signing key, encrypted in
@@ -154,7 +167,7 @@ its private file is mode 0600 on the application volume and is included in
 consistent application recovery archives. `MERGES = always` enables server signing
 without requiring a second native MFA enrollment alongside ZITADEL.
 Protected fast-forward merges still preserve the exact reviewed commit and
-all existing approval, signature and hosted-validation requirements.
+all enrolled approval, signature and validation requirements.
 
 Linux application jobs have two concurrent slots, each with 2 requested CPUs,
 a 3 CPU/6 GiB limit and a fresh 96 GiB Cinder scratch volume. A separate trusted

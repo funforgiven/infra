@@ -7,14 +7,8 @@
     "funforgiven",
     "atollion-coordinator"
   ],
-  "enable_status_check": true,
-  "status_check_contexts": [
-    "Atollion validation / linux-quality (pull_request)",
-    "Atollion validation / windows-build (pull_request)",
-    "Atollion validation / windows-native (pull_request)",
-    "Atollion validation / macos-native (pull_request)",
-    "Atollion validation / validation (pull_request)"
-  ],
+  "enable_status_check": false,
+  "status_check_contexts": [],
   "required_approvals": 1,
   "enable_approvals_whitelist": true,
   "approvals_whitelist_username": [
