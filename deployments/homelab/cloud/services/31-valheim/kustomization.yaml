@@ -10,6 +10,7 @@ configMapGenerator:
     files:
       - install.sh
       - prepare-identity.sh
+      - prepare-app480.py
       - start.sh
       - start-game.sh
       - ready.py
