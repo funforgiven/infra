@@ -90,7 +90,7 @@ spec:
               drop:
                 - ALL
             readOnlyRootFilesystem: true
-          volumeMounts: &valheimMounts
+          volumeMounts:
             - name: bootstrap
               mountPath: /bootstrap
               readOnly: true
@@ -101,6 +101,8 @@ spec:
             - name: credentials
               mountPath: /credentials
               readOnly: true
+            - name: identity
+              mountPath: /identity
       containers:
         - name: valheim
           image: *valheimImage
@@ -151,7 +153,25 @@ spec:
             limits:
               memory: 8Gi
           securityContext: *valheimSecurityContext
-          volumeMounts: *valheimMounts
+          volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+            - name: credentials
+              mountPath: /credentials
+              readOnly: true
+            - name: identity
+              mountPath: /etc/passwd
+              subPath: passwd
+              readOnly: true
+            - name: identity
+              mountPath: /etc/group
+              subPath: group
+              readOnly: true
       volumes:
         - name: bootstrap
           configMap:
@@ -164,6 +184,9 @@ spec:
         - name: tmp
           emptyDir:
             sizeLimit: 512Mi
+        - name: identity
+          emptyDir:
+            sizeLimit: 1Mi
   volumeClaimTemplates:
     - metadata:
         name: data

@@ -9,6 +9,7 @@ configMapGenerator:
     namespace: games
     files:
       - install.sh
+      - prepare-identity.sh
       - start.sh
       - start-game.sh
       - ready.py
