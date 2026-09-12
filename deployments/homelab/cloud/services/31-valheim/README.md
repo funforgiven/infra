@@ -42,6 +42,10 @@ match the installed server version; inspect the startup logs after an update.
 
 The repository's scripts replace the image's root bootstrap with a Supervisor
 running as UID/GID 1000, a read-only root filesystem, and no Linux capabilities.
+The installer prepares account files on an ephemeral volume and the game mounts
+them read-only at `/etc/passwd` and `/etc/group`. This gives UID 1000 a real
+`valheim` account with `/data/home` as its home directory; the bundled PlayFab
+library requires this lookup even when the server uses the Steam backend.
 SteamCMD, its home directory, and the installed server are writable on the PVC.
 `/data/worlds` contains saves and permission lists. Do not delete the PVC to
 repair an installation; game binaries live separately at `/data/server`.
