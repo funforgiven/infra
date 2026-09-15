@@ -186,10 +186,11 @@ the archive into a new scratch PVC in `home-automation-restore`. PVC modifiers
 clear original volume bindings and select the Delete storage class. Velero also
 discovers an unmounted state-claim placeholder; the verifier never mounts it and
 the controller removes it after confirming it remains unbound. The pod
-transformation preserves Velero's injected restore helper and removes every application container. It
-checks every file hash, JSON payload and the SQLite database. The verifier has
-no credentials, route, secondary NIC or network access and cannot start another
-home automation controller. Its scratch volume uses a Delete reclaim policy.
+transformation preserves Velero's injected restore helper and removes every
+application container. It checks every file hash, JSON payload and the SQLite
+database. The verifier has no credentials, secondary NIC or network access and
+cannot start another home automation controller. Its scratch volume uses a
+Delete reclaim policy.
 
 Run this same check on demand after a deployment and after stateful upgrades:
 
@@ -217,6 +218,36 @@ volume, and start exactly one instance. Restore OTBR's checked archive/dataset
 before re-enabling its pod. Verify HA login, MQTT discovery, coordinator identity
 and Matter devices before retiring the old volume. Never replay old fabric or
 radio state while another copy is running.
+
+## Deployment qualification — 2026-09-15
+
+The live deployment passed these checks before handover:
+
+- The main pod had all five containers ready with zero restarts. The automation,
+  IoT network and backup-policy Flux Kustomizations were ready and healthy.
+- HTTPS certificate validation and HA WebSocket upgrade succeeded through Envoy.
+  IoT clients received HTTP 403 for onboarding; direct IoT access to ports 8123,
+  1883, 5580 and 9000 was blocked.
+- A temporary pod on another worker reached the HA IoT interface over IPv4 and
+  IPv6 link-local, received local IPv6 multicast replies, and reached an existing
+  Hue bridge. The temporary probe and its network attachment were removed.
+- Prometheus reported authenticated MQTT and the Matter API as healthy, and
+  recorded a successful local recovery archive.
+- `home-automation-qualification-20260915c` completed in the existing B2 location
+  with one PodVolumeBackup: the archive volume, 741,635 bytes. No application
+  state or runtime volume was copied directly.
+- `home-automation-restore-20260915e` completed at 19:02 UTC. Its PodVolumeRestore
+  downloaded all 741,635 bytes into a new scratch volume. The offline verifier
+  succeeded, the unmounted state placeholder was removed, and the monthly
+  CronJob recorded the successful qualification. Failed diagnostic attempts
+  were removed after this result.
+- All 15 native-platform flake checks and nine recovery tests passed. The checks
+  include archive corruption, SQLite integrity, backup failure recovery, restore
+  helper preservation and removal of production PVC bindings.
+
+This qualifies infrastructure and archive recovery with the initially empty HA
+installation. Zigbee pairing, the TCP Thread RCP, OTBR dataset recovery and
+Matter-over-Thread commissioning still require the physical radios and devices.
 
 ## Sources
 
