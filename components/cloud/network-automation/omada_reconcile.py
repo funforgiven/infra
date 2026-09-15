@@ -434,7 +434,7 @@ class OmadaApi:
             ),
             "profile-create": ("LAN profile creation", "POST", self._v1(f"sites/{quoted[0]}/lan-profiles")),
             "profile-update": ("LAN profile update", "PATCH", self._v1(f"sites/{quoted[0]}/lan-profiles/{quoted[1]}")),
-            "port-assign": ("switch port assignment", "PUT", self._v1(f"sites/{quoted[0]}/switches/{quoted[1]}/ports/{quoted[2]}/profile")),
+            "port-assign": ("switch port assignment", "PATCH", self._v1(f"sites/{quoted[0]}/switches/{quoted[1]}/ports/{quoted[2]}")),
             "ssid-create": ("SSID creation", "POST", self._v1(f"sites/{quoted[0]}/wireless-network/wlans/{quoted[1]}/ssids")),
             "ssid-update": ("SSID update", "PATCH", self._v1(f"sites/{quoted[0]}/wireless-network/wlans/{quoted[1]}/ssids/{quoted[2]}/update-basic-config")),
         }
@@ -910,9 +910,22 @@ def apply(
         profile = snapshot.profiles_by_name.get(profile_name)
         if profile is None:
             raise SafeError("desired profile disappeared before port assignment")
+        port = snapshot.ports[int(action.target)]
+        # The controller's profile-only PUT currently fails name validation.
+        # PATCH preserves the port's physical settings while following the
+        # selected profile for both general policy and VLAN membership.
+        payload = {
+            "name": _string(port.get("portName"), "port name"),
+            "profileId": _profile_id(profile),
+            "profileOverrideEnable": False,
+            "profileVlanOverrideEnable": False,
+            "linkSpeed": _integer(port.get("linkSpeed"), "port speed"),
+            "duplex": _integer(port.get("duplex"), "port duplex"),
+            "tagIds": port.get("tagIds", []),
+        }
         api.write(
             "port-assign", (snapshot.site_id, desired.switch_mac, action.target),
-            {"profileId": _profile_id(profile)},
+            payload,
         )
 
     for action in wireless:

@@ -120,6 +120,8 @@ class FakeApi:
             1: {"profileId": "p-ccr", "profileName": "infra-ccr-trunk"},
             2: {"profileId": "p-trusted", "profileName": "infra-trusted-access"},
             3: {"profileId": "p-management", "profileName": "infra-management-access"},
+            4: {"profileId": "p-iot", "profileName": "infra-iot-access"},
+            5: {"profileId": "p-iot", "profileName": "infra-iot-access"},
             6: {"profileId": "p-ap", "profileName": "infra-ap-trunk"},
             8: {"profileId": "p-iot", "profileName": "infra-iot-access"},
             9: {"profileId": "p-crs", "profileName": "infra-crs-trunk"},
@@ -175,6 +177,8 @@ class FakeApi:
                 {
                     "switchMac": "98-25-4A-CB-BF-BE",
                     "switchName": "98-25-4A-CB-BF-BE", "port": number,
+                    "portName": f"Port{number}", "linkSpeed": 0, "duplex": 0,
+                    "tagIds": [],
                     "profileOverrideEnable": False, **state,
                 }
                 for number, state in self.ports.items()
@@ -297,6 +301,20 @@ class ReconcilerTests(unittest.TestCase):
         self.assertIn(("create_profile", "infra-trusted-access"), self.api.calls)
         self.assertIn(("assign_profile", 2), self.api.calls)
         self.assertTrue(all(action.operation == "noop" for action in self.plan()))
+
+    def test_port_assignment_preserves_name_speed_duplex_and_tags(self) -> None:
+        self.api.ports[4] = {
+            "profileId": "p-all", "profileName": "All", "portName": "Zigbee radio",
+            "linkSpeed": 2, "duplex": 2, "tagIds": ["operator-label"],
+        }
+        with mock.patch.object(self.api, "write", wraps=self.api.write) as write:
+            self.assertEqual(self.reconcile(), 1)
+        assignment = next(call for call in write.call_args_list if call.args[0] == "port-assign")
+        self.assertEqual(assignment.args[2], {
+            "name": "Zigbee radio", "profileId": "p-iot",
+            "profileOverrideEnable": False, "profileVlanOverrideEnable": False,
+            "linkSpeed": 2, "duplex": 2, "tagIds": ["operator-label"],
+        })
 
     def test_workstation_profile_disables_stp_and_clears_subordinate_policy(self) -> None:
         trusted = next(

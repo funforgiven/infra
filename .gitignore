@@ -22,3 +22,4 @@
 /secrets/*.pem
 __pycache__/
 before-infra-*.rsc
+secrets/home-assistant-token.local

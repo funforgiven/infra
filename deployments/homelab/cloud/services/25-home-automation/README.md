@@ -13,8 +13,8 @@ ports and security groups are explicitly retired by the services-hosts root.
 | Home Assistant Container | 2026.9.2 | Frontend, automations and integration configuration |
 | Matter.js Server | 1.4.0 | Matter controller and persistent fabric identity; matches the current official HA app's base image |
 | Eclipse Mosquitto | 2.1.2 | Authenticated local MQTT broker with per-user topic ACLs |
-| Zigbee2MQTT | 2.14.1 | Ember coordinator over Ethernet; disabled until a dongle address is configured |
-| OpenThread Border Router | ownbee v0.3.0 | Optional TCP-connected Thread RCP; zero replicas until hardware is configured |
+| Zigbee2MQTT | 2.14.1 | Ember coordinator over Ethernet at `10.21.50.20` |
+| OpenThread Border Router | ownbee v0.3.0 | TCP-connected Thread RCP at `10.21.50.21` |
 
 Every image is pinned by digest. The main StatefulSet contains HA, Matter,
 Mosquitto, Zigbee2MQTT and a backup/metrics sidecar. They share one network
@@ -112,7 +112,26 @@ policy admits HTTP only from Envoy. Subsequent HTTP changes use HA's UI and its
 confirmation/rollback mechanism. The initializer never overwrites existing
 configuration, network identities or user state.
 
-## Activate Zigbee later
+## Radio inventory
+
+| Role | Omada PoE port | Reserved IPv4 | Ethernet MAC | mDNS name |
+| --- | --- | --- | --- | --- |
+| Zigbee coordinator | 4 | `10.21.50.20` | `20:E7:C8:CC:25:8B` | `home-zigbee.local` |
+| Thread RCP | 5 | `10.21.50.21` | `20:E7:C8:CD:0D:8F` | `home-thread.local` |
+
+Both ports use `infra-iot-access` (VLAN 50). DHCP reservations are owned by
+`network-inventory.yaml`; the dongles use DHCP, not Smart IP. Both run SONOFF
+stable ESP32 firmware 1.0.10. The Zigbee radio runs stock coordinator firmware
+1.0.0 / Ember 7.4.5; Thread runs stock RCP 1.0.0 / OpenThread SDK 2.4.5.
+Automatic firmware updates are disabled. No USB connection is required.
+
+Unique web passwords are encrypted for the administrator in
+`secrets/home-automation-radios.yaml`. The operator-provided HA token is encrypted
+in `secrets/home-assistant.yaml`; it is not deployed into the cluster. The
+ignored `secrets/home-assistant-token.local` input is removed after enrollment.
+These credentials are separate from Flux's application credentials.
+
+## Zigbee coordinator
 
 Use one Dongle-M in **Zigbee coordinator** mode, with Ethernet, stable power and
 a DHCP reservation or static address on VLAN 50. Zigbee router mode is for mesh
@@ -134,11 +153,10 @@ PAN ID and extended PAN ID are generated once and retained on the state PVC.
 Never replace an initialized configuration with a new `GENERATE` configuration.
 Mesh routers can be added later without changing the Kubernetes infrastructure.
 
-## Activate Thread later
+## Thread border router
 
-The optional `thread.yaml` StatefulSet starts with **zero replicas**. Set the
-second Dongle-M's fixed TCP endpoint in `thread.env`, set replicas to one, and
-commit after it runs Thread RCP firmware. `DEVICE=/tmp/ttyOTBR` is the
+The `thread.yaml` StatefulSet runs one instance. `thread.env` connects to the
+second Dongle-M at `10.21.50.21:6638`, using 115200 baud and no flow control. `DEVICE=/tmp/ttyOTBR` is the
 container's TCP-to-PTY bridge, not a host USB device. Automatic firmware flashing
 and NAT64 are disabled. The community OTBR container and network RCP path must
 be qualified against the actual hardware before relying on Thread automations.
