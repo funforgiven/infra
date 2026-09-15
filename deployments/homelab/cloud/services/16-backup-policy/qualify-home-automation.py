@@ -52,20 +52,11 @@ if latest.get('status', {}).get('phase') != 'Completed':
 if 'home-automation' not in latest['spec']['includedNamespaces']:
     raise SystemExit('Latest backup predates automation backup enrollment')
 
-for resource, name in [('pods', 'home-assistant-0'), ('persistentvolumeclaims', 'automation-backups')]:
+for resource, name in [('pods', 'home-assistant-0'), ('persistentvolumeclaims', 'automation-backups'),
+                       ('persistentvolumeclaims', 'automation-state')]:
     path = f'/api/v1/namespaces/{namespace}/{resource}/{name}'
     request('DELETE', path, {'propagationPolicy': 'Foreground'}, missing_ok=True)
     wait_for(lambda: request('GET', path, missing_ok=True) is None, seconds=600)
-
-# Precreate only scratch storage. Velero's Pod action discovers the original
-# pod's PVCs before resource modifiers run; explicitly exclude those resources
-# so it can never recreate or bind the production state claim in this namespace.
-request('POST', f'/api/v1/namespaces/{namespace}/persistentvolumeclaims', {
-    'apiVersion': 'v1', 'kind': 'PersistentVolumeClaim',
-    'metadata': {'name': 'automation-backups', 'namespace': namespace},
-    'spec': {'accessModes': ['ReadWriteOnce'], 'storageClassName': 'automation-restore',
-             'resources': {'requests': {'storage': '20Gi'}}},
-})
 
 restore_name = os.environ['JOB_NAME']
 restore = {
@@ -75,8 +66,10 @@ restore = {
     'spec': {
         'backupName': latest['metadata']['name'],
         'includedNamespaces': ['home-automation'],
-        'includedResources': ['pods'],
-        'excludedResources': ['persistentvolumeclaims', 'persistentvolumes'],
+        # Velero 1.18 requires both PV/PVC resource types in its filter before
+        # starting filesystem restores. Cluster resources remain disabled;
+        # PVC modifiers clear original bindings and select new scratch storage.
+        'includedResources': ['pods', 'persistentvolumeclaims', 'persistentvolumes'],
         'labelSelector': {'matchLabels': {'backup.fahrican.com/verify': 'automation'}},
         'includeClusterResources': False,
         'namespaceMapping': {'home-automation': namespace}, 'restorePVs': True,
@@ -101,11 +94,18 @@ def verified():
     pod = request('GET', f'/api/v1/namespaces/{namespace}/pods/home-assistant-0', missing_ok=True)
     if not pod:
         return False
+    if pod['metadata'].get('labels', {}).get('velero.io/restore-name') != restore_name:
+        raise RuntimeError('Verifier belongs to another restore')
     spec = pod['spec']
     if spec.get('hostNetwork') or spec.get('hostPID') or spec.get('automountServiceAccountToken'):
         raise RuntimeError('Restore isolation contract violated')
     if pod['metadata'].get('annotations', {}).get('k8s.v1.cni.cncf.io/networks'):
         raise RuntimeError('Restored verifier has a secondary network')
+    if [c['name'] for c in spec['containers']] != ['backup']:
+        raise RuntimeError('Unexpected application container in restored verifier')
+    claims = [v['persistentVolumeClaim']['claimName'] for v in spec['volumes'] if 'persistentVolumeClaim' in v]
+    if claims != ['automation-backups']:
+        raise RuntimeError('Unexpected persistent storage in restored verifier')
     phase = pod.get('status', {}).get('phase')
     if phase == 'Failed':
         raise RuntimeError('Offline archive verification failed')
@@ -113,4 +113,12 @@ def verified():
 
 
 wait_for(verified, seconds=900)
+# Pod dependencies are discovered before its volumes are rewritten. The state
+# claim is therefore an unmounted placeholder; it must never provision or bind.
+state_path = f'/api/v1/namespaces/{namespace}/persistentvolumeclaims/automation-state'
+state_claim = request('GET', state_path, missing_ok=True)
+if state_claim:
+    if state_claim['spec'].get('volumeName') or state_claim.get('status', {}).get('phase') == 'Bound':
+        raise RuntimeError('The excluded state placeholder unexpectedly bound a volume')
+    request('DELETE', state_path, {'propagationPolicy': 'Foreground'})
 print('Verified automation recovery from B2 backup ' + latest['metadata']['name'])
