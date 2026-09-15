@@ -1,4 +1,5 @@
 import importlib.util
+from contextlib import closing
 import io
 import json
 import os
@@ -11,6 +12,7 @@ import tempfile
 import threading
 import time
 import unittest
+import yaml
 
 ROOT = Path(__file__).resolve().parents[5]
 SOURCE = ROOT / 'deployments/homelab/cloud/services/25-home-automation'
@@ -35,7 +37,7 @@ class RecoveryTests(unittest.TestCase):
         (ha / 'configuration.yaml').write_text('default_config:\n')
         (self.state / 'zigbee2mqtt/configuration.yaml').write_text('version: 5\n')
         (self.state / 'matter/fabric.json').write_text('{"fabric": "preserved"}')
-        with sqlite3.connect(ha / 'home-assistant_v2.db') as connection:
+        with closing(sqlite3.connect(ha / 'home-assistant_v2.db')) as connection, connection:
             connection.execute('CREATE TABLE states (state TEXT)')
             connection.execute("INSERT INTO states VALUES ('on')")
 
@@ -101,6 +103,22 @@ class RecoveryTests(unittest.TestCase):
         with self.assertRaises(sqlite3.DatabaseError):
             self.snapshot()
         self.assertFalse((self.control / 'pause').exists())
+
+
+class VolumeSelectionTests(unittest.TestCase):
+    def test_velero_default_filesystem_mode_copies_only_the_verified_archive(self):
+        # Velero's cluster-wide opt-out mode includes emptyDir volumes too.
+        # Derive selection from the pod volumes so new runtime volumes must be
+        # excluded explicitly rather than silently entering offsite backups.
+        for filename in ('workload.yaml', 'thread.yaml'):
+            documents = list(yaml.safe_load_all((SOURCE / filename).read_text()))
+            workload = next(item for item in documents if item['kind'] == 'StatefulSet')
+            template = workload['spec']['template']
+            excluded = set(template['metadata']['annotations']['backup.velero.io/backup-volumes-excludes'].split(','))
+            selected = {volume['name'] for volume in template['spec']['volumes']
+                        if volume['name'] not in excluded
+                        and not {'hostPath', 'configMap', 'secret', 'projected'}.intersection(volume)}
+            self.assertEqual({'backups'}, selected, filename)
 
 
 class SupervisorTests(unittest.TestCase):
