@@ -106,6 +106,19 @@ data:
       - operation: move
         from: /automationRestoreHelper
         path: /spec/initContainers/0
+      # Velero inherits the source container's security context, including
+      # OTBR's privilege. The filesystem restore helper needs none of it.
+      - operation: add
+        path: /spec/initContainers/0/securityContext
+        value: |-
+          {
+            "runAsNonRoot": true,
+            "runAsUser": 1000,
+            "runAsGroup": 1000,
+            "allowPrivilegeEscalation": false,
+            "readOnlyRootFilesystem": true,
+            "capabilities": {"drop": ["ALL"]}
+          }
       - operation: add
         path: /metadata/annotations
         value: '{}'
@@ -211,6 +224,19 @@ data:
       - operation: move
         from: /automationRestoreHelper
         path: /spec/initContainers/0
+      # Velero inherits the source container's security context, including
+      # OTBR's privilege. The filesystem restore helper needs none of it.
+      - operation: add
+        path: /spec/initContainers/0/securityContext
+        value: |-
+          {
+            "runAsNonRoot": true,
+            "runAsUser": 1000,
+            "runAsGroup": 1000,
+            "allowPrivilegeEscalation": false,
+            "readOnlyRootFilesystem": true,
+            "capabilities": {"drop": ["ALL"]}
+          }
       - operation: add
         path: /metadata/annotations
         value: '{}'
