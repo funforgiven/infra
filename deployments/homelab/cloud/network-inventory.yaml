@@ -404,6 +404,14 @@ all:
               mac_address: EC:B5:FA:8E:DB:63
               address: 10.21.50.121
               server: dhcp-iot
+            - comment: "infra: Dongle-M Zigbee coordinator"
+              mac_address: 20:E7:C8:CC:25:8B
+              address: 10.21.50.20
+              server: dhcp-iot
+            - comment: "infra: Dongle-M Thread RCP"
+              mac_address: 20:E7:C8:CD:0D:8F
+              address: 10.21.50.21
+              server: dhcp-iot
             - comment: "infra: PiKVM ricotta"
               mac_address: 2C:CF:67:9D:A2:F7
               address: 10.21.90.3

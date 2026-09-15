@@ -51,6 +51,8 @@ switch:
     1: infra-ccr-trunk
     2: infra-trusted-access
     3: infra-management-access
+    4: infra-iot-access # Dongle-M Zigbee coordinator
+    5: infra-iot-access # Dongle-M Thread RCP
     6: infra-ap-trunk
     8: infra-iot-access
     9: infra-crs-trunk

@@ -67,7 +67,7 @@ metadata:
   name: openthread-border-router
   namespace: home-automation
 spec:
-  replicas: 0
+  replicas: 1
   serviceName: openthread-border-router
   selector:
     matchLabels:
