@@ -33,8 +33,8 @@ spec:
           curl --fail --silent --show-error --location --retry 3 -o plugins.tgz \
             https://github.com/containernetworking/plugins/releases/download/v1.9.1/cni-plugins-linux-amd64-v1.9.1.tgz
           printf '%s  %s\n' b98f74a0f8522f0a83867178729c1aa70f2158f90c45a2ca8fa791db1c76b303 plugins.tgz | sha256sum -c -
-          tar -xzf plugins.tgz ./ipvlan ./static ./tuning
-          for plugin in ipvlan static tuning; do
+          tar -xzf plugins.tgz ./ipvlan ./macvlan ./static ./tuning
+          for plugin in ipvlan macvlan static tuning; do
             cp "$plugin" "/host-cni/$plugin.automation-new"
             chmod 0755 "/host-cni/$plugin.automation-new"
             mv -f "/host-cni/$plugin.automation-new" "/host-cni/$plugin"

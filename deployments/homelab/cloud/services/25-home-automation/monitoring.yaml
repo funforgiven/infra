@@ -13,6 +13,20 @@ spec:
       scrapeTimeout: 15s
 ---
 apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: openthread-border-router
+  namespace: home-automation
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: openthread-border-router
+  endpoints:
+    - port: metrics
+      interval: 60s
+      scrapeTimeout: 15s
+---
+apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: home-automation
@@ -79,3 +93,19 @@ spec:
             severity: warning
           annotations:
             summary: An automation container is repeatedly restarting.
+        - alert: HomeAutomationThreadDetached
+          expr: home_automation_thread_attached == 0 or absent(home_automation_thread_attached)
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: The Thread border router is not attached to its mesh.
+        - alert: HomeAutomationThreadBackupStale
+          expr: >-
+            time() - home_automation_thread_backup_last_success_timestamp_seconds > 100800
+            or absent(home_automation_thread_backup_last_success_timestamp_seconds)
+          for: 30m
+          labels:
+            severity: critical
+          annotations:
+            summary: No verified Thread recovery archive exists within 28 hours.

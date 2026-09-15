@@ -123,45 +123,50 @@ class VolumeSelectionTests(unittest.TestCase):
             self.assertEqual({'backups'}, selected, filename)
 
     def test_restore_preserves_velero_helper_and_removes_application_access(self):
-        documents = list(yaml.safe_load_all((SOURCE / 'workload.yaml').read_text()))
-        original = next(item for item in documents if item['kind'] == 'StatefulSet')['spec']['template']
-        modifiers = list(yaml.safe_load_all((SOURCE.parent / '16-backup-policy/home-automation-restore.yaml').read_text()))
-        rule = yaml.safe_load(modifiers[0]['data']['resource-modifiers.yaml'])['resourceModifierRules'][0]
-        operations = []
-        for patch in rule['patches']:
-            operation = {'op': patch['operation'], 'path': patch['path']}
-            if 'from' in patch:
-                operation['from'] = patch['from']
-            if 'value' in patch:
-                value = patch['value']
-                operation['value'] = json.loads(value) if value.startswith(('{', '[')) else value
-            operations.append(operation)
-        for owner_present in (False, True):
-            pod = copy.deepcopy(original)
-            pod['spec']['nodeName'] = 'production-worker'
-            if owner_present:
-                pod['metadata']['ownerReferences'] = [{'kind': 'StatefulSet', 'name': 'home-assistant', 'uid': 'old'}]
-            helper = {'name': 'restore-wait', 'image': 'velero', 'args': [f'restore-{owner_present}'],
-                      'volumeMounts': [{'name': 'backups', 'mountPath': '/restores/backups'}]}
-            pod['spec']['initContainers'].insert(0, copy.deepcopy(helper))
-            # Velero parses its string patch values afresh for each object.
-            restored = jsonpatch.JsonPatch(copy.deepcopy(operations)).apply(pod)
-            self.assertEqual([helper], restored['spec']['initContainers'])
-            self.assertEqual(['backup'], [c['name'] for c in restored['spec']['containers']])
-            self.assertEqual({}, restored['metadata']['annotations'])
-            self.assertEqual([], restored['metadata']['ownerReferences'])
-            self.assertFalse(restored['spec']['automountServiceAccountToken'])
-            self.assertFalse(restored['spec'].get('hostNetwork'))
-            self.assertNotIn('nodeName', restored['spec'])
-            self.assertNotIn('automationRestoreHelper', restored)
-            claims = [v['persistentVolumeClaim']['claimName'] for v in restored['spec']['volumes'] if 'persistentVolumeClaim' in v]
-            self.assertEqual(['automation-backups'], claims)
+        for filename, pod_name, prefix in [('workload.yaml', 'home-assistant-0', 'automation'),
+                                           ('thread.yaml', 'openthread-border-router-0', 'thread')]:
+            documents = list(yaml.safe_load_all((SOURCE / filename).read_text()))
+            original = next(item for item in documents if item['kind'] == 'StatefulSet')['spec']['template']
+            modifiers = list(yaml.safe_load_all((SOURCE.parent / '16-backup-policy/home-automation-restore.yaml').read_text()))
+            rules = yaml.safe_load(modifiers[0]['data']['resource-modifiers.yaml'])['resourceModifierRules']
+            rule = next(r for r in rules if r['conditions'].get('resourceNameRegex') == f'^{pod_name}$')
+            operations = []
+            for patch in rule['patches']:
+                operation = {'op': patch['operation'], 'path': patch['path']}
+                if 'from' in patch:
+                    operation['from'] = patch['from']
+                if 'value' in patch:
+                    value = patch['value']
+                    operation['value'] = json.loads(value) if value.startswith(('{', '[')) else value
+                operations.append(operation)
+            for owner_present in (False, True):
+                pod = copy.deepcopy(original)
+                pod['spec']['nodeName'] = 'production-worker'
+                if owner_present:
+                    pod['metadata']['ownerReferences'] = [{'kind': 'StatefulSet', 'name': 'home-assistant', 'uid': 'old'}]
+                helper = {'name': 'restore-wait', 'image': 'velero', 'args': [f'restore-{owner_present}'],
+                          'volumeMounts': [{'name': 'backups', 'mountPath': '/restores/backups'}]}
+                pod['spec']['initContainers'].insert(0, copy.deepcopy(helper))
+                # Velero parses its string patch values afresh for each object.
+                restored = jsonpatch.JsonPatch(copy.deepcopy(operations)).apply(pod)
+                self.assertEqual([helper], restored['spec']['initContainers'])
+                self.assertEqual(['backup'], [c['name'] for c in restored['spec']['containers']])
+                self.assertEqual({}, restored['metadata']['annotations'])
+                self.assertEqual([], restored['metadata']['ownerReferences'])
+                self.assertFalse(restored['spec']['automountServiceAccountToken'])
+                self.assertFalse(restored['spec'].get('hostNetwork'))
+                self.assertNotIn('nodeName', restored['spec'])
+                self.assertNotIn('automationRestoreHelper', restored)
+                claims = [v['persistentVolumeClaim']['claimName'] for v in restored['spec']['volumes'] if 'persistentVolumeClaim' in v]
+                self.assertEqual([prefix + '-backups'], claims)
+                self.assertFalse(any('hostPath' in v for v in restored['spec']['volumes']))
+                self.assertFalse(any(c.get('securityContext', {}).get('privileged') for c in restored['spec']['containers']))
 
     def test_restore_claims_never_keep_production_volume_bindings(self):
         documents = list(yaml.safe_load_all((SOURCE.parent / '16-backup-policy/home-automation-restore.yaml').read_text()))
         rules = yaml.safe_load(documents[0]['data']['resource-modifiers.yaml'])['resourceModifierRules']
         rule = next(item for item in rules if item['conditions']['groupResource'] == 'persistentvolumeclaims')
-        for name in ('automation-state', 'automation-backups'):
+        for name in ('automation-state', 'automation-backups', 'thread-state', 'thread-backups'):
             for bound in (False, True):
                 claim = {'metadata': {'name': name, 'annotations': {'volume.kubernetes.io/selected-node': 'production-worker'}},
                          'spec': {'storageClassName': 'rbd1'}}
