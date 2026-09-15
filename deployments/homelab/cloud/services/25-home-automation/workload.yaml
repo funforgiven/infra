@@ -40,7 +40,7 @@ spec:
       annotations:
         k8s.v1.cni.cncf.io/networks: '[{"name":"automation-lan","interface":"net1"}]'
         backup.velero.io/backup-volumes: backups
-        backup.velero.io/backup-volumes-excludes: state
+        backup.velero.io/backup-volumes-excludes: state,runtime,control,ha-tmp,matter-tmp,zigbee-tmp,backup-tmp
         pre.hook.backup.velero.io/command: '["python", "/bootstrap/backup.py", "--once"]'
         pre.hook.backup.velero.io/container: backup
         pre.hook.backup.velero.io/on-error: Fail
