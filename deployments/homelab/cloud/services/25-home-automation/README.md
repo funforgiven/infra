@@ -271,14 +271,59 @@ The live deployment passed these checks before handover:
   include archive corruption, SQLite integrity, backup failure recovery, restore
   helper preservation and removal of production PVC bindings.
 
-This qualifies infrastructure and archive recovery with the initially empty HA
-installation. Zigbee pairing, the TCP Thread RCP, OTBR dataset recovery and
-Matter-over-Thread commissioning still require the physical radios and devices.
+This initial qualification covered the deployment before radio activation.
+The hardware qualification below extends it to the connected dongles.
+
+## Radio qualification — 2026-09-16
+
+- Both Dongle-M devices are configured over PoE/Ethernet, with unique encrypted
+  passwords, disabled setup hotspots, DHCP reservations and serial allowlists.
+- Zigbee2MQTT connected to Ember 7.4.5, generated its persistent coordinator
+  backup, and reported online through MQTT discovery. Pairing remains closed.
+  The HTTPS frontend works; an invalid frontend token is rejected with 4401.
+- MQTT, Matter, Thread and OTBR integrations are loaded in HA. `Rooftrollen`
+  on Thread channel 25 is preferred; HA discovery is limited to `net1`.
+- The original ipvlan attachment passed host-address tests but dropped routed
+  Thread traffic. Both attachments now use macvlan bridge mode. HA and a probe
+  on another prepared worker learned OTBR's IPv6 route and reached its Thread
+  address with three replies out of three. The Thread prefix and dataset
+  survived the network migration and the backup pause/resume cycle.
+- The main pod has five ready containers and OTBR has two, with zero restarts.
+  Prometheus scrapes both, reports MQTT/Matter/Thread healthy, and has no active
+  home-automation alerts after the backup pause clears.
+- From IoT, HA ports 8123/1883/5580/8080/9000 and OTBR's API are blocked.
+  Onboarding and Zigbee administration via HTTPS return 403. The temporary
+  network probes and attachments are removed.
+- B2 backup `home-automation-radios-20260916a` completed at 21:13 UTC on September
+  15 (00:13 Istanbul on September 16). Its two PodVolumeBackups contain
+  1,470,247 bytes for HA and 993 bytes for Thread, using the existing encrypted
+  `fahrican-cloud-recovery/services/kubernetes` destination.
+- Restore `home-automation-restore-20260916b` completed at 21:22 UTC September
+  15 (00:22 Istanbul September 16), downloading both archives in full. Both
+  restricted offline verifiers succeeded, including native Thread state and
+  dataset checks. Unmounted state placeholders were removed. The failed
+  diagnostic restore/job were removed after this successful rerun.
+- All cloud configuration checks and 12 recovery tests passed, including
+  corrupt/truncated Thread datasets, unsafe archives, and removal of OTBR's
+  privileges from Velero's filesystem restore helper.
+
+End-device Zigbee pairing and Matter-over-Thread commissioning remain to be
+performed when devices are available. Before Matter commissioning, connect the
+phone to `Rooftrollen_IoT` and sync the preferred Thread credentials:
+
+- Android: Companion app → Settings → Companion app → Troubleshooting →
+  **Sync Thread credentials**.
+- iPhone: Settings → Devices & services → Thread → Configure →
+  **Send credentials to phone** under the preferred network.
+
+Then use the Companion app to add a Matter device. These phone-side steps are
+required even though HA already stores and prefers the network.
 
 ## Sources
 
 - [Home Assistant Container](https://www.home-assistant.io/installation/linux#install-home-assistant-container)
 - [HA HTTP settings](https://www.home-assistant.io/integrations/http/)
+- [Thread credential synchronization](https://www.home-assistant.io/integrations/thread/)
 - [Matter requirements](https://www.home-assistant.io/integrations/matter/)
 - [Official Matter app image selection](https://github.com/home-assistant/addons/blob/master/matter_server/build.yaml)
 - [Matter.js container options](https://github.com/matter-js/matterjs-server/blob/v1.4.0/docs/docker.md)
