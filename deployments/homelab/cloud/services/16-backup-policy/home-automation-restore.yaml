@@ -8,22 +8,17 @@ data:
     version: v1
     resourceModifierRules:
     - conditions:
-        groupResource: persistentvolumeclaims
-        resourceNameRegex: ^automation-backups$
-        namespaces:
-        - home-automation
-      patches:
-      - operation: remove
-        path: /spec/volumeName
-      - operation: replace
-        path: /spec/storageClassName
-        value: automation-restore
-    - conditions:
         groupResource: pods
         resourceNameRegex: ^home-assistant-0$
         namespaces:
         - home-automation
       patches:
+      - operation: test
+        path: /spec/initContainers/0/name
+        value: restore-wait
+      - operation: move
+        from: /spec/initContainers/0
+        path: /automationRestoreHelper
       - operation: replace
         path: /spec
         value: |-
@@ -105,13 +100,18 @@ data:
                   "sizeLimit": "20Gi"
                 }
               }
-            ]
+            ],
+            "initContainers": []
           }
-      - operation: replace
+      - operation: move
+        from: /automationRestoreHelper
+        path: /spec/initContainers/0
+      - operation: add
         path: /metadata/annotations
         value: '{}'
-      - operation: remove
+      - operation: add
         path: /metadata/ownerReferences
+        value: '[]'
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -201,6 +201,12 @@ rules:
   verbs:
   - get
   - delete
+- apiGroups:
+  - ''
+  resources:
+  - persistentvolumeclaims
+  verbs:
+  - create
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
