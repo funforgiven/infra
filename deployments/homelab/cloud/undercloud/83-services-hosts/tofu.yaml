@@ -13,15 +13,6 @@ spec:
   sourceRef:
     kind: GitRepository
     name: services-tofu-source
-  vars:
-    # Active NixOS boot-volume revision. Changing it replaces protected roots,
-    # so prepare credentials and recovery first.
-    - name: image_revision
-      value: "80ab8bcb18b757363d31317d61d8950b26271a6f"
-    # Keep NixOS until HAOS can restore the encrypted native backup and its
-    # pinned image is available.
-    - name: home_assistant_platform
-      value: nixos
   runnerPodTemplate:
     spec:
       envFrom:
@@ -30,7 +21,6 @@ spec:
   writeOutputsToSecret:
     name: services-hosts-outputs
     outputs:
-      - home_assistant_private_address
-      - home_assistant_provider_address
+      - iot_network_id
   remediation:
     retries: 3

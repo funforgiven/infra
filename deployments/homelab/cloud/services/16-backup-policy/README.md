@@ -1,7 +1,7 @@
 # Backup and restore
 
 Velero backs up the services cluster with Kopia filesystem backups. The policy
-covers the `backup-qualification`, `finance`, `games`, `media`, and
+covers the `backup-qualification`, `finance`, `forge`, `games`, `home-automation`, `media`, and
 `services-databases` namespaces. Volume snapshots are not used.
 
 ## Schedules
@@ -30,6 +30,14 @@ the filesystem copy of the live `wallos.db`; see the
 Wallos PVCs during an isolated namespace-mapped restore. Exclude the live route,
 workload, Secret, and NetworkPolicy resources so the restored financial data
 cannot start a writer, receive traffic, contact ZITADEL, or send notifications.
+
+Home automation uses a coordinated recovery archive instead of live database
+copies. The backup hook gracefully stops its writers, archives their complete
+state, resumes them, and validates file hashes and SQLite integrity. The monthly
+`home-automation-restore` CronJob downloads the newest daily archive into an
+isolated namespace and executes only the offline verifier. It cannot start
+Home Assistant, MQTT, Zigbee or Matter. See the [automation runbook](../25-home-automation/README.md)
+for the separate Thread dataset and activation requirements.
 
 ## Run and inspect a backup
 

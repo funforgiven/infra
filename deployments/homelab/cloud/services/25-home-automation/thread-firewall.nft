@@ -1,0 +1,17 @@
+table inet automation_thread {
+  chain input {
+    type filter hook input priority -10; policy accept;
+    iifname "net1" ct state established,related accept
+    iifname "net1" meta l4proto ipv6-icmp accept
+    iifname "net1" meta nfproto ipv6 meta l4proto udp accept
+    iifname "net1" udp dport 5353 accept
+    iifname "net1" ip saddr 10.21.50.10 tcp dport 8081 accept
+    iifname "net1" drop
+  }
+  chain forward {
+    type filter hook forward priority -10; policy accept;
+    # Thread only forwards to its IoT backbone; never into the cluster overlay.
+    iifname "wpan0" oifname != "net1" drop
+    iifname "eth0" oifname "wpan0" drop
+  }
+}

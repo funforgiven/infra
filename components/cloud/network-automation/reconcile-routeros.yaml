@@ -296,6 +296,7 @@
       tags:
         - never
         - apply
+        - provider-vlans
 
     - name: Assert every reconciled bond and tagged bridge-port configuration
       community.routeros.command:
@@ -509,9 +510,9 @@
             item.in_interface_list ==
             routeros_provider_network.wan_interface_list
           - item.protocol in ['tcp', 'udp']
-          - item.destination_port is match('^[0-9]+$')
+          - item.destination_port is match('^[0-9]+(-[0-9]+)?$')
           - item.to_address | length > 0
-          - item.to_port is match('^[0-9]+$')
+          - item.to_port is match('^[0-9]+(-[0-9]+)?$')
         fail_msg: "Invalid WAN port forward: {{ item.comment | default('unnamed') }}"
       loop: "{{ routeros_port_forwards }}"
       loop_control:
@@ -532,9 +533,9 @@
             item.excluded_destination_address_list ==
             routeros_provider_network.nat_address_list
           - item.protocol in ['tcp', 'udp']
-          - item.destination_port is match('^[0-9]+$')
+          - item.destination_port is match('^[0-9]+(-[0-9]+)?$')
           - item.to_address | length > 0
-          - item.to_port is match('^[0-9]+$')
+          - item.to_port is match('^[0-9]+(-[0-9]+)?$')
         fail_msg: "Invalid NAT reflection: {{ item.comment | default('unnamed') }}"
       loop: "{{ routeros_nat_reflections }}"
       loop_control:

@@ -1,0 +1,377 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: home-assistant
+  namespace: home-automation
+  labels:
+    app.kubernetes.io/name: home-assistant
+    app.kubernetes.io/part-of: home-automation
+spec:
+  selector:
+    app.kubernetes.io/name: home-assistant
+  ports:
+  - name: http
+    port: 8123
+    targetPort: http
+  - name: zigbee-ui
+    port: 8080
+    targetPort: zigbee-ui
+  - name: metrics
+    port: 9000
+    targetPort: metrics
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: home-assistant
+  namespace: home-automation
+spec:
+  replicas: 1
+  serviceName: home-assistant
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: home-assistant
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: home-assistant
+        app.kubernetes.io/part-of: home-automation
+        backup.fahrican.com/verify: automation
+      annotations:
+        k8s.v1.cni.cncf.io/networks: '[{"name":"automation-lan","interface":"net1"}]'
+        backup.velero.io/backup-volumes: backups
+        backup.velero.io/backup-volumes-excludes: state
+        pre.hook.backup.velero.io/command: '["python", "/bootstrap/backup.py", "--once"]'
+        pre.hook.backup.velero.io/container: backup
+        pre.hook.backup.velero.io/on-error: Fail
+        pre.hook.backup.velero.io/timeout: 5m
+    spec:
+      automountServiceAccountToken: false
+      nodeSelector:
+        fahrican.com.node-restriction.kubernetes.io/iot: 'true'
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: 120
+      initContainers:
+      - name: iot-firewall
+        image: docker.io/nicolaka/netshoot:v0.14@sha256:7f08c4aff13ff61a35d30e30c5c1ea8396eac6ab4ce19fd02d5a4b3b5d0d09a2
+        command:
+        - /bin/sh
+        - -ec
+        - |-
+          nft list table inet automation >/dev/null 2>&1 && nft delete table inet automation || true
+          nft -f /bootstrap/iot-firewall.nft
+        securityContext:
+          runAsUser: 0
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - NET_ADMIN
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: bootstrap
+          mountPath: /bootstrap
+          readOnly: true
+      - name: seed-config
+        image: docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4
+        command:
+        - python
+        - /bootstrap/bootstrap.py
+        securityContext: &id001
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: bootstrap
+          mountPath: /bootstrap
+          readOnly: true
+        - name: state
+          mountPath: /state
+        - name: runtime
+          mountPath: /runtime
+        - name: credentials
+          mountPath: /credentials
+          readOnly: true
+      - name: hash-mqtt-passwords
+        image: docker.io/eclipse-mosquitto:2.1.2-alpine@sha256:6f8d8a947c506f8a2290ec65cd4bd2bc7cb4d43fb5f6271f861cb013e2ef9797
+        command:
+        - mosquitto_passwd
+        - -U
+        - /runtime/mosquitto-passwords
+        securityContext: *id001
+        volumeMounts:
+        - name: runtime
+          mountPath: /runtime
+      containers:
+      - name: home-assistant
+        image: ghcr.io/home-assistant/home-assistant:2026.9.2@sha256:a1bc133af84ee6505fe2c266d9805b7c75b780dfdc188edfee3b11e8f3cd8efe
+        command:
+        - /bin/sh
+        - /bootstrap/run-service.sh
+        - home-assistant
+        - python
+        - -m
+        - homeassistant
+        - --config
+        - /config
+        env:
+        - &id002
+          name: TZ
+          value: Europe/Istanbul
+        securityContext: *id001
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: '2'
+            memory: 2Gi
+        volumeMounts:
+        - &id003
+          name: bootstrap
+          mountPath: /bootstrap
+          readOnly: true
+        - &id004
+          name: control
+          mountPath: /control
+        - name: state
+          mountPath: /config
+          subPath: home-assistant
+        - name: ha-tmp
+          mountPath: /tmp
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -ec
+            - test -f /control/home-assistant.running || test -f /control/home-assistant.paused
+          periodSeconds: 30
+          failureThreshold: 5
+        ports:
+        - name: http
+          containerPort: 8123
+        - name: zigbee-ui
+          containerPort: 8080
+        startupProbe:
+          httpGet:
+            path: /manifest.json
+            port: http
+          periodSeconds: 10
+          failureThreshold: 90
+        readinessProbe:
+          httpGet:
+            path: /manifest.json
+            port: http
+          periodSeconds: 10
+          failureThreshold: 3
+      - name: matter
+        image: ghcr.io/matter-js/matterjs-server:1.4.0@sha256:54232d0d3e7dff5a54759469d2753399270412b4c30c55b31750a4595e4cb236
+        command:
+        - /bin/sh
+        - /bootstrap/run-service.sh
+        - matter
+        - node
+        - --enable-source-maps
+        - /app/node_modules/matter-server/dist/esm/MatterServer.js
+        env:
+        - *id002
+        - name: STORAGE_PATH
+          value: /data
+        - name: LISTEN_ADDRESS
+          value: 127.0.0.1
+        - name: PRIMARY_INTERFACE
+          value: net1
+        - name: LOG_LEVEL
+          value: info
+        - name: ENABLE_TIME_SYNC
+          value: 'true'
+        securityContext: *id001
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: '1'
+            memory: 512Mi
+        volumeMounts:
+        - *id003
+        - *id004
+        - name: state
+          mountPath: /data
+          subPath: matter
+        - name: matter-tmp
+          mountPath: /tmp
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -ec
+            - test -f /control/matter.running || test -f /control/matter.paused
+          periodSeconds: 30
+          failureThreshold: 5
+      - name: mosquitto
+        image: docker.io/eclipse-mosquitto:2.1.2-alpine@sha256:6f8d8a947c506f8a2290ec65cd4bd2bc7cb4d43fb5f6271f861cb013e2ef9797
+        command:
+        - /bin/sh
+        - /bootstrap/run-service.sh
+        - mosquitto
+        - /usr/sbin/mosquitto
+        - -c
+        - /bootstrap/mosquitto.conf
+        env:
+        - *id002
+        securityContext: *id001
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 128Mi
+        volumeMounts:
+        - *id003
+        - *id004
+        - name: state
+          mountPath: /mosquitto/data
+          subPath: mosquitto
+        - name: runtime
+          mountPath: /runtime
+          readOnly: true
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -ec
+            - test -f /control/mosquitto.running || test -f /control/mosquitto.paused
+          periodSeconds: 30
+          failureThreshold: 5
+      - name: zigbee2mqtt
+        image: ghcr.io/koenkk/zigbee2mqtt:2.14.1@sha256:fef0de769dcd04c27b3a6d277b61046eb96284bdd4198dcb1687c3a01b3020f3
+        command:
+        - /bin/sh
+        - /bootstrap/run-service.sh
+        - zigbee2mqtt
+        - /bin/sh
+        - /bootstrap/start-zigbee.sh
+        env:
+        - *id002
+        securityContext: *id001
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 384Mi
+        volumeMounts:
+        - *id003
+        - *id004
+        - name: state
+          mountPath: /app/data
+          subPath: zigbee2mqtt
+        - name: credentials
+          mountPath: /credentials
+          readOnly: true
+        - name: zigbee-tmp
+          mountPath: /tmp
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -ec
+            - test -f /control/zigbee2mqtt.running || test -f /control/zigbee2mqtt.paused
+          periodSeconds: 30
+          failureThreshold: 5
+        envFrom:
+        - configMapRef:
+            name: automation-radios
+      - name: backup
+        image: docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4
+        command:
+        - python
+        - /bootstrap/backup.py
+        envFrom:
+        - configMapRef:
+            name: automation-radios
+        securityContext: *id001
+        ports:
+        - name: metrics
+          containerPort: 9000
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: metrics
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: metrics
+          periodSeconds: 30
+        resources:
+          requests:
+            cpu: 25m
+            memory: 64Mi
+          limits:
+            cpu: '1'
+            memory: 512Mi
+        volumeMounts:
+        - *id003
+        - *id004
+        - name: state
+          mountPath: /state
+        - name: backups
+          mountPath: /backups
+        - name: backup-tmp
+          mountPath: /tmp
+        - name: credentials
+          mountPath: /credentials
+          readOnly: true
+      volumes:
+      - name: bootstrap
+        configMap:
+          name: automation-bootstrap
+          defaultMode: 365
+      - name: credentials
+        secret:
+          secretName: automation-credentials
+          defaultMode: 288
+      - name: state
+        persistentVolumeClaim:
+          claimName: automation-state
+      - name: backups
+        persistentVolumeClaim:
+          claimName: automation-backups
+      - name: runtime
+        emptyDir:
+          medium: Memory
+          sizeLimit: 128Mi
+      - name: control
+        emptyDir:
+          medium: Memory
+          sizeLimit: 128Mi
+      - name: ha-tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 128Mi
+      - name: matter-tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 128Mi
+      - name: zigbee-tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 128Mi
+      - name: backup-tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 128Mi

@@ -114,6 +114,18 @@ metadata:
   name: home-automation
   labels:
     gateway.fahrican.com/services: allowed
+    # NET_ADMIN configures only Multus pod interfaces; OTBR needs /dev/net/tun.
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: home-automation-restore
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.35
 ---
 apiVersion: v1
 kind: Namespace

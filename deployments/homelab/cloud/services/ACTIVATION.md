@@ -6,8 +6,8 @@ Secret as a persistent change.
 
 This guide covers the remaining manual operations: enrolling or rotating
 provider credentials, reconciling provider-created values, initializing a new
-Restic repository, promoting host images, and completing the Home Assistant OS
-migration.
+Restic repository, promoting host images, and activating home automation
+radios.
 
 Run commands from the repository root in the flake-locked environment unless a
 procedure says otherwise.
@@ -252,54 +252,17 @@ prefix-restricted writer.
 
 ## Promote service-host images
 
-Image promotion requires a clean, SSH-signed commit and services-project
-OpenStack credentials:
+Image promotion now serves the native macOS runner host only. From a clean,
+SSH-signed commit:
 
 ```sh
-nix run .#promote-service-images
+nix run .#promote-service-images -- forge-macos
 ```
 
-The command builds and imports the Home Assistant NixOS image for the signed
-revision and verifies the pinned official HAOS image. Promotion does not change
-the revision or boot volume used by the running host. Make host replacement or
-volume cutover a separate reviewed change with a tested recovery path.
-
-Before changing host inputs, evaluate the repository and build the image locally:
-
-```sh
-nix flake check --no-build --accept-flake-config
-nix build .#home-assistant-openstack-image --no-link --accept-flake-config
-```
-
-## Home Assistant OS cutover
-
-The active selector remains `nixos` until all preparation and recovery checks
-below pass.
-
-1. Create a full encrypted native Home Assistant backup and download its
-   emergency kit.
-2. Restore that backup into an isolated HAOS instance and verify the integrations
-   and representative history required for recovery.
-3. Promote and verify the pinned HAOS image.
-4. Change `home_assistant_platform` to `haos` in
-   [`../undercloud/83-services-hosts/tofu.yaml`](../undercloud/83-services-hosts/tofu.yaml).
-   Review the plan: it must retain both fixed ports and both protected boot
-   volumes while replacing only the VM attachment.
-5. Restore the tested backup during HAOS onboarding.
-6. Configure the provider-LAN interface as `10.21.40.120/24` with a route to
-   `10.21.10.0/24` through `10.21.40.1`. The private services-network address is
-   supplied by Neutron DHCP.
-7. Configure forwarded headers for only `192.168.80.0/24`, confirm the pending
-   HTTP setting through `https://home.fahrican.com`, and verify local hardware
-   discovery.
-8. Configure encrypted daily native backups in the existing Backblaze bucket
-   under `services/hosts/home-assistant/` with the Home Assistant-specific key.
-9. Complete another isolated restore from a post-cutover backup.
-
-Keep the old NixOS root volume until the post-cutover restore succeeds. Retire
-the old volume and Restic configuration only in a separate change. The provider
-NIC, onboarding state, HTTP proxy setting, and UI-only integrations are appliance
-state; back them up after each accepted change.
+Home Assistant runs in Kubernetes with digest-pinned container images. The
+empty legacy appliance and its HAOS migration path are retired. Follow the
+[automation runbook](25-home-automation/README.md) for first-owner creation,
+MQTT and Matter integration setup, later radio activation, backups and recovery.
 
 ## Verification
 

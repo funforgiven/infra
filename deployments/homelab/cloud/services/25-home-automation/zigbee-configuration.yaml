@@ -1,0 +1,29 @@
+version: 5
+homeassistant:
+  enabled: true
+mqtt:
+  server: mqtt://127.0.0.1:1883
+  user: zigbee2mqtt
+  base_topic: zigbee2mqtt
+serial:
+  adapter: ember
+  baudrate: 115200
+  rtscts: false
+frontend:
+  enabled: true
+  port: 8080
+  host: 0.0.0.0
+  base_url: /zigbee2mqtt
+  url: https://home.fahrican.com/zigbee2mqtt/
+availability:
+  enabled: true
+advanced:
+  network_key: GENERATE
+  pan_id: GENERATE
+  ext_pan_id: GENERATE
+  channel: 20
+  log_level: info
+  log_output:
+    - console
+  cache_state: true
+  cache_state_persistent: true

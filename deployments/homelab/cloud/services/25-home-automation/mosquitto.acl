@@ -1,0 +1,14 @@
+user homeassistant
+topic readwrite homeassistant/#
+topic readwrite zigbee2mqtt/#
+
+user zigbee2mqtt
+topic readwrite zigbee2mqtt/#
+topic write homeassistant/#
+topic read homeassistant/status
+
+user monitoring
+topic read $SYS/#
+topic read zigbee2mqtt/bridge/state
+topic read zigbee2mqtt/bridge/health
+topic readwrite infra/healthcheck

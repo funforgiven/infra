@@ -82,8 +82,8 @@ at boot. It does not create or format an ESP.
 
 Netplan renders `bond0` as fast 802.3ad LACP with `min-links=1` and a
 layer-3+4 hash. It assigns host addresses to VLANs 20 and 30–32 and renders
-unnumbered `bond0.33` and `bond0.40` interfaces for the Manila and external
-provider bridges. The role discovers exactly two interfaces using the
+unnumbered `bond0.33`, `bond0.40` and `bond0.50` interfaces for the Manila,
+external and IoT provider bridges. The role discovers exactly two interfaces using the
 qualified `ice` driver and bonds Netplan's driver-matched group; kernel names,
 PCI slots, and permanent MAC addresses are not inventory identity.
 

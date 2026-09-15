@@ -1,0 +1,328 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: automation-restore-modifiers
+  namespace: velero
+data:
+  resource-modifiers.yaml: |
+    version: v1
+    resourceModifierRules:
+    - conditions:
+        groupResource: persistentvolumeclaims
+        resourceNameRegex: ^automation-backups$
+        namespaces:
+        - home-automation
+      patches:
+      - operation: remove
+        path: /spec/volumeName
+      - operation: replace
+        path: /spec/storageClassName
+        value: automation-restore
+    - conditions:
+        groupResource: pods
+        resourceNameRegex: ^home-assistant-0$
+        namespaces:
+        - home-automation
+      patches:
+      - operation: replace
+        path: /spec
+        value: |-
+          {
+            "automountServiceAccountToken": false,
+            "restartPolicy": "Never",
+            "securityContext": {
+              "fsGroup": 1000,
+              "seccompProfile": {
+                "type": "RuntimeDefault"
+              }
+            },
+            "containers": [
+              {
+                "name": "backup",
+                "image": "docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4",
+                "command": [
+                  "python",
+                  "/bootstrap/backup.py",
+                  "--verify",
+                  "/backups/home-automation.tar.gz"
+                ],
+                "securityContext": {
+                  "runAsNonRoot": true,
+                  "runAsUser": 1000,
+                  "runAsGroup": 1000,
+                  "allowPrivilegeEscalation": false,
+                  "readOnlyRootFilesystem": true,
+                  "capabilities": {
+                    "drop": [
+                      "ALL"
+                    ]
+                  }
+                },
+                "resources": {
+                  "requests": {
+                    "cpu": "25m",
+                    "memory": "64Mi"
+                  },
+                  "limits": {
+                    "cpu": "1",
+                    "memory": "512Mi"
+                  }
+                },
+                "volumeMounts": [
+                  {
+                    "name": "backups",
+                    "mountPath": "/backups",
+                    "readOnly": true
+                  },
+                  {
+                    "name": "bootstrap",
+                    "mountPath": "/bootstrap",
+                    "readOnly": true
+                  },
+                  {
+                    "name": "tmp",
+                    "mountPath": "/tmp"
+                  }
+                ]
+              }
+            ],
+            "volumes": [
+              {
+                "name": "backups",
+                "persistentVolumeClaim": {
+                  "claimName": "automation-backups"
+                }
+              },
+              {
+                "name": "bootstrap",
+                "configMap": {
+                  "name": "automation-recovery-tools"
+                }
+              },
+              {
+                "name": "tmp",
+                "emptyDir": {
+                  "sizeLimit": "20Gi"
+                }
+              }
+            ]
+          }
+      - operation: replace
+        path: /metadata/annotations
+        value: '{}'
+      - operation: remove
+        path: /metadata/ownerReferences
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: automation-restore
+provisioner: cinder.csi.openstack.org
+parameters:
+  type: rbd1
+  fstype: ext4
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all
+  namespace: home-automation-restore
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: home-automation-restore
+  namespace: backup-qualification
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: home-automation-restore
+  namespace: velero
+rules:
+- apiGroups:
+  - velero.io
+  resources:
+  - backups
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - velero.io
+  resources:
+  - restores
+  verbs:
+  - get
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: home-automation-restore
+  namespace: velero
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: home-automation-restore
+subjects:
+- kind: ServiceAccount
+  name: home-automation-restore
+  namespace: backup-qualification
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: home-automation-restore
+  namespace: home-automation-restore
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - pods
+  resourceNames:
+  - home-assistant-0
+  verbs:
+  - get
+  - delete
+- apiGroups:
+  - ''
+  resources:
+  - persistentvolumeclaims
+  resourceNames:
+  - automation-backups
+  verbs:
+  - get
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: home-automation-restore
+  namespace: home-automation-restore
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: home-automation-restore
+subjects:
+- kind: ServiceAccount
+  name: home-automation-restore
+  namespace: backup-qualification
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: home-automation-restore
+  namespace: backup-qualification
+spec:
+  schedule: 30 5 2 * *
+  timeZone: Europe/Istanbul
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 4500
+      ttlSecondsAfterFinished: 604800
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: home-automation-restore
+        spec:
+          serviceAccountName: home-automation-restore
+          automountServiceAccountToken: true
+          restartPolicy: Never
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+          - name: qualify
+            image: docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4
+            command:
+            - python
+            - /bootstrap/qualify-home-automation.py
+            env:
+            - name: JOB_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['batch.kubernetes.io/job-name']
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                cpu: 250m
+                memory: 128Mi
+            volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+          volumes:
+          - name: bootstrap
+            configMap:
+              name: automation-restore-controller
+---
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: home-automation-restore
+  namespace: backup-qualification
+spec:
+  order: 15
+  selector: app.kubernetes.io/name == 'home-automation-restore'
+  types:
+  - Ingress
+  - Egress
+  ingress:
+  - action: Deny
+  egress:
+  - action: Allow
+    destination:
+      services:
+        name: kubernetes
+        namespace: default
+  - action: Deny
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: home-automation-restore
+  namespace: backup-qualification
+spec:
+  groups:
+  - name: home-automation-restore
+    rules:
+    - alert: HomeAutomationRestoreStale
+      expr: time() - kube_cronjob_status_last_successful_time{namespace="backup-qualification",cronjob="home-automation-restore"}
+        > 3456000 or absent(kube_cronjob_status_last_successful_time{namespace="backup-qualification",cronjob="home-automation-restore"})
+      for: 1h
+      labels:
+        severity: critical
+      annotations:
+        summary: No isolated home automation restore has succeeded within 40 days.
+    - alert: HomeAutomationRestoreFailed
+      expr: kube_job_status_failed{namespace="backup-qualification",job_name=~"home-automation-restore-.*"}
+        > 0
+      for: 15m
+      labels:
+        severity: critical
+      annotations:
+        summary: The automation restore qualification failed.

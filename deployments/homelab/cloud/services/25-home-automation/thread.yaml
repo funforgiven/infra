@@ -1,0 +1,172 @@
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: thread-lan
+  namespace: home-automation
+spec:
+  config: |-
+    {
+      "cniVersion": "0.3.1",
+      "name": "thread-lan",
+      "plugins": [
+        {
+          "type": "ipvlan",
+          "master": "iot0",
+          "mode": "l2",
+          "ipam": {
+            "type": "static",
+            "addresses": [
+              {
+                "address": "10.21.50.11/24"
+              }
+            ]
+          }
+        },
+        {
+          "type": "tuning",
+          "sysctl": {
+            "net.ipv6.conf.all.disable_ipv6": "0",
+            "net.ipv6.conf.IFNAME.disable_ipv6": "0",
+            "net.ipv6.conf.all.forwarding": "1",
+            "net.ipv6.conf.IFNAME.accept_ra": "2",
+            "net.ipv6.conf.IFNAME.accept_ra_rt_info_max_plen": "64"
+          }
+        }
+      ]
+    }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: thread-state
+  namespace: home-automation
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: rbd1
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: thread-backups
+  namespace: home-automation
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: rbd1
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: openthread-border-router
+  namespace: home-automation
+spec:
+  replicas: 0
+  serviceName: openthread-border-router
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: openthread-border-router
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: openthread-border-router
+        app.kubernetes.io/part-of: home-automation
+      annotations:
+        k8s.v1.cni.cncf.io/networks: '[{"name":"thread-lan","interface":"net1"}]'
+        backup.velero.io/backup-volumes: backups
+        backup.velero.io/backup-volumes-excludes: data
+        pre.hook.backup.velero.io/command: '["/bin/bash", "/bootstrap/thread-backup.sh"]'
+        pre.hook.backup.velero.io/container: otbr
+        pre.hook.backup.velero.io/on-error: Fail
+        pre.hook.backup.velero.io/timeout: 3m
+    spec:
+      automountServiceAccountToken: false
+      nodeSelector:
+        fahrican.com.node-restriction.kubernetes.io/iot: 'true'
+      terminationGracePeriodSeconds: 90
+      initContainers:
+      - name: iot-firewall
+        image: docker.io/nicolaka/netshoot:v0.14@sha256:7f08c4aff13ff61a35d30e30c5c1ea8396eac6ab4ce19fd02d5a4b3b5d0d09a2
+        command:
+        - /bin/sh
+        - -ec
+        - |-
+          nft list table inet automation_thread >/dev/null 2>&1 && nft delete table inet automation_thread || true
+          nft -f /bootstrap/thread-firewall.nft
+        securityContext:
+          runAsUser: 0
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - NET_ADMIN
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: bootstrap
+          mountPath: /bootstrap
+          readOnly: true
+      containers:
+      - name: otbr
+        image: ghcr.io/ownbee/hass-otbr-docker:v0.3.0@sha256:5ca7008462e94d4c937aca8c1c9a60e709d6d300625363c161b946683032d5b1
+        envFrom:
+        - configMapRef:
+            name: automation-thread
+        securityContext:
+          privileged: true
+          runAsUser: 0
+        readinessProbe:
+          exec:
+            command:
+            - /bin/bash
+            - -ec
+            - test -f /tmp/backup-active || curl --fail --silent http://127.0.0.1:8081/node/state >/dev/null
+          initialDelaySeconds: 30
+          periodSeconds: 15
+        livenessProbe:
+          exec:
+            command:
+            - /bin/bash
+            - -ec
+            - test -f /tmp/backup-active || curl --fail --silent http://127.0.0.1:8081/node/state >/dev/null
+          initialDelaySeconds: 120
+          periodSeconds: 30
+          failureThreshold: 5
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: backups
+          mountPath: /backups
+        - name: bootstrap
+          mountPath: /bootstrap
+          readOnly: true
+        - name: tun
+          mountPath: /dev/net/tun
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: thread-state
+      - name: backups
+        persistentVolumeClaim:
+          claimName: thread-backups
+      - name: bootstrap
+        configMap:
+          name: automation-bootstrap
+          defaultMode: 365
+      - name: tun
+        hostPath:
+          path: /dev/net/tun
+          type: CharDevice
