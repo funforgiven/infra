@@ -112,6 +112,23 @@ data:
       - operation: add
         path: /metadata/ownerReferences
         value: '[]'
+    - conditions:
+        groupResource: persistentvolumeclaims
+        resourceNameRegex: ^automation-(state|backups)$
+        namespaces:
+        - home-automation
+      patches:
+      - operation: add
+        path: /spec/volumeName
+        value: ''
+      - operation: remove
+        path: /spec/volumeName
+      - operation: add
+        path: /spec/storageClassName
+        value: automation-restore
+      - operation: add
+        path: /metadata/annotations
+        value: '{}'
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -198,15 +215,10 @@ rules:
   - persistentvolumeclaims
   resourceNames:
   - automation-backups
+  - automation-state
   verbs:
   - get
   - delete
-- apiGroups:
-  - ''
-  resources:
-  - persistentvolumeclaims
-  verbs:
-  - create
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

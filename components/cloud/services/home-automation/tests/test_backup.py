@@ -157,6 +157,24 @@ class VolumeSelectionTests(unittest.TestCase):
             claims = [v['persistentVolumeClaim']['claimName'] for v in restored['spec']['volumes'] if 'persistentVolumeClaim' in v]
             self.assertEqual(['automation-backups'], claims)
 
+    def test_restore_claims_never_keep_production_volume_bindings(self):
+        documents = list(yaml.safe_load_all((SOURCE.parent / '16-backup-policy/home-automation-restore.yaml').read_text()))
+        rules = yaml.safe_load(documents[0]['data']['resource-modifiers.yaml'])['resourceModifierRules']
+        rule = next(item for item in rules if item['conditions']['groupResource'] == 'persistentvolumeclaims')
+        for name in ('automation-state', 'automation-backups'):
+            for bound in (False, True):
+                claim = {'metadata': {'name': name, 'annotations': {'volume.kubernetes.io/selected-node': 'production-worker'}},
+                         'spec': {'storageClassName': 'rbd1'}}
+                if bound:
+                    claim['spec']['volumeName'] = 'production-volume'
+                operations = [{'op': p['operation'], 'path': p['path'],
+                               **({'value': json.loads(p['value']) if p['value'].startswith('{') else p['value']} if 'value' in p else {})}
+                              for p in rule['patches']]
+                restored = jsonpatch.JsonPatch(operations).apply(claim)
+                self.assertNotIn('volumeName', restored['spec'])
+                self.assertEqual('automation-restore', restored['spec']['storageClassName'])
+                self.assertEqual({}, restored['metadata']['annotations'])
+
 
 class SupervisorTests(unittest.TestCase):
     def test_graceful_pause_resume_and_expired_lease(self):

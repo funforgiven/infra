@@ -181,11 +181,12 @@ copy. Its archive and dataset contain Thread keys. The dormant OTBR volumes
 hold no network state and are not expected to have PodVolumeBackups yet.
 
 The `backup-qualification/home-automation-restore` CronJob runs monthly on day 2
-at 05:30 Istanbul time. It uses the newest completed daily backup, creates a new
-20 GiB scratch PVC and restores the archive through a rewritten verifier pod in
-`home-automation-restore`. Original PVC resources are explicitly excluded so
-Velero cannot recreate production volume bindings. The transformation preserves
-Velero's injected restore helper and removes every application container. It
+at 05:30 Istanbul time. It uses the newest completed daily backup and restores
+the archive into a new scratch PVC in `home-automation-restore`. PVC modifiers
+clear original volume bindings and select the Delete storage class. Velero also
+discovers an unmounted state-claim placeholder; the verifier never mounts it and
+the controller removes it after confirming it remains unbound. The pod
+transformation preserves Velero's injected restore helper and removes every application container. It
 checks every file hash, JSON payload and the SQLite database. The verifier has
 no credentials, route, secondary NIC or network access and cannot start another
 home automation controller. Its scratch volume uses a Delete reclaim policy.
