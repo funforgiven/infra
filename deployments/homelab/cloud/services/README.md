@@ -10,8 +10,7 @@ capacity.
 | Location | Workloads |
 | --- | --- |
 | OpenStack undercloud | Keystone, Magnum, Cinder, Manila, Octavia, and undercloud Flux controllers |
-| Services Kubernetes cluster | Media applications, databases, Envoy Gateway, monitoring, and Velero |
-| Home Assistant VM | Current NixOS installation; retained HAOS image and volume for the planned cutover |
+| Services Kubernetes cluster | Home automation, media applications, databases, Envoy Gateway, monitoring, and Velero |
 | AWS Frankfurt | Stalwart mail, RDS PostgreSQL, S3 message storage, and CloudWatch monitoring |
 
 The OpenStack `public` network is RFC1918 provider space. Floating addresses
@@ -32,7 +31,7 @@ each at its own provider VIP. No game management surface is exposed.
 | Discord music (Muse) | Services cluster | Discord guild after credential enrollment and an owner-authorized Guild Install using Manage Server; no HTTP endpoint |
 | Factorio Space Age | Services cluster | Public browser; verified Factorio account and shared game password |
 | Valheim 1.0 | Services cluster | Steam public browser or direct UDP connection; shared game password |
-| Home Assistant | Dedicated VM | `https://home.fahrican.com`; native local account and MFA |
+| Home Assistant | Services cluster | `https://home.fahrican.com`; native local account and MFA |
 | Wallos | Services cluster | `https://wallos.fahrican.com`; LAN/WireGuard only, with ZITADEL OIDC |
 | Forgejo and Actions | Services cluster | `https://git.fahrican.com`, Git SSH port `2222`; private LAN/WireGuard and native ZITADEL OIDC |
 | Stalwart mail | AWS appliance | Native mail accounts; public mail protocols and web administration |
@@ -51,7 +50,8 @@ that order into a manual activation sequence or use live suspension as lasting
 configuration.
 
 - Credential rotation, provider reconciliation, image promotion, host backup
-  initialization, and HAOS cutover: [service operations](ACTIVATION.md)
+  initialization: [service operations](ACTIVATION.md)
+- Home Assistant, Zigbee, Matter/Thread and recovery: [automation runbook](25-home-automation/README.md)
 - Discord application creation, Guild Install, playback qualification, and
   credential rotation: [Muse onboarding](40-media/MUSE.md)
 - Telegram alert-bot creation and target enrollment: [Telegram bootstrap](TELEGRAM.md)

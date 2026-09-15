@@ -15,6 +15,7 @@ spec:
       - finance
       - forge
       - games
+      - home-automation
       - media
       - services-databases
     snapshotVolumes: false
@@ -37,6 +38,7 @@ spec:
       - finance
       - forge
       - games
+      - home-automation
       - media
       - services-databases
     snapshotVolumes: false

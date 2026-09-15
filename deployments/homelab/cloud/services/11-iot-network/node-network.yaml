@@ -1,0 +1,123 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: iot-node-network
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: iot-node-network
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: iot-node-network
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      automountServiceAccountToken: false
+      nodeSelector:
+        fahrican.com.node-restriction.kubernetes.io/iot: 'true'
+      initContainers:
+      - name: install-cni
+        image: docker.io/nicolaka/netshoot:v0.14@sha256:7f08c4aff13ff61a35d30e30c5c1ea8396eac6ab4ce19fd02d5a4b3b5d0d09a2
+        command:
+        - /bin/sh
+        - -ec
+        - |
+          set -eu
+          cd /tmp
+          curl --fail --silent --show-error --location --retry 3 -o plugins.tgz \
+            https://github.com/containernetworking/plugins/releases/download/v1.9.1/cni-plugins-linux-amd64-v1.9.1.tgz
+          printf '%s  %s\n' b98f74a0f8522f0a83867178729c1aa70f2158f90c45a2ca8fa791db1c76b303 plugins.tgz | sha256sum -c -
+          tar -xzf plugins.tgz ./ipvlan ./static ./tuning
+          for plugin in ipvlan static tuning; do
+            cp "$plugin" "/host-cni/$plugin.automation-new"
+            chmod 0755 "/host-cni/$plugin.automation-new"
+            mv -f "/host-cni/$plugin.automation-new" "/host-cni/$plugin"
+          done
+        securityContext:
+          runAsUser: 0
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: cnibin
+          mountPath: /host-cni
+        - name: tmp
+          mountPath: /tmp
+      containers:
+      - name: network
+        image: docker.io/nicolaka/netshoot:v0.14@sha256:7f08c4aff13ff61a35d30e30c5c1ea8396eac6ab4ce19fd02d5a4b3b5d0d09a2
+        command:
+        - /bin/sh
+        - -ec
+        - |
+          set -eu
+          # Only rename the explicitly assigned, locally administered IoT NIC prefix.
+          while :; do
+            device="$(ip -j link | jq -r '.[] | select(.address | startswith("fa:16:51:")) | .ifname')"
+            if test -n "$device"; then break; fi
+            sleep 5
+          done
+          test "$(printf '%s\n' "$device" | wc -l)" -eq 1
+          if test "$device" != iot0; then
+            ip link set "$device" down
+            ip link set "$device" name iot0
+          fi
+          echo 1 > /host-ipv6/iot0/disable_ipv6
+          ip addr flush dev iot0
+          ip link set iot0 mtu 1500 up
+          # The parent NIC has no host addresses and must not expose worker services.
+          nft list table inet automation_host >/dev/null 2>&1 || nft add table inet automation_host
+          nft -f - <<'EOF'
+          flush table inet automation_host
+          add chain inet automation_host input { type filter hook input priority -10; policy accept; }
+          add rule inet automation_host input iifname "iot0" drop
+          EOF
+          exec sleep infinity
+        securityContext:
+          runAsUser: 0
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - NET_ADMIN
+          readOnlyRootFilesystem: true
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -ec
+            - ip link show iot0 | grep -q UP
+          periodSeconds: 10
+        resources:
+          requests:
+            cpu: 5m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: host-ipv6
+          mountPath: /host-ipv6
+      volumes:
+      - name: cnibin
+        hostPath:
+          path: /opt/cni/bin
+          type: Directory
+      - name: tmp
+        emptyDir:
+          sizeLimit: 128Mi
+      - name: host-ipv6
+        hostPath:
+          path: /proc/sys/net/ipv6/conf
+          type: Directory

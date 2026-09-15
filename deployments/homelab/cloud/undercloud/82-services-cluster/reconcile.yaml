@@ -393,6 +393,8 @@ data:
         "fahrican.com.node-restriction.kubernetes.io/hypervisor=$hypervisor" --overwrite
     done < /tmp/worker-placement
 
+    python3 /iot/reconcile-iot.py "$kubectl"
+
     "$flux" install --namespace=flux-system
     "$kubectl" -n flux-system create secret generic sops-age \
       --from-file=age.agekey=/bootstrap/age.agekey \
@@ -597,6 +599,9 @@ spec:
                     - ALL
                 readOnlyRootFilesystem: true
               volumeMounts:
+                - name: iot
+                  mountPath: /iot
+                  readOnly: true
                 - name: bootstrap
                   mountPath: /bootstrap
                   readOnly: true
@@ -609,6 +614,9 @@ spec:
                 - name: tmp
                   mountPath: /tmp
           volumes:
+            - name: iot
+              configMap:
+                name: services-iot-reconcile
             - name: bootstrap
               secret:
                 secretName: services-flux-bootstrap

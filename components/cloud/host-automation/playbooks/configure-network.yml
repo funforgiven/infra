@@ -1,0 +1,18 @@
+---
+- name: Reconcile physical cloud host networking
+  hosts: cloud_hosts
+  become: true
+  gather_facts: true
+  serial: 1
+  any_errors_fatal: true
+  tasks:
+    - name: Verify the expected cloud bond before changing networking
+      ansible.builtin.assert:
+        that:
+          - cloud_bond_members | length == 2
+          - cloud_bond_name == 'bond0'
+          - cloud_vlan_mtu[20] == 1500
+    - name: Apply the existing canonical network owner
+      ansible.builtin.import_role:
+        name: cloud_host
+        tasks_from: network.yml

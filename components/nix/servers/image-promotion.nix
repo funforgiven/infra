@@ -27,11 +27,10 @@
         text = ''
           set -euo pipefail
 
-          host="''${1:-home-assistant}"
+          host="''${1:-forge-macos}"
           case "$host" in
-            home-assistant) project=services ;;
             forge-macos) project=forge-ci ;;
-            *) echo 'Expected home-assistant or forge-macos.' >&2; exit 64 ;;
+            *) echo 'Expected forge-macos.' >&2; exit 64 ;;
           esac
 
           repository_root="$(git rev-parse --show-toplevel)"
@@ -149,73 +148,7 @@
               --column id
           fi
 
-          if [[ "$host" != home-assistant ]]; then
-            printf 'Promoted %s at %s. Existing boot volumes were not changed.\n' "$host" "$revision"
-            exit 0
-          fi
-
-          haos_version=18.2
-          haos_name="haos-$haos_version"
-          haos_archive_sha256=254e53f354df0739e3afc09be5431a07df53f0df6b703885404f665c454f254e
-          haos_url="https://github.com/home-assistant/operating-system/releases/download/$haos_version/haos_ova-$haos_version.qcow2.xz"
-
-          mapfile -t haos_existing_ids < <(
-            openstack image list \
-              --name "$haos_name" \
-              --property image_role=home-assistant-os \
-              --property "haos_version=$haos_version" \
-              --format value \
-              --column ID
-          )
-
-          if [[ "''${#haos_existing_ids[@]}" -gt 1 ]]; then
-            echo "More than one immutable image matches $haos_name." >&2
-            exit 1
-          fi
-
-          if [[ "''${#haos_existing_ids[@]}" -eq 1 ]]; then
-            recorded_archive_sha256="$(
-              openstack image show "''${haos_existing_ids[0]}" --format json |
-                jq --raw-output '.properties.image_source_archive_sha256 // empty'
-            )"
-            if [[ "$recorded_archive_sha256" != "$haos_archive_sha256" ]]; then
-              echo "Existing image $haos_name has an unexpected source digest." >&2
-              exit 1
-            fi
-            echo "$haos_name already exists from the pinned official asset."
-          else
-            haos_archive="$temporary_directory/$haos_name.qcow2.xz"
-            haos_image="$temporary_directory/$haos_name.qcow2"
-            curl --fail --location --retry 5 --output "$haos_archive" "$haos_url"
-            printf '%s  %s\n' "$haos_archive_sha256" "$haos_archive" |
-              sha256sum --check --strict
-            xz --decompress --stdout "$haos_archive" > "$haos_image"
-            haos_image_sha256="$(sha256sum "$haos_image" | cut -d ' ' -f 1)"
-
-            openstack image create "$haos_name" \
-              --private \
-              --protected \
-              --container-format bare \
-              --disk-format qcow2 \
-              --file "$haos_image" \
-              --tag managed-by-nix \
-              --property hw_firmware_type=uefi \
-              --property hw_machine_type=q35 \
-              --property image_role=home-assistant-os \
-              --property "haos_version=$haos_version" \
-              --property "image_source_archive_sha256=$haos_archive_sha256" \
-              --property "image_source_sha256=$haos_image_sha256" \
-              --property "image_source_url=$haos_url" \
-              --property os_distro=home-assistant \
-              --property os_type=linux \
-              --format value \
-              --column id
-          fi
-
-          printf '%s\n' \
-            "Promoted the Home Assistant NixOS image at $revision." \
-            "Verified HAOS $haos_version." \
-            'Active boot-volume revisions were intentionally left unchanged.'
+          printf 'Promoted %s at %s. Existing boot volumes were not changed.\n' "$host" "$revision"
         '';
       };
     in
@@ -229,9 +162,7 @@
         nixos-anywhere = inputs.nixos-anywhere.packages.${system}.nixos-anywhere;
         promote-service-images = promoteServiceImages;
       }
-      // lib.optionalAttrs (system == config.dendritic.hosts.home-assistant.system) {
-        home-assistant-openstack-image =
-          inputs.self.nixosConfigurations.home-assistant.config.system.build.images.openstack;
+      // lib.optionalAttrs (system == config.dendritic.hosts.forge-macos.system) {
         forge-macos-openstack-image =
           inputs.self.nixosConfigurations.forge-macos.config.system.build.images.openstack;
       };

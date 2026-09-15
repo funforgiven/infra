@@ -41,6 +41,7 @@ cloud_vlan_mtu:
   32: 9000
   33: 1500
   40: 1500
+  50: 1500
 cloud_jumbo_vlans:
   - 30
   - 31

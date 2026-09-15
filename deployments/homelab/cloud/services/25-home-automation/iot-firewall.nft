@@ -1,0 +1,18 @@
+# This table belongs to the pod network namespace, never the worker namespace.
+table inet automation {
+  chain input {
+    type filter hook input priority -10; policy accept;
+    iifname "net1" ct state established,related accept
+    iifname "net1" meta l4proto ipv6-icmp accept
+    iifname "net1" ip protocol icmp accept
+    # Matter uses operational, commissioning, mDNS and dynamic OTA UDP ports.
+    iifname "net1" meta nfproto ipv6 meta l4proto udp accept
+    iifname "net1" tcp dport 5540 accept
+    iifname "net1" udp dport { 1900, 5353 } accept
+    # HTTPS ingress uses eth0; IoT clients cannot reach the control APIs.
+    iifname "net1" drop
+  }
+  chain forward {
+    type filter hook forward priority -10; policy drop;
+  }
+}

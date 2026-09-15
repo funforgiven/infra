@@ -107,7 +107,7 @@ class FakeApi:
         self.profiles = [
             profile("All", "p-all", 1, []),
             profile("infra-ccr-trunk", "p-ccr", 1, [10, 20, 40, 50, 60, 90]),
-            profile("infra-crs-trunk", "p-crs", 1, [10, 20, 40, 90]),
+            profile("infra-crs-trunk", "p-crs", 1, [10, 20, 40, 50, 90]),
             profile(
                 "infra-trusted-access", "p-trusted", 10, [],
                 spanning_tree_enabled=False,

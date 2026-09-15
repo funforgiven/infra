@@ -5,3 +5,8 @@ resources:
   - runtime-contract.yaml
   - rbac.yaml
   - reconcile.yaml
+configMapGenerator:
+  - name: services-iot-reconcile
+    namespace: openstack
+    files:
+      - reconcile-iot.py

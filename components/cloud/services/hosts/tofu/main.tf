@@ -18,289 +18,148 @@ provider "openstack" {
   project_domain_name = "Default"
 }
 
-variable "image_revision" {
-  description = "Full signed Git revision promoted into Glance"
-  type        = string
-
-  validation {
-    condition     = can(regex("^[0-9a-f]{40}$", var.image_revision))
-    error_message = "image_revision must be a full lowercase 40-character Git commit."
-  }
-}
-
-variable "home_assistant_platform" {
-  description = "Home Assistant boot platform; switch to haos only after testing backup restore and recovery"
-  type        = string
-  default     = "nixos"
-
-  validation {
-    condition     = contains(["nixos", "haos"], var.home_assistant_platform)
-    error_message = "home_assistant_platform must be nixos or haos."
-  }
-}
-
 locals {
-  image_revision_short  = substr(var.image_revision, 0, 12)
-  tags                  = ["managed-by-opentofu", "platform-services"]
-  trusted_operator_cidr = "10.21.10.0/24"
+  tags = ["managed-by-opentofu", "platform-services"]
 }
 
-data "openstack_networking_network_v2" "services" {
-  name = "services"
-}
+# The owner authorized retirement of the empty standalone Home Assistant.
+# Kubernetes now owns application state; remove the VM, both boot volumes,
+# dedicated ports and security groups, without a legacy restore dependency.
 
-data "openstack_networking_subnet_v2" "services" {
-  name       = "services-v4"
-  network_id = data.openstack_networking_network_v2.services.id
-}
-
-data "openstack_networking_network_v2" "public" {
-  name     = "public"
-  external = true
-}
-
-data "openstack_networking_subnet_v2" "public" {
-  name       = "public-v4"
-  network_id = data.openstack_networking_network_v2.public.id
-}
-
-data "openstack_compute_flavor_v2" "services" {
-  name = "services.worker"
-}
-
-data "openstack_images_image_v2" "home_assistant" {
-  name = "nixos-home-assistant-${local.image_revision_short}"
-
-  properties = {
-    image_role            = "home-assistant"
-    image_source_revision = var.image_revision
-  }
-}
-
-data "openstack_images_image_v2" "home_assistant_os" {
-  name = "haos-18.2"
-
-  properties = {
-    image_role   = "home-assistant-os"
-    haos_version = "18.2"
-  }
-}
-
-resource "openstack_networking_secgroup_v2" "service_ssh" {
-  name        = "service-ssh"
-  description = "SSH and diagnostics from the trusted operator LAN"
-  tags        = local.tags
-}
-
-resource "openstack_networking_secgroup_rule_v2" "service_ssh" {
-  direction         = "ingress"
-  ethertype         = "IPv4"
-  protocol          = "tcp"
-  port_range_min    = 22
-  port_range_max    = 22
-  remote_ip_prefix  = local.trusted_operator_cidr
-  security_group_id = openstack_networking_secgroup_v2.service_ssh.id
-}
-
-resource "openstack_networking_secgroup_rule_v2" "service_icmp" {
-  direction         = "ingress"
-  ethertype         = "IPv4"
-  protocol          = "icmp"
-  remote_ip_prefix  = local.trusted_operator_cidr
-  security_group_id = openstack_networking_secgroup_v2.service_ssh.id
-}
-
-resource "openstack_networking_secgroup_rule_v2" "service_node_exporter" {
-  direction         = "ingress"
-  ethertype         = "IPv4"
-  protocol          = "tcp"
-  port_range_min    = 9100
-  port_range_max    = 9100
-  remote_ip_prefix  = "192.168.80.0/24"
-  security_group_id = openstack_networking_secgroup_v2.service_ssh.id
-}
-
-resource "openstack_networking_secgroup_v2" "home_assistant_private" {
-  name        = "home-assistant-private"
-  description = "Home Assistant ingress from services workloads"
-  tags        = local.tags
-}
-
-resource "openstack_networking_secgroup_rule_v2" "home_assistant_private_http" {
-  direction         = "ingress"
-  ethertype         = "IPv4"
-  protocol          = "tcp"
-  port_range_min    = 8123
-  port_range_max    = 8123
-  remote_ip_prefix  = "192.168.80.0/24"
-  security_group_id = openstack_networking_secgroup_v2.home_assistant_private.id
-}
-
-resource "openstack_networking_secgroup_v2" "home_assistant_provider" {
-  name        = "home-assistant-provider"
-  description = "Home Assistant UI and discovery from the trusted operator LAN"
-  tags        = local.tags
-}
-
-resource "openstack_networking_secgroup_rule_v2" "home_assistant_provider_ssh" {
-  direction         = "ingress"
-  ethertype         = "IPv4"
-  protocol          = "tcp"
-  port_range_min    = 22
-  port_range_max    = 22
-  remote_ip_prefix  = local.trusted_operator_cidr
-  security_group_id = openstack_networking_secgroup_v2.home_assistant_provider.id
-}
-
-resource "openstack_networking_secgroup_rule_v2" "home_assistant_provider_http" {
-  direction         = "ingress"
-  ethertype         = "IPv4"
-  protocol          = "tcp"
-  port_range_min    = 8123
-  port_range_max    = 8123
-  remote_ip_prefix  = local.trusted_operator_cidr
-  security_group_id = openstack_networking_secgroup_v2.home_assistant_provider.id
-}
-
-resource "openstack_networking_secgroup_rule_v2" "home_assistant_provider_mdns" {
-  direction         = "ingress"
-  ethertype         = "IPv4"
-  protocol          = "udp"
-  port_range_min    = 5353
-  port_range_max    = 5353
-  remote_ip_prefix  = local.trusted_operator_cidr
-  security_group_id = openstack_networking_secgroup_v2.home_assistant_provider.id
-}
-
-resource "openstack_networking_secgroup_rule_v2" "home_assistant_provider_ssdp" {
-  direction         = "ingress"
-  ethertype         = "IPv4"
-  protocol          = "udp"
-  port_range_min    = 1900
-  port_range_max    = 1900
-  remote_ip_prefix  = local.trusted_operator_cidr
-  security_group_id = openstack_networking_secgroup_v2.home_assistant_provider.id
-}
-
-resource "openstack_networking_secgroup_rule_v2" "home_assistant_provider_icmp" {
-  direction         = "ingress"
-  ethertype         = "IPv4"
-  protocol          = "icmp"
-  remote_ip_prefix  = local.trusted_operator_cidr
-  security_group_id = openstack_networking_secgroup_v2.home_assistant_provider.id
-}
-
-resource "openstack_networking_port_v2" "home_assistant_services" {
-  name           = "home-assistant-services"
-  network_id     = data.openstack_networking_network_v2.services.id
-  admin_state_up = true
-  security_group_ids = [
-    openstack_networking_secgroup_v2.home_assistant_private.id,
-    openstack_networking_secgroup_v2.service_ssh.id,
-  ]
-  tags = local.tags
-
-  fixed_ip {
-    subnet_id  = data.openstack_networking_subnet_v2.services.id
-    ip_address = "192.168.80.10"
-  }
+removed {
+  from = openstack_networking_secgroup_v2.service_ssh
 
   lifecycle {
-    prevent_destroy = true
+    destroy = true
   }
 }
 
-resource "openstack_networking_port_v2" "home_assistant_provider" {
-  name               = "home-assistant-provider"
-  network_id         = data.openstack_networking_network_v2.public.id
-  admin_state_up     = true
-  mac_address        = "fa:16:3e:80:00:10"
-  security_group_ids = [openstack_networking_secgroup_v2.home_assistant_provider.id]
-  tags               = local.tags
-
-  fixed_ip {
-    subnet_id  = data.openstack_networking_subnet_v2.public.id
-    ip_address = "10.21.40.120"
-  }
+removed {
+  from = openstack_networking_secgroup_rule_v2.service_ssh
 
   lifecycle {
-    prevent_destroy = true
+    destroy = true
   }
 }
 
-resource "openstack_blockstorage_volume_v3" "home_assistant_root" {
-  name        = "home-assistant-root-${local.image_revision_short}"
-  description = "Retained NixOS root for Home Assistant"
-  size        = 100
-  image_id    = data.openstack_images_image_v2.home_assistant.id
-
-  metadata = {
-    image_source_revision = var.image_revision
-    managed_by            = "opentofu"
-    service               = "home-assistant"
-  }
+removed {
+  from = openstack_networking_secgroup_rule_v2.service_icmp
 
   lifecycle {
-    prevent_destroy = true
+    destroy = true
   }
 }
 
-resource "openstack_blockstorage_volume_v3" "home_assistant_os_root" {
-  name        = "home-assistant-root-haos-18.2"
-  description = "Retained Home Assistant OS root; native backups carry application state"
-  size        = 100
-  image_id    = data.openstack_images_image_v2.home_assistant_os.id
-
-  metadata = {
-    haos_version = "18.2"
-    managed_by   = "opentofu"
-    service      = "home-assistant"
-  }
+removed {
+  from = openstack_networking_secgroup_rule_v2.service_node_exporter
 
   lifecycle {
-    prevent_destroy = true
+    destroy = true
   }
 }
 
-resource "openstack_compute_instance_v2" "home_assistant" {
-  name                = "home-assistant"
-  flavor_id           = data.openstack_compute_flavor_v2.services.id
-  config_drive        = var.home_assistant_platform == "nixos"
-  stop_before_destroy = true
+removed {
+  from = openstack_networking_secgroup_v2.home_assistant_private
 
-  block_device {
-    uuid = var.home_assistant_platform == "haos" ? (
-      openstack_blockstorage_volume_v3.home_assistant_os_root.id
-    ) : openstack_blockstorage_volume_v3.home_assistant_root.id
-    source_type           = "volume"
-    destination_type      = "volume"
-    boot_index            = 0
-    delete_on_termination = false
-  }
-
-  network {
-    port = openstack_networking_port_v2.home_assistant_services.id
-  }
-
-  network {
-    port = openstack_networking_port_v2.home_assistant_provider.id
-  }
-
-  metadata = {
-    managed_by = "opentofu"
-    platform   = var.home_assistant_platform
-    service    = "home-assistant"
+  lifecycle {
+    destroy = true
   }
 }
 
-output "home_assistant_private_address" {
-  description = "Home Assistant address used by in-cluster ingress"
-  value       = "192.168.80.10"
+removed {
+  from = openstack_networking_secgroup_rule_v2.home_assistant_private_http
+
+  lifecycle {
+    destroy = true
+  }
 }
 
-output "home_assistant_provider_address" {
-  description = "Home Assistant direct address for local discovery"
-  value       = "10.21.40.120"
+removed {
+  from = openstack_networking_secgroup_v2.home_assistant_provider
+
+  lifecycle {
+    destroy = true
+  }
+}
+
+removed {
+  from = openstack_networking_secgroup_rule_v2.home_assistant_provider_ssh
+
+  lifecycle {
+    destroy = true
+  }
+}
+
+removed {
+  from = openstack_networking_secgroup_rule_v2.home_assistant_provider_http
+
+  lifecycle {
+    destroy = true
+  }
+}
+
+removed {
+  from = openstack_networking_secgroup_rule_v2.home_assistant_provider_mdns
+
+  lifecycle {
+    destroy = true
+  }
+}
+
+removed {
+  from = openstack_networking_secgroup_rule_v2.home_assistant_provider_ssdp
+
+  lifecycle {
+    destroy = true
+  }
+}
+
+removed {
+  from = openstack_networking_secgroup_rule_v2.home_assistant_provider_icmp
+
+  lifecycle {
+    destroy = true
+  }
+}
+
+removed {
+  from = openstack_networking_port_v2.home_assistant_services
+
+  lifecycle {
+    destroy = true
+  }
+}
+
+removed {
+  from = openstack_networking_port_v2.home_assistant_provider
+
+  lifecycle {
+    destroy = true
+  }
+}
+
+removed {
+  from = openstack_blockstorage_volume_v3.home_assistant_root
+
+  lifecycle {
+    destroy = true
+  }
+}
+
+removed {
+  from = openstack_blockstorage_volume_v3.home_assistant_os_root
+
+  lifecycle {
+    destroy = true
+  }
+}
+
+removed {
+  from = openstack_compute_instance_v2.home_assistant
+
+  lifecycle {
+    destroy = true
+  }
 }
 
 # Hermes is retired. These blocks explicitly destroy its cloud resources when

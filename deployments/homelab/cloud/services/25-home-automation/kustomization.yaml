@@ -1,4 +1,40 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - endpoint.yaml
+- credentials.sops.yaml
+- storage.yaml
+- network-attachment.yaml
+- workload.yaml
+- routes.yaml
+- network-policy.yaml
+- monitoring.yaml
+- thread.yaml
+configMapGenerator:
+- name: automation-bootstrap
+  namespace: home-automation
+  files:
+  - bootstrap.py
+  - backup.py
+  - run-service.sh
+  - start-zigbee.sh
+  - configuration.yaml
+  - zigbee-configuration.yaml
+  - mosquitto.conf
+  - mosquitto.acl
+  - iot-firewall.nft
+  - thread-firewall.nft
+  - thread-backup.sh
+- name: automation-radios
+  namespace: home-automation
+  envs:
+  - radios.env
+- name: automation-thread
+  namespace: home-automation
+  envs:
+  - thread.env
+- name: automation-recovery-tools
+  namespace: home-automation-restore
+  options:
+    disableNameSuffixHash: true
+  files:
+  - backup.py

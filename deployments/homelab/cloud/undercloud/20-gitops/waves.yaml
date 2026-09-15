@@ -1260,7 +1260,7 @@ spec:
     secretRef:
       name: sops-age
   dependsOn:
-    - name: wave81-services-foundation
+    - name: wave83-services-hosts
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -1278,7 +1278,7 @@ spec:
     kind: GitRepository
     name: flux-system
   dependsOn:
-    - name: wave82-services-cluster
+    - name: wave81-services-foundation
   healthChecks:
     - apiVersion: infra.contrib.fluxcd.io/v1alpha2
       kind: Terraform

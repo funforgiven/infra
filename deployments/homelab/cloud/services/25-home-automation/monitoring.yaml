@@ -1,0 +1,81 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: home-automation
+  namespace: home-automation
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: home-assistant
+  endpoints:
+    - port: metrics
+      interval: 60s
+      scrapeTimeout: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: home-automation
+  namespace: home-automation
+spec:
+  groups:
+    - name: home-automation
+      rules:
+        - alert: HomeAutomationUnavailable
+          expr: >-
+            kube_statefulset_status_replicas_ready{namespace="home-automation",statefulset="home-assistant"} < 1
+            or absent(kube_statefulset_status_replicas_ready{namespace="home-automation",statefulset="home-assistant"})
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: Home automation has no ready instance.
+        - alert: HomeAutomationBackupStale
+          expr: >-
+            time() - home_automation_backup_last_success_timestamp_seconds > 28800
+            or absent(home_automation_backup_last_success_timestamp_seconds)
+          for: 30m
+          labels:
+            severity: critical
+          annotations:
+            summary: No verified local automation recovery archive exists within eight hours.
+        - alert: HomeAutomationMqttUnavailable
+          expr: home_automation_mqtt_authenticated == 0
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: Authenticated MQTT health checks are failing.
+        - alert: HomeAutomationMatterUnavailable
+          expr: home_automation_matter_available == 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Matter Server is unavailable.
+        - alert: HomeAutomationStorageFilling
+          expr: >-
+            kubelet_volume_stats_available_bytes{namespace="home-automation"}
+            / kubelet_volume_stats_capacity_bytes{namespace="home-automation"} < 0.15
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: An automation volume has less than 15 percent free space.
+        - alert: HomeAutomationThreadUnavailable
+          expr: >-
+            kube_statefulset_status_replicas_ready{namespace="home-automation",statefulset="openthread-border-router"}
+            < kube_statefulset_replicas{namespace="home-automation",statefulset="openthread-border-router"}
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: The enabled Thread border router is unavailable.
+        - alert: HomeAutomationContainerRestarts
+          expr: >-
+            increase(kube_pod_container_status_restarts_total{namespace="home-automation"}[1h]) > 3
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: An automation container is repeatedly restarting.

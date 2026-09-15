@@ -5,3 +5,9 @@ resources:
   - media-restore-modifiers.yaml
   - restore-qualification.yaml
   - schedules.yaml
+  - home-automation-restore.yaml
+configMapGenerator:
+  - name: automation-restore-controller
+    namespace: backup-qualification
+    files:
+      - qualify-home-automation.py

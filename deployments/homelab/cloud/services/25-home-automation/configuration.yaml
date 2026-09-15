@@ -1,0 +1,19 @@
+default_config:
+homeassistant:
+  name: Home
+  country: TR
+  currency: TRY
+  time_zone: Europe/Istanbul
+  unit_system: metric
+  external_url: https://home.fahrican.com
+  internal_url: https://home.fahrican.com
+recorder:
+  purge_keep_days: 14
+  auto_purge: true
+  auto_repack: true
+  commit_interval: 5
+prometheus:
+  requires_auth: true
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
