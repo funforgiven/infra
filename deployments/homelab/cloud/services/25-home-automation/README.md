@@ -46,7 +46,7 @@ https://home.fahrican.com -> Octavia -> Envoy -> HA :8123 on eth0
                                               |
                                         net1 10.21.50.10
                                               |
-               physical IoT VLAN 50 -- Multus ipvlan L2
+               physical IoT VLAN 50 -- Multus macvlan bridge
                                               |
                                         net1 10.21.50.11
                                               |
@@ -63,10 +63,10 @@ is `10.21.50.100–199`; `.10` and `.11` are reserved here for automation pods.
 The services-cluster reconciler attaches one unnumbered IoT NIC to each worker,
 identified by a deterministic `fa:16:51:*` MAC. A restricted node label selects
 prepared workers. The node-network DaemonSet names the interface `iot0`, leaves
-it unnumbered, blocks host input on it and installs pinned ipvlan CNI plugins.
+it unnumbered, blocks host input on it and installs pinned CNI plugins.
 Multus gives each automation pod its secondary interface. Port security is
 disabled **only on these IoT ports**, allowing pod IPv4/IPv6 addresses and
-multicast to use the parent MAC. Tenant ports keep their existing security.
+multicast to use each pod's own MAC. Tenant ports keep their existing security.
 Stale ports from retired workers are retained for inspection rather than
 silently detached or reassigned.
 
@@ -85,10 +85,12 @@ Do not substitute an mDNS reflector for this L2 attachment. Disable multicast
 blocking/client isolation on that SSID if present. Ordinary phone use can return
 to the trusted LAN after commissioning. The router permits IoT clients to reach
 the services HTTPS VIP `10.21.40.122:443`; the onboarding and Zigbee administration
-routes still require an operator network. Hardware commissioning remains
-unverified until the radios arrive.
+routes still require an operator network. End-device commissioning is performed later with the Companion app.
 
 ## First login and integrations
+
+The owner account exists, MQTT/Matter/OTBR are enrolled, and HA discovery uses
+`net1`. The following settings also document how to recreate those integrations.
 
 1. From the trusted LAN or administration WireGuard, open
    <https://home.fahrican.com> and create the owner account. Enable MFA in the
@@ -129,7 +131,9 @@ Unique web passwords are encrypted for the administrator in
 `secrets/home-automation-radios.yaml`. The operator-provided HA token is encrypted
 in `secrets/home-assistant.yaml`; it is not deployed into the cluster. The
 ignored `secrets/home-assistant-token.local` input is removed after enrollment.
-These credentials are separate from Flux's application credentials.
+These credentials are separate from Flux's application credentials. Both setup
+hotspots are disabled; serial allowlists admit only `.10` to Zigbee and `.11`
+to Thread. The web consoles still require their individual passwords.
 
 ## Zigbee coordinator
 
@@ -138,12 +142,10 @@ a DHCP reservation or static address on VLAN 50. Zigbee router mode is for mesh
 repeaters; it cannot replace the coordinator. Use a separate dongle for Thread:
 Zigbee coordinator, Zigbee router and Thread RCP modes are mutually exclusive.
 
-Set `ZIGBEE_SERIAL_PORT=tcp://<coordinator-ip>:6638` and `ZIGBEE_ENABLED=true` in
-`radios.env`, then commit. Confirm the socket port in the dongle UI; 6638 is the
-usual value. Allow only `10.21.50.10` in the dongle's coordinator IP allowlist.
-The `ember` adapter uses 115200 baud with hardware flow control disabled.
-Check firmware compatibility against the pinned Zigbee2MQTT release before
-flashing; firmware flashing is a separate hardware operation.
+`radios.env` enables the coordinator at `tcp://10.21.50.20:6638`. Its serial
+allowlist admits only `10.21.50.10`. The `ember` adapter uses 115200 baud with
+hardware flow control disabled. Before any future firmware change, check
+compatibility with the pinned Zigbee2MQTT release.
 
 The frontend is <https://home.fahrican.com/zigbee2mqtt/>. It is restricted to
 operator networks and additionally requires `zigbee-ui-token` from SOPS.
@@ -156,17 +158,16 @@ Mesh routers can be added later without changing the Kubernetes infrastructure.
 ## Thread border router
 
 The `thread.yaml` StatefulSet runs one instance. `thread.env` connects to the
-second Dongle-M at `10.21.50.21:6638`, using 115200 baud and no flow control. `DEVICE=/tmp/ttyOTBR` is the
-container's TCP-to-PTY bridge, not a host USB device. Automatic firmware flashing
-and NAT64 are disabled. The community OTBR container and network RCP path must
-be qualified against the actual hardware before relying on Thread automations.
+second Dongle-M at `10.21.50.21:6638`, using 115200 baud and no flow control.
+`DEVICE=/tmp/ttyOTBR` is the container's TCP-to-PTY bridge. Automatic firmware
+flashing and NAT64 are disabled. The serial allowlist admits only OTBR's `.11`.
 
-Add the **OpenThread Border Router** integration at `http://10.21.50.11:8081`.
-Create/select one Thread network, set it as preferred, and sync its credentials
-into the Companion app. Export the active dataset into the password manager.
-Additional border routers should join this same dataset instead of forming
-independent networks. Choose the Thread channel after checking local Wi-Fi and
-Zigbee interference. Pair Matter devices through the Companion app afterwards.
+The **OpenThread Border Router** integration uses `http://10.21.50.11:8081`.
+`Rooftrollen` is the preferred Thread network on channel 25; Zigbee uses channel
+20. Its keys were generated once and are retained in OTBR state and HA's Thread
+integration. Sync this network's credentials into the Companion app before
+pairing Matter-over-Thread devices. Additional border routers must join this
+same dataset. Avoid forming a second independent network for the same home.
 
 ## Monitoring and backup
 
@@ -193,21 +194,27 @@ backups at 03:15 UTC Sunday (90 days). Local archive freshness is not proof of
 offsite coverage: check both the archive metric and Velero's completed backup
 and PodVolumeBackup records. B2 Object Lock is not enabled in this platform.
 
-When OTBR is enabled, its backup hook exports the native dataset privately,
-stops `otbr-agent`, archives `/data/thread`, and resumes it before the offsite
-copy. Its archive and dataset contain Thread keys. The dormant OTBR volumes
-hold no network state and are not expected to have PodVolumeBackups yet.
+OTBR's daily/weekly backup hook exports the native dataset privately, stops
+`otbr-agent`, waits for its cleanup, archives `/data/thread`, and resumes it.
+It atomically publishes one `thread-recovery.tar.gz` bundle containing native
+state, `dataset.txt`, a timestamp and SHA-256 checksums. Failed captures preserve
+the previous bundle. These files contain Thread keys and must stay private.
+The restricted metrics sidecar validates this bundle and reports Thread mesh
+attachment. Alerts cover detached Thread state and backups older than 28 hours.
+The liveness probe remains active during captures so a stuck backup cannot keep
+OTBR stopped indefinitely.
 
 The `backup-qualification/home-automation-restore` CronJob runs monthly on day 2
 at 05:30 Istanbul time. It uses the newest completed daily backup and restores
-the archive into a new scratch PVC in `home-automation-restore`. PVC modifiers
+both archives into new scratch PVCs in `home-automation-restore`. PVC modifiers
 clear original volume bindings and select the Delete storage class. Velero also
-discovers an unmounted state-claim placeholder; the verifier never mounts it and
-the controller removes it after confirming it remains unbound. The pod
+discovers unmounted state-claim placeholders; the verifiers never mount them and
+the controller removes them after confirming they remain unbound. The pod
 transformation preserves Velero's injected restore helper and removes every
 application container. It checks every file hash, JSON payload and the SQLite
-database. The verifier has no credentials, secondary NIC or network access and
-cannot start another home automation controller. Its scratch volume uses a
+database, plus Thread bundle checksums, required dataset fields and native
+settings. Each verifier has no service credentials, secondary NIC, host mounts
+or network access and cannot start another controller. Scratch volumes use a
 Delete reclaim policy.
 
 Run this same check on demand after a deployment and after stateful upgrades:
@@ -232,8 +239,9 @@ OTBR, mount a **new** state PVC in a disposable non-networked restore pod, and
 extract the verified archive there with path traversal and symlinks rejected.
 Restore the four state subdirectories with UID/GID 1000. Reuse the SOPS MQTT
 credentials and Git configuration, point `automation-state` at the recovered
-volume, and start exactly one instance. Restore OTBR's checked archive/dataset
-before re-enabling its pod. Verify HA login, MQTT discovery, coordinator identity
+volume, and start exactly one instance. Unpack the verified Thread bundle, then
+restore its inner `thread.tar.gz` into OTBR's new `/data` volume before enabling
+its pod; `dataset.txt` is the native TLV fallback for replacement hardware. Verify HA login, MQTT discovery, coordinator identity
 and Matter devices before retiring the old volume. Never replay old fabric or
 radio state while another copy is running.
 
@@ -276,4 +284,5 @@ Matter-over-Thread commissioning still require the physical radios and devices.
 - [Matter.js container options](https://github.com/matter-js/matterjs-server/blob/v1.4.0/docs/docker.md)
 - [SONOFF Dongle-M modes](https://dongle.sonoff.tech/guide/dongle-m/web_console/)
 - [Zigbee2MQTT Ember adapters](https://www.zigbee2mqtt.io/guide/adapters/emberznet.html)
+- [CNI macvlan](https://www.cni.dev/plugins/current/main/macvlan/)
 - [Standalone OTBR container](https://github.com/ownbee/hass-otbr-docker/tree/v0.3.0)

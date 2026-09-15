@@ -10,9 +10,9 @@ spec:
       "name": "automation-lan",
       "plugins": [
         {
-          "type": "ipvlan",
+          "type": "macvlan",
           "master": "iot0",
-          "mode": "l2",
+          "mode": "bridge",
           "ipam": {
             "type": "static",
             "addresses": [

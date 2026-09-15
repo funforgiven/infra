@@ -10,9 +10,9 @@ spec:
       "name": "thread-lan",
       "plugins": [
         {
-          "type": "ipvlan",
+          "type": "macvlan",
           "master": "iot0",
-          "mode": "l2",
+          "mode": "bridge",
           "ipam": {
             "type": "static",
             "addresses": [
@@ -53,6 +53,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: thread-backups
   namespace: home-automation
+  labels:
+    backup.fahrican.com/verify: automation
 spec:
   accessModes:
   - ReadWriteOnce
@@ -77,6 +79,7 @@ spec:
       labels:
         app.kubernetes.io/name: openthread-border-router
         app.kubernetes.io/part-of: home-automation
+        backup.fahrican.com/verify: automation
       annotations:
         k8s.v1.cni.cncf.io/networks: '[{"name":"thread-lan","interface":"net1"}]'
         backup.velero.io/backup-volumes: backups
@@ -87,6 +90,10 @@ spec:
         pre.hook.backup.velero.io/timeout: 3m
     spec:
       automountServiceAccountToken: false
+      securityContext:
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       nodeSelector:
         fahrican.com.node-restriction.kubernetes.io/iot: 'true'
       terminationGracePeriodSeconds: 90
@@ -134,7 +141,7 @@ spec:
             command:
             - /bin/bash
             - -ec
-            - test -f /tmp/backup-active || curl --fail --silent http://127.0.0.1:8081/node/state >/dev/null
+            - curl --fail --silent http://127.0.0.1:8081/node/state >/dev/null
           initialDelaySeconds: 120
           periodSeconds: 30
           failureThreshold: 5
@@ -155,6 +162,42 @@ spec:
           readOnly: true
         - name: tun
           mountPath: /dev/net/tun
+      - name: metrics
+        image: docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4
+        command: [python, /bootstrap/thread-recovery.py]
+        ports:
+        - name: metrics
+          containerPort: 9000
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: [ALL]
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: metrics
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: metrics
+        resources:
+          requests:
+            cpu: 10m
+            memory: 24Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+        volumeMounts:
+        - name: backups
+          mountPath: /backups
+          readOnly: true
+        - name: bootstrap
+          mountPath: /bootstrap
+          readOnly: true
       volumes:
       - name: data
         persistentVolumeClaim:
@@ -170,3 +213,18 @@ spec:
         hostPath:
           path: /dev/net/tun
           type: CharDevice
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openthread-border-router
+  namespace: home-automation
+  labels:
+    app.kubernetes.io/name: openthread-border-router
+spec:
+  selector:
+    app.kubernetes.io/name: openthread-border-router
+  ports:
+  - name: metrics
+    port: 9000
+    targetPort: metrics

@@ -13,6 +13,7 @@ server = 'https://' + os.environ['KUBERNETES_SERVICE_HOST'] + ':' + os.environ['
 account = Path('/var/run/secrets/kubernetes.io/serviceaccount')
 context = ssl.create_default_context(cafile=account / 'ca.crt')
 namespace = 'home-automation-restore'
+verifiers = {'home-assistant-0': 'automation', 'openthread-border-router-0': 'thread'}
 
 
 def request(method, path, body=None, missing_ok=False):
@@ -52,8 +53,10 @@ if latest.get('status', {}).get('phase') != 'Completed':
 if 'home-automation' not in latest['spec']['includedNamespaces']:
     raise SystemExit('Latest backup predates automation backup enrollment')
 
-for resource, name in [('pods', 'home-assistant-0'), ('persistentvolumeclaims', 'automation-backups'),
-                       ('persistentvolumeclaims', 'automation-state')]:
+resources = [('pods', name) for name in verifiers]
+resources += [('persistentvolumeclaims', prefix + suffix)
+              for prefix in verifiers.values() for suffix in ('-backups', '-state')]
+for resource, name in resources:
     path = f'/api/v1/namespaces/{namespace}/{resource}/{name}'
     request('DELETE', path, {'propagationPolicy': 'Foreground'}, missing_ok=True)
     wait_for(lambda: request('GET', path, missing_ok=True) is None, seconds=600)
@@ -90,8 +93,8 @@ def restored():
 wait_for(restored)
 
 
-def verified():
-    pod = request('GET', f'/api/v1/namespaces/{namespace}/pods/home-assistant-0', missing_ok=True)
+def verified(pod_name, prefix):
+    pod = request('GET', f'/api/v1/namespaces/{namespace}/pods/{pod_name}', missing_ok=True)
     if not pod:
         return False
     if pod['metadata'].get('labels', {}).get('velero.io/restore-name') != restore_name:
@@ -104,7 +107,7 @@ def verified():
     if [c['name'] for c in spec['containers']] != ['backup']:
         raise RuntimeError('Unexpected application container in restored verifier')
     claims = [v['persistentVolumeClaim']['claimName'] for v in spec['volumes'] if 'persistentVolumeClaim' in v]
-    if claims != ['automation-backups']:
+    if claims != [prefix + '-backups']:
         raise RuntimeError('Unexpected persistent storage in restored verifier')
     phase = pod.get('status', {}).get('phase')
     if phase == 'Failed':
@@ -112,13 +115,15 @@ def verified():
     return phase == 'Succeeded'
 
 
-wait_for(verified, seconds=900)
+for pod_name, prefix in verifiers.items():
+    wait_for(lambda: verified(pod_name, prefix), seconds=900)
 # Pod dependencies are discovered before its volumes are rewritten. The state
 # claim is therefore an unmounted placeholder; it must never provision or bind.
-state_path = f'/api/v1/namespaces/{namespace}/persistentvolumeclaims/automation-state'
-state_claim = request('GET', state_path, missing_ok=True)
-if state_claim:
-    if state_claim['spec'].get('volumeName') or state_claim.get('status', {}).get('phase') == 'Bound':
-        raise RuntimeError('The excluded state placeholder unexpectedly bound a volume')
-    request('DELETE', state_path, {'propagationPolicy': 'Foreground'})
-print('Verified automation recovery from B2 backup ' + latest['metadata']['name'])
+for prefix in verifiers.values():
+    state_path = f'/api/v1/namespaces/{namespace}/persistentvolumeclaims/{prefix}-state'
+    state_claim = request('GET', state_path, missing_ok=True)
+    if state_claim:
+        if state_claim['spec'].get('volumeName') or state_claim.get('status', {}).get('phase') == 'Bound':
+            raise RuntimeError('The excluded state placeholder unexpectedly bound a volume')
+        request('DELETE', state_path, {'propagationPolicy': 'Foreground'})
+print('Verified automation and Thread recovery from B2 backup ' + latest['metadata']['name'])

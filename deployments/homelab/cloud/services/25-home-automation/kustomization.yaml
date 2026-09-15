@@ -24,6 +24,7 @@ configMapGenerator:
   - iot-firewall.nft
   - thread-firewall.nft
   - thread-backup.sh
+  - thread-recovery.py
 - name: automation-radios
   namespace: home-automation
   envs:
@@ -38,3 +39,4 @@ configMapGenerator:
     disableNameSuffixHash: true
   files:
   - backup.py
+  - thread-recovery.py
