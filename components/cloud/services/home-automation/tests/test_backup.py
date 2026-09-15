@@ -1,5 +1,6 @@
 import importlib.util
 from contextlib import closing
+import copy
 import io
 import json
 import os
@@ -13,6 +14,7 @@ import threading
 import time
 import unittest
 import yaml
+import jsonpatch
 
 ROOT = Path(__file__).resolve().parents[5]
 SOURCE = ROOT / 'deployments/homelab/cloud/services/25-home-automation'
@@ -119,6 +121,41 @@ class VolumeSelectionTests(unittest.TestCase):
                         if volume['name'] not in excluded
                         and not {'hostPath', 'configMap', 'secret', 'projected'}.intersection(volume)}
             self.assertEqual({'backups'}, selected, filename)
+
+    def test_restore_preserves_velero_helper_and_removes_application_access(self):
+        documents = list(yaml.safe_load_all((SOURCE / 'workload.yaml').read_text()))
+        original = next(item for item in documents if item['kind'] == 'StatefulSet')['spec']['template']
+        modifiers = list(yaml.safe_load_all((SOURCE.parent / '16-backup-policy/home-automation-restore.yaml').read_text()))
+        rule = yaml.safe_load(modifiers[0]['data']['resource-modifiers.yaml'])['resourceModifierRules'][0]
+        operations = []
+        for patch in rule['patches']:
+            operation = {'op': patch['operation'], 'path': patch['path']}
+            if 'from' in patch:
+                operation['from'] = patch['from']
+            if 'value' in patch:
+                value = patch['value']
+                operation['value'] = json.loads(value) if value.startswith(('{', '[')) else value
+            operations.append(operation)
+        for owner_present in (False, True):
+            pod = copy.deepcopy(original)
+            pod['spec']['nodeName'] = 'production-worker'
+            if owner_present:
+                pod['metadata']['ownerReferences'] = [{'kind': 'StatefulSet', 'name': 'home-assistant', 'uid': 'old'}]
+            helper = {'name': 'restore-wait', 'image': 'velero', 'args': [f'restore-{owner_present}'],
+                      'volumeMounts': [{'name': 'backups', 'mountPath': '/restores/backups'}]}
+            pod['spec']['initContainers'].insert(0, copy.deepcopy(helper))
+            # Velero parses its string patch values afresh for each object.
+            restored = jsonpatch.JsonPatch(copy.deepcopy(operations)).apply(pod)
+            self.assertEqual([helper], restored['spec']['initContainers'])
+            self.assertEqual(['backup'], [c['name'] for c in restored['spec']['containers']])
+            self.assertEqual({}, restored['metadata']['annotations'])
+            self.assertEqual([], restored['metadata']['ownerReferences'])
+            self.assertFalse(restored['spec']['automountServiceAccountToken'])
+            self.assertFalse(restored['spec'].get('hostNetwork'))
+            self.assertNotIn('nodeName', restored['spec'])
+            self.assertNotIn('automationRestoreHelper', restored)
+            claims = [v['persistentVolumeClaim']['claimName'] for v in restored['spec']['volumes'] if 'persistentVolumeClaim' in v]
+            self.assertEqual(['automation-backups'], claims)
 
 
 class SupervisorTests(unittest.TestCase):

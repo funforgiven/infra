@@ -57,6 +57,16 @@ for resource, name in [('pods', 'home-assistant-0'), ('persistentvolumeclaims', 
     request('DELETE', path, {'propagationPolicy': 'Foreground'}, missing_ok=True)
     wait_for(lambda: request('GET', path, missing_ok=True) is None, seconds=600)
 
+# Precreate only scratch storage. Velero's Pod action discovers the original
+# pod's PVCs before resource modifiers run; explicitly exclude those resources
+# so it can never recreate or bind the production state claim in this namespace.
+request('POST', f'/api/v1/namespaces/{namespace}/persistentvolumeclaims', {
+    'apiVersion': 'v1', 'kind': 'PersistentVolumeClaim',
+    'metadata': {'name': 'automation-backups', 'namespace': namespace},
+    'spec': {'accessModes': ['ReadWriteOnce'], 'storageClassName': 'automation-restore',
+             'resources': {'requests': {'storage': '20Gi'}}},
+})
+
 restore_name = os.environ['JOB_NAME']
 restore = {
     'apiVersion': 'velero.io/v1', 'kind': 'Restore',
@@ -65,7 +75,8 @@ restore = {
     'spec': {
         'backupName': latest['metadata']['name'],
         'includedNamespaces': ['home-automation'],
-        'includedResources': ['pods', 'persistentvolumeclaims'],
+        'includedResources': ['pods'],
+        'excludedResources': ['persistentvolumeclaims', 'persistentvolumes'],
         'labelSelector': {'matchLabels': {'backup.fahrican.com/verify': 'automation'}},
         'includeClusterResources': False,
         'namespaceMapping': {'home-automation': namespace}, 'restorePVs': True,

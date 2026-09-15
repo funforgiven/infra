@@ -7,6 +7,7 @@
       python = pkgs.python3.withPackages (pythonPackages: [
         pythonPackages.ansible
         pythonPackages.ansible-core
+        pythonPackages.jsonpatch
         pythonPackages.pyyaml
         pythonPackages.requests
       ]);
