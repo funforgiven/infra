@@ -145,11 +145,15 @@ class VolumeSelectionTests(unittest.TestCase):
                 if owner_present:
                     pod['metadata']['ownerReferences'] = [{'kind': 'StatefulSet', 'name': 'home-assistant', 'uid': 'old'}]
                 helper = {'name': 'restore-wait', 'image': 'velero', 'args': [f'restore-{owner_present}'],
-                          'volumeMounts': [{'name': 'backups', 'mountPath': '/restores/backups'}]}
+                          'volumeMounts': [{'name': 'backups', 'mountPath': '/restores/backups'}],
+                          'securityContext': copy.deepcopy(original['spec']['containers'][0]['securityContext'])}
                 pod['spec']['initContainers'].insert(0, copy.deepcopy(helper))
                 # Velero parses its string patch values afresh for each object.
                 restored = jsonpatch.JsonPatch(copy.deepcopy(operations)).apply(pod)
-                self.assertEqual([helper], restored['spec']['initContainers'])
+                safe_context = {'runAsNonRoot': True, 'runAsUser': 1000, 'runAsGroup': 1000,
+                                'allowPrivilegeEscalation': False, 'readOnlyRootFilesystem': True,
+                                'capabilities': {'drop': ['ALL']}}
+                self.assertEqual([dict(helper, securityContext=safe_context)], restored['spec']['initContainers'])
                 self.assertEqual(['backup'], [c['name'] for c in restored['spec']['containers']])
                 self.assertEqual({}, restored['metadata']['annotations'])
                 self.assertEqual([], restored['metadata']['ownerReferences'])
