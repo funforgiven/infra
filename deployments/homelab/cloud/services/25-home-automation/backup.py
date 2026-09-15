@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Produce a bounded, quiesced recovery archive; serve backup/application metrics."""
 import argparse
+from contextlib import closing
 import fcntl
 import hashlib
 import io
@@ -8,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import signal
 import socket
 import sqlite3
 import tarfile
@@ -16,6 +18,7 @@ import threading
 import time
 import urllib.request
 import uuid
+import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 SERVICES = ('home-assistant', 'matter', 'mosquitto', 'zigbee2mqtt')
@@ -54,7 +57,7 @@ def verify(path):
                     database = Path(directory) / 'database.db'
                     with database.open('wb') as output:
                         shutil.copyfileobj(archive.extractfile(member), output)
-                    with sqlite3.connect(f'file:{database}?mode=ro', uri=True) as connection:
+                    with closing(sqlite3.connect(f'file:{database}?mode=ro', uri=True)) as connection:
                         if connection.execute('PRAGMA integrity_check').fetchone() != ('ok',):
                             raise ValueError('Home Assistant SQLite integrity check failed')
         for required in ('home-assistant/configuration.yaml', 'home-assistant/.storage/http',
@@ -92,7 +95,7 @@ def backup(state=Path('/state'), destination=Path('/backups'), control=Path('/co
             # SQLite main file is self-contained, and refuse a locked writer.
             database = state / 'home-assistant/home-assistant_v2.db'
             if database.exists():
-                with sqlite3.connect(database, timeout=1) as connection:
+                with closing(sqlite3.connect(database, timeout=1)) as connection:
                     result = connection.execute('PRAGMA wal_checkpoint(TRUNCATE)').fetchone()
                     if result and result[0] != 0:
                         raise RuntimeError('SQLite writer remains active')
@@ -211,6 +214,9 @@ def serve():
 
 
 if __name__ == '__main__':
+    # Python running as container PID 1 must explicitly handle termination.
+    # SystemExit also runs the backup's finally block and resumes writers.
+    signal.signal(signal.SIGTERM, lambda *_args: sys.exit(0))
     os.umask(0o077)
     parser = argparse.ArgumentParser()
     parser.add_argument('--once', action='store_true')

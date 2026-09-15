@@ -43,6 +43,8 @@ if not http.exists():
 credentials = Path('/credentials')
 runtime = Path('/runtime')
 runtime.mkdir(exist_ok=True)
+# Mosquitto's ACL reader requires a regular file; projected ConfigMaps use symlinks.
+shutil.copyfile('/bootstrap/mosquitto.acl', runtime / 'mosquitto.acl')
 with (runtime / 'mosquitto-passwords').open('w') as output:
     for user in ('homeassistant', 'zigbee2mqtt', 'monitoring'):
         password = (credentials / f'{user}-password').read_text().strip()

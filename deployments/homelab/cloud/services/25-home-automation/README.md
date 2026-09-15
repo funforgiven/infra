@@ -190,11 +190,19 @@ home automation controller. Its scratch volume uses a Delete reclaim policy.
 Run this same check on demand after a deployment and after stateful upgrades:
 
 ```sh
-velero backup create automation-<unique-name> --from-schedule services-daily --wait
+velero backup create automation-<unique-name> --include-namespaces home-automation \
+  --default-volumes-to-fs-backup --snapshot-volumes=false --wait
 kubectl -n backup-qualification create job \
-  --from=cronjob/home-automation-restore home-automation-restore-<unique-name>
+  --from=cronjob/home-automation-restore home-automation-restore-<unique-name> \
+  --dry-run=client -o yaml > /tmp/automation-restore-job.yaml
+kubectl set env --local -f /tmp/automation-restore-job.yaml \
+  BACKUP_NAME=automation-<unique-name> -o yaml | kubectl create -f -
 kubectl -n backup-qualification logs -f job/home-automation-restore-<unique-name>
 ```
+
+The monthly CronJob always selects the newest daily backup. `BACKUP_NAME` is an
+explicit override for a scoped on-demand test; manual tests do not replace or
+mislabel the daily services backup.
 
 For live recovery, first pass the isolated check, stop the main StatefulSet and
 OTBR, mount a **new** state PVC in a disposable non-networked restore pod, and
