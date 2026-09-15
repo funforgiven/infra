@@ -6,6 +6,7 @@ from pathlib import Path
 import ssl
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 server = 'https://' + os.environ['KUBERNETES_SERVICE_HOST'] + ':' + os.environ['KUBERNETES_SERVICE_PORT_HTTPS']
@@ -37,10 +38,15 @@ def wait_for(check, seconds=1800):
     raise TimeoutError('Restore qualification timed out')
 
 
-backups = request('GET', '/apis/velero.io/v1/namespaces/velero/backups?labelSelector=velero.io%2Fschedule-name%3Dservices-daily')['items']
-if not backups:
-    raise SystemExit('No scheduled backup is available')
-latest = max(backups, key=lambda item: item['metadata']['creationTimestamp'])
+selected_backup = os.environ.get('BACKUP_NAME')
+if selected_backup:
+    latest = request('GET', '/apis/velero.io/v1/namespaces/velero/backups/'
+                     + urllib.parse.quote(selected_backup, safe=''))
+else:
+    backups = request('GET', '/apis/velero.io/v1/namespaces/velero/backups?labelSelector=velero.io%2Fschedule-name%3Dservices-daily')['items']
+    if not backups:
+        raise SystemExit('No scheduled backup is available')
+    latest = max(backups, key=lambda item: item['metadata']['creationTimestamp'])
 if latest.get('status', {}).get('phase') != 'Completed':
     raise SystemExit('Latest daily backup is incomplete; refusing an older fallback')
 if 'home-automation' not in latest['spec']['includedNamespaces']:
