@@ -5,8 +5,10 @@ alias: Fahrican Loft keypad - Loft and Bedroom lights
 description: >-
   A keypad PIN or fingerprint unlock/unlatch turns on the Fahrican Loft and
   Fahrican Bedroom 1600 lm Hue bulbs; keypad locking turns them off.
-  Wait up to 20 seconds for Matter to confirm
-  the requested lock state. Preserve brightness and color, with no fade.
+  Wait up to 20 seconds for Matter to confirm the requested lock state.
+  For keypad action 0, require a new final Matter state after the keypad event
+  to determine whether the door locked or opened. Preserve brightness and
+  color, with no fade.
   App, Matter, MQTT, automatic and inside-button actions do not trigger this.
 triggers:
 - trigger: event.received
@@ -21,6 +23,12 @@ triggers:
   options:
     event_type: [lock, full_lock]
   id: depart
+- trigger: event.received
+  target:
+    entity_id: event.nuki_ultra_action
+  options:
+    event_type: [unknown]
+  id: keypad_unspecified
 conditions:
 - alias: Require an identified keypad action
   condition: template
@@ -28,14 +36,19 @@ conditions:
     {% set event = trigger.to_state.attributes %}
     {{ event.get('source') == 'keypad'
        and event.get('trigger_id') == 0
+       and event.get('action_id') in [0, 1, 2, 3, 6]
        and event.get('code_id', 0) | int(0) > 0
        and event.get('keypad_source') in ['code', 'fingerprint', 'back_button'] }}
 actions:
 - alias: Wait for the requested lock state
   wait_template: >-
+    {% set lock = states.lock.smart_lock_ultra %}
     {{ (trigger.id == 'arrive'
-        and states('lock.smart_lock_ultra') in ['unlocked', 'open'])
-       or (trigger.id == 'depart' and is_state('lock.smart_lock_ultra', 'locked')) }}
+        and lock.state in ['unlocked', 'open'])
+       or (trigger.id == 'depart' and lock.state == 'locked')
+       or (trigger.id == 'keypad_unspecified'
+           and lock.state in ['locked', 'unlocked', 'open']
+           and as_timestamp(lock.last_changed) >= as_timestamp(trigger.to_state.state)) }}
   timeout:
     seconds: 20
   continue_on_timeout: false
@@ -44,8 +57,11 @@ actions:
   value_template: "{{ states('event.nuki_ultra_action') == trigger.to_state.state }}"
 - choose:
   - conditions:
-    - condition: trigger
-      id: arrive
+    - condition: template
+      value_template: >-
+        {{ trigger.id == 'arrive'
+           or (trigger.id == 'keypad_unspecified'
+               and states('lock.smart_lock_ultra') in ['unlocked', 'open']) }}
     sequence:
     - action: light.turn_on
       target:
@@ -55,8 +71,11 @@ actions:
       data:
         transition: 0
   - conditions:
-    - condition: trigger
-      id: depart
+    - condition: template
+      value_template: >-
+        {{ trigger.id == 'depart'
+           or (trigger.id == 'keypad_unspecified'
+               and is_state('lock.smart_lock_ultra', 'locked')) }}
     sequence:
     - action: light.turn_off
       target:
