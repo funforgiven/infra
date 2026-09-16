@@ -223,6 +223,30 @@ and HA discards replayed retained event messages. No door, alarm or access
 automation is created by discovery. User-name mappings require observing the
 owner's deliberate keypad/fingerprint actions.
 
+### Keypad lighting
+
+`nuki-keypad-lighting.yaml` is the recovery copy of HA automation
+`nuki_keypad_hue_1600_lighting` ("Nuki keypad - 1600 lm Hue lights"). Install
+its YAML mapping as JSON through HA's authenticated
+`POST /api/config/automation/config/nuki_keypad_hue_1600_lighting` endpoint.
+HA validates, saves and reloads this automation; its live configuration remains
+editable in the UI and is included in application backups. It is not a
+Kubernetes resource and does not restart the automation pod.
+
+PIN and fingerprint unlock/unlatch actions turn on only the two 1600 lm bulbs,
+`light.0x001788011015148f` and `light.0x0017880110151bb9` (Philips model
+`9290038536H`). Identified keypad lock/full-lock actions turn them off. The
+automation preserves brightness and color and sets transition to zero.
+It requires a keypad code ID and source, excludes other command sources,
+and waits up to 20 seconds for Matter to confirm the requested lock state.
+If confirmation times out or another action supersedes the request, it stops.
+The event trigger ignores restored states on startup/reconnection; a new
+keypad request replaces a pending run. No lock command is sent.
+
+MQTT publishes an action request, not a physical door-open sensor reading.
+Keypad back-button actions without a code ID cannot be identified by this
+rule and require a verified keypad authorization mapping before inclusion.
+
 ## Monitoring and backup
 
 Prometheus scrapes the backup sidecar through an internal ServiceMonitor. It

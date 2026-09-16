@@ -1,0 +1,71 @@
+# Install through HA's /api/config/automation/config/<id> endpoint.
+# HA owns the live copy in automations.yaml; normal application backups include it.
+id: nuki_keypad_hue_1600_lighting
+alias: Nuki keypad - 1600 lm Hue lights
+description: >-
+  A keypad PIN or fingerprint unlock/unlatch turns on the two 1600 lm Hue bulbs;
+  keypad locking turns them off. Wait up to 20 seconds for Matter to confirm
+  the requested lock state. Preserve brightness and color, with no fade.
+  App, Matter, MQTT, automatic and inside-button actions do not trigger this.
+triggers:
+- trigger: event.received
+  target:
+    entity_id: event.nuki_ultra_action
+  options:
+    event_type: [unlock, unlatch]
+  id: arrive
+- trigger: event.received
+  target:
+    entity_id: event.nuki_ultra_action
+  options:
+    event_type: [lock, full_lock]
+  id: depart
+conditions:
+- alias: Require an identified keypad action
+  condition: template
+  value_template: >-
+    {% set event = trigger.to_state.attributes %}
+    {{ event.get('source') == 'keypad'
+       and event.get('trigger_id') == 0
+       and event.get('code_id', 0) | int(0) > 0
+       and event.get('keypad_source') in ['code', 'fingerprint', 'back_button'] }}
+actions:
+- alias: Wait for the requested lock state
+  wait_template: >-
+    {{ (trigger.id == 'arrive'
+        and states('lock.smart_lock_ultra') in ['unlocked', 'open'])
+       or (trigger.id == 'depart' and is_state('lock.smart_lock_ultra', 'locked')) }}
+  timeout:
+    seconds: 20
+  continue_on_timeout: false
+- alias: Ignore a request superseded by another lock action
+  condition: template
+  value_template: "{{ states('event.nuki_ultra_action') == trigger.to_state.state }}"
+- choose:
+  - conditions:
+    - condition: trigger
+      id: arrive
+    sequence:
+    - action: light.turn_on
+      target:
+        entity_id:
+        - light.0x001788011015148f
+        - light.0x0017880110151bb9
+      data:
+        transition: 0
+  - conditions:
+    - condition: trigger
+      id: depart
+    sequence:
+    - action: light.turn_off
+      target:
+        entity_id:
+        - light.0x001788011015148f
+        - light.0x0017880110151bb9
+      data:
+        transition: 0
+mode: restart
+max_exceeded: silent
+initial_state: true
+trace:
+  stored_traces: 10
