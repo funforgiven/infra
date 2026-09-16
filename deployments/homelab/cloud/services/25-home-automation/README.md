@@ -121,7 +121,7 @@ configuration, network identities or user state.
 
 ## Daikin Onecta
 
-The FTXM71A2V1B uses a BRP069C4x adapter on `Rooftrollen_IoT`, observed at
+The Fahrican Loft FTXM71A2V1B uses a BRP069C4x adapter on `Rooftrollen_IoT`, observed at
 `10.21.50.119` (DHCP), MAC `34:90:EA:D1:9B:20`. Firmware `2.6.2` answers Daikin
 UDP discovery, but the legacy HTTP status endpoints and a read-only POST to
 `/dsiot/multireq` return HTTP 404; HTTPS port 443 refuses connections. These

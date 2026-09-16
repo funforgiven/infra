@@ -67,3 +67,10 @@ nuki_lock:
   area: Fahrican Loft
   matter_name: Fahrican Loft external door
   mqtt_name: Fahrican Loft lock activity
+daikin_ac:
+  model: FTXM71A2V1B
+  adapter: BRP069C4x
+  mac: '34:90:EA:D1:9B:20'
+  area: Fahrican Loft
+  name: Fahrican Loft AC
+  integration: daikin_onecta
