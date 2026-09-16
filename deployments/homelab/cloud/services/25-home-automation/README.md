@@ -226,7 +226,7 @@ owner's deliberate keypad/fingerprint actions.
 ### Keypad lighting
 
 `nuki-keypad-lighting.yaml` is the recovery copy of HA automation
-`nuki_keypad_hue_1600_lighting` ("Nuki keypad - 1600 lm Hue lights"). Install
+`nuki_keypad_hue_1600_lighting` ("Fahrican Loft keypad - Loft and Bedroom lights"). Install
 its YAML mapping as JSON through HA's authenticated
 `POST /api/config/automation/config/nuki_keypad_hue_1600_lighting` endpoint.
 HA validates, saves and reloads this automation; its live configuration remains
@@ -234,7 +234,8 @@ editable in the UI and is included in application backups. It is not a
 Kubernetes resource and does not restart the automation pod.
 
 PIN and fingerprint unlock/unlatch actions turn on only the two 1600 lm bulbs,
-`light.0x001788011015148f` and `light.0x0017880110151bb9` (Philips model
+`light.0x001788011015148f` in Fahrican Loft and `light.0x0017880110151bb9`
+in Fahrican Bedroom (Philips model
 `9290038536H`). Identified keypad lock/full-lock actions turn them off. The
 automation preserves brightness and color and sets transition to zero.
 It requires a keypad code ID and source, excludes other command sources,
@@ -246,6 +247,46 @@ keypad request replaces a pending run. No lock command is sent.
 MQTT publishes an action request, not a physical door-open sensor reading.
 Keypad back-button actions without a code ID cannot be identified by this
 rule and require a verified keypad authorization mapping before inclusion.
+
+## Rooms and dimmers
+
+`home-layout.yaml` records the owner's floor/area layout and device assignments.
+Home Assistant owns the live floor, area and device registries, which are
+included in application backups. Apply the inventory through HA's authenticated
+`config/floor_registry`, `config/area_registry` and `config/device_registry`
+WebSocket APIs. Registry display names describe the rooms while entity IDs and
+Zigbee2MQTT friendly names remain stable for existing automations.
+
+HA permits one floor per area. The shared `5th–6th` floor entry contains
+Stairwell; its level is unset because it spans the two physical floors. The
+unused initial Bedroom area was renamed Enes Room. Living Room and Kitchen
+retain their original registry IDs. Both the Matter lock and MQTT activity
+device belong to Fahrican Loft, at the external door. The SONOFF `d047` relay
+belongs to Fahrican Bedroom.
+
+`hue-dimmer-automations.yaml` contains four HA automation recovery copies.
+Install each mapping with `POST /api/config/automation/config/<id>`. The power
+button's `on_press` event toggles the paired bulb's current HA state. Brightness
+up/down press and hold events apply steps of 25 percentage points, with zero
+transition. Release events and the unassigned Hue button are ignored. Each
+dimmer has its own ordered action queue; unavailable bulbs are skipped.
+MQTT trigger payloads explicitly use UTF-8 decoding. All five Hue bulbs also
+have the Zigbee2MQTT device option `transition: 0`, applied through
+`zigbee2mqtt/bridge/request/device/options`, so ordinary commands use no fade.
+
+| Area | Dimmer | Bulb |
+| --- | --- | --- |
+| Fahrican Loft | `0x001788010ed6a389` | `0x001788011015148f` |
+| Fahrican Bedroom | `0x001788010ed6a323` | `0x0017880110151bb9` |
+| Living Room | `0x001788010edcc2de` | `0x001788010c012f69` |
+| Fahrican Spare Room | `0x001788010edcc4bf` | `0x001788010c0179eb` |
+
+Remove only the dimmer-to-bulb `genOnOff` and `genLevelCtrl` bindings, with
+`skip_disable_reporting: true`, before enabling each replacement automation.
+Retain coordinator bindings for button events and battery/status reports, and
+bulb-to-coordinator reporting. Battery dimmers may need a button press to wake
+for unbinding. The requested software controls depend on HA, Zigbee2MQTT and
+Mosquitto being available. Stairwell keeps its separate motion automation.
 
 ## Monitoring and backup
 

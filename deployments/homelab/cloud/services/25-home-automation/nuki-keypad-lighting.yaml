@@ -1,10 +1,11 @@
 # Install through HA's /api/config/automation/config/<id> endpoint.
 # HA owns the live copy in automations.yaml; normal application backups include it.
 id: nuki_keypad_hue_1600_lighting
-alias: Nuki keypad - 1600 lm Hue lights
+alias: Fahrican Loft keypad - Loft and Bedroom lights
 description: >-
-  A keypad PIN or fingerprint unlock/unlatch turns on the two 1600 lm Hue bulbs;
-  keypad locking turns them off. Wait up to 20 seconds for Matter to confirm
+  A keypad PIN or fingerprint unlock/unlatch turns on the Fahrican Loft and
+  Fahrican Bedroom 1600 lm Hue bulbs; keypad locking turns them off.
+  Wait up to 20 seconds for Matter to confirm
   the requested lock state. Preserve brightness and color, with no fade.
   App, Matter, MQTT, automatic and inside-button actions do not trigger this.
 triggers:
