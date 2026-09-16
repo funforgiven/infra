@@ -133,7 +133,10 @@ spec:
             command:
             - /bin/bash
             - -ec
-            - test -f /tmp/backup-active || curl --fail --silent http://127.0.0.1:8081/node/state >/dev/null
+            - |-
+              test -f /tmp/backup-active && exit 0
+              test "$(s6-svstat -o ready /run/service/otbr-agent)" = true
+              curl --fail --silent http://127.0.0.1:8081/node/state >/dev/null
           initialDelaySeconds: 30
           periodSeconds: 15
         livenessProbe:
