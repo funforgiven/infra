@@ -1,0 +1,86 @@
+# Published through HA's mqtt.publish action; retained by the backed-up broker.
+# No lock commands or automatic door/alarm actions are configured here.
+homeassistant/event/nuki_4e988f8f/action/config:
+  name: Action requested
+  unique_id: nuki_4e988f8f_action
+  default_entity_id: event.nuki_ultra_action
+  device: &device
+    identifiers: [nuki_4e988f8f_activity]
+    manufacturer: Nuki
+    model: Smart Lock Ultra MQTT
+    name: Nuki Ultra activity
+    serial_number: 4E988F8F
+  availability_topic: nuki/4E988F8F/connected
+  payload_available: 'true'
+  payload_not_available: 'false'
+  state_topic: nuki/4E988F8F/lockActionEvent
+  event_types: [unlock, lock, unlatch, lock_n_go, lock_n_go_unlatch, full_lock, fob, button, unknown]
+  icon: mdi:lock-clock
+  value_template: >-
+    {% set p = value.split(',') %}
+    {% if p | length == 5 and p | select('match', '^\d+$') | list | length == 5 %}
+      {% set actions = {'1': 'unlock', '2': 'lock', '3': 'unlatch', '4': 'lock_n_go',
+                        '5': 'lock_n_go_unlatch', '6': 'full_lock', '80': 'fob', '90': 'button'} %}
+      {% set triggers = {'0': 'system_or_bluetooth', '2': 'button', '3': 'automatic',
+                         '6': 'auto_lock', '171': 'matter', '172': 'mqtt'} %}
+      {% set keypad = {'0': 'back_button', '1': 'code', '2': 'fingerprint'} %}
+      {{ {'event_type': actions.get(p[0], 'unknown'),
+          'action_id': p[0] | int, 'trigger_id': p[1] | int,
+          'source': 'keypad' if p[3] | int > 0 else triggers.get(p[1], 'unknown'),
+          'authorization_id': p[2] | int if p[2] | int > 0 else none,
+          'code_id': p[3] | int if p[3] | int > 0 else none,
+          'keypad_source': keypad.get(p[4], 'unknown') if p[3] | int > 0 else none,
+          'context_value': p[4] | int} | to_json }}
+    {% else %}
+      {{ {} | to_json }}
+    {% endif %}
+
+homeassistant/binary_sensor/nuki_4e988f8f/mqtt/config:
+  name: MQTT connection
+  unique_id: nuki_4e988f8f_mqtt
+  default_entity_id: binary_sensor.nuki_ultra_mqtt
+  device: *device
+  device_class: connectivity
+  entity_category: diagnostic
+  state_topic: nuki/4E988F8F/connected
+  payload_on: 'true'
+  payload_off: 'false'
+
+homeassistant/binary_sensor/nuki_4e988f8f/keypad_battery/config:
+  name: Keypad battery low
+  unique_id: nuki_4e988f8f_keypad_battery
+  default_entity_id: binary_sensor.nuki_ultra_keypad_battery_low
+  device: *device
+  device_class: battery
+  entity_category: diagnostic
+  state_topic: nuki/4E988F8F/keypadBatteryCritical
+  payload_on: 'true'
+  payload_off: 'false'
+  availability_topic: nuki/4E988F8F/connected
+  payload_available: 'true'
+  payload_not_available: 'false'
+
+homeassistant/binary_sensor/nuki_4e988f8f/battery/config:
+  name: Lock battery low
+  unique_id: nuki_4e988f8f_battery
+  default_entity_id: binary_sensor.nuki_ultra_battery_low
+  device: *device
+  device_class: battery
+  entity_category: diagnostic
+  state_topic: nuki/4E988F8F/batteryCritical
+  payload_on: 'true'
+  payload_off: 'false'
+  availability_topic: nuki/4E988F8F/connected
+  payload_available: 'true'
+  payload_not_available: 'false'
+
+homeassistant/sensor/nuki_4e988f8f/firmware/config:
+  name: Firmware
+  unique_id: nuki_4e988f8f_firmware
+  default_entity_id: sensor.nuki_ultra_firmware
+  device: *device
+  entity_category: diagnostic
+  state_topic: nuki/4E988F8F/firmware
+  availability_topic: nuki/4E988F8F/connected
+  payload_available: 'true'
+  payload_not_available: 'false'

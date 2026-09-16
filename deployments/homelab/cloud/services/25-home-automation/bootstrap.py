@@ -44,11 +44,16 @@ credentials = Path('/credentials')
 runtime = Path('/runtime')
 runtime.mkdir(exist_ok=True)
 # Mosquitto's ACL reader requires a regular file; projected ConfigMaps use symlinks.
-shutil.copyfile('/bootstrap/mosquitto.acl', runtime / 'mosquitto.acl')
-with (runtime / 'mosquitto-passwords').open('w') as output:
-    for user in ('homeassistant', 'zigbee2mqtt', 'monitoring'):
-        password = (credentials / f'{user}-password').read_text().strip()
-        if not password or any(c in password for c in '\r\n:'):
-            raise SystemExit('Invalid MQTT credential')
-        output.write(f'{user}:{password}\n')
+for name in ('mosquitto.acl', 'mosquitto-nuki.acl'):
+    shutil.copyfile(Path('/bootstrap') / name, runtime / name)
+for filename, users in (
+    ('mosquitto-passwords', ('homeassistant', 'zigbee2mqtt', 'monitoring')),
+    ('nuki-passwords', ('nuki',)),
+):
+    with (runtime / filename).open('w') as output:
+        for user in users:
+            password = (credentials / f'{user}-password').read_text().strip()
+            if not password or any(c in password for c in '\r\n:'):
+                raise SystemExit('Invalid MQTT credential')
+            output.write(f'{user}:{password}\n')
 print('Initial configuration and runtime credentials prepared.')

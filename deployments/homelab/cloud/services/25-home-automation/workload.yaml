@@ -105,9 +105,11 @@ spec:
       - name: hash-mqtt-passwords
         image: docker.io/eclipse-mosquitto:2.1.2-alpine@sha256:6f8d8a947c506f8a2290ec65cd4bd2bc7cb4d43fb5f6271f861cb013e2ef9797
         command:
-        - mosquitto_passwd
-        - -U
-        - /runtime/mosquitto-passwords
+        - /bin/sh
+        - -ec
+        - |-
+          mosquitto_passwd -U /runtime/mosquitto-passwords
+          mosquitto_passwd -U /runtime/nuki-passwords
         securityContext: *id001
         volumeMounts:
         - name: runtime

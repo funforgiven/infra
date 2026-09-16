@@ -18,8 +18,9 @@ ports and security groups are explicitly retired by the services-hosts root.
 
 Every image is pinned by digest. The main StatefulSet contains HA, Matter,
 Mosquitto, Zigbee2MQTT and a backup/metrics sidecar. They share one network
-namespace so MQTT and the unauthenticated Matter WebSocket API stay on
-loopback. A single 20 GiB Cinder volume holds four separate state directories.
+namespace so internal MQTT and the unauthenticated Matter WebSocket API use
+loopback. A separate MQTT listener accepts only Nuki telemetry through OTBR.
+A single 20 GiB Cinder volume holds four separate state directories.
 This is deliberately a single-writer stack: upgrades and recovery replace the
 whole instance. Do not scale it above one replica or start a second copy of its
 Zigbee network or Matter fabric. A second 20 GiB volume holds verified recovery
@@ -72,8 +73,10 @@ silently detached or reassigned.
 
 Calico NetworkPolicies filter the primary pod interface. They do not protect
 Multus interfaces: the explicit pod nftables rules protect `net1`. IoT clients
-can exchange discovery and Matter traffic but cannot reach HA, MQTT, Matter's
-management API or the metrics endpoint on that interface. OTBR's API accepts
+can exchange discovery and Matter traffic but cannot reach HA, Matter's
+management API or the metrics endpoint on that interface. MQTT on `.10:1883`
+accepts only OTBR's `.11` NAT64 source, with separate authentication and ACLs.
+Internal MQTT credentials are not accepted by this listener. OTBR's API accepts
 only the main automation pod's `.10` address. Router advertisements and route
 information options are enabled for IPv6 Thread reachability; no ISP IPv6
 connection is required. The main pod does not forward traffic between networks.
@@ -98,7 +101,8 @@ The owner account exists, MQTT/Matter/OTBR are enrolled, and HA discovery uses
 2. Add **MQTT** with broker `127.0.0.1`, port `1883`, username `homeassistant`,
    and the `homeassistant-password` value in `credentials.sops.yaml`. Retrieve
    it into the password manager or clipboard, without putting it in command
-   arguments or logs. Only loopback carries cleartext MQTT.
+   arguments or logs. The separate Nuki listener carries cleartext MQTT only
+   across the local IoT segment between the border router and broker.
 3. Add **Matter**, choose an existing/custom server, and set
    `ws://127.0.0.1:5580/ws`. The server's storage contains the fabric keys and
    must survive every upgrade and restore. No host Bluetooth or D-Bus mount is
@@ -160,7 +164,17 @@ Mesh routers can be added later without changing the Kubernetes infrastructure.
 The `thread.yaml` StatefulSet runs one instance. `thread.env` connects to the
 second Dongle-M at `10.21.50.21:6638`, using 115200 baud and no flow control.
 `DEVICE=/tmp/ttyOTBR` is the container's TCP-to-PTY bridge. Automatic firmware
-flashing and NAT64 are disabled. The serial allowlist admits only OTBR's `.11`.
+flashing is disabled. The serial allowlist admits only OTBR's `.11`.
+
+NAT64 and upstream DNS are enabled for Nuki's MQTT-over-Thread connection.
+IPv4 forwarding is enabled only inside the OTBR pod. Its nftables rules permit
+translated Thread traffic only to `10.21.50.10:1883` and ICMP to that same broker;
+all other translated IPv4 forwarding is dropped, including cluster and internet
+destinations. Native IPv6 Matter traffic retains its existing IoT-only routing.
+DNS queries handled by OTBR use its existing cluster DNS egress permission.
+`thread-ready.sh` configures NAT64 after every agent start, including the
+service restart performed by backups; the image's initial configuration runs
+only once per container.
 
 The **OpenThread Border Router** integration uses `http://10.21.50.11:8081`.
 `Rooftrollen` is the preferred Thread network on channel 25; Zigbee uses channel
@@ -168,6 +182,41 @@ The **OpenThread Border Router** integration uses `http://10.21.50.11:8081`.
 integration. Sync this network's credentials into the Companion app before
 pairing Matter-over-Thread devices. Additional border routers must join this
 same dataset. Avoid forming a second independent network for the same home.
+
+## Nuki Ultra MQTT activity
+
+The Nuki Ultra (`4E988F8F`) is paired through Matter as
+`lock.smart_lock_ultra`. Matter remains the command interface. The separate
+MQTT account `nuki` can publish an explicit list of status/event topics under
+`nuki/4E988F8F/`; it cannot read commands, publish commands, alter discovery,
+or access Zigbee topics. Its password is `stringData.nuki-password` in
+`credentials.sops.yaml`. It is not accepted by the loopback listener.
+
+In the Nuki app use **Features & Configuration → Smart Home → MQTT**:
+
+- Host: `10.21.50.10`; Nuki uses port `1883` automatically.
+- Username: `nuki`; retrieve its password from SOPS.
+- **Allow locking: off.**
+- **Auto discovery: off.** The repository defines activity entities without a
+  duplicate MQTT lock or command buttons.
+- Keep the working Matter pairing. Wi-Fi is not needed. Nuki's separate cloud
+  remote access is not provided by the restricted NAT64 path.
+
+`nuki-mqtt-discovery.yaml` contains retained MQTT discovery messages. Publish
+each mapping entry through HA's authenticated `mqtt.publish` action with
+`topic` set to the mapping key, `payload` to the JSON-encoded mapping value,
+`retain: true`, and `qos: 1`. These messages and HA's entity registry are included
+in normal application backups. Re-publish them after changing the file or
+rebuilding an empty broker.
+
+The activity device exposes `event.nuki_ultra_action`, MQTT connection,
+lock/keypad low-battery flags, and firmware. Events include requested action,
+trigger, authorization ID, code ID, and keypad source when reported. IDs are
+not PINs. The MQTT event is an action request, not proof the door unlocked;
+use the Matter lock state to confirm completion. Invalid payloads are ignored,
+and HA discards replayed retained event messages. No door, alarm or access
+automation is created by discovery. User-name mappings require observing the
+owner's deliberate keypad/fingerprint actions.
 
 ## Monitoring and backup
 

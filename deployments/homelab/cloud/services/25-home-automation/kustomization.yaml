@@ -21,9 +21,11 @@ configMapGenerator:
   - zigbee-configuration.yaml
   - mosquitto.conf
   - mosquitto.acl
+  - mosquitto-nuki.acl
   - iot-firewall.nft
   - thread-firewall.nft
   - thread-backup.sh
+  - thread-ready.sh
   - thread-recovery.py
 - name: automation-radios
   namespace: home-automation
