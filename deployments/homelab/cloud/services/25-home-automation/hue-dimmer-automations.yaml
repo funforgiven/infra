@@ -1,0 +1,78 @@
+# Recovery copies: install each mapping through HA's automation config API.
+# Remove dimmer-to-bulb bindings before enabling. Keep coordinator bindings.
+# The Hue button remains available for a future scene assignment.
+- &hue_dimmer
+  id: hue_dimmer_a389_fahrican_loft
+  alias: Fahrican Loft dimmer
+  description: >-
+    Power toggles the actual light state. Brightness buttons change it by 25
+    percentage points per press or hold event. Changes are instant. Release
+    events are ignored so one physical press produces one action.
+  triggers:
+  - trigger: mqtt
+    topic: zigbee2mqtt/0x001788010ed6a389/action
+    encoding: utf-8
+  variables:
+    light_entity: light.0x001788011015148f
+  conditions:
+  - condition: template
+    value_template: >-
+      {{ trigger.payload in ['on_press', 'up_press', 'up_hold', 'down_press', 'down_hold']
+         and states(light_entity) in ['on', 'off'] }}
+  actions:
+  - choose:
+    - conditions: "{{ trigger.payload == 'on_press' }}"
+      sequence:
+      - action: light.toggle
+        target:
+          entity_id: "{{ light_entity }}"
+        data:
+          transition: 0
+    - conditions: "{{ trigger.payload in ['up_press', 'up_hold'] }}"
+      sequence:
+      - action: light.turn_on
+        target:
+          entity_id: "{{ light_entity }}"
+        data:
+          brightness_step_pct: 25
+          transition: 0
+    - conditions: "{{ trigger.payload in ['down_press', 'down_hold'] }}"
+      sequence:
+      - action: light.turn_on
+        target:
+          entity_id: "{{ light_entity }}"
+        data:
+          brightness_step_pct: -25
+          transition: 0
+  mode: queued
+  max: 20
+  initial_state: true
+  trace:
+    stored_traces: 10
+- <<: *hue_dimmer
+  id: hue_dimmer_a323_fahrican_bedroom
+  alias: Fahrican Bedroom dimmer
+  triggers:
+  - trigger: mqtt
+    topic: zigbee2mqtt/0x001788010ed6a323/action
+    encoding: utf-8
+  variables:
+    light_entity: light.0x0017880110151bb9
+- <<: *hue_dimmer
+  id: hue_dimmer_c2de_living_room
+  alias: Living Room dimmer
+  triggers:
+  - trigger: mqtt
+    topic: zigbee2mqtt/0x001788010edcc2de/action
+    encoding: utf-8
+  variables:
+    light_entity: light.0x001788010c012f69
+- <<: *hue_dimmer
+  id: hue_dimmer_c4bf_fahrican_spare_room
+  alias: Fahrican Spare Room dimmer
+  triggers:
+  - trigger: mqtt
+    topic: zigbee2mqtt/0x001788010edcc4bf/action
+    encoding: utf-8
+  variables:
+    light_entity: light.0x001788010c0179eb

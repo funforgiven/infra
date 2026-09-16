@@ -1,0 +1,69 @@
+# Recovery inventory for HA's floor, area and device registries.
+# HA owns the live registries; this file is not a Kubernetes resource.
+hue_bulb_options:
+  transition: 0
+floors:
+- name: 5th Floor
+  level: 5
+- name: 5th–6th
+  level: null
+- name: 6th Floor
+  level: 6
+areas:
+- name: Entry Hall
+  floor: 5th Floor
+  icon: mdi:door-open
+  covers: Flat entrance and distribution to Enes Room, Enes Bathroom, Living Room and Kitchen.
+- name: Living Room
+  floor: 5th Floor
+  icon: mdi:sofa
+  covers: Living portion of the open-plan space.
+- name: Kitchen
+  floor: 5th Floor
+  icon: mdi:stove
+  covers: Kitchen portion of the open-plan space.
+- name: Enes Room
+  floor: 5th Floor
+  icon: mdi:bed
+  covers: Bedroom and desk/work/gaming/PC space.
+- name: Enes Bathroom
+  floor: 5th Floor
+  icon: mdi:shower
+  covers: Enes bathroom.
+- name: Stairwell
+  floor: 5th–6th
+  icon: mdi:stairs
+  covers: Internal duplex stairs, including the stair light.
+- name: Fahrican Loft
+  floor: 6th Floor
+  icon: mdi:sofa
+  covers: Upper entrance/landing and living/work/gaming/PC area, including the external flat door.
+- name: Fahrican Bedroom
+  floor: 6th Floor
+  icon: mdi:bed
+  covers: Bedroom.
+- name: Fahrican Bathroom
+  floor: 6th Floor
+  icon: mdi:shower
+  covers: Bathroom.
+- name: Fahrican Spare Room
+  floor: 6th Floor
+  icon: mdi:door
+  covers: Extra/spare room.
+zigbee_devices:
+  '0x001788011015148f': {area: Fahrican Loft, name: Fahrican Loft light}
+  '0x001788010ed6a389': {area: Fahrican Loft, name: Fahrican Loft dimmer}
+  '0x0017880110151bb9': {area: Fahrican Bedroom, name: Fahrican Bedroom light}
+  '0x001788010ed6a323': {area: Fahrican Bedroom, name: Fahrican Bedroom dimmer}
+  '0x001788010c0b1125': {area: Stairwell, name: Stairwell light}
+  '0xa4c1381711f7ffff': {area: Stairwell, name: Stairwell motion sensor}
+  '0x001788010c0179eb': {area: Fahrican Spare Room, name: Fahrican Spare Room light}
+  '0x001788010edcc4bf': {area: Fahrican Spare Room, name: Fahrican Spare Room dimmer}
+  '0x001788010c012f69': {area: Living Room, name: Living Room light}
+  '0x001788010edcc2de': {area: Living Room, name: Living Room dimmer}
+  '0xe456acfffe5cd047': {area: Fahrican Bedroom, name: Fahrican Bedroom light relay}
+nuki_lock:
+  serial: 4E988F8F
+  area: Fahrican Loft
+  matter_name: Fahrican Loft external door
+  mqtt_name: Fahrican Loft lock activity
