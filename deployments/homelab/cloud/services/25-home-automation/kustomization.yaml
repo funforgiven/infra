@@ -14,6 +14,8 @@ configMapGenerator:
   namespace: home-automation
   files:
   - bootstrap.py
+  - install-onecta.py
+  - onecta-application-credentials.py
   - backup.py
   - run-service.sh
   - start-zigbee.sh

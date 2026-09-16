@@ -15,6 +15,7 @@ ports and security groups are explicitly retired by the services-hosts root.
 | Eclipse Mosquitto | 2.1.2 | Authenticated local MQTT broker with per-user topic ACLs |
 | Zigbee2MQTT | 2.14.1 | Ember coordinator over Ethernet at `10.21.50.20` |
 | OpenThread Border Router | ownbee v0.3.0 | TCP-connected Thread RCP at `10.21.50.21` |
+| Daikin Onecta custom integration | 4.6.19 | Cloud control and telemetry for the Daikin AC |
 
 Every image is pinned by digest. The main StatefulSet contains HA, Matter,
 Mosquitto, Zigbee2MQTT and a backup/metrics sidecar. They share one network
@@ -117,6 +118,53 @@ seeds the pinned 2026.9.2 HTTP schema **once** with forwarded-header trust for
 policy admits HTTP only from Envoy. Subsequent HTTP changes use HA's UI and its
 confirmation/rollback mechanism. The initializer never overwrites existing
 configuration, network identities or user state.
+
+## Daikin Onecta
+
+The FTXM71A2V1B uses a BRP069C4x adapter on `Rooftrollen_IoT`, observed at
+`10.21.50.119` (DHCP), MAC `34:90:EA:D1:9B:20`. Firmware `2.6.2` answers Daikin
+UDP discovery, but the legacy HTTP status endpoints and a read-only POST to
+`/dsiot/multireq` return HTTP 404; HTTPS port 443 refuses connections. These
+checks were performed from HA's own IoT address. The built-in local Daikin
+integration cannot control this adapter/firmware; use the
+[Onecta integration](https://github.com/jwillemsen/daikin_onecta).
+
+`install-onecta.py` runs before HA starts and installs release 4.6.19, pinned
+to commit `719600642d2e21f02d87f4a570ce4580849f87b1` and a SHA-256 checksum.
+It caches the verified source archive under `home-assistant/.managed-integrations`
+on the state PVC, so subsequent pod starts do not need GitHub access. A new
+volume needs HTTPS access to `codeload.github.com`. Both the cache and installed
+component are included in the existing application backups. Upgrade the version,
+commit and checksum together after checking HA compatibility. HACS is not used
+to manage this component.
+
+The owner's Daikin developer credentials are encrypted for the administrator
+only in `secrets/daikin-onecta.yaml`. Enroll them through HA's authenticated
+`application_credentials/create` WebSocket command with domain `daikin_onecta`;
+do not place credentials in command arguments, ConfigMaps or logs. HA owns the
+live application credentials and OAuth tokens in `.storage`, included in normal
+backups. Restoring client credentials alone requires the owner to authorize again.
+
+The registered redirect URI is exactly:
+
+```text
+https://home.fahrican.com/auth/external/callback
+```
+
+`onecta-application-credentials.py` replaces only the upstream component's OAuth
+platform using HA's documented `AuthImplementation` extension. It sets this
+callback for Onecta while leaving My Home Assistant enabled for other uses.
+The authorization URL and signed OAuth state both use the same callback, which
+HA then supplies during token exchange. Do not change just the Daikin portal's
+redirect: update the overlay to match and restart HA too. The owner must finish
+Daikin login and consent in a browser that can reach `home.fahrican.com`.
+
+Use conservative polling: 10 minutes from 07:00 to 22:00 and 30 minutes overnight,
+with 30 seconds of refresh suppression after a command. This schedules about
+108 regular polls/day, leaving room beneath Daikin's private-developer limit of
+200 API requests/day for commands and additional requests. The actual remaining
+quota is exposed by the integration; scheduled polls are not the entire API
+request budget. Onecta requires internet and Daikin cloud availability.
 
 ## Radio inventory
 
