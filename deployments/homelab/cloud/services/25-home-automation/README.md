@@ -241,8 +241,19 @@ automation preserves brightness and color and sets transition to zero.
 It requires a keypad code ID and source, excludes other command sources,
 and waits up to 20 seconds for Matter to confirm the requested lock state.
 If confirmation times out or another action supersedes the request, it stops.
+Firmware 5.9.4 was observed reporting fingerprint actions with action ID `0`,
+which the event entity labels `unknown`, followed by the actual Matter lock
+state. For an identified keypad event with action `0`, the automation waits
+for a final Matter state whose change timestamp is at or after that event;
+`locked` turns the lights off and `unlocked`/`open` turns them on. It never uses
+the pre-event state to guess what action `0` will do. Other unknown action IDs
+are ignored.
 The event trigger ignores restored states on startup/reconnection; a new
 keypad request replaces a pending run. No lock command is sent.
+Live verification with firmware 5.9.4 confirmed that fingerprint locking turns
+both bulbs off, fingerprint unlocking turns both on, and inside-button locking
+leaves them unchanged. PIN actions use the same source filter but have not yet
+been verified with a physical PIN entry.
 
 MQTT publishes an action request, not a physical door-open sensor reading.
 Keypad back-button actions without a code ID cannot be identified by this
