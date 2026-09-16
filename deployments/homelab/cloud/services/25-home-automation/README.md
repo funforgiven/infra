@@ -191,6 +191,9 @@ MQTT account `nuki` can publish an explicit list of status/event topics under
 `nuki/4E988F8F/`; it cannot read commands, publish commands, alter discovery,
 or access Zigbee topics. Its password is `stringData.nuki-password` in
 `credentials.sops.yaml`. It is not accepted by the loopback listener.
+Use a random 32-character ASCII alphanumeric password for this account: Nuki
+users have reported MQTT activation failures with longer passwords or special
+characters, even when another MQTT client accepts the same credentials.
 
 In the Nuki app use **Features & Configuration → Smart Home → MQTT**:
 
