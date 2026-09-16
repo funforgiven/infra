@@ -1,0 +1,18 @@
+# Telemetry only. No command subscriptions or Home Assistant discovery writes.
+user nuki
+topic write nuki/4E988F8F/deviceType
+topic write nuki/4E988F8F/name
+topic write nuki/4E988F8F/firmware
+topic write nuki/4E988F8F/mode
+topic write nuki/4E988F8F/state
+topic write nuki/4E988F8F/batteryCritical
+topic write nuki/4E988F8F/batteryChargeState
+topic write nuki/4E988F8F/batteryCharging
+topic write nuki/4E988F8F/keypadBatteryCritical
+topic write nuki/4E988F8F/doorsensorState
+topic write nuki/4E988F8F/doorsensorBatteryCritical
+topic write nuki/4E988F8F/serverConnected
+topic write nuki/4E988F8F/timestamp
+topic write nuki/4E988F8F/connected
+topic write nuki/4E988F8F/commandResponse
+topic write nuki/4E988F8F/lockActionEvent

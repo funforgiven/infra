@@ -10,6 +10,11 @@ table inet automation_thread {
   }
   chain forward {
     type filter hook forward priority -10; policy accept;
+    # Native OTBR NAT64 emits translated IPv4 packets through wpan0.
+    # Restrict them to local MQTT and ICMP reachability checks of that broker.
+    iifname "wpan0" oifname "net1" ip daddr 10.21.50.10 tcp dport 1883 counter accept
+    iifname "wpan0" oifname "net1" ip daddr 10.21.50.10 ip protocol icmp counter accept
+    iifname "wpan0" meta nfproto ipv4 counter drop
     # Thread only forwards to its IoT backbone; never into the cluster overlay.
     iifname "wpan0" oifname != "net1" drop
     iifname "eth0" oifname "wpan0" drop

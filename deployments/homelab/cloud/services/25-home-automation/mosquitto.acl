@@ -1,6 +1,7 @@
 user homeassistant
 topic readwrite homeassistant/#
 topic readwrite zigbee2mqtt/#
+topic read nuki/4E988F8F/#
 
 user zigbee2mqtt
 topic readwrite zigbee2mqtt/#

@@ -8,6 +8,8 @@ table inet automation {
     # Matter uses operational, commissioning, mDNS and dynamic OTA UDP ports.
     iifname "net1" meta nfproto ipv6 meta l4proto udp accept
     iifname "net1" tcp dport 5540 accept
+    # The Nuki reaches MQTT through OTBR's NAT64 translator, never from Wi-Fi.
+    iifname "net1" ip saddr 10.21.50.11 tcp dport 1883 accept
     iifname "net1" udp dport { 1900, 5353 } accept
     # HTTPS ingress uses eth0; IoT clients cannot reach the control APIs.
     iifname "net1" drop
