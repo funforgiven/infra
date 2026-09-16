@@ -47,7 +47,7 @@ areas:
   icon: mdi:shower
   covers: Bathroom.
 - name: Fahrican Spare Room
-  floor: 6th Floor
+  floor: 5th Floor
   icon: mdi:door
   covers: Extra/spare room.
 zigbee_devices:
