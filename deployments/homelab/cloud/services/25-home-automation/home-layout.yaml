@@ -61,7 +61,8 @@ zigbee_devices:
   '0x001788010edcc4bf': {area: Fahrican Spare Room, name: Fahrican Spare Room dimmer}
   '0x001788010c012f69': {area: Living Room, name: Living Room light}
   '0x001788010edcc2de': {area: Living Room, name: Living Room dimmer}
-  '0xe456acfffe5cd047': {area: Fahrican Bedroom, name: Fahrican Bedroom light relay}
+  '0xe456acfffe5cd047': {area: Fahrican Bathroom, name: Fahrican Bathroom light relay}
+  '0x54ef441001724e3e': {area: Fahrican Bathroom, name: Fahrican Bathroom presence sensor}
 nuki_lock:
   serial: 4E988F8F
   area: Fahrican Loft

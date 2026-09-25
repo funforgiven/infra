@@ -1,0 +1,59 @@
+# Recovery copy: install through HA's automation config API.
+# FP300 uses combined mmWave/PIR presence and a 10-second absence delay.
+id: fahrican_bathroom_presence_lighting
+alias: Fahrican Bathroom presence lighting
+description: >-
+  FP300 presence turns on the bathroom relay immediately and keeps it on while
+  occupied. Turn off after 20 seconds of confirmed absence, in addition to the
+  sensor's 10-second absence delay. Returning presence cancels the countdown.
+  Unknown or unavailable presence leaves the relay unchanged.
+triggers:
+- trigger: state
+  entity_id: binary_sensor.0x54ef441001724e3e_presence
+  to: null
+- trigger: homeassistant
+  event: start
+- trigger: event
+  event_type: automation_reloaded
+- trigger: state
+  entity_id: switch.0xe456acfffe5cd047
+  from:
+  - unavailable
+  - unknown
+  to:
+  - "on"
+  - "off"
+conditions: []
+actions:
+- choose:
+  - conditions:
+    - condition: state
+      entity_id: binary_sensor.0x54ef441001724e3e_presence
+      state: "on"
+    sequence:
+    - condition: state
+      entity_id: switch.0xe456acfffe5cd047
+      state: "off"
+    - action: switch.turn_on
+      target:
+        entity_id: switch.0xe456acfffe5cd047
+  - conditions:
+    - condition: state
+      entity_id: binary_sensor.0x54ef441001724e3e_presence
+      state: "off"
+    sequence:
+    - delay:
+        seconds: 20
+    - condition: state
+      entity_id: binary_sensor.0x54ef441001724e3e_presence
+      state: "off"
+    - condition: state
+      entity_id: switch.0xe456acfffe5cd047
+      state: "on"
+    - action: switch.turn_off
+      target:
+        entity_id: switch.0xe456acfffe5cd047
+mode: restart
+initial_state: true
+trace:
+  stored_traces: 10
