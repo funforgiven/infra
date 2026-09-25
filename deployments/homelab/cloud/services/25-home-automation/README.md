@@ -321,7 +321,7 @@ Stairwell; its level is unset because it spans the two physical floors. The
 unused initial Bedroom area was renamed Enes Room. Living Room and Kitchen
 retain their original registry IDs. Both the Matter lock and MQTT activity
 device belong to Fahrican Loft, at the external door. The SONOFF `d047` relay
-belongs to Fahrican Bedroom.
+and Aqara FP300 `4e3e` presence sensor belong to Fahrican Bathroom.
 
 `hue-dimmer-automations.yaml` contains four HA automation recovery copies.
 Install each mapping with `POST /api/config/automation/config/<id>`. The power
@@ -346,6 +346,33 @@ Retain coordinator bindings for button events and battery/status reports, and
 bulb-to-coordinator reporting. Battery dimmers may need a button press to wake
 for unbinding. The requested software controls depend on HA, Zigbee2MQTT and
 Mosquitto being available. Stairwell keeps its separate motion automation.
+
+## Bathroom presence lighting
+
+`bathroom-presence-lighting.yaml` is the recovery copy of automation
+`fahrican_bathroom_presence_lighting`. Install its mapping with
+`POST /api/config/automation/config/fahrican_bathroom_presence_lighting`.
+HA validates, saves and reloads it; the live automation and room assignments
+are included in application backups. This file is not a Kubernetes resource
+and needs no pod restart.
+
+The Fahrican Bathroom FP300 (`0x54ef441001724e3e`, model PS-S04D) controls the
+SONOFF relay `switch.0xe456acfffe5cd047`. The relay was previously mislabeled
+as Fahrican Bedroom; its entity ID and Zigbee2MQTT friendly name stay stable.
+Use `binary_sensor.0x54ef441001724e3e_presence`, which includes radar detection
+of a stationary occupant. The separate PIR entity measures motion and must
+not control the off decision. Keep `presence_detection_options: both` and
+`absence_delay_timer: 10` on the sensor. See the
+[FP300 device documentation](https://www.zigbee2mqtt.io/devices/PS-S04D.html).
+
+Presence turns the relay on immediately, with no fade. The light remains on
+while presence is reported; there is no maximum occupied duration. Absence
+starts a 20-second HA delay, making the total about 30 seconds including the
+sensor's own delay. A new presence report cancels the pending off action.
+Unknown/unavailable sensor states cancel the countdown and leave the relay
+unchanged. HA startup, automation reload and relay availability recovery
+reconcile the light with the current valid presence state. The relay remains
+manually operable between presence transitions.
 
 ## Monitoring and backup
 
