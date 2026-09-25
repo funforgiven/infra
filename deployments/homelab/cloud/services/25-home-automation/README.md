@@ -361,8 +361,10 @@ SONOFF relay `switch.0xe456acfffe5cd047`. The relay was previously mislabeled
 as Fahrican Bedroom; its entity ID and Zigbee2MQTT friendly name stay stable.
 Use `binary_sensor.0x54ef441001724e3e_presence`, which includes radar detection
 of a stationary occupant. The separate PIR entity measures motion and must
-not control the off decision. Keep `presence_detection_options: both` and
-`absence_delay_timer: 10` on the sensor. See the
+not control the off decision. Keep `presence_detection_options: both`,
+`motion_sensitivity: high` and `absence_delay_timer: 10` on the sensor. High
+sensitivity was applied after the owner reported detection only at very close
+range; a room-distance test is still needed. See the
 [FP300 device documentation](https://www.zigbee2mqtt.io/devices/PS-S04D.html).
 
 Presence turns the relay on immediately, with no fade. The light remains on
