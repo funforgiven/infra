@@ -351,8 +351,15 @@ sends on/off and zero fade directly without overwriting brightness.
 Live HA toggle checks passed on the 1600 lm Loft and 1100 lm Spare Room bulbs:
 hardware reads retained brightness 254 and 129 respectively while off and
 after turning on. The Spare Room also passed a 129 → 193 → 129 brightness-step
-check. Both bulbs were returned to their starting on/off state. This check did
-not restart Zigbee2MQTT; subsequent backup-cycle behavior remains to be observed.
+check. Both bulbs were returned to their starting on/off state.
+
+The complete scheduled backup cycle also passed on September 26 at 19:36
+Istanbul time. The Spare Room bulb was set to 37% (94/254) and switched off
+before the backup. Logs confirmed Zigbee2MQTT stopped and restarted; the
+archive passed integrity verification at 19:36:44. Afterward, a hardware read
+still returned OFF/94, and a normal HA turn-on without an explicit brightness
+returned ON/94. The bulb was restored to its original OFF/129 state. All five
+bulbs' native-control options remained in the live configuration after restart.
 
 | Area | Dimmer | Bulb |
 | --- | --- | --- |
