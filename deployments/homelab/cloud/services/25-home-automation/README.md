@@ -329,9 +329,30 @@ button's `on_press` event toggles the paired bulb's current HA state. Brightness
 up/down press and hold events apply steps of 25 percentage points, with zero
 transition. Release events and the unassigned Hue button are ignored. Each
 dimmer has its own ordered action queue; unavailable bulbs are skipped.
-MQTT trigger payloads explicitly use UTF-8 decoding. All five Hue bulbs also
-have the Zigbee2MQTT device option `transition: 0`, applied through
-`zigbee2mqtt/bridge/request/device/options`, so ordinary commands use no fade.
+MQTT trigger payloads explicitly use UTF-8 decoding. All five Hue bulbs use
+`hue_native_control: true` and `transition: 0`. `hue-device-options.yaml`
+contains recovery payloads: publish each mapping to
+`zigbee2mqtt/bridge/request/device/options` with QoS 1 and retain disabled,
+then verify the response has `status: ok` and the expected `data.to` options.
+These options apply immediately and persist in the backed-up Zigbee2MQTT
+configuration; the recovery file is not a Kubernetes resource.
+
+Native control is required here to preserve brightness while switching off
+instantly. In converters 26.105.0, the standard light converter treats an
+explicit zero transition as a level-to-zero off command. Hue then reports
+brightness 1; the converter stores the previous brightness only in memory.
+A Zigbee2MQTT restart, including the routine backup pause/resume, loses that
+value and a subsequent on command restores minimum brightness. On September
+26, logs showed the Loft and Bedroom bulbs drop from 254 to 1 after their
+01:44 off commands, then turn on at 2 at 18:54 and 15:22 respectively (Istanbul
+time), with service restarts in between and no intervening down-button events.
+The supported [native Hue control option](https://www.zigbee2mqtt.io/devices/9290038536H.html#options)
+sends on/off and zero fade directly without overwriting brightness.
+Live HA toggle checks passed on the 1600 lm Loft and 1100 lm Spare Room bulbs:
+hardware reads retained brightness 254 and 129 respectively while off and
+after turning on. The Spare Room also passed a 129 → 193 → 129 brightness-step
+check. Both bulbs were returned to their starting on/off state. This check did
+not restart Zigbee2MQTT; subsequent backup-cycle behavior remains to be observed.
 
 | Area | Dimmer | Bulb |
 | --- | --- | --- |

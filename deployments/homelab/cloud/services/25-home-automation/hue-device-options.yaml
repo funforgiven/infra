@@ -1,0 +1,15 @@
+# Recovery copies: publish each mapping to
+# zigbee2mqtt/bridge/request/device/options (QoS 1, retain false).
+# Native on/off preserves bulb brightness across Zigbee2MQTT restarts.
+- id: '0x001788011015148f'
+  options: &hue_options
+    hue_native_control: true
+    transition: 0
+- id: '0x0017880110151bb9'
+  options: *hue_options
+- id: '0x001788010c0b1125'
+  options: *hue_options
+- id: '0x001788010c012f69'
+  options: *hue_options
+- id: '0x001788010c0179eb'
+  options: *hue_options
