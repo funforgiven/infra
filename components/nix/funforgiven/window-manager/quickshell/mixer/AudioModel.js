@@ -279,7 +279,14 @@ function isPhysicalSink(node, audioSinkType, definitions, nodes) {
             || propertyIsTrue(value(properties, "node.monitor"))) {
         return false;
     }
-    if (owns(properties, "node.link-group")
+    // WirePlumber's UCM SplitPCM sinks use loopbacks with a real ALSA route.
+    var alsaSplit = value(properties, "device.api") === "alsa"
+        && value(properties, "api.alsa.pcm.stream") === "playback"
+        && typeof properties["api.alsa.split.name"] === "string"
+        && present(properties["api.alsa.split.name"])
+        && typeof properties["api.alsa.split.position"] === "string"
+        && present(properties["api.alsa.split.position"]);
+    if ((owns(properties, "node.link-group") && !alsaSplit)
             || owns(properties, "filter.smart")
             || owns(properties, "filter.smart.name")
             || owns(properties, "filter.smart.target")

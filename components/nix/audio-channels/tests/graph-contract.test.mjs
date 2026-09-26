@@ -97,6 +97,22 @@ test("runtime contract accepts four device-backed acyclic bridge targets", () =>
         channel.targetPhysical && channel.targetAvailable && channel.targetCycleSafe));
 });
 
+test("native ALSA split hardware is accepted while smart filters stay excluded", () => {
+    const graph = fixture();
+    const props = graph.find(object => object.id === 40).info.props;
+    Object.assign(props, {
+        "device.api": "alsa",
+        "api.alsa.pcm.stream": "playback",
+        "api.alsa.split.name": "alsa_output.hw_Duo_1",
+        "api.alsa.split.position": "[AUX2,AUX3]",
+        "node.link-group": "loopback-100-19",
+        "node.virtual": false
+    });
+    assert.equal(validateRuntimeGraph(graph, expected).ok, true);
+    props["filter.smart"] = true;
+    assert.equal(validateRuntimeGraph(graph, expected).ok, false);
+});
+
 test("an unavailable active Route overrides an available EnumRoute", () => {
     const graph = fixture();
     graph.find(object => object.id === 50).info.params.Route = [

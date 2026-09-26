@@ -80,6 +80,36 @@ if (validate_hardware_target 10 20 220) >"$test_tmp/audioctl-route.out" 2>&1; th
 fi
 grep -Fq 'has no available hardware route' "$test_tmp/audioctl-route.out"
 
+# Native UCM SplitPCM outputs carry a link-group, but remain hardware targets.
+split_graph=$(fixture '[]' '[]' | jq -c '
+  .[0].info.props += {
+    "node.virtual": false,
+    "node.link-group": "loopback-100-19",
+    "device.api": "alsa",
+    "api.alsa.pcm.stream": "playback",
+    "api.alsa.split.name": "alsa_output.hw_Duo_1",
+    "api.alsa.split.position": "[AUX2,AUX3]"
+  }
+  | . + [{id: 10, type: "PipeWire:Interface:Node", info: {props: {}}}]
+')
+graph_json=$split_graph
+validate_hardware_target 10 20 220
+for override in \
+  '{"device.api":"other"}' \
+  '{"api.alsa.pcm.stream":"capture"}' \
+  '{"api.alsa.split.name":""}' \
+  '{"api.alsa.split.position":null}' \
+  '{"filter.smart":true}' \
+  '{"factory.name":"support.null-audio-sink"}'; do
+  graph_json=$(jq -c --argjson override "$override" \
+    '.[0].info.props += $override' <<<"$split_graph")
+  if (validate_hardware_target 10 20 220) >"$test_tmp/audioctl-split.out" 2>&1; then
+    printf 'controller accepted an invalid SplitPCM target: %s\n' "$override" >&2
+    exit 1
+  fi
+  grep -Fq 'filter endpoint' "$test_tmp/audioctl-split.out"
+done
+
 first_nonce="42:100:200:300"
 second_nonce="42:101:201:301"
 first_request="${first_nonce}:500"

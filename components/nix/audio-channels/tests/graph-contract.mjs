@@ -227,7 +227,13 @@ function physicalTargetErrors(target, index) {
             || propertyIsTrue(props["wireplumber.is-fallback"])
             || propertyIsTrue(props["bluez5.loopback"]))
         errors.push("target is disabled, virtual, or a policy fallback");
-    if (props["node.link-group"] !== undefined
+    const alsaSplit = props["device.api"] === "alsa"
+        && props["api.alsa.pcm.stream"] === "playback"
+        && typeof props["api.alsa.split.name"] === "string"
+        && props["api.alsa.split.name"].length > 0
+        && typeof props["api.alsa.split.position"] === "string"
+        && props["api.alsa.split.position"].length > 0;
+    if ((props["node.link-group"] !== undefined && !alsaSplit)
             || props["filter.smart"] !== undefined
             || props["filter.smart.name"] !== undefined
             || props["filter.smart.target"] !== undefined)

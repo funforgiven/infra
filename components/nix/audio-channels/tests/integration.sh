@@ -624,13 +624,14 @@ create_output() {
   local suffix=$1
   local availability_property=${2:-}
   local priority=${3:-200}
+  local extra_properties=${4:-}
   local name="$fake_output_prefix.$suffix"
   local availability=""
   if [[ -n $availability_property ]]; then
     availability="$availability_property = true"
   fi
-  printf 'create-node adapter { factory.name = "api.alsa.pcm.sink" api.alsa.path = "null" api.alsa.disable-mmap = true api.alsa.disable-batch = true node.name = "%s" node.description = "Test Output %s" media.class = "Audio/Sink" device.id = %s priority.session = %s object.linger = true audio.format = "S16LE" audio.rate = 48000 audio.channels = 2 audio.position = [ FL FR ] %s }\n' \
-    "$name" "$suffix" "$device_id" "$priority" "$availability" >&3
+  printf 'create-node adapter { factory.name = "api.alsa.pcm.sink" api.alsa.path = "null" api.alsa.disable-mmap = true api.alsa.disable-batch = true node.name = "%s" node.description = "Test Output %s" media.class = "Audio/Sink" device.id = %s priority.session = %s object.linger = true audio.format = "S16LE" audio.rate = 48000 audio.channels = 2 audio.position = [ FL FR ] %s %s }\n' \
+    "$name" "$suffix" "$device_id" "$priority" "$availability" "$extra_properties" >&3
   wait_for "$name" node_present "$name"
 }
 
@@ -1207,6 +1208,19 @@ wait_for "Music remains on output B" bridge_target_is music "$fake_output_prefix
 create_output a
 wait_for "Voice recovery after reset target return" bridge_target_is voice "$fake_output_prefix.a"
 wait_for "Game recovery after output return" bridge_target_is game "$fake_output_prefix.a"
+run_graph_contract
+
+# UCM split sinks have a link-group even though they are hardware endpoints.
+# Exercise the controller and policy together, including durable restoration.
+create_output split "" 50 \
+  'device.api = alsa api.alsa.pcm.stream = playback node.virtual = false node.link-group = "loopback-split-test" api.alsa.split.name = "alsa_output.hw_Duo_1" api.alsa.split.position = "[AUX2,AUX3]"'
+move_bridge system "$fake_output_prefix.split"
+run_graph_contract
+restart_wireplumber
+wait_for "saved SplitPCM output after restart" bridge_target_is system "$fake_output_prefix.split"
+destroy_output split
+wait_for "missing SplitPCM output without fallback" bridge_waiting_for system "$fake_output_prefix.split"
+move_bridge system "$fake_output_prefix.b"
 run_graph_contract
 
 find "$XDG_STATE_HOME" -type f -print -quit | grep -q . \

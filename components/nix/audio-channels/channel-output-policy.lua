@@ -293,7 +293,15 @@ local function eligible_physical_sink (
       property_is_true (props ["bluez5.loopback"]) then
     return false, "target is virtual or a policy fallback"
   end
-  if props ["node.link-group"] ~= nil or
+  -- WirePlumber implements UCM SplitPCM hardware outputs with loopbacks.
+  -- They retain their ALSA device/route identity and are not effect filters.
+  local alsa_split = props ["device.api"] == "alsa" and
+    props ["api.alsa.pcm.stream"] == "playback" and
+    type (props ["api.alsa.split.name"]) == "string" and
+    props ["api.alsa.split.name"] ~= "" and
+    type (props ["api.alsa.split.position"]) == "string" and
+    props ["api.alsa.split.position"] ~= ""
+  if (props ["node.link-group"] ~= nil and not alsa_split) or
       props ["filter.smart"] ~= nil or
       props ["filter.smart.name"] ~= nil or
       props ["filter.smart.target"] ~= nil then

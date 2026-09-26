@@ -1270,7 +1270,13 @@ validate_hardware_target() {
     | ($props["wireplumber.is-virtual"] | truthy)
       or ($props["wireplumber.is-fallback"] | truthy)
       or ($props["bluez5.loopback"] | truthy)
-      or ($props | has("node.link-group"))
+      # UCM SplitPCM outputs are device-backed ALSA loopbacks, not filters.
+      or (($props | has("node.link-group")) and (
+        $props["device.api"] == "alsa"
+        and $props["api.alsa.pcm.stream"] == "playback"
+        and ($props["api.alsa.split.name"] | type == "string" and length > 0)
+        and ($props["api.alsa.split.position"] | type == "string" and length > 0)
+      | not))
       or ($props | has("filter.smart"))
       or ($props | has("filter.smart.name"))
       or ($props | has("filter.smart.target"))
