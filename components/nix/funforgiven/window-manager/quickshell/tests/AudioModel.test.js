@@ -375,6 +375,34 @@ test("hardware candidates are device-backed and reject virtual/marked/filter nod
     );
 });
 
+test("native ALSA SplitPCM outputs remain selectable without admitting filters", () => {
+    const split = physical(31, "alsa_output.duo.HiFi__Line1__sink");
+    Object.assign(split.properties, {
+        "node.virtual": false,
+        "node.link-group": "loopback-100-19",
+        "device.api": "alsa",
+        "api.alsa.pcm.stream": "playback",
+        "api.alsa.split.name": "alsa_output.hw_Duo_1",
+        "api.alsa.split.position": "[AUX2,AUX3]"
+    });
+    assert.equal(AudioModel.isPhysicalSink(split, AudioSink, definitions, [split]), true);
+
+    for (const override of [
+        { "device.id": undefined },
+        { "node.virtual": true },
+        { "device.api": "other" },
+        { "api.alsa.pcm.stream": "capture" },
+        { "api.alsa.split.name": "" },
+        { "api.alsa.split.position": undefined },
+        { "filter.smart": true },
+        { "factory.name": "support.null-audio-sink" }
+    ]) {
+        const invalid = { ...split, properties: { ...split.properties, ...override } };
+        assert.equal(AudioModel.isPhysicalSink(invalid, AudioSink, definitions, [invalid]), false,
+            JSON.stringify(override));
+    }
+});
+
 test("microphone candidates include physical sources and reject monitor sources", () => {
     const valid = physicalInput(30, "alsa_input.valid");
     const qflagsSource = {
