@@ -30,8 +30,8 @@ as an official standalone Kubernetes container.
 | Physical attachment | SG3210XHP-M2 port 6, `infra-ap-trunk` |
 | Temporary Ethernet limit | Port 6 at 1 Gb/s full duplex; 2.5 Gb/s fails reachability on the current cable/switch path, including after AP firmware 8.7.11 |
 | AP management | Untagged at the AP, switch PVID/native VLAN 90 |
-| Trusted WLAN | `Rooftrollen`, tagged VLAN 10 |
-| IoT WLAN | `Rooftrollen_IoT`, tagged VLAN 50 |
+| Trusted WLAN | `Rooftrollen`, tagged VLAN 10, 5/6 GHz, WPA3 with required PMF and MLO |
+| IoT WLAN | `Rooftrollen_IoT`, tagged VLAN 50, 2.4 GHz, WPA2-AES |
 
 The router's management DHCP service is **static-only**. A replacement AP needs
 its own verified Ethernet MAC reservation before it can receive an address.
@@ -40,14 +40,30 @@ its old static `10.21.90.4` for rollback. Do not set a VLAN 90 management overri
 on the U7: its management traffic is untagged on this switch port.
 
 The switch's physical speed/duplex settings are preserved by the Omada
-reconciler. Keep the recorded 1 Gb/s workaround until a cable/port/firmware test
-can sustain 2.5 Gb/s. Test a known-good short cable on the same port first; the
-current evidence does not distinguish cable, AP PHY and switch interoperability.
+reconciler. The owner accepted keeping the recorded 1 Gb/s workaround for now.
+The installed cable is Cat6; its category supports 2.5 Gb/s. The current evidence
+does not distinguish cable condition, AP PHY and switch interoperability.
+Revisit automatic speed only in a separate, bounded diagnostic session.
 
 `../../unifi-network.yaml` records the native enrollment settings and secret
 references; it is a documented desired-state input, not an automatic UniFi API
 reconciler. Wi-Fi names and PSKs survive the migration. The PSKs remain in the
 existing SOPS `secrets/omada.yaml` document during the switch transition.
+
+Radio widths are 20 MHz on 2.4 GHz, 80 MHz on 5 GHz and 160 MHz on 6 GHz.
+The initial 40 MHz 5-GHz default limited the phone's reported PHY rate to
+573.6 Mb/s, consistent with its approximately 450 Mb/s speed test. The wider
+channel needs a client throughput retest; MLO does not guarantee simultaneous
+data transfer over both bands, and all upstream traffic shares the 1 Gb/s link.
+Clients must support WPA3 to join Rooftrollen; forget/rejoin after the security
+change if needed. Older devices retain the separate IoT WLAN and its VLAN policy.
+
+The U7 Pro Max's dedicated `wifi3`/`scan0` radio and `ubnt-airview` daemon are
+active. In Network, open **AirView > WiFi Scanner**, select the AP, and choose
+**Spectrum Analyzer**. That checkbox selects a display mode; it is not a
+persistent AP-enable switch. Automatic Channel AI optimization is a separate
+feature and remains disabled. A full RF scan is not required to enable the
+dedicated analyzer.
 
 ## Security and access
 
@@ -118,9 +134,9 @@ No UDP discovery broadcast is routed: use explicit layer-3 adoption.
 8. Join both SSIDs with real clients. Trusted clients must receive VLAN-10
    addresses; IoT clients must receive VLAN-50 addresses and retain Home
    Assistant discovery/control. Confirm IoT cannot reach management or the
-   controller UI, and prove VPN access from outside the LAN. Qualify 6 GHz
-   afterward using the real Turkey regulatory domain and WPA3/PMF requirements;
-   do not change the country to unlock frequencies.
+   controller UI, and prove VPN access from outside the LAN. Verify 6-GHz and
+   MLO association with capable clients, using Turkey's regulatory domain and
+   WPA3/required PMF; do not change the country to unlock frequencies.
 
 ## Monitoring and backups
 

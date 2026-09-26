@@ -24,7 +24,7 @@ accessPoints:
     address: 10.21.90.6
     switch: SG3210XHP-M2
     switchPort: 6
-    # Temporary switch-port setting: both tested AP firmware versions lose
+    # User-approved temporary setting: both tested AP firmware versions lose
     # connectivity at 2.5 Gb/s on the current cable/switch combination.
     # Omada's reconciler preserves physical speed/duplex settings; it owns
     # the VLAN profile. Retest auto speed after isolating the cable/PHY issue.
@@ -35,14 +35,26 @@ accessPoints:
     # Untagged AP management frames are assigned VLAN 90 by the switch PVID.
     managementVlanOverride: false
     addressMode: dhcp-reservation
+    radios:
+      - band: 2.4GHz
+        channelWidthMHz: 20
+      - band: 5GHz
+        channelWidthMHz: 80
+      - band: 6GHz
+        channelWidthMHz: 160
+    # The dedicated scan radio and ubnt-airview daemon already run on this AP.
+    # Spectrum Analyzer in AirView selects a visualization, not a persistent
+    # setting that needs enabling on the AP. Channel AI is separate.
+    spectralAnalysis: dedicated-radio-active
 wireless:
   country: Turkey
   ssids:
     - name: Rooftrollen
       vlan: 10
-      bands: [2.4GHz, 5GHz]
-      security: WPA2-WPA3-Personal
-      pmf: optional
+      bands: [5GHz, 6GHz]
+      security: WPA3-Personal
+      pmf: required
+      multiLinkOperation: true
       fastRoaming: false
       pskSecretFile: secrets/omada.yaml
       pskSecretRef: wireless.psks.personal
@@ -51,11 +63,12 @@ wireless:
       bands: [2.4GHz]
       security: WPA2-Personal-AES
       pmf: optional
+      multiLinkOperation: false
       fastRoaming: false
       # Preserve the existing local automation discovery and communication.
       clientIsolation: false
       pskSecretFile: secrets/omada.yaml
       pskSecretRef: wireless.psks.iot
-  # Qualify old clients first. Then enable 6 GHz with WPA3/PMF as supported by
-  # the Turkey regulatory domain, and verify real client association.
-  sixGhz: pending-client-and-regulatory-qualification
+  # Country 792 permits the controller's lower-6-GHz indoor channel set.
+  # Enabling MLO does not prove that a client negotiates multiple links.
+  sixGhz: enabled
