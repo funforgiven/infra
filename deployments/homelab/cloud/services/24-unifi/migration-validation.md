@@ -3,7 +3,7 @@
 The controller and AP are online using a **temporary 1 Gb/s Ethernet limit** on
 switch port 6. Automatic 2.5 Gb/s negotiation does not sustain connectivity on
 the current cable/switch path, including after updating the AP to 8.7.11. This
-record includes recovery and wireless changes through 23:12 UTC. The owner
+record includes recovery, wireless and gateway checks through 23:25 UTC. The owner
 accepted retaining 1 Gb/s for now; final wireless throughput and offsite-recovery
 acceptance remain pending.
 
@@ -23,13 +23,39 @@ acceptance remain pending.
 | Exporters | Node exporter, controller health textfile and UnPoller running. The disconnected-AP metric was observed during the initial failure. |
 | Router access | Narrow inform/STUN, private setup/SSH and VPN AP-SSH rules applied. No WAN port forwards added. |
 
-The private DNS record, Envoy HTTPS route, certificate SAN and Prometheus
-resources passed local validation and Kubernetes server-side dry runs. They
-have **not yet been verified after publication**. The owner explicitly authorized
-committing and pushing the required changes to `main` on 2026-09-27 local time,
-resolving the previous publication-approval blocker.
-`https://unifi.fahrican.com` is not yet a verified access path in this record.
-The native private recovery UI is on `10.21.40.127:11443`.
+The migration and radio settings were published to `origin/main` at signed
+commit `f24709377ca4a3495523d5278b88def864d518b2`, after the owner's explicit
+authorization and secret checks. Gitleaks found no exposed credentials in the
+pending history. A separate in-memory comparison verified that the actual
+UniFi passwords, backup password and WLAN PSKs occur nowhere in that history
+as plaintext or base64. Only SOPS-encrypted credential fields and public
+host/CA keys were published; private keys, kubeconfigs and recovery archives
+were excluded.
+
+The private access and monitoring rollout is verified:
+
+- DNS resolves `unifi.fahrican.com` to `10.21.40.122`.
+- The services Gateway certificate includes the new hostname and is Ready.
+  HTTPRoute and BackendTLSPolicy have Accepted/ResolvedRefs conditions;
+  the administrator SecurityPolicy is Accepted.
+- An admin-workstation request returned HTTP 200 with successful certificate
+  verification. An authenticated owner login and Network API read through
+  `https://unifi.fahrican.com` succeeded; the verification session logged out.
+- The same HTTPS request from a non-admin VM returned HTTP 403, also with
+  successful certificate verification. The allowlist remains the admin
+  workstation and administration WireGuard subnet.
+- Prometheus reports healthy node-metrics, AP-metrics and origin-probe targets.
+  `unifi_service_up`, `unifi_https_up` and `probe_success` are 1; AP uptime is
+  present. A transient poller reauthentication failure cleared on a later
+  scrape, and the AP-metrics alert cleared. The backup-stale alert remains
+  pending because no offsite backup has succeeded.
+- Both undercloud UniFi/DNS waves and the services UniFi/Gateway waves applied
+  the published revision. The UniFi Terraform resource is Ready and reports
+  **Plan no changes**, confirming adoption of the already-provisioned VM
+  without replacement.
+
+The native private recovery UI remains on `10.21.40.127:11443`. Actual access
+from an external VPN client still needs acceptance testing.
 
 ## AP connectivity failure and recovery
 
@@ -155,12 +181,10 @@ unable to contact production APs.
 
 1. Retest throughput after the width/security changes and verify a real 6-GHz
    or MLO client association. Retain the approved 1 Gb/s Ethernet limit.
-2. Publish/reconcile the authorized GitOps changes; verify DNS, Envoy route
-   and BackendTLSPolicy conditions, browser login and Prometheus targets/alerts.
-3. Refill the B2 master intake privately, reconcile the restricted writer, run
+2. Refill the B2 master intake privately, reconcile the restricted writer, run
    the first offsite backup and complete an isolated restore with login/site
    verification.
-4. Join each WLAN with real clients and prove the expected VLAN address, IoT
+3. Join each WLAN with real clients and prove the expected VLAN address, IoT
    restrictions, Home Assistant discovery/control and administration VPN access
    from outside the LAN. Qualify 6 GHz separately in the Turkey domain.
 
