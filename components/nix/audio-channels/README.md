@@ -156,6 +156,51 @@ selected. For verification, play one channel at a time and check that only its
 assigned fader controls it, including mute, then verify the routes after a
 WirePlumber restart and USB reconnect.
 
+## Duo MIDI routing pads
+
+The desktop service `funforgiven-audio-midi` routes the focused Niri
+application's active playback to one of the four channels. On the Duo, enable
+MIDI under **Settings → System → MIDI**, then configure four SMART pads as
+**MIDI → Custom → Control Change**, using **channel 16**, **value 127**, and
+**On only**:
+
+| Pad label | CC number | Destination |
+| --- | --- | --- |
+| System | 102 | System |
+| Game | 103 | Game |
+| Voice | 104 | Voice Chat |
+| Music | 105 | Music |
+
+These controls are separate from the Duo's default fader and button MIDI
+messages. See RØDE's [MIDI trigger instructions](https://help.rode.com/hc/en-us/articles/8565481010063-MIDI-Triggers-for-R%C3%98DECaster-Pro-II-Duo)
+for editing a pad. The service opens only the Duo's named MIDI input, reconnects
+when the device returns, and starts with the graphical session.
+
+Focus an application that is playing audio, then press a pad. A notification
+confirms the destination. The app is captured when the MIDI message arrives;
+changing focus while a previous move finishes cannot change the captured app.
+All matching playback streams move together. Browsers are treated as one app,
+so this can include several tabs or windows. Applications without an active
+playback stream need to start audio before they can be moved. WirePlumber saves
+the route using its existing application stream identity; MIDI routing does not
+change the default sink or any volume settings.
+
+Inspect matching streams without moving them, or route the focused app manually:
+
+```sh
+funforgiven-audio-midi route game --dry-run
+funforgiven-audio-midi route game
+systemctl --user status funforgiven-audio-midi
+journalctl --user -u funforgiven-audio-midi -b
+```
+
+The terminal is the focused app when commands are entered there. For manual
+testing, delay the command long enough to focus the intended app first:
+
+```sh
+sleep 3; funforgiven-audio-midi route game --dry-run
+```
+
 ## Validation
 
 The repository checks parse the generated PipeWire configuration, compile the
@@ -169,12 +214,18 @@ nix build \
   .#checks.x86_64-linux.audio-channels-wireplumber-lua \
   .#checks.x86_64-linux.audio-channels-audioctl \
   .#checks.x86_64-linux.audio-channels-integration \
+  .#checks.x86_64-linux.audio-midi \
   --no-link --accept-flake-config
 ```
 
 The Duo check parses the built profiles with ALSA's native UCM library and checks
 the independent playback channel pairs and 2/16/20-channel capture modes without
 opening audio hardware.
+
+The MIDI check covers focus capture, process and application matching, stale
+PIDs, internal-stream exclusions, controller filtering, and invocation of the
+existing routing helper. Pad programming and physical MIDI delivery require a
+connected Duo for verification.
 
 After changing the deployed configuration, manually verify:
 
