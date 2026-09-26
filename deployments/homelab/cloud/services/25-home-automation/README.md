@@ -359,22 +359,35 @@ and needs no pod restart.
 The Fahrican Bathroom FP300 (`0x54ef441001724e3e`, model PS-S04D) controls the
 SONOFF relay `switch.0xe456acfffe5cd047`. The relay was previously mislabeled
 as Fahrican Bedroom; its entity ID and Zigbee2MQTT friendly name stay stable.
-Use `binary_sensor.0x54ef441001724e3e_presence`, which includes radar detection
-of a stationary occupant. The separate PIR entity measures motion and must
-not control the off decision. Keep `presence_detection_options: both`,
-`motion_sensitivity: high` and `absence_delay_timer: 10` on the sensor. High
-sensitivity was applied after the owner reported detection only at very close
-range; a room-distance test is still needed. See the
+`binary_sensor.0x54ef441001724e3e_pir_detection` turns the light on promptly
+when motion is reported. `binary_sensor.0x54ef441001724e3e_presence` also turns
+it on and keeps it on while radar detects a stationary occupant. Both readings
+must be clear before turning off: PIR can clear while radar still detects
+someone. Keep `presence_detection_options: both`, `motion_sensitivity: high`,
+`ai_sensitivity_adaptive: OFF`, `pir_detection_interval: 5` and
+`absence_delay_timer: 10` on the sensor. The shorter PIR interval supports
+quick re-entry at the cost of increased battery use. See the
 [FP300 device documentation](https://www.zigbee2mqtt.io/devices/PS-S04D.html).
 
-Presence turns the relay on immediately, with no fade. The light remains on
-while presence is reported; there is no maximum occupied duration. Absence
-starts a 20-second HA delay, making the total about 30 seconds including the
-sensor's own delay. A new presence report cancels the pending off action.
-Unknown/unavailable sensor states cancel the countdown and leave the relay
-unchanged. HA startup, automation reload and relay availability recovery
-reconcile the light with the current valid presence state. The relay remains
-manually operable between presence transitions.
+Commands have no fade and there is no maximum occupied duration. Once both
+readings are clear, HA waits 20 seconds before turning off, making the total
+about 30 seconds including the radar's own absence delay. Activity from either
+sensor cancels the countdown. Unknown/unavailable readings cancel pending
+turn-off and are never treated as vacant; either valid active reading can
+still turn the light on. HA startup, automation reload and relay availability
+recovery reconcile the light with current sensor states. The relay remains
+manually operable between sensor state transitions.
+
+The owner reported intermittent, very short-range radar detection even after
+high sensitivity and empty-room spatial learning. On September 26, direct
+device reads returned PIR active with radar presence inactive; one earlier
+event had a 24-second gap between those reports. Motion now provides prompt
+entry lighting, but reliable stationary detection still needs a physical test
+with fixed high sensitivity. The sensor runs firmware `0.0.0_6542`; Zigbee2MQTT
+2.14.1 includes the upstream presence/PIR reporting fix, and both coordinator
+bindings and configured report entries are present. Do not treat cached
+`target_distance: 0` as proof of a failed radar; distance tracking is a separate
+diagnostic function.
 
 ## Monitoring and backup
 
