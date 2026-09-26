@@ -429,8 +429,19 @@ about four seconds of delay. Three recent PIR reports were followed by the
 relay reporting on within 0.11–0.34 seconds, confirming that HA adds no entry
 countdown. Two of those events had no radar presence confirmation. The sensor
 accepted `pir_detection_interval: 2` at 20:34 Istanbul time, reduced from 5;
-both MQTT and HA reported the new value. Improvement in physical entry
-latency and reliable detection at 3–4 metres still require the owner's test.
+both MQTT and HA reported the new value. The owner reported no improvement
+in the roughly four-second entry delay after this change.
+
+A coordinated PIR-only comparison at 21:05–21:06 Istanbul time also produced
+the same owner-observed delay. The mode change was confirmed before the owner
+waited for the light to switch off and walked back into view. The PIR report
+arrived at 21:06:13.900 and the relay reported on at 21:06:14.223, about 0.32
+seconds later. Combined mode was restored and verified at 21:06:43.799. This
+shows that disabling radar does not eliminate the delay; it does not establish
+whether the remaining delay is in PIR detection/firmware or device-specific
+Zigbee reporting. Do not attribute it to a HA turn-on timer or to waiting for
+radar confirmation. Reliable detection and stationary presence at 3–4 metres
+remain unqualified.
 
 ## Monitoring and backup
 
