@@ -54,6 +54,8 @@ switch:
     3: infra-management-access
     4: infra-iot-access # Dongle-M Zigbee coordinator
     5: infra-iot-access # Dongle-M Thread RCP
+    # Physical speed is temporarily 1 Gb/s full duplex; the reconciler preserves
+    # it. See unifi-network.yaml and services/24-unifi/migration-validation.md.
     6: infra-ap-trunk
     8: infra-iot-access
     9: infra-crs-trunk

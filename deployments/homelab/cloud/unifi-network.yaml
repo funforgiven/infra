@@ -24,6 +24,13 @@ accessPoints:
     address: 10.21.90.6
     switch: SG3210XHP-M2
     switchPort: 6
+    # Temporary switch-port setting: both tested AP firmware versions lose
+    # connectivity at 2.5 Gb/s on the current cable/switch combination.
+    # Omada's reconciler preserves physical speed/duplex settings; it owns
+    # the VLAN profile. Retest auto speed after isolating the cable/PHY issue.
+    ethernetLink:
+      speedMbps: 1000
+      duplex: full
     managementVlan: 90
     # Untagged AP management frames are assigned VLAN 90 by the switch PVID.
     managementVlanOverride: false
