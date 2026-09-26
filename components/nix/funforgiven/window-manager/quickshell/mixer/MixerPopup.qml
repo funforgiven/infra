@@ -451,7 +451,6 @@ Scope {
                                     Layout.fillHeight: true
                                     channel: root.channelForDefinition(modelData, root.audioRevision)
                                     accent: root.accentFor(modelData.id)
-                                    dropdownHost: root
                                     dragSession: mixerDragSession
                                 }
                             }

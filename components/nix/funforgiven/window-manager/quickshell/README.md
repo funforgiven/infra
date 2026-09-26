@@ -8,6 +8,13 @@ Quickshell runs as a UWSM graphical-session service. Application launches go
 through `uwsm-app`, and Niri remains the source of workspace, window, focus, and
 output state. PipeWire and WirePlumber remain the source of audio state.
 
+The mixer routes applications to System, Game, Voice Chat, and Music on the
+RØDECaster Duo. Playback channel cards show their saved hardware destination
+without an output selector, gain slider, or mute button; use the Duo's faders
+and mute buttons for channel control. Application controls and the microphone
+panel remain available. The bar opens audio routing without displaying a
+software volume percentage as the hardware level.
+
 ## Automated checks
 
 The flake checks cover QML loading, JavaScript reducers, tray and popup
@@ -88,11 +95,11 @@ remaining DankMaterialShell process, unit, startup entry, or environment hook.
    confirm a pending move does not briefly create an Unrouted item.
 3. Use keyboard routing and pointer routing; both must wait for the same
    PipeWire graph confirmation.
-4. Scroll an output or microphone list and immediately click the visible row at
+4. Scroll the microphone list and immediately click the visible row at
    the same pointer coordinate. The newly visible row must activate once; a real
    drag or flick must activate nothing.
-5. Switch real hardware outputs, restart PipeWire/WirePlumber, and verify saved
-   stream and bridge routes return without a feedback cycle.
+5. Restart PipeWire/WirePlumber and reconnect the Duo; verify that saved stream
+   and bridge routes return, and each hardware fader controls its assigned channel.
 
 ### Idle overlay and session lifecycle
 

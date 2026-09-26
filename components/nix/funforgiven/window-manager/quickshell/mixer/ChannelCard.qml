@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
-import Quickshell
 import ".." as Shell
 import "../components" as Components
 import "../components/StableKeys.js" as StableKeys
@@ -14,12 +13,10 @@ Rectangle {
 
     required property var channel
     required property color accent
-    required property var dropdownHost
     property var dragSession: null
     property var groupKeys: []
     property bool dropActive: false
     property bool dropHovering: false
-    readonly property var outputs: Services.AudioService.outputsForChannel(channel.id)
     readonly property bool dragInProgress: dragSession !== null && dragSession.active
     readonly property string channelSymbol: {
         if (channel.id === "system")
@@ -57,8 +54,6 @@ Rectangle {
         if (next !== root.groupKeys)
             root.groupKeys = next;
     }
-    readonly property var bridgeAudio: channel && channel.bridge ? channel.bridge.audio : null
-    readonly property bool channelMuted: bridgeAudio !== null && bridgeAudio.muted === true
 
     function dropPayload(drop) {
         if (!drop || !drop.source || !drop.source.dragPayload)
@@ -124,8 +119,7 @@ Rectangle {
 
                 Text {
                     Layout.fillWidth: true
-                    visible: root.channel.status.state !== "connected"
-                    text: root.channel.status.message
+                    text: root.channel.status.state === "connected" && root.channel.output ? root.channel.output.label : root.channel.status.message
                     color: root.channel.status.state === "error" ? Shell.Theme.errorText : Shell.Theme.secondaryText
                     elide: Text.ElideRight
                     font.family: Shell.Theme.sansFont
@@ -139,54 +133,6 @@ Rectangle {
                 accent: root.accent
                 tone: root.channel.isDefault && !root.channel.isObservedDefault ? "warning" : "accent"
             }
-        }
-
-        Rectangle {
-            Layout.fillWidth: true
-            implicitHeight: gainControls.implicitHeight + Shell.Theme.spacingMedium * 2
-            radius: Shell.Theme.radiusMedium
-            color: Shell.Theme.elevatedSurface
-
-            RowLayout {
-                id: gainControls
-
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.top: parent.top
-                anchors.margins: Shell.Theme.spacingMedium
-                spacing: Shell.Theme.spacingMedium
-
-                ChannelGain {
-                    Layout.fillWidth: true
-                    channel: root.channel
-                    accent: root.accent
-                }
-
-                Components.IconButton {
-                    Layout.preferredWidth: Shell.Theme.controlLargeSize
-                    Layout.preferredHeight: Shell.Theme.controlLargeSize
-                    Layout.alignment: Qt.AlignBottom
-                    iconSource: Quickshell.iconPath(root.channelMuted ? "audio-volume-muted-symbolic" : "audio-volume-high-symbolic", "audio-volume-high")
-                    iconSize: Shell.Theme.iconMediumSize
-                    accessibleName: (root.channelMuted ? "Unmute " : "Mute ") + root.channel.label
-                    tooltipText: root.channelMuted ? "Unmute" : "Mute"
-                    accent: root.accent
-                    checked: root.channelMuted
-                    enabled: root.bridgeAudio !== null
-                    onClicked: button => {
-                        if (button === Qt.LeftButton)
-                            Services.AudioActions.setChannelMuted(root.channel.id, !root.channelMuted);
-                    }
-                }
-            }
-        }
-
-        OutputPicker {
-            Layout.fillWidth: true
-            channel: root.channel
-            outputs: root.outputs
-            accent: root.accent
-            dropdownHost: root.dropdownHost
         }
 
         RowLayout {
