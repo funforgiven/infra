@@ -27,6 +27,7 @@ let
     "zram"
     "audio"
     "audio-channels"
+    "rodecaster-duo"
     "fonts"
     "funforgiven-input"
     "session-env"
