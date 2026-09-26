@@ -146,8 +146,9 @@ The AP's native radio state confirms 5 GHz at **80 MHz** on primary channel 40
 and 6 GHz at **160 MHz** on primary channel 85. The 2.4-GHz radio remains at
 20 MHz on channel 11. Country code 792 (Turkey) and its lower-6-GHz channel set
 are retained. The controller confirms `mlo_enabled=true`, and the AP has an
-`mld0` interface. A client MLO association and final speed result still require
-verification; enabling the feature alone does not prove either.
+`mld0` interface. A client MLO association still requires verification; enabling
+the feature alone does not prove it. The owner subsequently reported good
+speeds after tuning, without supplying an exact result.
 
 The U7 Pro Max's dedicated `wifi3`/`scan0` radio and `/usr/sbin/ubnt-airview -w 1`
 are active. The installed Network 10.6.106 UI exposes Spectrum Analyzer under
@@ -179,8 +180,8 @@ unable to contact production APs.
 
 ## Remaining acceptance checks
 
-1. Retest throughput after the width/security changes and verify a real 6-GHz
-   or MLO client association. Retain the approved 1 Gb/s Ethernet limit.
+1. Verify a real 6-GHz or MLO client association. The owner has accepted the
+   improved speeds; retain the approved 1 Gb/s Ethernet limit.
 2. Refill the B2 master intake privately, reconcile the restricted writer, run
    the first offsite backup and complete an isolated restore with login/site
    verification.
