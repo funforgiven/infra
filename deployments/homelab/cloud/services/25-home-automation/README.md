@@ -392,9 +392,10 @@ when motion is reported. `binary_sensor.0x54ef441001724e3e_presence` also turns
 it on and keeps it on while radar detects a stationary occupant. Both readings
 must be clear before turning off: PIR can clear while radar still detects
 someone. Keep `presence_detection_options: both`, `motion_sensitivity: high`,
-`ai_sensitivity_adaptive: OFF`, `pir_detection_interval: 5` and
-`absence_delay_timer: 10` on the sensor. The shorter PIR interval supports
-quick re-entry at the cost of increased battery use. See the
+`ai_sensitivity_adaptive: OFF`, `pir_detection_interval: 2` and
+`absence_delay_timer: 10` on the sensor. The PIR interval is at the supported
+minimum to test faster detection, at the cost of increased battery use. It is
+not a guaranteed entry-to-light latency. See the
 [FP300 device documentation](https://www.zigbee2mqtt.io/devices/PS-S04D.html).
 
 Commands have no fade and there is no maximum occupied duration. Once both
@@ -422,6 +423,14 @@ qualified as reliable. The sensor runs firmware `0.0.0_6542`; Zigbee2MQTT
 bindings and configured report entries are present. Do not treat cached
 `target_distance: 0` as proof of a failed radar; distance tracking is a separate
 diagnostic function.
+
+Later on September 26, the owner clarified that detection was occurring with
+about four seconds of delay. Three recent PIR reports were followed by the
+relay reporting on within 0.11–0.34 seconds, confirming that HA adds no entry
+countdown. Two of those events had no radar presence confirmation. The sensor
+accepted `pir_detection_interval: 2` at 20:34 Istanbul time, reduced from 5;
+both MQTT and HA reported the new value. Improvement in physical entry
+latency and reliable detection at 3–4 metres still require the owner's test.
 
 ## Monitoring and backup
 
