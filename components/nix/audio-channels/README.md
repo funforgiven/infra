@@ -64,6 +64,96 @@ sed -n '1,120p' \
 Do not use `wpctl reset --all` or remove unrelated WirePlumber device/profile
 state as channel recovery.
 
+## RØDECaster Duo
+
+The `rodecaster-duo` feature on `parmigiano` supports standard and expanded USB 1
+playback. Standard mode (`19f7:0050`) uses Pro Audio to expose Main and Chat.
+**Expanded mode uses a custom ALSA UCM HiFi profile** to expose System, Game,
+Chat, and Music as separate stereo hardware outputs. PipeWire's native SplitPCM
+support sends each stream to its own USB channel pair; no RØDE driver is needed
+for this Linux setup.
+
+The mixer, routing helper, and WirePlumber policy accept native ALSA SplitPCM
+outputs as hardware destinations despite their internal loopback group. They
+still require a device-backed output and exclude effect filters and logical
+channel sinks.
+
+Connect the computer to **USB 1** and set **Settings → Outputs → Multitrack →
+USB 1 Input → Expanded** on the Duo. USB 1 Output can remain stereo for gaming
+and calls; enable multitrack output only when individual recording tracks are
+needed. Changing USB modes reconnects the audio device.
+
+After activating the configuration, choose these physical outputs for the four
+logical channels in the shell's audio mixer:
+
+| Logical channel | PipeWire physical output | Duo fader assignment |
+| --- | --- | --- |
+| System | RØDECaster Duo System | USB 1 / System |
+| Game | RØDECaster Duo Game | Game |
+| Voice Chat | RØDECaster Duo Chat | USB 1 Chat |
+| Music | RØDECaster Duo Music | Music |
+
+Press the button above each physical fader, open its settings cog, and assign the
+corresponding input. Using all four physical faders for computer audio means
+microphones must use the Duo's on-screen virtual faders. WirePlumber remembers
+each logical channel's physical output. To establish or change a route from the
+terminal, find the bridge and physical sink IDs/serials with `pw-dump`, then use:
+
+```sh
+funforgiven-audioctl move-bridge BRIDGE_ID BRIDGE_SERIAL CHANNEL_ID TARGET_ID TARGET_SERIAL
+```
+
+In Expanded mode, PCM 1's playback pairs 1–2, 3–4, and 5–6 carry System, Game,
+and Music respectively. Chat uses the separate stereo PCM 0. The profile exposes
+only these four playback destinations; virtual A/B are unused. It matches the
+expanded-mode USB IDs `19f7:0079` (stereo capture), `19f7:0073` (older 16-channel
+capture), and `19f7:0095` (20-channel capture). The UCM package retains all other
+distribution profiles and is selected only for the WirePlumber service.
+
+Select **RØDECaster Duo Chat Capture** as the input in a communications app.
+Configure the Duo's USB 1 Chat output mix/mix-minus to send the desired
+microphones without returning the caller's audio to them. Main Capture is the
+stereo main mix or full multitrack stream, depending on USB 1 Output settings.
+
+The channel map is grounded in the
+[Duo ALSA profile proposal](https://github.com/alsa-project/alsa-ucm-conf/pull/742)
+and the [Linux Duo configuration](https://github.com/parzival-space/rodecaster-pro-2-virtual-devices-pipewire).
+RØDE's [virtual-device guide](https://help.rode.com/hc/en-us/articles/17214867752847-Virtual-Devices)
+documents the on-device Expanded setting and fader assignments.
+
+For individual recording tracks, enable **USB 1 Output** multitrack under
+**Settings → Outputs → Multitrack** on the Duo, then reconnect it and select
+**Main Capture** in the recording application. The device determines the
+available capture channels. Firmware 1.7.3 changed the layout to 20 channels:
+the main mix on 1–2, then nine stereo fader pairs on 3–20. Older firmware uses a
+different layout; consult RØDE's
+[multitrack channel layout](https://help.rode.com/hc/en-us/articles/15412830674959-The-R%C3%98DECaster-Pro-II-Duo-Multitrack-Channel-Layout)
+before assigning individual tracks. Multitrack capture does not add PC playback
+destinations.
+
+After rebuilding, restart WirePlumber to load the labels and channel maps:
+
+```sh
+sudo nixos-rebuild switch --flake path:.#parmigiano --accept-flake-config
+systemctl --user restart wireplumber
+wpctl status -n
+```
+
+An existing saved profile takes precedence over the rule's default. Find the
+Duo's current device ID in `wpctl status -n`, inspect
+`pw-cli enum-params DEVICE_ID EnumProfile`, then select the index named **HiFi**
+for Expanded mode using `wpctl set-profile DEVICE_ID PROFILE_INDEX`. Pro Audio
+exposes raw multichannel ports and does not provide the four split outputs.
+Standard mode instead uses `pro-audio`. Do not reuse numeric IDs from an earlier
+session.
+
+Changing USB modes or profiles replaces the node names. Update all four saved
+physical targets with `move-bridge` and re-select the communications app's input.
+Existing routes intentionally stay disconnected until their new destination is
+selected. For verification, play one channel at a time and check that only its
+assigned fader controls it, including mute, then verify the routes after a
+WirePlumber restart and USB reconnect.
+
 ## Validation
 
 The repository checks parse the generated PipeWire configuration, compile the
@@ -72,12 +162,17 @@ isolated PipeWire/WirePlumber runtime:
 
 ```sh
 nix build \
+  .#checks.x86_64-linux.rodecaster-duo-ucm \
   .#checks.x86_64-linux.audio-channels-pipewire-config \
   .#checks.x86_64-linux.audio-channels-wireplumber-lua \
   .#checks.x86_64-linux.audio-channels-audioctl \
   .#checks.x86_64-linux.audio-channels-integration \
   --no-link --accept-flake-config
 ```
+
+The Duo check parses the built profiles with ALSA's native UCM library and checks
+the independent playback channel pairs and 2/16/20-channel capture modes without
+opening audio hardware.
 
 After changing the deployed configuration, manually verify:
 
