@@ -1,0 +1,37 @@
+Rooftrollen:
+  primary-color: '#778bd1'
+  accent-color: '#bc9565'
+  ha-card-border-radius: 24px
+  ha-card-border-width: 1px
+  ha-card-box-shadow: none
+  ha-view-sections-column-gap: 24px
+  ha-view-sections-row-gap: 28px
+  mush-card-primary-font-size: 15px
+  mush-card-secondary-font-size: 13px
+  mush-title-font-size: 22px
+  mush-title-font-weight: '600'
+  mush-control-border-radius: 14px
+  mush-icon-border-radius: 16px
+  mush-control-height: 44px
+  mush-spacing: 12px
+  modes:
+    light:
+      primary-background-color: '#f4f3ef'
+      secondary-background-color: '#eae9e4'
+      card-background-color: '#ffffff'
+      ha-card-background: '#ffffff'
+      primary-text-color: '#242830'
+      secondary-text-color: '#636977'
+      divider-color: rgba(38, 47, 64, .09)
+      app-header-background-color: '#f4f3ef'
+      app-header-text-color: '#242830'
+    dark:
+      primary-background-color: '#11151b'
+      secondary-background-color: '#242b35'
+      card-background-color: '#1b212a'
+      ha-card-background: '#1b212a'
+      primary-text-color: '#edf0f5'
+      secondary-text-color: '#b2bac8'
+      divider-color: rgba(200, 210, 230, .09)
+      app-header-background-color: '#11151b'
+      app-header-text-color: '#edf0f5'

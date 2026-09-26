@@ -1,0 +1,1554 @@
+# Rooftrollen dashboard. Recovery source; Home Assistant owns the live UI configuration.
+title: Rooftrollen
+views:
+- title: Home
+  path: home
+  show_icon_and_title: true
+  type: sections
+  max_columns: 3
+  theme: Rooftrollen
+  dense_section_placement: false
+  sections:
+  - type: grid
+    cards:
+    - type: custom:mushroom-chips-card
+      alignment: start
+      chips:
+      - type: template
+        icon: mdi:lightbulb-group-outline
+        content: '{{ expand([''light.0x001788011015148f'', ''light.0x0017880110151bb9'', ''switch.0xe456acfffe5cd047'',
+          ''light.0x001788010c012f69'', ''light.0x001788010c0179eb'', ''light.0x001788010c0b1125'']) | selectattr(''state'',
+          ''eq'', ''on'') | list | count }} lights on'
+        icon_color: amber
+        tap_action:
+          action: navigate
+          navigation_path: /dashboard-rooftrollen/lights
+      - type: template
+        icon: mdi:weather-partly-cloudy
+        content: '{{ (state_attr(entity, ''temperature'') | string) + ''° · '' + (states(entity) | replace(''-'',
+          '' '') | capitalize) if has_value(entity) and is_number(state_attr(entity, ''temperature'')) else ''Weather
+          unavailable'' }}'
+        icon_color: blue
+        tap_action:
+          action: more-info
+        entity: weather.forecast_home
+      - type: template
+        icon: mdi:account-circle-outline
+        content: '{{ ''Fahrican is home'' if is_state(entity, ''home'') else ''Fahrican is away'' if is_state(entity,
+          ''not_home'') else states(entity) | capitalize }}'
+        icon_color: green
+        tap_action:
+          action: more-info
+        entity: person.funforgiven
+      grid_options:
+        columns: full
+        rows: auto
+      card_mod:
+        style: 'ha-card { --chip-border-width: 0; --chip-background: var(--secondary-background-color); --chip-height:
+          40px; --chip-border-radius: 14px; }'
+    column_span: 3
+  - type: grid
+    cards:
+    - type: custom:mushroom-template-card
+      primary: Fahrican Loft
+      secondary: 6th floor · {{ (state_attr('climate.daikinap90808_room_temperature', 'current_temperature') | string)
+        + ' °C' if is_number(state_attr('climate.daikinap90808_room_temperature', 'current_temperature')) else 'AC
+        unavailable' }}
+      icon: mdi:sofa-outline
+      color: rgb(135, 156, 242)
+      tap_action:
+        action: navigate
+        navigation_path: /dashboard-rooftrollen/loft
+      icon_tap_action:
+        action: navigate
+        navigation_path: /dashboard-rooftrollen/loft
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(135, 156, 242, .13), rgba(135, 156, 242, .035)), var(--ha-card-background);
+          padding: 8px 4px; }'
+    - type: custom:mushroom-light-card
+      entity: light.0x001788011015148f
+      name: Light
+      icon: mdi:lightbulb-outline
+      show_brightness_control: true
+      show_color_temp_control: false
+      show_color_control: false
+      use_light_color: false
+      icon_color: amber
+      collapsible_controls: false
+      layout: horizontal
+      tap_action:
+        action: toggle
+      hold_action:
+        action: more-info
+      double_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(135, 156, 242, .13), rgba(135, 156, 242, .035)), var(--ha-card-background);
+          padding: 4px; }'
+    - type: custom:mushroom-chips-card
+      alignment: start
+      chips:
+      - type: template
+        icon: mdi:air-conditioner
+        content: '{{ (states(entity) | replace(''_'', '' '') | capitalize) + ('' · '' + (state_attr(entity, ''temperature'')
+          | string) + ''°'' if is_number(state_attr(entity, ''temperature'')) else '''') if has_value(entity) else
+          ''AC unavailable'' }}'
+        icon_color: indigo
+        tap_action:
+          action: navigate
+          navigation_path: /dashboard-rooftrollen/climate
+        entity: climate.daikinap90808_room_temperature
+      - type: template
+        icon: mdi:door-closed-lock
+        content: '{{ states(''lock.smart_lock_ultra'') | capitalize }}'
+        icon_color: '{{ ''green'' if is_state(entity, ''locked'') else ''amber'' }}'
+        tap_action:
+          action: navigate
+          navigation_path: /dashboard-rooftrollen/door
+        entity: lock.smart_lock_ultra
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { --chip-border-width: 0; --chip-background: var(--secondary-background-color); --chip-height:
+          40px; --chip-border-radius: 14px; }'
+    column_span: 1
+  - type: grid
+    cards:
+    - type: custom:mushroom-template-card
+      primary: Fahrican Bedroom
+      secondary: 6th floor
+      icon: mdi:bed-king-outline
+      color: rgb(183, 147, 218)
+      tap_action:
+        action: navigate
+        navigation_path: /dashboard-rooftrollen/bedroom
+      icon_tap_action:
+        action: navigate
+        navigation_path: /dashboard-rooftrollen/bedroom
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(183, 147, 218, .13), rgba(183, 147, 218, .035)), var(--ha-card-background);
+          padding: 8px 4px; }'
+    - type: custom:mushroom-light-card
+      entity: light.0x0017880110151bb9
+      name: Light
+      icon: mdi:lightbulb-outline
+      show_brightness_control: true
+      show_color_temp_control: false
+      show_color_control: false
+      use_light_color: false
+      icon_color: amber
+      collapsible_controls: false
+      layout: horizontal
+      tap_action:
+        action: toggle
+      hold_action:
+        action: more-info
+      double_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(183, 147, 218, .13), rgba(183, 147, 218, .035)), var(--ha-card-background);
+          padding: 4px; }'
+    - type: custom:mushroom-chips-card
+      alignment: start
+      chips:
+      - type: template
+        icon: mdi:palette-outline
+        content: Color & warmth
+        icon_color: purple
+        tap_action:
+          action: navigate
+          navigation_path: /dashboard-rooftrollen/bedroom
+        entity: light.0x0017880110151bb9
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { --chip-border-width: 0; --chip-background: var(--secondary-background-color); --chip-height:
+          40px; --chip-border-radius: 14px; }'
+    column_span: 1
+  - type: grid
+    cards:
+    - type: custom:mushroom-template-card
+      primary: Fahrican Bathroom
+      secondary: 6th floor · {{ 'Occupied' if is_state('binary_sensor.0x54ef441001724e3e_presence', 'on') or is_state('binary_sensor.0x54ef441001724e3e_pir_detection',
+        'on') else 'Clear' if is_state('binary_sensor.0x54ef441001724e3e_presence', 'off') and is_state('binary_sensor.0x54ef441001724e3e_pir_detection',
+        'off') else 'Presence unavailable' }}
+      icon: mdi:shower-head
+      color: rgb(87, 177, 168)
+      tap_action:
+        action: navigate
+        navigation_path: /dashboard-rooftrollen/bathroom
+      icon_tap_action:
+        action: navigate
+        navigation_path: /dashboard-rooftrollen/bathroom
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(87, 177, 168, .13), rgba(87, 177, 168, .035)), var(--ha-card-background);
+          padding: 8px 4px; }'
+    - type: custom:mushroom-template-card
+      primary: Bathroom light
+      secondary: '{{ states(entity) | capitalize }} · Presence controlled'
+      icon: mdi:lightbulb-outline
+      color: '{{ ''teal'' if is_state(entity, ''on'') else ''disabled'' }}'
+      tap_action:
+        action: toggle
+      icon_tap_action:
+        action: toggle
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(87, 177, 168, .13), rgba(87, 177, 168, .035)), var(--ha-card-background);
+          padding: 8px 4px; }'
+      entity: switch.0xe456acfffe5cd047
+      hold_action:
+        action: more-info
+    - type: custom:mushroom-chips-card
+      alignment: start
+      chips:
+      - type: template
+        icon: mdi:thermometer
+        content: '{{ (states(entity) | float | round(1) | string) + '' °C'' if is_number(states(entity)) else ''Unavailable''
+          }}'
+        icon_color: teal
+        tap_action:
+          action: more-info
+        entity: sensor.0x54ef441001724e3e_temperature
+      - type: template
+        icon: mdi:water-percent
+        content: '{{ (states(entity) | float | round | string) + ''%'' if is_number(states(entity)) else ''Unavailable''
+          }}'
+        icon_color: teal
+        tap_action:
+          action: more-info
+        entity: sensor.0x54ef441001724e3e_humidity
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { --chip-border-width: 0; --chip-background: var(--secondary-background-color); --chip-height:
+          40px; --chip-border-radius: 14px; }'
+    column_span: 1
+  - type: grid
+    cards:
+    - type: custom:mushroom-template-card
+      primary: Living Room
+      secondary: 5th floor
+      icon: mdi:sofa-single-outline
+      color: rgb(211, 160, 87)
+      tap_action:
+        action: navigate
+        navigation_path: /dashboard-rooftrollen/living
+      icon_tap_action:
+        action: navigate
+        navigation_path: /dashboard-rooftrollen/living
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(211, 160, 87, .13), rgba(211, 160, 87, .035)), var(--ha-card-background);
+          padding: 8px 4px; }'
+    - type: custom:mushroom-light-card
+      entity: light.0x001788010c012f69
+      name: Light
+      icon: mdi:lightbulb-outline
+      show_brightness_control: true
+      show_color_temp_control: false
+      show_color_control: false
+      use_light_color: false
+      icon_color: amber
+      collapsible_controls: false
+      layout: horizontal
+      tap_action:
+        action: toggle
+      hold_action:
+        action: more-info
+      double_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(211, 160, 87, .13), rgba(211, 160, 87, .035)), var(--ha-card-background);
+          padding: 4px; }'
+    - type: custom:mushroom-chips-card
+      alignment: start
+      chips:
+      - type: template
+        icon: mdi:palette-outline
+        content: Color & warmth
+        icon_color: amber
+        tap_action:
+          action: navigate
+          navigation_path: /dashboard-rooftrollen/living
+        entity: light.0x001788010c012f69
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { --chip-border-width: 0; --chip-background: var(--secondary-background-color); --chip-height:
+          40px; --chip-border-radius: 14px; }'
+    column_span: 1
+  - type: grid
+    cards:
+    - type: custom:mushroom-template-card
+      primary: Fahrican Spare Room
+      secondary: 5th floor
+      icon: mdi:door-open
+      color: rgb(152, 169, 117)
+      tap_action:
+        action: navigate
+        navigation_path: /dashboard-rooftrollen/spare
+      icon_tap_action:
+        action: navigate
+        navigation_path: /dashboard-rooftrollen/spare
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(152, 169, 117, .13), rgba(152, 169, 117, .035)), var(--ha-card-background);
+          padding: 8px 4px; }'
+    - type: custom:mushroom-light-card
+      entity: light.0x001788010c0179eb
+      name: Light
+      icon: mdi:lightbulb-outline
+      show_brightness_control: true
+      show_color_temp_control: false
+      show_color_control: false
+      use_light_color: false
+      icon_color: amber
+      collapsible_controls: false
+      layout: horizontal
+      tap_action:
+        action: toggle
+      hold_action:
+        action: more-info
+      double_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(152, 169, 117, .13), rgba(152, 169, 117, .035)), var(--ha-card-background);
+          padding: 4px; }'
+    - type: custom:mushroom-chips-card
+      alignment: start
+      chips:
+      - type: template
+        icon: mdi:palette-outline
+        content: Color & warmth
+        icon_color: green
+        tap_action:
+          action: navigate
+          navigation_path: /dashboard-rooftrollen/spare
+        entity: light.0x001788010c0179eb
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { --chip-border-width: 0; --chip-background: var(--secondary-background-color); --chip-height:
+          40px; --chip-border-radius: 14px; }'
+    column_span: 1
+  - type: grid
+    cards:
+    - type: custom:mushroom-template-card
+      primary: Stairwell
+      secondary: 5th–6th floors
+      icon: mdi:stairs
+      color: rgb(129, 169, 201)
+      tap_action:
+        action: navigate
+        navigation_path: /dashboard-rooftrollen/stairs
+      icon_tap_action:
+        action: navigate
+        navigation_path: /dashboard-rooftrollen/stairs
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(129, 169, 201, .13), rgba(129, 169, 201, .035)), var(--ha-card-background);
+          padding: 8px 4px; }'
+    - type: custom:mushroom-light-card
+      entity: light.0x001788010c0b1125
+      name: Light
+      icon: mdi:lightbulb-outline
+      show_brightness_control: true
+      show_color_temp_control: false
+      show_color_control: false
+      use_light_color: false
+      icon_color: amber
+      collapsible_controls: false
+      layout: horizontal
+      tap_action:
+        action: toggle
+      hold_action:
+        action: more-info
+      double_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(129, 169, 201, .13), rgba(129, 169, 201, .035)), var(--ha-card-background);
+          padding: 4px; }'
+    - type: custom:mushroom-chips-card
+      alignment: start
+      chips:
+      - type: template
+        icon: mdi:motion-sensor
+        content: '{{ ''Motion'' if is_state(entity, ''on'') else ''Clear'' if is_state(entity, ''off'') else ''Unavailable''
+          }}'
+        icon_color: blue
+        tap_action:
+          action: more-info
+        entity: binary_sensor.0xa4c1381711f7ffff_occupancy
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { --chip-border-width: 0; --chip-background: var(--secondary-background-color); --chip-height:
+          40px; --chip-border-radius: 14px; }'
+    column_span: 1
+  - type: grid
+    cards:
+    - type: custom:mushroom-template-card
+      primary: Lights off
+      secondary: Turn off the five Hue bulbs
+      icon: mdi:lightbulb-group-off-outline
+      color: amber
+      tap_action:
+        action: perform-action
+        perform_action: light.turn_off
+        target:
+          entity_id:
+          - light.0x001788011015148f
+          - light.0x0017880110151bb9
+          - light.0x001788010c012f69
+          - light.0x001788010c0179eb
+          - light.0x001788010c0b1125
+        data:
+          transition: 0
+      icon_tap_action:
+        action: perform-action
+        perform_action: light.turn_off
+        target:
+          entity_id:
+          - light.0x001788011015148f
+          - light.0x0017880110151bb9
+          - light.0x001788010c012f69
+          - light.0x001788010c0179eb
+          - light.0x001788010c0b1125
+        data:
+          transition: 0
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+    column_span: 1
+  header:
+    card:
+      type: markdown
+      text_only: true
+      content: |-
+        # {% if now().hour < 5 %}Good night{% elif now().hour < 12 %}Good morning{% elif now().hour < 18 %}Good afternoon{% else %}Good evening{% endif %}, Fahrican.
+        {{ now().strftime('%A, %-d %B') }} · Rooftrollen
+    layout: responsive
+    badges_position: bottom
+- title: Lights
+  path: lights
+  show_icon_and_title: true
+  type: sections
+  max_columns: 3
+  theme: Rooftrollen
+  dense_section_placement: false
+  sections:
+  - type: grid
+    cards:
+    - type: custom:mushroom-title-card
+      title: 6th floor
+      grid_options:
+        columns: 12
+        rows: auto
+    - type: custom:mushroom-light-card
+      entity: light.0x001788011015148f
+      name: Fahrican Loft
+      icon: mdi:lightbulb-outline
+      show_brightness_control: true
+      show_color_temp_control: true
+      show_color_control: true
+      use_light_color: false
+      icon_color: amber
+      collapsible_controls: false
+      layout: default
+      tap_action:
+        action: toggle
+      hold_action:
+        action: more-info
+      double_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(135, 156, 242, .13), rgba(135, 156, 242, .035)), var(--ha-card-background);
+          padding: 4px; }'
+    - type: custom:mushroom-light-card
+      entity: light.0x0017880110151bb9
+      name: Fahrican Bedroom
+      icon: mdi:lightbulb-outline
+      show_brightness_control: true
+      show_color_temp_control: true
+      show_color_control: true
+      use_light_color: false
+      icon_color: amber
+      collapsible_controls: false
+      layout: default
+      tap_action:
+        action: toggle
+      hold_action:
+        action: more-info
+      double_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(183, 147, 218, .13), rgba(183, 147, 218, .035)), var(--ha-card-background);
+          padding: 4px; }'
+    - type: custom:mushroom-template-card
+      primary: Bathroom relay
+      secondary: '{{ states(entity) | replace(''_'', '' '') | capitalize }}'
+      icon: mdi:lightbulb-outline
+      color: teal
+      tap_action:
+        action: toggle
+      icon_tap_action:
+        action: toggle
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: switch.0xe456acfffe5cd047
+    column_span: 1
+  - type: grid
+    cards:
+    - type: custom:mushroom-title-card
+      title: 5th floor
+      grid_options:
+        columns: 12
+        rows: auto
+    - type: custom:mushroom-light-card
+      entity: light.0x001788010c012f69
+      name: Living Room
+      icon: mdi:lightbulb-outline
+      show_brightness_control: true
+      show_color_temp_control: true
+      show_color_control: true
+      use_light_color: false
+      icon_color: amber
+      collapsible_controls: false
+      layout: default
+      tap_action:
+        action: toggle
+      hold_action:
+        action: more-info
+      double_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(211, 160, 87, .13), rgba(211, 160, 87, .035)), var(--ha-card-background);
+          padding: 4px; }'
+    - type: custom:mushroom-light-card
+      entity: light.0x001788010c0179eb
+      name: Fahrican Spare Room
+      icon: mdi:lightbulb-outline
+      show_brightness_control: true
+      show_color_temp_control: true
+      show_color_control: true
+      use_light_color: false
+      icon_color: amber
+      collapsible_controls: false
+      layout: default
+      tap_action:
+        action: toggle
+      hold_action:
+        action: more-info
+      double_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(152, 169, 117, .13), rgba(152, 169, 117, .035)), var(--ha-card-background);
+          padding: 4px; }'
+    column_span: 1
+  - type: grid
+    cards:
+    - type: custom:mushroom-title-card
+      title: Between floors
+      grid_options:
+        columns: 12
+        rows: auto
+    - type: custom:mushroom-light-card
+      entity: light.0x001788010c0b1125
+      name: Stairwell
+      icon: mdi:lightbulb-outline
+      show_brightness_control: true
+      show_color_temp_control: true
+      show_color_control: true
+      use_light_color: false
+      icon_color: amber
+      collapsible_controls: false
+      layout: default
+      tap_action:
+        action: toggle
+      hold_action:
+        action: more-info
+      double_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(129, 169, 201, .13), rgba(129, 169, 201, .035)), var(--ha-card-background);
+          padding: 4px; }'
+    - type: custom:mushroom-template-card
+      primary: All Hue lights off
+      secondary: Five bulbs · instant off
+      icon: mdi:lightbulb-group-off-outline
+      color: amber
+      tap_action:
+        action: perform-action
+        perform_action: light.turn_off
+        target:
+          entity_id:
+          - light.0x001788011015148f
+          - light.0x0017880110151bb9
+          - light.0x001788010c012f69
+          - light.0x001788010c0179eb
+          - light.0x001788010c0b1125
+        data:
+          transition: 0
+      icon_tap_action:
+        action: perform-action
+        perform_action: light.turn_off
+        target:
+          entity_id:
+          - light.0x001788011015148f
+          - light.0x0017880110151bb9
+          - light.0x001788010c012f69
+          - light.0x001788010c0179eb
+          - light.0x001788010c0b1125
+        data:
+          transition: 0
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+    column_span: 1
+  header:
+    card:
+      type: markdown
+      text_only: true
+      content: |-
+        # Light, just how you like it.
+        Tap a light to switch it. Adjust brightness, color or warmth below.
+    layout: responsive
+    badges_position: bottom
+- title: Climate
+  path: climate
+  show_icon_and_title: true
+  type: sections
+  max_columns: 3
+  theme: Rooftrollen
+  dense_section_placement: false
+  sections:
+  - type: grid
+    cards:
+    - type: custom:mushroom-title-card
+      title: Fahrican Loft
+      grid_options:
+        columns: 12
+        rows: auto
+      subtitle: 6th floor
+    - type: thermostat
+      entity: climate.daikinap90808_room_temperature
+      name: Loft temperature
+      show_current_as_primary: true
+      features:
+      - type: climate-hvac-modes
+        hvac_modes:
+        - 'off'
+        - cool
+        - heat
+        - fan_only
+        - dry
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(135, 156, 242, .13), rgba(135, 156, 242, .035)), var(--ha-card-background);  }'
+    column_span: 1
+  - type: grid
+    cards:
+    - type: custom:mushroom-title-card
+      title: Fahrican Bathroom
+      grid_options:
+        columns: 12
+        rows: auto
+      subtitle: 6th floor
+    - type: custom:mushroom-template-card
+      primary: Temperature
+      secondary: '{{ (states(entity) | float | round(1) | string) + '' °C'' if is_number(states(entity)) else ''Unavailable''
+        }}'
+      icon: mdi:thermometer
+      color: teal
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: sensor.0x54ef441001724e3e_temperature
+    - type: custom:mushroom-template-card
+      primary: Humidity
+      secondary: '{{ (states(entity) | float | round(1) | string) + '' %'' if is_number(states(entity)) else ''Unavailable''
+        }}'
+      icon: mdi:water-percent
+      color: teal
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: sensor.0x54ef441001724e3e_humidity
+    - type: history-graph
+      title: Bathroom · last 12 hours
+      hours_to_show: 12
+      entities:
+      - entity: sensor.0x54ef441001724e3e_temperature
+        name: Temperature
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+    - type: history-graph
+      title: Bathroom · last 12 hours
+      hours_to_show: 12
+      entities:
+      - entity: sensor.0x54ef441001724e3e_humidity
+        name: Humidity
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+    column_span: 1
+  - type: grid
+    cards:
+    - type: custom:mushroom-title-card
+      title: Outside & energy
+      grid_options:
+        columns: 12
+        rows: auto
+    - type: weather-forecast
+      entity: weather.forecast_home
+      forecast_type: daily
+      show_current: true
+      show_forecast: true
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+    - type: custom:mushroom-template-card
+      primary: AC cooling today
+      secondary: '{{ (states(entity) | float | round(1) | string) + '' kWh'' if is_number(states(entity)) else ''Unavailable''
+        }}'
+      icon: mdi:lightning-bolt-outline
+      color: amber
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: sensor.daikinap90808_climatecontrol_cooling_daily_electrical_consumption
+    - type: custom:mushroom-template-card
+      primary: AC cooling this month
+      secondary: '{{ (states(entity) | float | round(1) | string) + '' kWh'' if is_number(states(entity)) else ''Unavailable''
+        }}'
+      icon: mdi:calendar-month-outline
+      color: amber
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: sensor.daikinap90808_climatecontrol_cooling_monthly_electrical_consumption
+    column_span: 1
+  header:
+    card:
+      type: markdown
+      text_only: true
+      content: |-
+        # A comfortable home.
+        Temperature, air conditioning and the weather outside.
+    layout: responsive
+    badges_position: bottom
+- title: Door
+  path: door
+  show_icon_and_title: true
+  type: sections
+  max_columns: 3
+  theme: Rooftrollen
+  dense_section_placement: false
+  sections:
+  - type: grid
+    cards:
+    - type: custom:mushroom-title-card
+      title: Fahrican Loft
+      grid_options:
+        columns: 12
+        rows: auto
+      subtitle: External door · 6th floor
+    - type: custom:mushroom-template-card
+      primary: External door
+      secondary: '{{ states(entity) | replace(''_'','' '') | capitalize }}'
+      icon: '{{ ''mdi:lock-outline'' if is_state(entity,''locked'') else ''mdi:lock-open-outline'' }}'
+      color: '{{ ''green'' if is_state(entity,''locked'') else ''amber'' }}'
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(135, 156, 242, .13), rgba(135, 156, 242, .035)), var(--ha-card-background);
+          padding: 16px 4px; }'
+      entity: lock.smart_lock_ultra
+    - type: custom:mushroom-template-card
+      primary: Lock door
+      secondary: Secure the external door
+      icon: mdi:lock-outline
+      color: green
+      tap_action:
+        action: perform-action
+        perform_action: lock.lock
+        target:
+          entity_id:
+          - lock.smart_lock_ultra
+        confirmation:
+          text: Lock the Fahrican Loft external door?
+      icon_tap_action:
+        action: perform-action
+        perform_action: lock.lock
+        target:
+          entity_id:
+          - lock.smart_lock_ultra
+        confirmation:
+          text: Lock the Fahrican Loft external door?
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+    - type: custom:mushroom-template-card
+      primary: Unlock door
+      secondary: Unlock without pulling the latch
+      icon: mdi:lock-open-outline
+      color: amber
+      tap_action:
+        action: perform-action
+        perform_action: lock.unlock
+        target:
+          entity_id:
+          - lock.smart_lock_ultra
+        confirmation:
+          text: Unlock the Fahrican Loft external door?
+      icon_tap_action:
+        action: perform-action
+        perform_action: lock.unlock
+        target:
+          entity_id:
+          - lock.smart_lock_ultra
+        confirmation:
+          text: Unlock the Fahrican Loft external door?
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+    - type: custom:mushroom-template-card
+      primary: Open latch
+      secondary: Release the latch to open the door
+      icon: mdi:door-open
+      color: orange
+      tap_action:
+        action: perform-action
+        perform_action: lock.open
+        target:
+          entity_id:
+          - lock.smart_lock_ultra
+        confirmation:
+          text: Release the Fahrican Loft external door latch?
+      icon_tap_action:
+        action: perform-action
+        perform_action: lock.open
+        target:
+          entity_id:
+          - lock.smart_lock_ultra
+        confirmation:
+          text: Release the Fahrican Loft external door latch?
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+    column_span: 1
+  - type: grid
+    cards:
+    - type: custom:mushroom-title-card
+      title: At a glance
+      grid_options:
+        columns: 12
+        rows: auto
+    - type: custom:mushroom-template-card
+      primary: Lock battery
+      secondary: '{{ (states(entity) | float | round(1) | string) + '' %'' if is_number(states(entity)) else ''Unavailable''
+        }}'
+      icon: mdi:battery
+      color: green
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: sensor.smart_lock_ultra_battery
+    - type: custom:mushroom-template-card
+      primary: Keypad battery
+      secondary: '{{ ''Low — replace batteries'' if is_state(entity,''on'') else ''Normal'' if is_state(entity,''off'')
+        else ''Unavailable'' }}'
+      icon: mdi:dialpad
+      color: '{{ ''red'' if is_state(entity,''on'') else ''green'' }}'
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: binary_sensor.nuki_ultra_keypad_battery_low
+    - type: custom:mushroom-template-card
+      primary: Lock activity
+      secondary: '{{ ''Connected'' if is_state(entity,''on'') else ''Disconnected'' if is_state(entity,''off'')
+        else ''Unavailable'' }}'
+      icon: mdi:connection
+      color: '{{ ''green'' if is_state(entity,''on'') else ''amber'' }}'
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: binary_sensor.nuki_ultra_mqtt
+    - type: custom:mushroom-template-card
+      primary: Keypad lighting
+      secondary: '{{ states(entity) | replace(''_'', '' '') | capitalize }}'
+      icon: mdi:lightbulb-auto-outline
+      color: amber
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: automation.nuki_keypad_1600_lm_hue_lights
+    column_span: 1
+  - type: grid
+    cards:
+    - type: custom:mushroom-title-card
+      title: Recent activity
+      grid_options:
+        columns: 12
+        rows: auto
+    - type: logbook
+      hours_to_show: 24
+      target:
+        entity_id:
+        - lock.smart_lock_ultra
+        - event.nuki_ultra_action
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+    column_span: 1
+  header:
+    card:
+      type: markdown
+      text_only: true
+      content: |-
+        # Your door, at a glance.
+        Lock state, keypad activity and battery health.
+    layout: responsive
+    badges_position: bottom
+- title: Fahrican Loft
+  path: loft
+  icon: mdi:lightbulb-outline
+  show_icon_and_title: true
+  type: sections
+  max_columns: 3
+  theme: Rooftrollen
+  dense_section_placement: false
+  sections:
+  - type: grid
+    cards:
+    - type: custom:mushroom-light-card
+      entity: light.0x001788011015148f
+      name: Room light
+      icon: mdi:lightbulb-outline
+      show_brightness_control: true
+      show_color_temp_control: true
+      show_color_control: true
+      use_light_color: false
+      icon_color: amber
+      collapsible_controls: false
+      layout: default
+      tap_action:
+        action: toggle
+      hold_action:
+        action: more-info
+      double_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(135, 156, 242, .13), rgba(135, 156, 242, .035)), var(--ha-card-background);
+          padding: 4px; }'
+    - type: custom:mushroom-climate-card
+      entity: climate.daikinap90808_room_temperature
+      name: Loft air conditioning
+      show_temperature_control: true
+      hvac_modes:
+      - 'off'
+      - cool
+      - heat
+      - fan_only
+      - dry
+      collapsible_controls: false
+      tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(135, 156, 242, .13), rgba(135, 156, 242, .035)), var(--ha-card-background);
+          padding: 8px 4px; }'
+    - type: custom:mushroom-template-card
+      primary: External door
+      secondary: '{{ states(''lock.smart_lock_ultra'') | capitalize }}'
+      icon: mdi:door-closed-lock
+      color: indigo
+      tap_action:
+        action: navigate
+        navigation_path: /dashboard-rooftrollen/door
+      icon_tap_action:
+        action: navigate
+        navigation_path: /dashboard-rooftrollen/door
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+    column_span: 1
+  - type: grid
+    cards:
+    - type: custom:mushroom-template-card
+      primary: Dimmer control
+      secondary: '{{ states(entity) | replace(''_'', '' '') | capitalize }}'
+      icon: mdi:gesture-tap-button
+      color: primary
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: automation.fahrican_loft_dimmer
+    column_span: 1
+  subview: true
+  back_path: /dashboard-rooftrollen/home
+  header:
+    card:
+      type: markdown
+      text_only: true
+      content: |-
+        # Fahrican Loft
+        6th floor
+    layout: responsive
+    badges_position: bottom
+- title: Fahrican Bedroom
+  path: bedroom
+  icon: mdi:lightbulb-outline
+  show_icon_and_title: true
+  type: sections
+  max_columns: 3
+  theme: Rooftrollen
+  dense_section_placement: false
+  sections:
+  - type: grid
+    cards:
+    - type: custom:mushroom-light-card
+      entity: light.0x0017880110151bb9
+      name: Room light
+      icon: mdi:lightbulb-outline
+      show_brightness_control: true
+      show_color_temp_control: true
+      show_color_control: true
+      use_light_color: false
+      icon_color: amber
+      collapsible_controls: false
+      layout: default
+      tap_action:
+        action: toggle
+      hold_action:
+        action: more-info
+      double_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(183, 147, 218, .13), rgba(183, 147, 218, .035)), var(--ha-card-background);
+          padding: 4px; }'
+    column_span: 1
+  - type: grid
+    cards:
+    - type: custom:mushroom-template-card
+      primary: Dimmer control
+      secondary: '{{ states(entity) | replace(''_'', '' '') | capitalize }}'
+      icon: mdi:gesture-tap-button
+      color: primary
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: automation.fahrican_bedroom_dimmer
+    column_span: 1
+  subview: true
+  back_path: /dashboard-rooftrollen/home
+  header:
+    card:
+      type: markdown
+      text_only: true
+      content: |-
+        # Fahrican Bedroom
+        6th floor
+    layout: responsive
+    badges_position: bottom
+- title: Living Room
+  path: living
+  icon: mdi:lightbulb-outline
+  show_icon_and_title: true
+  type: sections
+  max_columns: 3
+  theme: Rooftrollen
+  dense_section_placement: false
+  sections:
+  - type: grid
+    cards:
+    - type: custom:mushroom-light-card
+      entity: light.0x001788010c012f69
+      name: Room light
+      icon: mdi:lightbulb-outline
+      show_brightness_control: true
+      show_color_temp_control: true
+      show_color_control: true
+      use_light_color: false
+      icon_color: amber
+      collapsible_controls: false
+      layout: default
+      tap_action:
+        action: toggle
+      hold_action:
+        action: more-info
+      double_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(211, 160, 87, .13), rgba(211, 160, 87, .035)), var(--ha-card-background);
+          padding: 4px; }'
+    column_span: 1
+  - type: grid
+    cards:
+    - type: custom:mushroom-template-card
+      primary: Dimmer control
+      secondary: '{{ states(entity) | replace(''_'', '' '') | capitalize }}'
+      icon: mdi:gesture-tap-button
+      color: primary
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: automation.living_room_dimmer
+    column_span: 1
+  subview: true
+  back_path: /dashboard-rooftrollen/home
+  header:
+    card:
+      type: markdown
+      text_only: true
+      content: |-
+        # Living Room
+        5th floor
+    layout: responsive
+    badges_position: bottom
+- title: Fahrican Spare Room
+  path: spare
+  icon: mdi:lightbulb-outline
+  show_icon_and_title: true
+  type: sections
+  max_columns: 3
+  theme: Rooftrollen
+  dense_section_placement: false
+  sections:
+  - type: grid
+    cards:
+    - type: custom:mushroom-light-card
+      entity: light.0x001788010c0179eb
+      name: Room light
+      icon: mdi:lightbulb-outline
+      show_brightness_control: true
+      show_color_temp_control: true
+      show_color_control: true
+      use_light_color: false
+      icon_color: amber
+      collapsible_controls: false
+      layout: default
+      tap_action:
+        action: toggle
+      hold_action:
+        action: more-info
+      double_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(152, 169, 117, .13), rgba(152, 169, 117, .035)), var(--ha-card-background);
+          padding: 4px; }'
+    column_span: 1
+  - type: grid
+    cards:
+    - type: custom:mushroom-template-card
+      primary: Dimmer control
+      secondary: '{{ states(entity) | replace(''_'', '' '') | capitalize }}'
+      icon: mdi:gesture-tap-button
+      color: primary
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: automation.fahrican_spare_room_dimmer
+    column_span: 1
+  subview: true
+  back_path: /dashboard-rooftrollen/home
+  header:
+    card:
+      type: markdown
+      text_only: true
+      content: |-
+        # Fahrican Spare Room
+        5th floor
+    layout: responsive
+    badges_position: bottom
+- title: Stairwell
+  path: stairs
+  icon: mdi:lightbulb-outline
+  show_icon_and_title: true
+  type: sections
+  max_columns: 3
+  theme: Rooftrollen
+  dense_section_placement: false
+  sections:
+  - type: grid
+    cards:
+    - type: custom:mushroom-light-card
+      entity: light.0x001788010c0b1125
+      name: Room light
+      icon: mdi:lightbulb-outline
+      show_brightness_control: true
+      show_color_temp_control: true
+      show_color_control: true
+      use_light_color: false
+      icon_color: amber
+      collapsible_controls: false
+      layout: default
+      tap_action:
+        action: toggle
+      hold_action:
+        action: more-info
+      double_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(129, 169, 201, .13), rgba(129, 169, 201, .035)), var(--ha-card-background);
+          padding: 4px; }'
+    column_span: 1
+  - type: grid
+    cards:
+    - type: custom:mushroom-template-card
+      primary: Motion
+      secondary: '{{ states(entity) | replace(''_'', '' '') | capitalize }}'
+      icon: mdi:motion-sensor
+      color: blue
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: binary_sensor.0xa4c1381711f7ffff_occupancy
+    - type: custom:mushroom-template-card
+      primary: Motion lighting
+      secondary: '{{ states(entity) | replace(''_'', '' '') | capitalize }}'
+      icon: mdi:gesture-tap-button
+      color: primary
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: automation.pir_motion_hue_bulb_1125
+    column_span: 1
+  subview: true
+  back_path: /dashboard-rooftrollen/home
+  header:
+    card:
+      type: markdown
+      text_only: true
+      content: |-
+        # Stairwell
+        5th–6th floors
+    layout: responsive
+    badges_position: bottom
+- title: Fahrican Bathroom
+  path: bathroom
+  icon: mdi:shower-head
+  show_icon_and_title: true
+  type: sections
+  max_columns: 3
+  theme: Rooftrollen
+  dense_section_placement: false
+  sections:
+  - type: grid
+    cards:
+    - type: custom:mushroom-template-card
+      primary: Bathroom light
+      secondary: '{{ states(entity) | capitalize }}'
+      icon: mdi:lightbulb-outline
+      color: '{{ ''teal'' if is_state(entity,''on'') else ''disabled'' }}'
+      tap_action:
+        action: toggle
+      icon_tap_action:
+        action: toggle
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
+          linear-gradient(125deg, rgba(87, 177, 168, .13), rgba(87, 177, 168, .035)), var(--ha-card-background);  }'
+      entity: switch.0xe456acfffe5cd047
+      hold_action:
+        action: more-info
+    - type: custom:mushroom-template-card
+      primary: Presence
+      secondary: '{{ states(entity) | replace(''_'', '' '') | capitalize }}'
+      icon: mdi:human
+      color: teal
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: binary_sensor.0x54ef441001724e3e_presence
+    - type: custom:mushroom-template-card
+      primary: Motion
+      secondary: '{{ states(entity) | replace(''_'', '' '') | capitalize }}'
+      icon: mdi:motion-sensor
+      color: teal
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: binary_sensor.0x54ef441001724e3e_pir_detection
+    - type: custom:mushroom-template-card
+      primary: Automatic lighting
+      secondary: '{{ states(entity) | replace(''_'', '' '') | capitalize }}'
+      icon: mdi:lightbulb-auto-outline
+      color: teal
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: automation.fahrican_bathroom_presence_lighting
+    column_span: 1
+  - type: grid
+    cards:
+    - type: custom:mushroom-template-card
+      primary: Temperature
+      secondary: '{{ (states(entity) | float | round(1) | string) + '' °C'' if is_number(states(entity)) else ''Unavailable''
+        }}'
+      icon: mdi:thermometer
+      color: teal
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: sensor.0x54ef441001724e3e_temperature
+    - type: custom:mushroom-template-card
+      primary: Humidity
+      secondary: '{{ (states(entity) | float | round(1) | string) + '' %'' if is_number(states(entity)) else ''Unavailable''
+        }}'
+      icon: mdi:water-percent
+      color: teal
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: sensor.0x54ef441001724e3e_humidity
+    - type: history-graph
+      title: Presence · last 3 hours
+      hours_to_show: 3
+      entities:
+      - entity: binary_sensor.0x54ef441001724e3e_presence
+        name: Presence
+      - entity: switch.0xe456acfffe5cd047
+        name: Light
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+    column_span: 1
+  subview: true
+  back_path: /dashboard-rooftrollen/home
+  header:
+    card:
+      type: markdown
+      text_only: true
+      content: |-
+        # Fahrican Bathroom
+        6th floor · Automatic presence lighting
+    layout: responsive
+    badges_position: bottom
