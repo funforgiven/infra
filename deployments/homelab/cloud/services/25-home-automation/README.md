@@ -6,6 +6,12 @@ users, dashboards and automations in its persistent configuration directory.
 The old appliance has no data to migrate; its VM, two boot volumes, dedicated
 ports and security groups are explicitly retired by the services-hosts root.
 
+The [Rooftrollen dashboard](dashboard/README.md) provides room controls, lighting,
+climate and door pages with a theme that follows the system's light/dark setting.
+Its recovery source and pinned frontend resources are tracked in `dashboard/`;
+Home Assistant owns the live, UI-editable configuration and existing application
+backups include it.
+
 ## Components
 
 | Component | Pinned release | Purpose |

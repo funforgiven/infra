@@ -1,0 +1,16 @@
+[
+  {
+    "repository": "piitaya/lovelace-mushroom",
+    "version": "v5.2.3",
+    "asset": "mushroom.js",
+    "url": "https://github.com/piitaya/lovelace-mushroom/releases/download/v5.2.3/mushroom.js",
+    "sha256": "631668268e474d5357e0f17f161322499ea5c93a910431477e112653d7aa456b"
+  },
+  {
+    "repository": "thomasloven/lovelace-card-mod",
+    "version": "v4.2.1",
+    "asset": "card-mod.js",
+    "url": "https://raw.githubusercontent.com/thomasloven/lovelace-card-mod/v4.2.1/card-mod.js",
+    "sha256": "5e7e71ad61796f59070f8c4621e69fa8e71a9864d0be0922bc4dbc72f990cd35"
+  }
+]
