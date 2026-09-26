@@ -6,6 +6,10 @@ switching. Future MikroTik switches must preserve the same VLAN trunk contract.
 Omada remains in service until its last switch is replaced. Its reconciler now
 uses `scope: switch-only`, so an offline EAP cannot block switch maintenance.
 
+See [migration validation](migration-validation.md) for the dated deployment,
+AP connectivity and backup results. The address and monitoring definitions below
+describe the intended deployment; that record identifies checks still pending.
+
 The native UniFi OS Server runs on a dedicated Ubuntu 24.04 OpenStack VM:
 2 vCPU, 4 GiB RAM, 2 GiB swap and a retained 64 GiB Cinder boot volume. Both
 VM and volume have `prevent_destroy`. A controller outage leaves adopted APs
@@ -91,11 +95,14 @@ No UDP discovery broadcast is routed: use explicit layer-3 adoption.
    country to Turkey; disable remote access and wireless meshing. Retain the
    default stable automatic update policy. Create **Third-party Gateway** networks for VLANs 10 and 50;
    never create a DHCP server or gateway in UniFi.
-6. Set **Inform Host Override** to `10.21.40.127` before adoption. Over the
-   verified AP SSH connection, run
+6. Use the routed address `10.21.40.127` for explicit adoption. Over the verified
+   AP SSH connection, run
    `set-inform http://10.21.40.127:8080/inform` (or the firmware's
    `mca-cli-op set-inform ...`). Adopt only MAC `74:F9:2C:3C:99:F7`; repeat inform
    after accepting if required. Verify Connected state and the final inform URL.
+   The installed UniFi OS version does not expose the older standalone
+   application's Inform Host Override setting; do not write unsupported API
+   fields to emulate it.
 7. Apply the SSIDs from `../../unifi-network.yaml`, reusing the SOPS PSKs without
    displaying them in terminal output or passing them on a command line. Rotate
    the AP's factory SSH credential through UniFi Device SSH Settings and store
@@ -126,11 +133,15 @@ containing letters, digits and `_+=/@.-`. Then run:
 
 ```sh
 nix run .#enroll-service-host-secrets -- ubuntu@10.21.40.127 unifi-poller
-nix run .#generate-services-credential -- --rotate UNIFI_BACKUP_RESTIC_PASSWORD
 nix run .#reconcile-services-backblaze -- apply --bootstrap-directory /secure/intake
 nix run .#initialize-services-restic -- apply
 nix run .#enroll-service-host-secrets -- ubuntu@10.21.40.127 unifi-backup
 ```
+
+`UNIFI_BACKUP_RESTIC_PASSWORD` is already generated in the declared SOPS file
+and protects the local migration checkpoint. Reuse it for enrollment. Do not
+regenerate it while repositories still require the existing password; password
+rotation needs an explicit Restic key migration and recovery verification.
 
 The Backblaze reconciler consumes the usual one-time master-key intake and
 creates a separate writer restricted to `services/hosts/unifi/`. Never reuse a
