@@ -67,7 +67,7 @@ in
 
           gestures.hot-corners.enable = false;
 
-          xwayland-satellite.path = lib.getExe pkgs.xwayland-satellite-unstable;
+          xwayland-satellite.path = lib.getExe pkgs.xwayland-satellite-stable;
         };
       };
     };

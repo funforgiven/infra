@@ -33,7 +33,10 @@
     import-tree.url = "github:vic/import-tree";
     niri = {
       url = "github:sodiboo/niri-flake";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        xwayland-satellite-stable.follows = "xwayland-satellite";
+      };
     };
     nixos-anywhere = {
       url = "git+https://github.com/nix-community/nixos-anywhere.git?rev=bad98b0685cf47eaeadcaf6787da8b51cf025693&shallow=1";
@@ -57,6 +60,10 @@
     };
     wallpaper = {
       url = "path:/home/funforgiven/Pictures/Wallpapers/current.png";
+      flake = false;
+    };
+    xwayland-satellite = {
+      url = "github:Supreeeme/xwayland-satellite/v0.8.1";
       flake = false;
     };
   };

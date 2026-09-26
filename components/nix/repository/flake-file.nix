@@ -51,6 +51,14 @@ in
       niri = {
         url = "github:sodiboo/niri-flake";
         inputs.nixpkgs.follows = "nixpkgs";
+        inputs.xwayland-satellite-stable.follows = "xwayland-satellite";
+      };
+
+      xwayland-satellite = {
+        # 0.8.2 dismisses Steam menus and tooltips immediately.
+        # https://github.com/Supreeeme/xwayland-satellite/issues/468
+        url = "github:Supreeeme/xwayland-satellite/v0.8.1";
+        flake = false;
       };
 
       stylix = {
