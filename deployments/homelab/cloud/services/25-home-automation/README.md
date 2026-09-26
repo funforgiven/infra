@@ -334,7 +334,10 @@ Install each mapping with `POST /api/config/automation/config/<id>`. The power
 button's `on_press` event toggles the paired bulb's current HA state. Brightness
 up/down press and hold events apply steps of 25 percentage points, with zero
 transition. Release events and the unassigned Hue button are ignored. Each
-dimmer has its own ordered action queue; unavailable bulbs are skipped.
+room's dimmer automation has an ordered action queue; unavailable bulbs are
+skipped. The two Fahrican Bedroom dimmers share the same automation and queue,
+so either remote acts on the bulb's current state. The bedside dimmer is named
+`Fahrican Bedroom bedside dimmer` and assigned to `fahrican_bedroom` in HA.
 MQTT trigger payloads explicitly use UTF-8 decoding. All five Hue bulbs use
 `hue_native_control: true` and `transition: 0`. `hue-device-options.yaml`
 contains recovery payloads: publish each mapping to
@@ -371,6 +374,7 @@ bulbs' native-control options remained in the live configuration after restart.
 | --- | --- | --- |
 | Fahrican Loft | `0x001788010ed6a389` | `0x001788011015148f` |
 | Fahrican Bedroom | `0x001788010ed6a323` | `0x0017880110151bb9` |
+| Fahrican Bedroom (bedside) | `0x001788010edcc45f` | `0x0017880110151bb9` |
 | Living Room | `0x001788010edcc2de` | `0x001788010c012f69` |
 | Fahrican Spare Room | `0x001788010edcc4bf` | `0x001788010c0179eb` |
 

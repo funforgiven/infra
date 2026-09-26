@@ -56,6 +56,9 @@
   - trigger: mqtt
     topic: zigbee2mqtt/0x001788010ed6a323/action
     encoding: utf-8
+  - trigger: mqtt
+    topic: zigbee2mqtt/0x001788010edcc45f/action
+    encoding: utf-8
   variables:
     light_entity: light.0x0017880110151bb9
 - <<: *hue_dimmer
