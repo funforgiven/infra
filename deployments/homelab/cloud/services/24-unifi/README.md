@@ -52,8 +52,9 @@ existing SOPS `secrets/omada.yaml` document during the switch transition.
 
 Radio widths are 20 MHz on 2.4 GHz, 80 MHz on 5 GHz and 160 MHz on 6 GHz.
 The initial 40 MHz 5-GHz default limited the phone's reported PHY rate to
-573.6 Mb/s, consistent with its approximately 450 Mb/s speed test. The wider
-channel needs a client throughput retest; MLO does not guarantee simultaneous
+573.6 Mb/s, consistent with its approximately 450 Mb/s speed test. After tuning,
+the owner reported good speeds; an exact new result was not supplied.
+MLO does not guarantee simultaneous
 data transfer over both bands, and all upstream traffic shares the 1 Gb/s link.
 Clients must support WPA3 to join Rooftrollen; forget/rejoin after the security
 change if needed. Older devices retain the separate IoT WLAN and its VLAN policy.
@@ -79,6 +80,21 @@ credential and the UnPoller credential are encrypted in
 recipient. Values in `data` are base64 encoded inside SOPS encryption. Retrieve
 the owner password into the password manager without copying it into chat or
 committing plaintext. Console diagnostic sharing is disabled.
+
+Open <https://unifi.fahrican.com> from the admin workstation or administration
+VPN and sign in with the **local** `admin` account. On the Wayland workstation,
+copy the password directly from SOPS to the clipboard with this command from
+the repository root, then paste it into the login form or password manager:
+
+```sh
+nix run .#sops --accept-flake-config -- decrypt \
+  --extract '["data"]["UNIFI_OWNER_PASSWORD"]' --output-type binary \
+  deployments/homelab/cloud/host-runtime/unifi.sops.yaml \
+  | base64 --decode | wl-copy
+```
+
+The access policy intentionally rejects ordinary Wi-Fi clients; use the
+administration VPN when logging in from a phone.
 
 The origin uses TLS with a VM-local private CA, a 90-day leaf certificate and
 daily renewal checks. Only its public CA enters Git. Envoy validates that CA and

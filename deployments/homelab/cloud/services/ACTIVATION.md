@@ -196,6 +196,21 @@ It clears the master files only after the declared keys and bucket policy have
 been reconciled successfully. Cluster and host writers remain independent and
 cannot cross their assigned prefixes.
 
+The 2026-09-27 credential audit found only the UniFi writer missing. Native B2
+authorization succeeded for the existing Velero, legacy Home Assistant host,
+undercloud etcd, management etcd, OpenStack and ZITADEL writers; each is
+restricted to `fahrican-cloud-recovery` and its declared prefix. The UniFi
+Restic password already exists and also protects its local recovery checkpoint;
+reuse it when enrolling `services/hosts/unifi/`. These credential checks do not
+replace successful backup jobs or restore tests.
+
+The standard intake files are `secrets/B2_MASTER_APPLICATION_KEY_ID.key` and
+`secrets/B2_MASTER_APPLICATION_KEY.key`. Keep one value in each regular,
+non-symlink mode-`0600` file; both are Git-ignored. The master is used only for
+provider reconciliation. Run `check` first, preserve working keys, then apply
+and deliver the scoped credentials to their declared consumers. Never install
+the master key on a backup host or in a cluster.
+
 ### Telegram
 
 Bot creation and token rotation remain manual BotFather operations. Follow
