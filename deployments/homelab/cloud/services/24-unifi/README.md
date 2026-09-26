@@ -28,6 +28,7 @@ as an official standalone Kubernetes container.
 | AP STUN | `10.21.40.127:3478/udp` |
 | U7 Pro Max | `74:F9:2C:3C:99:F7`, DHCP reservation `10.21.90.6` |
 | Physical attachment | SG3210XHP-M2 port 6, `infra-ap-trunk` |
+| Temporary Ethernet limit | Port 6 at 1 Gb/s full duplex; 2.5 Gb/s fails reachability on the current cable/switch path, including after AP firmware 8.7.11 |
 | AP management | Untagged at the AP, switch PVID/native VLAN 90 |
 | Trusted WLAN | `Rooftrollen`, tagged VLAN 10 |
 | IoT WLAN | `Rooftrollen_IoT`, tagged VLAN 50 |
@@ -37,6 +38,11 @@ its own verified Ethernet MAC reservation before it can receive an address.
 Do not copy the EAP MAC or enable a general DHCP pool. The unplugged EAP retains
 its old static `10.21.90.4` for rollback. Do not set a VLAN 90 management override
 on the U7: its management traffic is untagged on this switch port.
+
+The switch's physical speed/duplex settings are preserved by the Omada
+reconciler. Keep the recorded 1 Gb/s workaround until a cable/port/firmware test
+can sustain 2.5 Gb/s. Test a known-good short cable on the same port first; the
+current evidence does not distinguish cable, AP PHY and switch interoperability.
 
 `../../unifi-network.yaml` records the native enrollment settings and secret
 references; it is a documented desired-state input, not an automatic UniFi API
