@@ -3,8 +3,9 @@
 The controller and AP are online using a **temporary 1 Gb/s Ethernet limit** on
 switch port 6. Automatic 2.5 Gb/s negotiation does not sustain connectivity on
 the current cable/switch path, including after updating the AP to 8.7.11. This
-record includes recovery observations through 21:14 UTC; full client and
-offsite-recovery acceptance remains pending.
+record includes recovery and wireless changes through 23:12 UTC. The owner
+accepted retaining 1 Gb/s for now; final wireless throughput and offsite-recovery
+acceptance remain pending.
 
 ## Verified deployment
 
@@ -15,7 +16,7 @@ offsite-recovery acceptance remains pending.
 | Port contract | `infra-ap-trunk`: untagged/native VLAN 90, tagged VLANs 10 and 50. Switch reconciliation reports no changes or blockers. |
 | Physical link | Port 6 at 1 Gb/s full duplex as a temporary workaround. The Omada reconciler preserves physical speed/duplex; the limit is recorded in `unifi-network.yaml`. |
 | Address | Router reservation `10.21.90.6`; old EAP address `10.21.90.4` preserved. |
-| Controller | Dedicated retained-volume VM, `192.168.80.12` / `10.21.40.127`; UniFi OS 5.1.42 and Network 10.5.67. Cloud-init completed. |
+| Controller | Dedicated retained-volume VM, `192.168.80.12` / `10.21.40.127`; installed UniFi OS 5.1.42 and Network 10.5.67. Native automatic updating advanced Network to 10.6.106; its served UI version was verified. |
 | Authentication | Generated local owner and separate Network Read Only monitoring user, stored in administrator-only SOPS. Remote access disabled; diagnostics disabled; default automatic updates retained. |
 | WLAN configuration | `Rooftrollen` references the third-party VLAN-10 network; `Rooftrollen_IoT` references VLAN 50. Existing PSKs retained. Controller API read-back confirms both references. |
 | Origin TLS | Private CA and hostname verification passed against nginx; leaf renewal timer enabled. Services-cluster TCP probe to `192.168.80.12:8443` succeeded. |
@@ -24,9 +25,10 @@ offsite-recovery acceptance remains pending.
 
 The private DNS record, Envoy HTTPS route, certificate SAN and Prometheus
 resources passed local validation and Kubernetes server-side dry runs. They
-have **not been activated**: publishing the repository changes to `origin/main`
-is awaiting explicit approval after automatic approval review rejected the
-push. `https://unifi.fahrican.com` is therefore not yet a verified access path.
+have **not yet been verified after publication**. The owner explicitly authorized
+committing and pushing the required changes to `main` on 2026-09-27 local time,
+resolving the previous publication-approval blocker.
+`https://unifi.fahrican.com` is not yet a verified access path in this record.
 The native private recovery UI is on `10.21.40.127:11443`.
 
 ## AP connectivity failure and recovery
@@ -76,9 +78,9 @@ three associated clients and synchronized time. Five probes each to the gateway
 and `1.1.1.1` passed with zero loss. Authentication with the managed device SSH
 credential was verified on both firmware versions.
 
-After recovery, the controller identified the three associated clients on
-`Rooftrollen_IoT`; the Android phone was no longer associated, so its browsing
-retest is still required. The AP radio inventory showed `Rooftrollen` on
+Immediately after recovery, the controller identified three associated clients
+on `Rooftrollen_IoT`; the Android phone was then absent. A later user speed test
+confirmed working Wi-Fi at approximately 450 Mb/s. The AP initially showed `Rooftrollen` on
 2.4/5 GHz and `Rooftrollen_IoT` on 2.4 GHz, plus hidden UniFi internal interfaces.
 The user reported `6ghz-control` while the old firmware was running; it is not
 a configured user WLAN. No post-upgrade over-the-air scan has been completed.
@@ -91,13 +93,41 @@ host key. Clients with a known-host algorithm selection issue can select
 This isolates the failure to behavior dependent on the Ethernet speed; it does
 not establish whether the cable, AP PHY or switch interoperability is at fault.
 The SG3210XHP-M2 v3.0 currently runs firmware `3.0.0 Build 20230725 Rel.71176`.
-Test a known-good short cable on the same port next, then retest automatic speed
-with a bounded return to 1 Gb/s if necessary. A switch-wide firmware update
-needs a separate maintenance window because it interrupts the other endpoints.
+The user confirmed the cable is Cat6 and accepted keeping 1 Gb/s. Cable category
+is sufficient for 2.5 Gb/s; the observed failure does not prove a cable fault.
+Further Ethernet diagnosis is deferred. A switch-wide firmware update needs a
+separate maintenance window because it interrupts the other endpoints.
 
 For immediate wireless rollback, reconnect the EAP670 to this same port 6; its
 old address and Omada WLAN objects remain available. Restore automatic port
 speed when qualifying that rollback if its previous 2.5 Gb/s link is required.
+
+## Wireless performance and MLO
+
+Before tuning, the phone at `10.21.10.101` was associated on 5 GHz with a strong
+-46 dBm signal, 40 MHz channel width, two spatial streams and a reported AP-to-
+client PHY rate of 573.6 Mb/s. The user's approximately 450 Mb/s speed test is
+consistent with that limited channel width. The default bandwidth profile has
+no download or upload rate cap, and the Ethernet link reports full duplex with
+zero receive/transmit errors.
+
+At the user's request, Rooftrollen now uses only **5 and 6 GHz**, with **MLO,
+WPA3-only and required PMF**. Its password and VLAN-10 network reference are
+unchanged. Rooftrollen_IoT remains **2.4 GHz, WPA2-AES, VLAN 50**; a complete
+before/after API comparison confirmed its WLAN object was unchanged.
+
+The AP's native radio state confirms 5 GHz at **80 MHz** on primary channel 40
+and 6 GHz at **160 MHz** on primary channel 85. The 2.4-GHz radio remains at
+20 MHz on channel 11. Country code 792 (Turkey) and its lower-6-GHz channel set
+are retained. The controller confirms `mlo_enabled=true`, and the AP has an
+`mld0` interface. A client MLO association and final speed result still require
+verification; enabling the feature alone does not prove either.
+
+The U7 Pro Max's dedicated `wifi3`/`scan0` radio and `/usr/sbin/ubnt-airview -w 1`
+are active. The installed Network 10.6.106 UI exposes Spectrum Analyzer under
+AirView > WiFi Scanner; the checkbox changes the display mode. There is no
+additional persistent AP-enable setting required. Automatic Channel AI remains
+disabled. No disruptive full-radio scan was started.
 
 ## Backup evidence
 
@@ -123,9 +153,9 @@ unable to contact production APs.
 
 ## Remaining acceptance checks
 
-1. Confirm phone browsing after the recovery, qualify both WLANs, and resolve
-   the temporary 1 Gb/s Ethernet limit using the cable/port/firmware checks above.
-2. Publish/reconcile the GitOps changes after approval; verify DNS, Envoy route
+1. Retest throughput after the width/security changes and verify a real 6-GHz
+   or MLO client association. Retain the approved 1 Gb/s Ethernet limit.
+2. Publish/reconcile the authorized GitOps changes; verify DNS, Envoy route
    and BackendTLSPolicy conditions, browser login and Prometheus targets/alerts.
 3. Refill the B2 master intake privately, reconcile the restricted writer, run
    the first offsite backup and complete an isolated restore with login/site
