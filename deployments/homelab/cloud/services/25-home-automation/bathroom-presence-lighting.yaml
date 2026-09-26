@@ -1,15 +1,18 @@
 # Recovery copy: install through HA's automation config API.
-# FP300 uses combined mmWave/PIR presence and a 10-second absence delay.
+# FP300 uses both sensors, fixed high sensitivity, PIR interval 5 seconds,
+# and a 10-second radar absence delay.
 id: fahrican_bathroom_presence_lighting
 alias: Fahrican Bathroom presence lighting
 description: >-
-  FP300 presence turns on the bathroom relay immediately and keeps it on while
-  occupied. Turn off after 20 seconds of confirmed absence, in addition to the
-  sensor's 10-second absence delay. Returning presence cancels the countdown.
-  Unknown or unavailable presence leaves the relay unchanged.
+  FP300 motion or radar presence turns on the bathroom relay. Radar presence
+  keeps it on for a stationary occupant. Turn off only when both readings stay
+  clear for 20 seconds, after the sensor's own detection delays. Either reading
+  becoming active cancels the countdown. Unknown/unavailable is never vacant.
 triggers:
 - trigger: state
-  entity_id: binary_sensor.0x54ef441001724e3e_presence
+  entity_id:
+  - binary_sensor.0x54ef441001724e3e_presence
+  - binary_sensor.0x54ef441001724e3e_pir_detection
   to: null
 - trigger: homeassistant
   event: start
@@ -27,9 +30,14 @@ conditions: []
 actions:
 - choose:
   - conditions:
-    - condition: state
-      entity_id: binary_sensor.0x54ef441001724e3e_presence
-      state: "on"
+    - condition: or
+      conditions:
+      - condition: state
+        entity_id: binary_sensor.0x54ef441001724e3e_presence
+        state: "on"
+      - condition: state
+        entity_id: binary_sensor.0x54ef441001724e3e_pir_detection
+        state: "on"
     sequence:
     - condition: state
       entity_id: switch.0xe456acfffe5cd047
@@ -39,13 +47,17 @@ actions:
         entity_id: switch.0xe456acfffe5cd047
   - conditions:
     - condition: state
-      entity_id: binary_sensor.0x54ef441001724e3e_presence
+      entity_id:
+      - binary_sensor.0x54ef441001724e3e_presence
+      - binary_sensor.0x54ef441001724e3e_pir_detection
       state: "off"
     sequence:
     - delay:
         seconds: 20
     - condition: state
-      entity_id: binary_sensor.0x54ef441001724e3e_presence
+      entity_id:
+      - binary_sensor.0x54ef441001724e3e_presence
+      - binary_sensor.0x54ef441001724e3e_pir_detection
       state: "off"
     - condition: state
       entity_id: switch.0xe456acfffe5cd047
