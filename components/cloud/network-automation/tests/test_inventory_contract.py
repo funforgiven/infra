@@ -475,6 +475,18 @@ class NetworkInventoryTests(unittest.TestCase):
                     "tcp",
                     "443",
                 ),
+                (
+                    "infra: UniFi AP inform", "infra-forward", "vlan90-mgmt",
+                    "10.21.40.127", "tcp", "8080",
+                ),
+                (
+                    "infra: UniFi AP STUN", "infra-forward", "vlan90-mgmt",
+                    "10.21.40.127", "udp", "3478",
+                ),
+                (
+                    "infra: UniFi trusted bootstrap", "infra-forward", "vlan10-trusted",
+                    "10.21.40.127", "tcp", "22,11443",
+                ),
             ],
             [
                 (

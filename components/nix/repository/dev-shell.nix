@@ -34,6 +34,7 @@ _: {
             ]))
             pkgs.ripgrep
             pkgs.shellcheck
+            pkgs.openssl
             pkgs.skopeo
             pkgs.sops
             pkgs.velero

@@ -49,8 +49,10 @@ nix build .#checks.x86_64-linux.cloud-python \
 ## Omada
 
 `omada_reconcile.py` consumes `omada-network.yaml`. It manages the declared
-switch-only networks, profiles, port assignments, and `Rooftrollen` SSIDs for
-the exact configured site, switch, and access point. The controller UI still
+switch-only networks, profiles and port assignments for the exact configured
+site and switch. The version-2 `scope: switch-only` input never reads or mutates
+AP/WLAN objects and works with the unplugged EAP670. UniFi now owns WLANs;
+see the [AP migration runbook](../../../deployments/homelab/cloud/services/24-unifi/README.md). The controller UI still
 owns the switch management interface because the public API does not expose it.
 
 The adapter:
@@ -61,8 +63,9 @@ The adapter:
 - plans by default; and
 - polls readable state after a write.
 
-Use `--apply` only after reviewing the plan. Creating an SSID or rotating a PSK
-also requires `--include-write-only`, because Omada cannot return stored PSKs.
+Use `--apply` only after reviewing the plan. Legacy version-1 inputs retain
+SSID support and require `--include-write-only` for write-only PSKs; the active
+switch-only input does not access those credentials or configure SSIDs.
 The exact commands live in the RouterOS runbook so credential handling is
 documented in one place.
 

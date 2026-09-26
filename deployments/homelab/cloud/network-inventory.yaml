@@ -343,9 +343,44 @@ all:
               chain: infra-forward
               final_drop_comment: "infra: forward final drop"
               source_interface: wg-admin
-              destination: 10.21.90.4/31
+              destination: 10.21.90.5
               protocol: tcp
               destination_port: "443"
+            - comment: "infra: UniFi AP inform"
+              chain: infra-forward
+              final_drop_comment: "infra: forward final drop"
+              source_interface: vlan90-mgmt
+              destination: 10.21.40.127
+              protocol: tcp
+              destination_port: "8080"
+            - comment: "infra: UniFi AP STUN"
+              chain: infra-forward
+              final_drop_comment: "infra: forward final drop"
+              source_interface: vlan90-mgmt
+              destination: 10.21.40.127
+              protocol: udp
+              destination_port: "3478"
+            - comment: "infra: UniFi trusted bootstrap"
+              chain: infra-forward
+              final_drop_comment: "infra: forward final drop"
+              source_interface: vlan10-trusted
+              destination: 10.21.40.127
+              protocol: tcp
+              destination_port: "22,11443"
+            - comment: "infra: UniFi WireGuard bootstrap"
+              chain: infra-forward
+              final_drop_comment: "infra: forward final drop"
+              source_interface: wg-admin
+              destination: 10.21.40.127
+              protocol: tcp
+              destination_port: "22,11443"
+            - comment: "infra: WireGuard UniFi AP SSH"
+              chain: infra-forward
+              final_drop_comment: "infra: forward final drop"
+              source_interface: wg-admin
+              destination: 10.21.90.6
+              protocol: tcp
+              destination_port: "22"
           routeros_port_forwards:
             - comment: "infra: Factorio Space Age"
               in_interface_list: INFRA-WAN
@@ -419,4 +454,8 @@ all:
             - comment: "infra: Omada switch"
               mac_address: 98:25:4A:CB:BF:BE
               address: 10.21.90.5
+              server: dhcp-management
+            - comment: "infra: UniFi U7 Pro Max"
+              mac_address: 74:F9:2C:3C:99:F7
+              address: 10.21.90.6
               server: dhcp-management

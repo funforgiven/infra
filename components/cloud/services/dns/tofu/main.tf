@@ -50,6 +50,7 @@ locals {
     "home",
     "music",
     "upload",
+    "unifi",
     "wallos",
   ])
   mail_hosts = toset([

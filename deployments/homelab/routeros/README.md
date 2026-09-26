@@ -33,6 +33,7 @@ its compact desired-state file and reconciler.
 | CRS510 | `sfp28-5/6` | `bond-server2`, `asiago` |
 | CRS510 | `sfp28-7/8` | `bond-server3`, `pecorino` |
 | CRS510 | `ether1` | direct rescue, `192.168.89.2/24` |
+| SG3210XHP-M2 | port 6 | U7 Pro Max `74:F9:2C:3C:99:F7`; untagged management VLAN 90, tagged WLAN VLANs 10/50; reserved `10.21.90.6` |
 | SG3210XHP-M2 | port 3 | PiKVM `ricotta`, MAC `2C:CF:67:9D:A2:F7`; VLAN 90 DHCP reservation `10.21.90.3` |
 
 All qualified server links use forced `25G-baseCR`, RS-FEC (`fec91`),
@@ -97,7 +98,7 @@ The CCR2004 terminates the split-tunnel `wg-admin` network at
 interface list and is not NATed toward the internet. Firewall rules allow only
 DNS on the CCR, SSH to the three cloud hosts, HTTPS to the private and personal
 services Gateways, the undercloud and CAPI Kubernetes APIs, and the declared
-management ports for the CCR, CRS, PiKVM, EAP, and Omada switch.
+management ports for the CCR, CRS, PiKVM, UniFi AP, and Omada switch.
 
 Each administrator device supplies its own WireGuard public key and receives a
 unique SOPS-encrypted preshared key. Add the public key and sops-nix runtime
@@ -140,6 +141,9 @@ Mullvad objects while retaining the standard read-only CCR preflight.
 Use `--limit core_router --tags wan-port-forwards` to reconcile only the
 declared Factorio/Valheim WAN/reflection and Syncthing destination-NAT rows after the
 usual preflight.
+Use `--limit core_router --tags static-leases` to reconcile only declared DHCP
+reservations after the normal preflight. An extra-vars file can select the
+exact `routeros_static_leases` rows. VLAN 90 stays static-only.
 Use `--limit core_router --tags private-access` to reconcile and verify routed
 access rules while retaining the read-only preflight. An `--extra-vars` file
 containing `routeros_access_rules` can select the exact inventory rows for a
@@ -177,9 +181,10 @@ nix run .#sops --accept-flake-config -- \
       --credentials-stdin
 ```
 
-After reviewing the plan, add `--apply`. Creating an SSID or intentionally
-rotating its PSK also requires `--include-write-only`, because the controller
-does not return stored PSKs. The adapter never deletes controller objects.
+After reviewing the plan, add `--apply`. The current input is switch-only;
+the adapter neither requires the old EAP to be online nor changes its WLANs.
+It never deletes controller objects. UniFi manages the replacement APs;
+follow the [UniFi runbook](../cloud/services/24-unifi/README.md).
 
 ## Secrets and identity
 

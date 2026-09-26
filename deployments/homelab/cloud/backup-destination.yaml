@@ -37,6 +37,9 @@ bucket:
     - fileNamePrefix: services/hosts/gitlab/
       daysFromUploadingToHiding: null
       daysFromHidingToDeleting: 30
+    - fileNamePrefix: services/hosts/unifi/
+      daysFromUploadingToHiding: null
+      daysFromHidingToDeleting: 30
 
 writer:
   keyName: infra-undercloud-backup-writer
@@ -152,6 +155,13 @@ services:
       idField: HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID
       valueField: HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY
       resticPasswordField: HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD
+    - host: unifi
+      keyName: infra-services-unifi-backup-writer
+      namePrefix: services/hosts/unifi/
+      secretFile: deployments/homelab/cloud/host-runtime/backups.sops.yaml
+      idField: UNIFI_BACKUP_B2_APPLICATION_KEY_ID
+      valueField: UNIFI_BACKUP_B2_APPLICATION_KEY
+      resticPasswordField: UNIFI_BACKUP_RESTIC_PASSWORD
   hostCapabilities:
     - deleteFiles
     - listAllBucketNames

@@ -144,3 +144,12 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: services-network
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: unifi
+  labels:
+    gateway.fahrican.com/services: allowed
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.35

@@ -45,5 +45,19 @@
       "taleggio"
     ],
     "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA6TBFREK/67K3C/2fMOX2uN1RKh1dOZjBf/nKojqZId"
+  },
+  "u7-pro-max": {
+    "hostNames": [
+      "10.21.90.6",
+      "u7-pro-max"
+    ],
+    "publicKey": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCCLl237QP9EYXRmxvow3uc7dOAm+YXtkQJ24IrZZ4gvdoniHVGRP+/WhHzBu38PAtxBkt0p2N73/7B7HbOa3Q7bIZ+/5Zk2OmsM++/dYgmFcRD9xymzMThyH5xcUpWHv6JZrXLIPdDDhOSFVX6w0mxt+Juo0cC75f50kYBoBO7yk5BrjKfnZeqRvROPVWs/+3wXaXb+GfZT4WFpK//aKn8zptRsxPtjGw/Wk0tQ3W9AwiwWXHDdsdTAIPLzrhH0NIYThUAR1B7qwbOM9nEJPkrJMhCWozURyki8WmO8XOHo5t5wxy+4BlRUQoHvS1rhcE6N1CIPIQClQ9LMCOSpufd"
+  },
+  "unifi": {
+    "hostNames": [
+      "10.21.40.127",
+      "unifi"
+    ],
+    "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICrlJDuYUEWtPlgYY8XSDZb9EYfBcWAnS7IRf6tYJ+fX"
   }
 }

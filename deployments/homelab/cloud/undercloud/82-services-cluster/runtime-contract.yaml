@@ -24,6 +24,16 @@ data:
         - VALHEIM_GAME_PASSWORD
       mailProvisioning:
         - RESEND_ADMIN_API_KEY
+    hostCredentials:
+      unifi:
+        secretFile: deployments/homelab/cloud/host-runtime/unifi.sops.yaml
+        keys:
+          - UNIFI_OWNER_USERNAME
+          - UNIFI_OWNER_PASSWORD
+          - UNIFI_DEVICE_SSH_USERNAME
+          - UNIFI_DEVICE_SSH_PASSWORD
+          - UNIFI_POLLER_USERNAME
+          - UNIFI_POLLER_PASSWORD
     generatedSecrets:
       services-cluster:
         secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml
@@ -39,6 +49,7 @@ data:
         secretFile: deployments/homelab/cloud/host-runtime/generated.sops.yaml
         keys:
           - HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD
+          - UNIFI_BACKUP_RESTIC_PASSWORD
     provisionedSecrets:
       backblaze-services:
         provisioner: reconcile-services-backblaze
@@ -52,6 +63,8 @@ data:
         keys:
           - HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID
           - HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY
+          - UNIFI_BACKUP_B2_APPLICATION_KEY_ID
+          - UNIFI_BACKUP_B2_APPLICATION_KEY
       telegram-infrastructure:
         provisioner: reconcile-services-telegram
         secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml

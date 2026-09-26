@@ -1,5 +1,4 @@
-version: 2
-scope: switch-only
+version: 1
 
 site: Hark
 
@@ -57,3 +56,28 @@ switch:
     6: infra-ap-trunk
     8: infra-iot-access
     9: infra-crs-trunk
+
+accessPoint:
+  name: 9C-A2-F4-C2-ED-74
+  mac: 9C-A2-F4-C2-ED-74
+  model: EAP670(EU) v1.0
+  address: 10.21.90.4/24
+  gateway: 10.21.90.1
+  dns: 10.21.90.1
+  managementVlan: 90
+  switchPort: 6
+  managementVlanMode: default
+
+wireless:
+  group: Default
+  policy: standard
+
+  ssids:
+    - name: Rooftrollen
+      band: dual
+      vlan: 10
+      pskSecretRef: wireless.psks.personal
+    - name: Rooftrollen_IoT
+      band: 2.4GHz
+      vlan: 50
+      pskSecretRef: wireless.psks.iot

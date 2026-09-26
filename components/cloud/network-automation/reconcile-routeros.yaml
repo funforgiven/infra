@@ -1262,6 +1262,7 @@
       tags:
         - never
         - apply
+        - static-leases
 
     - name: Reconcile Git-owned static DHCP leases
       community.routeros.command:
@@ -1288,6 +1289,7 @@
       tags:
         - never
         - apply
+        - static-leases
 
     - name: Prove every Git-owned static DHCP lease
       community.routeros.command:
@@ -1307,6 +1309,7 @@
       tags:
         - never
         - apply
+        - static-leases
 
     - name: Reconcile Git-owned private DNS forwarders
       community.routeros.command:

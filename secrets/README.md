@@ -214,3 +214,16 @@ Re-encryption cannot remove old ciphertext from Git history.
   cluster credentials.
 - Verify ciphertext and structure in reviews; do not reveal values to prove that
   an update succeeded.
+
+## UniFi AP controller
+
+`UNIFI_POLLER_USERNAME` and `UNIFI_POLLER_PASSWORD` are local read-only UniFi
+credentials enrolled into `deployments/homelab/cloud/host-runtime/unifi.sops.yaml`.
+Use a 24+ character random password accepted by the host enrollment profile.
+`UNIFI_BACKUP_RESTIC_PASSWORD` is generated; the Backblaze reconciler owns
+`UNIFI_BACKUP_B2_APPLICATION_KEY_ID` and `UNIFI_BACKUP_B2_APPLICATION_KEY`.
+The writer is restricted to `services/hosts/unifi/`. Use the standard enrollment
+commands and the [UniFi recovery runbook](../deployments/homelab/cloud/services/24-unifi/README.md).
+The origin CA private key stays on the VM and in its encrypted Restic backup;
+only the verified public certificate is committed. WLAN PSKs remain under
+`wireless.psks` in `secrets/omada.yaml` during the switch transition.

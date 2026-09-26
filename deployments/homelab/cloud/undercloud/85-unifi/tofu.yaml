@@ -1,0 +1,23 @@
+apiVersion: infra.contrib.fluxcd.io/v1alpha2
+kind: Terraform
+metadata:
+  name: unifi
+  namespace: openstack
+spec:
+  interval: 10m
+  retryInterval: 1m
+  approvePlan: auto
+  destroyResourcesOnDeletion: false
+  path: ./components/cloud/services/unifi/tofu
+  sourceRef:
+    kind: GitRepository
+    name: services-tofu-source
+  runnerPodTemplate:
+    spec:
+      envFrom:
+        - secretRef:
+            name: magnum-keystone-admin
+  writeOutputsToSecret:
+    name: unifi-outputs
+  remediation:
+    retries: 3
