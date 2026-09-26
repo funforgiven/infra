@@ -11,8 +11,28 @@ _: {
       }:
       let
         awsRegion = "eu-central-1";
+        codexVersion = "0.153.3";
         python = pkgs.python312;
-        codexPackage = pkgs.codex;
+        codexPackage = pkgs.codex.overrideAttrs (
+          finalAttrs: _: {
+            version = codexVersion;
+            src = pkgs.fetchFromGitHub {
+              owner = "openai";
+              repo = "codex";
+              tag = "rust-v${finalAttrs.version}";
+              hash = "sha256-JujjJx9GHcTgirqEFr9tc4Ghzx65YNOqpNCc7rtthfI=";
+            };
+            cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
+              inherit (finalAttrs)
+                pname
+                version
+                src
+                sourceRoot
+                ;
+              hash = "sha256-GG6kOXmCdq+bZLU2ul0DIVL8lDuweayvZvXn6+bcUZw=";
+            };
+          }
+        );
         terraformMcpServer = pkgs.terraform-mcp-server;
         uvx = lib.getExe' pkgs.uv "uvx";
         uvEnvironment = {
@@ -24,8 +44,8 @@ _: {
       {
         assertions = [
           {
-            assertion = lib.versionAtLeast codexPackage.version "0.144.1";
-            message = "The official nixpkgs Codex package pin must provide Codex 0.144.1 or newer.";
+            assertion = codexPackage.version == codexVersion;
+            message = "The Codex package must provide the pinned ${codexVersion} release.";
           }
         ];
 
@@ -44,7 +64,7 @@ _: {
           package = codexPackage;
 
           settings = {
-            model = "gpt-5.6-sol";
+            model = "gpt-6-astra";
             personality = "pragmatic";
 
             approval_policy = "on-request";
