@@ -381,9 +381,15 @@ manually operable between sensor state transitions.
 The owner reported intermittent, very short-range radar detection even after
 high sensitivity and empty-room spatial learning. On September 26, direct
 device reads returned PIR active with radar presence inactive; one earlier
-event had a 24-second gap between those reports. Motion now provides prompt
-entry lighting, but reliable stationary detection still needs a physical test
-with fixed high sensitivity. The sensor runs firmware `0.0.0_6542`; Zigbee2MQTT
+event had a 24-second gap between those reports. The owner subsequently
+confirmed near-contact-only detection persisted with fixed high sensitivity
+and the shorter PIR interval. Received motion reports switched the relay on
+within about half a second. A supported sensor restart was confirmed by its
+power-outage counter increasing, and standard device reconfiguration returned
+`status: ok`, with the tuned settings preserved. Detection from 1–2 metres in
+an open position outside the bathroom remains to be tested to distinguish
+placement/interference from a sensor fault. Automatic lighting is not yet
+qualified as reliable. The sensor runs firmware `0.0.0_6542`; Zigbee2MQTT
 2.14.1 includes the upstream presence/PIR reporting fix, and both coordinator
 bindings and configured report entries are present. Do not treat cached
 `target_distance: 0` as proof of a failed radar; distance tracking is a separate
