@@ -24,6 +24,7 @@ each at its own provider VIP. No game management surface is exposed.
 
 | Service | Placement | Access and authentication |
 | --- | --- | --- |
+| UniFi OS Server | Dedicated OpenStack VM | `https://unifi.fahrican.com`; admin workstation/WireGuard, native local authentication; APs only |
 | Navidrome | Services cluster | `https://music.fahrican.com`; native Navidrome/Subsonic accounts |
 | SFTPGo | Services cluster | `https://upload.fahrican.com`; ZITADEL OIDC for the WebClient |
 | Beets | Services cluster | No direct user endpoint; imports accepted uploads into the media library |
@@ -49,6 +50,7 @@ Flux dependency ordering is declared in [`waves.yaml`](waves.yaml). Do not copy
 that order into a manual activation sequence or use live suspension as lasting
 configuration.
 
+- UniFi AP adoption, VLANs, origin trust and isolated recovery: [UniFi runbook](24-unifi/README.md)
 - Credential rotation, provider reconciliation, image promotion, host backup
   initialization: [service operations](ACTIVATION.md)
 - Home Assistant, Zigbee, Matter/Thread and recovery: [automation runbook](25-home-automation/README.md)

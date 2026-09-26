@@ -49,6 +49,8 @@
               -s components/cloud/services/valheim/tests -p 'test_*.py'
             python -m unittest discover \
               -s components/cloud/services/home-automation/tests -p 'test_*.py'
+            python -m unittest discover \
+              -s components/cloud/services/unifi/tests -p 'test_*.py'
 
             touch "$out"
           '';

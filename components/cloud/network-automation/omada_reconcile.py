@@ -93,16 +93,16 @@ class Desired:
     networks: tuple[Network, ...]
     profiles: tuple[Profile, ...]
     ports: Mapping[int, str]
-    ap_name: str
-    ap_mac: str
-    ap_model: str
-    ap_address: str
-    ap_netmask: str
-    ap_gateway: str
-    ap_dns: str
-    ap_port: int
-    wlan_group: str
-    ssids: tuple[Ssid, ...]
+    ap_name: str = ""
+    ap_mac: str = ""
+    ap_model: str = ""
+    ap_address: str = ""
+    ap_netmask: str = ""
+    ap_gateway: str = ""
+    ap_dns: str = ""
+    ap_port: int = 0
+    wlan_group: str = ""
+    ssids: tuple[Ssid, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -176,9 +176,12 @@ def _vlan(value: Any, label: str) -> int:
 def load_desired(path: Path = DEFAULT_DESIRED_STATE) -> Desired:
     try:
         root = yaml.safe_load(path.read_text(encoding="utf-8"))
-        if root["version"] != 1 or root["wireless"]["policy"] != "standard":
+        switch_only = root["version"] == 2 and root.get("scope") == "switch-only"
+        if not switch_only and (root["version"] != 1 or root["wireless"]["policy"] != "standard"):
             raise ValueError
-        switch, ap, wireless = root["switch"], root["accessPoint"], root["wireless"]
+        if switch_only and ("accessPoint" in root or "wireless" in root):
+            raise ValueError
+        switch = root["switch"]
         networks = tuple(
             Network(str(name), _vlan(vlan, "network VLAN"))
             for name, vlan in switch.get("networks", {}).items()
@@ -204,6 +207,28 @@ def load_desired(path: Path = DEFAULT_DESIRED_STATE) -> Desired:
             )
         profiles = tuple(profiles)
         ports = {int(port): str(profile) for port, profile in switch["ports"].items()}
+        if switch_only:
+            profile_map = {profile.name: profile for profile in profiles}
+            if not (
+                profiles and ports
+                and set(ports.values()).issubset(profile_map)
+                and all(1 <= port <= 65535 for port in ports)
+                and len({network.name for network in networks}) == len(networks)
+                and len({network.vlan for network in networks}) == len(networks)
+                and all(profile.native_vlan not in profile.tagged_vlans
+                        and len(profile.tagged_vlans) == len(set(profile.tagged_vlans))
+                        for profile in profiles)
+            ):
+                raise ValueError
+            return Desired(
+                site=_string(root["site"], "site"),
+                switch_name=_string(switch["name"], "switch name"),
+                switch_mac=normalize_mac(switch["mac"]),
+                switch_model=_string(switch["model"], "switch model"),
+                profile_template=_string(switch["profileTemplate"], "profile template"),
+                networks=networks, profiles=profiles, ports=ports,
+            )
+        ap, wireless = root["accessPoint"], root["wireless"]
         interface = ipaddress.IPv4Interface(ap["address"])
         gateway, dns = ipaddress.IPv4Address(ap["gateway"]), ipaddress.IPv4Address(ap["dns"])
         ssids = tuple(
@@ -478,28 +503,27 @@ def inspect(api: OmadaApi, desired: Desired) -> Snapshot:
         raise SafeError("the exact Omada site is missing or ambiguous")
     site_id = _string(sites[0].get("siteId"), "site ID")
     devices = api.read("devices", site_id)
-    switch, ap = (_one_device(devices, mac, label) for mac, label in (
-        (desired.switch_mac, "switch"), (desired.ap_mac, "access point")
-    ))
+    switch = _one_device(devices, desired.switch_mac, "switch")
     if (
         (switch.get("name"), switch.get("model"), str(switch.get("type", "")).lower())
         != (desired.switch_name, desired.switch_model, "switch")
     ):
         raise SafeError("the exact switch identity differs from Git")
-    if (
-        (ap.get("name"), ap.get("model"), str(ap.get("type", "")).lower(),
-         ap.get("status"), ap.get("detailStatus"))
-        != (desired.ap_name, desired.ap_model, "ap", 1, 14)
-    ):
-        raise SafeError("the exact access-point identity or health differs from Git")
-    ap_detail = api.read("ap", site_id, desired.ap_mac)
-    if (
-        (normalize_mac(ap_detail.get("mac")), ap_detail.get("name"),
-         str(ap_detail.get("type", "")).lower())
-        != (desired.ap_mac, desired.ap_name, "ap")
-    ):
-        raise SafeError("the exact access-point detail identity differs from Git")
-
+    if desired.ap_mac:
+        ap = _one_device(devices, desired.ap_mac, "access point")
+        if (
+            (ap.get("name"), ap.get("model"), str(ap.get("type", "")).lower(),
+             ap.get("status"), ap.get("detailStatus"))
+            != (desired.ap_name, desired.ap_model, "ap", 1, 14)
+        ):
+            raise SafeError("the exact access-point identity or health differs from Git")
+        ap_detail = api.read("ap", site_id, desired.ap_mac)
+        if (
+            (normalize_mac(ap_detail.get("mac")), ap_detail.get("name"),
+             str(ap_detail.get("type", "")).lower())
+            != (desired.ap_mac, desired.ap_name, "ap")
+        ):
+            raise SafeError("the exact access-point detail identity differs from Git")
     networks = _index_by(
         api.read("networks", site_id),
         lambda item: _integer(item.get("vlan"), "network VLAN"),
@@ -537,6 +561,14 @@ def inspect(api: OmadaApi, desired: Desired) -> Snapshot:
         ports[number] = port
     if not set(desired.ports).issubset(ports):
         raise SafeError("one or more declared switch ports are absent")
+
+    if not desired.ap_mac:
+        return Snapshot(
+            site_id=site_id, networks_by_vlan=networks,
+            network_vlans_by_id=vlan_by_id, profiles_by_name=profiles,
+            ports=ports, wlan_id="", ssid_ids={}, ssid_details={},
+            ap_ready=False, unexpected_ssids=(),
+        )
 
     groups = [group for group in api.read("wlan-groups", site_id)
               if group.get("name") == desired.wlan_group]
@@ -769,6 +801,9 @@ def make_plan(desired: Desired, snapshot: Snapshot, *, include_write_only: bool 
             operation, detail = "assign", f"assign {profile_name}"
         actions.append(Action("port", str(port), operation, detail))
 
+    if not desired.ap_mac:
+        return tuple(actions)
+
     actions.append(Action(
         "access-point", desired.ap_name, "noop" if snapshot.ap_ready else "blocked",
         "final static management state matches" if snapshot.ap_ready
@@ -948,7 +983,7 @@ def apply(
 
 
 def render(actions: Sequence[Action]) -> None:
-    print("Connected to the configured Omada site, switch, and access point")
+    print("Connected to the configured Omada site and managed devices")
     for action in actions:
         suffix = " (SSID password required)" if action.domain == "wireless" and action.mutates else ""
         print(f"  {action.domain} {action.target}: {action.operation} - {action.detail}{suffix}")

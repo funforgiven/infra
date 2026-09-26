@@ -10,6 +10,8 @@ Install one SOPS-backed secret profile on a service host over SSH.
 
 Profiles:
   monitoring             Infrastructure Telegram alerts
+  unifi-backup           UniFi Restic repository
+  unifi-poller           UniFi local read-only monitoring account
   home-assistant-backup   Home Assistant Restic repository
 EOF
 }
@@ -26,6 +28,13 @@ fi
 
 readonly ssh_target="$1"
 readonly profile="$2"
+ssh_options=(-o BatchMode=yes -o StrictHostKeyChecking=yes)
+if [[ -n "${SERVICE_HOST_SSH_IDENTITY_FILE:-}" ]]; then
+  ssh_options+=(-i "$SERVICE_HOST_SSH_IDENTITY_FILE" -o IdentitiesOnly=yes -o IdentityAgent=none)
+fi
+if [[ -n "${SERVICE_HOST_SSH_KNOWN_HOSTS_FILE:-}" ]]; then
+  ssh_options+=(-o "UserKnownHostsFile=$SERVICE_HOST_SSH_KNOWN_HOSTS_FILE")
+fi
 repository_root="$(git rev-parse --show-toplevel)"
 readonly repository_root
 
@@ -68,14 +77,14 @@ read_sops_value() {
 prepare_directory() {
   # The client-side value is selected only from constant paths below.
   # shellcheck disable=SC2029
-  ssh "$ssh_target" "sudo install -d -o root -g root -m 0700 '$1'"
+  ssh "${ssh_options[@]}" "$ssh_target" "sudo install -d -o root -g root -m 0700 '$1'"
 }
 
 install_stream() {
   local destination="$1"
   # The destination is a constant allow-listed path; bytes cross only stdin.
   # shellcheck disable=SC2029
-  ssh "$ssh_target" \
+  ssh "${ssh_options[@]}" "$ssh_target" \
     "sudo install -o root -g root -m 0400 /dev/stdin '$destination'"
 }
 
@@ -122,6 +131,23 @@ enroll_backup() {
 case "$profile" in
   monitoring)
     enroll_monitoring
+    ;;
+  unifi-poller)
+    poller_user=
+    poller_password=
+    read_sops_value poller_user UNIFI_POLLER_USERNAME '^[A-Za-z0-9_.@-]+$' 1 128
+    read_sops_value poller_password UNIFI_POLLER_PASSWORD '^[A-Za-z0-9_+=/@.-]+$' 24 128
+    prepare_directory /var/lib/unifi-poller
+    {
+      printf 'UP_UNIFI_DEFAULT_USER=%s\n' "$poller_user"
+      printf 'UP_UNIFI_DEFAULT_PASS=%s\n' "$poller_password"
+    } | install_stream /var/lib/unifi-poller/environment
+    unset poller_user poller_password
+    ssh "${ssh_options[@]}" "$ssh_target" 'sudo systemctl restart unifi-poller'
+    ;;
+  unifi-backup)
+    enroll_backup services/hosts/unifi UNIFI_BACKUP_RESTIC_PASSWORD \
+      UNIFI_BACKUP_B2_APPLICATION_KEY_ID UNIFI_BACKUP_B2_APPLICATION_KEY
     ;;
   home-assistant-backup)
     enroll_backup \

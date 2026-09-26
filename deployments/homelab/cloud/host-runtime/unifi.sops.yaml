@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: unifi-host-runtime
+type: Opaque
+data:
+    UNIFI_OWNER_USERNAME: ENC[AES256_GCM,data:1Q89jl4IdBg=,iv:ZjfdLEI5NLKA4az4GZbgRaTC6ogA7+2by2sdnNoqRVE=,tag:3iQkOiGHMeYXlHbIgHOvEg==,type:str]
+    UNIFI_OWNER_PASSWORD: ENC[AES256_GCM,data:yo2/kQxHQUneVz+gPv6hko947NPLKlEluphjxzx2F7OEdvvdWltYo6gxYj+vtaaf9Ulj+/85ESiYHHaULjd8Yw==,iv:Ndo8/Ee+tQ61j9f1rz6QRAw1aG3V49QnM5eQ4KeSJg8=,tag:ESqsqsKOsy0PxDUJZattOA==,type:str]
+    UNIFI_DEVICE_SSH_USERNAME: ENC[AES256_GCM,data:BVt4Ybh+ZqI=,iv:EgcnDRtD74AP2eGd7Um+k5aPTCmagjegmLNcDYB1L4I=,tag:EQ0zS5AY3Bo1zRjeMIwrbw==,type:str]
+    UNIFI_DEVICE_SSH_PASSWORD: ENC[AES256_GCM,data:1HYKkXeteMmd1CXLy+MKpPYnVaJsZ6Hflt3uVjnzKgYTUmP1ITuT3UUvTPDpVSdJl544+w1ERgtQhNY0+xhNcg==,iv:bFJq4CXxOxoE275mlLUBp6YeTx+Dv4Wzu/DL3/R+zOs=,tag:yv4Js+3OgD9qivTwuXpsWg==,type:str]
+    UNIFI_POLLER_USERNAME: ENC[AES256_GCM,data:R0KnHb0KwgnwRpJC,iv:vcXG1jX56iawhGOel7fz2wm6gWdPs9b+Hyta4g3sIus=,tag:o1FOg/zotYwFTCSt2DIYDw==,type:str]
+    UNIFI_POLLER_PASSWORD: ENC[AES256_GCM,data:xcMTvtceMQhZLk2iY3GRjXxg3KRVWCUqYeBx6ao081hxkAJoEmNsZAt+Eliv6PuGU1RT6OAMFKpdIBaCO6XMKg==,iv:ULZ9f2UeJRhvW/BdH+07zMclpLaXPyn4nN4DIYDasu4=,tag:Ays7chO8yqxSnDDxuJP7dg==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBGVEUweXc4ZGo2N0pEVmNM
+            YzRLVUdqNzltU21MR0VxdzlPZEFPeE9uemdZCkk0Vyt2aVlKYXFoSWowa0plclha
+            RDBIMW5aK2Z2RGhWM2FMY2V6T3FLRFEKLS0tIGpYUmNnS2FESEw1OG9tSG5nTkxq
+            S0YySi92ZVM2WWQrREhzb0V5SEFBUkUKOA5xhzzbLlhqxXyhNH0G1jfU/IIealMF
+            mtsPYo8kfcrFI/3tPe1SGyC70oP6ZGk16EljG0z3o3Cl7CBK+3ysyQ==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-09-26T19:49:32Z"
+    mac: ENC[AES256_GCM,data:F6LUeRceXy29YkljfZN7UGK12dd5Yuu6+oG4BCFT9Y1CWkj6mmQ/TmyvOrEldWAYVKrtwGQyRz3sDVNy3Xiq4/YPUhBN6+joyvd9mqyl/y3rH8t/5VH9ceq9xEH9JFoOwGQEVRe2cXtGKVPYpAVcm7v1AhcPpR0T2onX7MvN49k=,iv:zfsbAnG9Wg6YoYUeQ1sREirZFWxIXpsf7FFnXY017HA=,tag:ASgSBHkxTLfwd500rh4+vQ==,type:str]
+    version: 3.13.3

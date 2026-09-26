@@ -1,0 +1,97 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: unifi
+  namespace: unifi
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: unifi
+  endpoints:
+    - port: node-metrics
+      interval: 60s
+    - port: ap-metrics
+      interval: 60s
+      scrapeTimeout: 45s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: unifi-origin
+  namespace: unifi
+spec:
+  interval: 60s
+  jobName: unifi-origin
+  module: tcp_connect
+  prober:
+    url: blackbox-exporter.services-observability.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+        - 192.168.80.12:8443
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: unifi
+  namespace: unifi
+spec:
+  groups:
+    - name: unifi
+      rules:
+        - alert: UniFiControllerUnavailable
+          expr: >-
+            unifi_service_up == 0 or unifi_https_up == 0
+            or absent(unifi_https_up)
+            or time() - unifi_health_last_run_timestamp_seconds > 180
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: UniFi AP controller is unavailable
+            description: Check the unifi VM and uosserver service. APs retain their last configuration.
+        - alert: UniFiBackupStale
+          expr: >-
+            time() - unifi_backup_last_success_timestamp_seconds > 129600
+            or absent(unifi_backup_last_success_timestamp_seconds)
+          for: 15m
+          labels:
+            severity: critical
+          annotations:
+            summary: UniFi has no successful off-site backup in 36 hours
+            description: Check the Restic enrollment, repository and unifi-backup service before changing WLAN configuration.
+        - alert: UniFiOriginCertificateExpiring
+          expr: unifi_origin_certificate_expiry_timestamp_seconds - time() < 1209600
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: UniFi origin TLS certificate expires within 14 days
+            description: Check unifi-renew-tls.timer and its service; never disable backend certificate verification.
+        - alert: UniFiAPMetricsMissing
+          expr: >-
+            up{namespace="unifi",endpoint="ap-metrics"} == 0
+            or absent(up{namespace="unifi",endpoint="ap-metrics"})
+            or absent(unifi_device_uptime_seconds{type="uap"})
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: UniFi AP telemetry is missing
+            description: Check the local read-only UnPoller account and AP adoption; exporter HTTP health alone is insufficient.
+        - alert: UniFiAccessPointDisconnected
+          expr: unifi_site_disconnected > 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: A UniFi access point is disconnected
+            description: Check the AP power, VLAN 90 reservation and inform/STUN path.
+        - alert: UniFiOriginUnreachable
+          expr: probe_success{job="unifi-origin"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: The services cluster cannot reach the UniFi HTTPS origin
+            description: Check Neutron security rules, nginx and the private VM address.

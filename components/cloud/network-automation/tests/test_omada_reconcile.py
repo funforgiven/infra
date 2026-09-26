@@ -15,7 +15,8 @@ sys.path.insert(0, str(AUTOMATION_ROOT))
 import omada_reconcile as omada  # noqa: E402
 
 
-DESIRED_PATH = REPOSITORY_ROOT / "deployments/homelab/cloud/omada-network.yaml"
+DESIRED_PATH = Path(__file__).parent / "fixtures/omada-with-ap.yaml"
+SWITCH_ONLY_PATH = REPOSITORY_ROOT / "deployments/homelab/cloud/omada-network.yaml"
 
 
 def network(name: str, vlan: int) -> dict[str, object]:
@@ -376,6 +377,29 @@ class ReconcilerTests(unittest.TestCase):
         ]
         with self.assertRaisesRegex(omada.SafeError, "switch identity"):
             omada.inspect(self.api, self.desired)
+
+
+class SwitchOnlyTests(unittest.TestCase):
+    plan = ReconcilerTests.plan
+    reconcile = ReconcilerTests.reconcile
+    def setUp(self) -> None:
+        self.desired = omada.load_desired(SWITCH_ONLY_PATH)
+        self.api = FakeApi()
+        self.api.devices = [item for item in self.api.devices if item["type"] == "switch"]
+
+    def test_no_wireless_reads_or_writes_without_an_ap(self) -> None:
+        original = self.api.read
+        def read(resource, *args):
+            if resource in {"ap", "ap-ip", "ap-vlan", "wlan-groups", "ssids", "ssid"}:
+                self.fail("Switch-only reconciliation accessed wireless state")
+            return original(resource, *args)
+        with mock.patch.object(self.api, "read", side_effect=read):
+            self.assertTrue(all(action.operation == "noop" for action in self.plan()))
+            self.assertEqual(self.reconcile(include_write_only=True, include_psks=False), 0)
+            self.api.ports[6] = {"profileId": "p-all", "profileName": "All"}
+            self.assertEqual(self.reconcile(include_psks=False), 1)
+            self.assertIn(("assign_profile", 6), self.api.calls)
+
 
 
 class CommandAndTransportTests(unittest.TestCase):
