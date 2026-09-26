@@ -83,8 +83,10 @@ USB 1 Input → Expanded** on the Duo. USB 1 Output can remain stereo for gaming
 and calls; enable multitrack output only when individual recording tracks are
 needed. Changing USB modes reconnects the audio device.
 
-After activating the configuration, choose these physical outputs for the four
-logical channels in the shell's audio mixer:
+The four logical channels use these saved physical outputs. Quickshell shows
+the destination as a read-only label and keeps application-to-channel routing;
+channel volume and mute are controlled on the Duo. The channel output selectors,
+software gain sliders, and mute buttons are omitted from the shell.
 
 | Logical channel | PipeWire physical output | Duo fader assignment |
 | --- | --- | --- |
