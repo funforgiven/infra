@@ -109,7 +109,10 @@ in
             numlock = true;
             repeat-delay = 300;
             repeat-rate = 50;
-            xkb.layout = physicalLayout;
+            xkb = {
+              layout = physicalLayout;
+              options = "caps:super";
+            };
           };
 
           mouse.accel-profile = "flat";
