@@ -10,7 +10,6 @@ _: {
         ...
       }:
       let
-        awsRegion = "eu-central-1";
         codexVersion = "0.153.3";
         python = pkgs.python312;
         codexPackage = pkgs.codex.overrideAttrs (
@@ -34,12 +33,6 @@ _: {
           }
         );
         terraformMcpServer = pkgs.terraform-mcp-server;
-        uvx = lib.getExe' pkgs.uv "uvx";
-        uvEnvironment = {
-          UV_NO_MANAGED_PYTHON = "true";
-          UV_PYTHON = "${python}/bin/python3";
-          UV_PYTHON_DOWNLOADS = "never";
-        };
       in
       {
         assertions = [
@@ -107,20 +100,6 @@ _: {
               startup_timeout_sec = 20;
               tool_timeout_sec = 60;
               default_tools_approval_mode = "auto";
-            };
-
-            mcp_servers.aws = {
-              command = uvx;
-              args = [ "awslabs.aws-api-mcp-server==1.3.46" ];
-              startup_timeout_sec = 60;
-              tool_timeout_sec = 120;
-              default_tools_approval_mode = "prompt";
-              env = uvEnvironment // {
-                AWS_DEFAULT_REGION = awsRegion;
-                AWS_REGION = awsRegion;
-                FASTMCP_LOG_LEVEL = "ERROR";
-                READ_OPERATIONS_ONLY = "true";
-              };
             };
 
             mcp_servers.terraform = {
