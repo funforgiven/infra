@@ -26,7 +26,10 @@ its compact desired-state file and reconciler.
 | --- | --- | --- |
 | CCR2004 | `ether1` | TurkNet ONT, VLAN 35 PPPoE |
 | CCR2004 | `ether8` | direct rescue, `192.168.88.1/24` |
-| CCR2004 | `ether15` | SG3210XHP-M2 port 1 routed trunk |
+| CCR2004 | `ether2` | prepared replacement for the SG3210XHP-M2 port 1 trunk |
+| CCR2004 | `ether3/4` | HOUSEMATE access, untagged VLAN 70 |
+| CCR2004 | `ether15` | current SG3210XHP-M2 port 1 routed trunk; retained during migration |
+| CCR2004 | `ether16` | existing legacy hybrid connection; retained until recabled |
 | CRS510 | `sfp28-1` | SG3210XHP-M2 port 9 routed uplink |
 | CRS510 | `sfp28-2` | direct admin workstation; tagged VLANs 10 and 20 |
 | CRS510 | `sfp28-3/4` | `bond-server1`, `taleggio` |
@@ -35,6 +38,21 @@ its compact desired-state file and reconciler.
 | CRS510 | `ether1` | direct rescue, `192.168.89.2/24` |
 | SG3210XHP-M2 | port 6 | U7 Pro Max `74:F9:2C:3C:99:F7`; untagged management VLAN 90, tagged WLAN VLANs 10/50; reserved `10.21.90.6` |
 | SG3210XHP-M2 | port 3 | PiKVM `ricotta`, MAC `2C:CF:67:9D:A2:F7`; VLAN 90 DHCP reservation `10.21.90.3` |
+
+CCR ports 2 and 15 both carry native VLAN 1 and tagged VLANs 10, 20, 40, 50,
+60, and 90. Move the existing Omada uplink cable from 15 to 2 when ready;
+port 15 stays configured during the transition. VLAN 40 bridge membership is
+owned by the LAN port reconciler along with the other CCR bridge VLAN rows.
+
+Ports 3 and 4 share HOUSEMATE VLAN 70 (`10.21.70.0/24`), separate from GUEST
+VLAN 60. They accept untagged client traffic, use PVID 70 and ingress filtering,
+and reject VLAN-tagged client traffic. The gateway and DNS server are
+`10.21.70.1`; DHCP leases `10.21.70.100–199` for one day. Devices on these two
+ports can communicate with each other and reach the internet. Other traffic retains its existing
+policy, and router administration is governed separately
+by the input firewall. The existing public game port reflections remain
+available through `INFRA-LAN`. Devices moved from the legacy
+LAN need a fresh DHCP lease. The still-connected legacy port 16 is preserved.
 
 All qualified server links use forced `25G-baseCR`, RS-FEC (`fec91`),
 active/fast 802.3ad, minimum links 1, layer-3+4 hashing, and MTU 9000. Every
@@ -138,6 +156,10 @@ ansible-playbook reconcile-routeros.yaml --limit core_router --tags apply
 
 Use `--limit core_router --tags mullvad` to select only the destination-scoped
 Mullvad objects while retaining the standard read-only CCR preflight.
+Use `--limit core_router --tags lan-ports` to reconcile the CCR bridge VLANs,
+the current/replacement Omada trunks, and the housemate network and access
+ports after the read-only preflight. This tag enables writes; omit it for
+inspection only.
 Use `--limit core_router --tags wan-port-forwards` to reconcile only the
 declared Factorio/Valheim WAN/reflection and Syncthing destination-NAT rows after the
 usual preflight.

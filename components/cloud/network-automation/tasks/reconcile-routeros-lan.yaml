@@ -1,0 +1,411 @@
+---
+# RouterOS can print script errors without failing the SSH command. Require
+# a completion marker, assembled at runtime so terminal echo cannot satisfy it.
+# A single attempt also prevents a failed mutation from being retried blindly.
+- name: Validate the CCR LAN port inventory
+  ansible.builtin.assert:
+    that:
+      - routeros_lan.bridge == routeros_provider_network.bridge
+      - >-
+        routeros_lan.trunk_ports | unique | length == routeros_lan.trunk_ports |
+        length
+      - >-
+        routeros_housemate.ports | unique | length == routeros_housemate.ports |
+        length
+      - >-
+        routeros_lan.trunk_ports | intersect(routeros_housemate.ports) | length
+        == 0
+      - >-
+        (routeros_lan.trunk_ports + routeros_housemate.ports) |
+        intersect(['ether1', 'ether8']) | length == 0
+      - routeros_housemate.vlan_id | int > 1
+      - routeros_housemate.vlan_id | int < 4095
+      - routeros_housemate.vlan_id not in [10, 20, 40, 50, 60, 90]
+      - >-
+        routeros_lan.bridge_vlans | map(attribute='id') | unique | length ==
+        routeros_lan.bridge_vlans | length
+      - >-
+        routeros_lan.bridge_vlans | selectattr('id', 'equalto',
+        routeros_housemate.vlan_id) | map(attribute='untagged') | first ==
+        routeros_housemate.ports
+      - >-
+        routeros_lan.bridge_vlans | selectattr('id', 'equalto',
+        routeros_housemate.vlan_id) | map(attribute='tagged') | first ==
+        [routeros_lan.bridge]
+    fail_msg: >-
+      The CCR trunk, housemate, WAN, and rescue ports must remain distinct.
+  tags: [always, inventory-contract]
+
+- name: Validate each CCR bridge VLAN membership
+  ansible.builtin.assert:
+    that:
+      - item.tagged | intersect(item.untagged) | length == 0
+      - >-
+        item.id == routeros_housemate.vlan_id or (item.tagged + item.untagged) |
+        intersect(routeros_housemate.ports) | length == 0
+      - >-
+        item.id == routeros_housemate.vlan_id or routeros_lan.trunk_ports |
+        difference( item.untagged if item.id == 1 else item.tagged) | length ==
+        0
+  loop: "{{ routeros_lan.bridge_vlans }}"
+  loop_control:
+    label: "VLAN {{ item.id }}"
+  tags: [always, inventory-contract]
+
+- name: Require available CCR LAN ports
+  community.routeros.command:
+    commands:
+      - >-
+        :if ([:len [/interface ethernet find where name="{{ item }}" and
+        default-name="{{ item }}" and disabled=no]] != 1) do={ :error
+        "LAN prerequisite: physical port missing or disabled" }; :local row
+        [/interface bridge port find where interface="{{ item }}"]; :if ([:len
+        $row] > 1) do={ :error "duplicate LAN bridge port" }; :if ([:len $row] =
+        1) do={ :if ([/interface bridge port get $row bridge] !=
+        "{{ routeros_lan.bridge }}") do={ :error
+        "LAN port belongs to another bridge" } }; :put ("__infra_" . "lan_ok__")
+    wait_for:
+      - result[0] contains "__infra_lan_ok__"
+    retries: 1
+  loop: "{{ routeros_lan.trunk_ports + routeros_housemate.ports }}"
+  changed_when: false
+  tags: [always]
+
+- name: Refuse conflicting CCR bridge VLAN rows
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/interface bridge vlan find where
+        bridge="{{ routeros_lan.bridge }}" and vlan-ids={{ item.id }} and
+        dynamic=no]; :if ([:len $row] > 1) do={ :error
+        "duplicate LAN bridge VLAN" }; :if ([:len $row] = 1) do={ :if ([:pick
+        [/interface bridge vlan get $row comment] 0 7] != "infra: ") do={ :error
+        "LAN bridge VLAN has another owner" } }; :put ("__infra_" . "lan_ok__")
+    wait_for:
+      - result[0] contains "__infra_lan_ok__"
+    retries: 1
+  loop: "{{ routeros_lan.bridge_vlans }}"
+  loop_control:
+    label: "VLAN {{ item.id }}"
+  changed_when: false
+  tags: [always]
+
+- name: Require the housemate network firewall prerequisites
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/ip firewall filter find where
+        comment="{{ item.comment }}"]; :if ([:len $row] != 1) do={ :error
+        "LAN input rule missing" }; :if ([/ip firewall filter get $row chain] !=
+        "infra-input" or [/ip firewall filter get $row action] != "accept" or
+        [/ip firewall filter get $row protocol] != "{{ item.protocol }}" or [/ip
+        firewall filter get $row dst-port] != "{{ item.port }}" or [/ip firewall
+        filter get $row in-interface-list] != "INFRA-LAN" or [/ip firewall
+        filter get $row disabled] != false) do={ :error
+        "LAN input rule mismatch" }; :set row [/ip firewall filter find where
+        comment="infra: forward final drop"]; :if ([:len $row] != 1) do={ :error
+        "forward final drop missing" }; :if ([/ip firewall filter get $row
+        chain] != "infra-forward" or [/ip firewall filter get $row action] !=
+        "drop" or [/ip firewall filter get $row disabled] != false) do={ :error
+        "forward final drop mismatch" }; :if ([:len [/interface vlan find where
+        interface="{{ routeros_lan.bridge }}" and
+        vlan-id={{ routeros_housemate.vlan_id }} and
+        name!="{{ routeros_housemate.interface }}"]] > 0) do={ :error
+        "housemate VLAN already has another interface" }; :put ("__infra_" .
+        "lan_ok__")
+    wait_for:
+      - result[0] contains "__infra_lan_ok__"
+    retries: 1
+  loop:
+    - comment: "infra: input DHCP"
+      protocol: udp
+      port: "67"
+    - comment: "infra: input DNS UDP"
+      protocol: udp
+      port: "53"
+    - comment: "infra: input DNS TCP"
+      protocol: tcp
+      port: "53"
+  loop_control:
+    label: "{{ item.comment }}"
+  changed_when: false
+  tags: [always]
+
+- name: Refuse conflicting housemate service objects
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [{{ item.path }} find where {{ item.match }}]; :if ([:len
+        $row] > 1) do={ :error "duplicate housemate service object" }; :if
+        ([:len $row] = 1) do={ :if ([{{ item.path }} get $row comment] !=
+        "infra: HOUSEMATE") do={ :error
+        "housemate service object has another owner" } }; :put ("__infra_" .
+        "lan_ok__")
+    wait_for:
+      - result[0] contains "__infra_lan_ok__"
+    retries: 1
+  loop:
+    - path: /interface vlan
+      match: 'name="{{ routeros_housemate.interface }}"'
+    - path: /ip address
+      match: 'address="{{ routeros_housemate.address }}"'
+    - path: /ip dhcp-server
+      match: 'name="{{ routeros_housemate.dhcp_server }}"'
+    - path: /ip dhcp-server network
+      match: 'address="{{ routeros_housemate.network }}"'
+    - path: /interface list member
+      match: 'list=INFRA-LAN and interface="{{ routeros_housemate.interface }}"'
+    - path: /ip firewall address-list
+      match: 'list=INFRA-LAN-NAT and address="{{ routeros_housemate.network }}"'
+    - path: /ip firewall filter
+      match: 'comment="infra: HOUSEMATE"'
+  loop_control:
+    label: "{{ item.path }}"
+  changed_when: false
+  tags: [always]
+
+- name: Read the CCR LAN ports and VLANs
+  community.routeros.command:
+    commands:
+      - /interface bridge port print detail without-paging
+      - /interface bridge vlan print detail without-paging
+      - >-
+        /interface vlan print detail without-paging where
+        name="{{ routeros_housemate.interface }}"
+      - >-
+        /ip pool print detail without-paging where
+        name="{{ routeros_housemate.pool }}"
+      - >-
+        /ip dhcp-server print detail without-paging where
+        name="{{ routeros_housemate.dhcp_server }}"
+  register: routeros_lan_preflight
+  changed_when: false
+  tags: [always]
+
+- name: Show the CCR LAN preflight
+  ansible.builtin.debug:
+    var: routeros_lan_preflight.stdout_lines
+  tags: [always]
+
+- name: Reconcile housemate routing and DHCP before enabling access ports
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/interface vlan find where
+        name="{{ routeros_housemate.interface }}"]; :if ([:len $row] = 0) do={
+        :set row [/interface vlan add name="{{ routeros_housemate.interface }}"
+        interface="{{ routeros_lan.bridge }}"
+        vlan-id={{ routeros_housemate.vlan_id }}] }; /interface vlan set $row
+        comment="infra: HOUSEMATE" disabled=no
+        interface="{{ routeros_lan.bridge }}"
+        vlan-id={{ routeros_housemate.vlan_id }}; :set row [/ip address find
+        where address="{{ routeros_housemate.address }}"]; :if ([:len $row] = 0)
+        do={ :set row [/ip address add
+        address="{{ routeros_housemate.address }}"
+        interface="{{ routeros_housemate.interface }}"] }; /ip address set $row
+        comment="infra: HOUSEMATE" disabled=no
+        interface="{{ routeros_housemate.interface }}"; :set row [/ip pool find
+        where name="{{ routeros_housemate.pool }}"]; :if ([:len $row] = 0) do={
+        :set row [/ip pool add name="{{ routeros_housemate.pool }}"
+        ranges={{ routeros_housemate.pool_range }}] }; /ip pool set $row
+        ranges={{ routeros_housemate.pool_range }}; :set row [/ip dhcp-server
+        network find where address="{{ routeros_housemate.network }}"]; :if
+        ([:len $row] = 0) do={ :set row [/ip dhcp-server network add
+        address="{{ routeros_housemate.network }}"] }; /ip dhcp-server network
+        set $row comment="infra: HOUSEMATE"
+        gateway="{{ routeros_housemate.gateway }}"
+        dns-server="{{ routeros_housemate.gateway }}"; :set row [/ip dhcp-server
+        find where name="{{ routeros_housemate.dhcp_server }}"]; :if ([:len
+        $row] = 0) do={ :set row [/ip dhcp-server add
+        name="{{ routeros_housemate.dhcp_server }}"
+        interface="{{ routeros_housemate.interface }}"] }; /ip dhcp-server set
+        $row comment="infra: HOUSEMATE" disabled=no
+        interface="{{ routeros_housemate.interface }}"
+        address-pool="{{ routeros_housemate.pool }}"
+        lease-time={{ routeros_housemate.lease_time }}; :put ("__infra_" .
+        "lan_ok__")
+    wait_for:
+      - result[0] contains "__infra_lan_ok__"
+    retries: 1
+  tags: [never, apply, lan-ports]
+
+- name: Reconcile housemate internet access
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/interface list member find where list=INFRA-LAN and
+        interface="{{ routeros_housemate.interface }}"]; :if ([:len $row] = 0)
+        do={ :set row [/interface list member add list=INFRA-LAN
+        interface="{{ routeros_housemate.interface }}"] }; /interface list
+        member set $row comment="infra: HOUSEMATE" disabled=no; :set row [/ip
+        firewall address-list find where list=INFRA-LAN-NAT and
+        address="{{ routeros_housemate.network }}"]; :if ([:len $row] = 0) do={
+        :set row [/ip firewall address-list add list=INFRA-LAN-NAT
+        address="{{ routeros_housemate.network }}"] }; /ip firewall address-list
+        set $row comment="infra: HOUSEMATE" disabled=no; :set row [/ip firewall
+        filter find where comment="infra: HOUSEMATE"]; :if ([:len $row] = 0)
+        do={ :set row [/ip firewall filter add chain=infra-forward action=accept
+        comment="infra: HOUSEMATE"] }; /ip firewall filter set $row
+        chain=infra-forward action=accept disabled=no
+        in-interface="{{ routeros_housemate.interface }}"
+        src-address="{{ routeros_housemate.network }}"
+        out-interface-list=INFRA-WAN; /ip firewall filter move $row
+        destination=[find where chain=infra-forward and
+        comment="infra: forward final drop"]; :put ("__infra_" . "lan_ok__")
+    wait_for:
+      - result[0] contains "__infra_lan_ok__"
+    retries: 1
+  tags: [never, apply, lan-ports]
+
+- name: Reconcile the CCR bridge VLAN table
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/interface bridge vlan find where
+        bridge="{{ routeros_lan.bridge }}" and vlan-ids={{ item.id }} and
+        dynamic=no]; :if ([:len $row] = 0) do={ :set row [/interface bridge vlan
+        add bridge="{{ routeros_lan.bridge }}" vlan-ids={{ item.id }}
+        comment="infra: LAN VLAN {{ item.id }}"] }; /interface bridge vlan set
+        $row disabled=no tagged="{{ item.tagged | join(',') }}"
+        untagged="{{ item.untagged | join(',') }}"; :put ("__infra_" .
+        "lan_ok__")
+    wait_for:
+      - result[0] contains "__infra_lan_ok__"
+    retries: 1
+  loop: "{{ routeros_lan.bridge_vlans }}"
+  loop_control:
+    label: "VLAN {{ item.id }}"
+  tags: [never, apply, lan-ports]
+
+- name: Reconcile the current and replacement Omada trunks
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/interface bridge port find where interface="{{ item }}"];
+        :if ([:len $row] = 0) do={ :set row [/interface bridge port add
+        bridge="{{ routeros_lan.bridge }}" interface="{{ item }}" disabled=yes]
+        }; /interface bridge port set $row
+        comment="infra: Omada port 1 hybrid trunk" disabled=no hw=no edge=no
+        pvid=1 frame-types=admit-all ingress-filtering=yes; :put ("__infra_" .
+        "lan_ok__")
+    wait_for:
+      - result[0] contains "__infra_lan_ok__"
+    retries: 1
+  loop: "{{ routeros_lan.trunk_ports }}"
+  tags: [never, apply, lan-ports]
+
+- name: Reconcile the housemate access ports
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/interface bridge port find where interface="{{ item }}"];
+        :if ([:len $row] = 0) do={ :set row [/interface bridge port add
+        bridge="{{ routeros_lan.bridge }}" interface="{{ item }}" disabled=yes]
+        }; /interface bridge port set $row comment="infra: HOUSEMATE access"
+        disabled=no hw=no edge=auto pvid={{ routeros_housemate.vlan_id }}
+        frame-types=admit-only-untagged-and-priority-tagged
+        ingress-filtering=yes; :put ("__infra_" . "lan_ok__")
+    wait_for:
+      - result[0] contains "__infra_lan_ok__"
+    retries: 1
+  loop: "{{ routeros_housemate.ports }}"
+  tags: [never, apply, lan-ports]
+
+- name: Prove every CCR bridge VLAN membership
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/interface bridge vlan find where
+        bridge="{{ routeros_lan.bridge }}" and vlan-ids={{ item.id }} and
+        dynamic=no and disabled=no]; :if ([:len $row] != 1) do={ :error
+        "LAN VLAN missing" }; :if ([:tostr [/interface bridge vlan get $row
+        tagged]] != "{{ item.tagged | join(';') }}" or [:tostr [/interface
+        bridge vlan get $row untagged]] != "{{ item.untagged | join(';') }}")
+        do={ :error "incorrect LAN VLAN membership" }; :put ("__infra_" .
+        "lan_ok__")
+    wait_for:
+      - result[0] contains "__infra_lan_ok__"
+    retries: 1
+  loop: "{{ routeros_lan.bridge_vlans }}"
+  loop_control:
+    label: "VLAN {{ item.id }}"
+  changed_when: false
+  tags: [never, apply, lan-ports]
+
+- name: Prove the current and replacement Omada trunks
+  community.routeros.command:
+    commands:
+      - >-
+        :if ([:len [/interface bridge port find where
+        bridge="{{ routeros_lan.bridge }}" and interface="{{ item }}" and
+        disabled=no and pvid=1 and frame-types=admit-all and
+        ingress-filtering=yes and edge=no]] != 1) do={ :error
+        "incorrect Omada trunk" }; :put ("__infra_" . "lan_ok__")
+    wait_for:
+      - result[0] contains "__infra_lan_ok__"
+    retries: 1
+  loop: "{{ routeros_lan.trunk_ports }}"
+  changed_when: false
+  tags: [never, apply, lan-ports]
+
+- name: Prove the housemate access ports
+  community.routeros.command:
+    commands:
+      - >-
+        :if ([:len [/interface bridge port find where
+        bridge="{{ routeros_lan.bridge }}" and interface="{{ item }}" and
+        disabled=no and pvid={{ routeros_housemate.vlan_id }} and
+        ingress-filtering=yes and
+        frame-types=admit-only-untagged-and-priority-tagged]] != 1) do={ :error
+        "incorrect housemate access port" }; :put ("__infra_" . "lan_ok__")
+    wait_for:
+      - result[0] contains "__infra_lan_ok__"
+    retries: 1
+  loop: "{{ routeros_housemate.ports }}"
+  changed_when: false
+  tags: [never, apply, lan-ports]
+
+- name: Prove housemate routing and DHCP
+  community.routeros.command:
+    commands:
+      - >-
+        :if ([:len [/interface vlan find where
+        name="{{ routeros_housemate.interface }}" and
+        interface="{{ routeros_lan.bridge }}" and
+        vlan-id={{ routeros_housemate.vlan_id }} and disabled=no]] != 1) do={
+        :error "housemate VLAN missing" }; :if ([:len [/ip address find where
+        address="{{ routeros_housemate.address }}" and
+        interface="{{ routeros_housemate.interface }}" and disabled=no]] != 1)
+        do={ :error "housemate gateway missing" }; :if ([:len [/ip pool find
+        where name="{{ routeros_housemate.pool }}" and
+        ranges="{{ routeros_housemate.pool_range }}"]] != 1) do={ :error
+        "housemate pool mismatch" }; :if ([:len [/ip dhcp-server find where
+        name="{{ routeros_housemate.dhcp_server }}" and
+        interface="{{ routeros_housemate.interface }}" and disabled=no and
+        address-pool="{{ routeros_housemate.pool }}" and
+        lease-time={{ routeros_housemate.lease_time }}]] != 1) do={ :error
+        "housemate DHCP mismatch" }; :if ([:len [/ip dhcp-server network find
+        where address="{{ routeros_housemate.network }}" and
+        gateway="{{ routeros_housemate.gateway }}" and
+        dns-server="{{ routeros_housemate.gateway }}"]] != 1) do={ :error
+        "housemate DHCP network mismatch" }; :if ([:len [/interface list member
+        find where list=INFRA-LAN and
+        interface="{{ routeros_housemate.interface }}" and disabled=no]] != 1)
+        do={ :error "housemate LAN membership missing" }; :if ([:len [/ip
+        firewall address-list find where list=INFRA-LAN-NAT and
+        address="{{ routeros_housemate.network }}" and disabled=no]] != 1) do={
+        :error "housemate NAT membership missing" }; :local row [/ip firewall
+        filter find where comment="infra: HOUSEMATE"]; :if ([:len $row] != 1)
+        do={ :error "housemate WAN rule missing" }; :if ([/ip firewall filter
+        get $row chain] != "infra-forward" or [/ip firewall filter get $row
+        action] != "accept" or [/ip firewall filter get $row disabled] != false
+        or [/ip firewall filter get $row in-interface] !=
+        "{{ routeros_housemate.interface }}" or [:tostr [/ip firewall filter get
+        $row src-address]] != "{{ routeros_housemate.network }}" or [/ip
+        firewall filter get $row out-interface-list] != "INFRA-WAN") do={ :error
+        "housemate WAN rule mismatch" }; :put ("__infra_" . "lan_ok__")
+    wait_for:
+      - result[0] contains "__infra_lan_ok__"
+    retries: 1
+  changed_when: false
+  tags: [never, apply, lan-ports]
