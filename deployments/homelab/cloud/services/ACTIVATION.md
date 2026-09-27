@@ -196,13 +196,23 @@ It clears the master files only after the declared keys and bucket policy have
 been reconciled successfully. Cluster and host writers remain independent and
 cannot cross their assigned prefixes.
 
-The 2026-09-27 credential audit found only the UniFi writer missing. Native B2
+The 2026-09-27 credential audit found only the UniFi writer missing; it was
+created, SOPS-encrypted and enrolled on the controller that day. Native B2
 authorization succeeded for the existing Velero, legacy Home Assistant host,
 undercloud etcd, management etcd, OpenStack and ZITADEL writers; each is
-restricted to `fahrican-cloud-recovery` and its declared prefix. The UniFi
-Restic password already exists and also protects its local recovery checkpoint;
-reuse it when enrolling `services/hosts/unifi/`. These credential checks do not
-replace successful backup jobs or restore tests.
+restricted to `fahrican-cloud-recovery` and its declared prefix. Those existing
+writers were preserved. The UniFi Restic password was reused for
+`services/hosts/unifi/` and still protects its local recovery checkpoint. Both
+master intake files were cleared after verified encrypted persistence; the
+controller received only its scoped writer in root-owned mode-`0400` files.
+See the [UniFi migration evidence](24-unifi/migration-validation.md#backup-evidence)
+for the first offsite backup and recovery results. Credential checks alone do
+not prove that another service's backup or restore succeeds.
+
+The shared bucket retains private visibility, SSE-B2/AES256 encryption and its
+existing legacy `hermes`/`mail-edge` retention rules. Reconciliation treats B2's
+rule reordering and optional null duration fields as equivalent, while still
+detecting real retention changes.
 
 The standard intake files are `secrets/B2_MASTER_APPLICATION_KEY_ID.key` and
 `secrets/B2_MASTER_APPLICATION_KEY.key`. Keep one value in each regular,

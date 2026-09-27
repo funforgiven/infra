@@ -71,6 +71,13 @@ Type=oneshot
 UMask=0077
 ExecStart=$source/$name.sh
 UNIT
+  if [[ "$name" == backup ]]; then
+    cat >> /etc/systemd/system/unifi-backup.service <<'UNIT'
+CacheDirectory=unifi-backup
+CacheDirectoryMode=0700
+Environment=RESTIC_CACHE_DIR=/var/cache/unifi-backup
+UNIT
+  fi
 done
 cat > /etc/systemd/system/unifi-backup.timer <<'UNIT'
 [Unit]
