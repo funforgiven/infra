@@ -12,7 +12,7 @@
   name: Fahrican Loft desk sensor
   settings:
     presence_detection_options: both
-    motion_sensitivity: medium
+    motion_sensitivity: high
     absence_delay_timer: 30
     pir_detection_interval: 30
     ai_sensitivity_adaptive: 'OFF'
