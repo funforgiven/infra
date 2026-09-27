@@ -1,13 +1,13 @@
 # Recovery copy: install through HA's automation config API.
-# FP300 uses both sensors, fixed high sensitivity, PIR interval 2 seconds,
-# and a 10-second radar absence delay.
+# FP300 uses both sensors, fixed high sensitivity, PIR interval 30 seconds,
+# and a 30-second radar absence delay. HA adds no absence delay.
 id: fahrican_bathroom_presence_lighting
 alias: Fahrican Bathroom presence lighting
 description: >-
   FP300 motion or radar presence turns on the bathroom relay. Radar presence
-  keeps it on for a stationary occupant. Turn off only when both readings stay
-  clear for 20 seconds, after the sensor's own detection delays. Either reading
-  becoming active cancels the countdown. Unknown/unavailable is never vacant.
+  keeps it on for a stationary occupant. Turn off when both readings are clear,
+  with the sensor's 30-second absence delay providing confirmation. HA adds no
+  further delay. Unknown/unavailable is never vacant.
 triggers:
 - trigger: state
   entity_id:
@@ -52,13 +52,6 @@ actions:
       - binary_sensor.0x54ef441001724e3e_pir_detection
       state: "off"
     sequence:
-    - delay:
-        seconds: 20
-    - condition: state
-      entity_id:
-      - binary_sensor.0x54ef441001724e3e_presence
-      - binary_sensor.0x54ef441001724e3e_pir_detection
-      state: "off"
     - condition: state
       entity_id: switch.0xe456acfffe5cd047
       state: "on"
