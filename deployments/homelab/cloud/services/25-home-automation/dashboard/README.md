@@ -22,9 +22,16 @@ in **Fahrican Bathroom** on the **6th floor**.
 - The light count includes the bathroom relay. The explicitly labeled group-off
   button turns off the **five Hue bulbs**, keeping the bathroom presence workflow
   independent. This button sends `light.turn_off` with `transition: 0`.
-- Climate shows the loft Daikin thermostat, bathroom temperature/humidity and
-  history, outdoor weather, and the AC's reported cooling electricity use. These
-  cards use existing integration data and do not change Onecta polling.
+- Home shows occupancy and temperature/humidity chips for the loft desk,
+  bedroom and bathroom FP300s. The loft label describes desk presence, since
+  that sensor deliberately covers the desk rather than the entire room.
+- Loft and Bedroom detail pages show separate presence and PIR motion readings,
+  current temperature/humidity, and three-hour presence/motion/light histories.
+  The loft presence card reports sensor state; it does not claim to measure
+  whether the PC screen is actually awake.
+- Climate shows the three FP300s' temperature/humidity and twelve-hour histories,
+  the loft Daikin thermostat, outdoor weather, and the AC's reported cooling
+  electricity use. These cards do not change Onecta polling.
 - Door status comes from the existing Matter lock. Lock, unlock and unlatch are
   distinct controls and all have confirmation prompts. The activity card uses
   the existing Matter state and Nuki MQTT event; requested events do not prove
@@ -112,3 +119,8 @@ Initial validation on 2026-09-26 covers:
 
 Keep validation screenshots and temporary browser credentials out of Git. Browser
 checks use the existing encrypted token in memory and do not record its value.
+
+The September 27 FP300 update also passed entity-reference checks, HA rendering
+of the changed templates, and exact API readback. Home, Climate, Bedroom and Loft
+rendered in authenticated Chromium at desktop/light and phone/dark settings,
+without error cards or horizontal overflow.
