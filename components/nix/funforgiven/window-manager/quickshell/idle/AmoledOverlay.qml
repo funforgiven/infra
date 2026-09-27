@@ -8,17 +8,34 @@ import Quickshell.Wayland
 Scope {
     id: root
 
-    property bool active: false
+    readonly property bool active: policy.active
+
+    PresencePolicy {
+        id: policy
+    }
 
     IpcHandler {
         target: "amoled"
 
         function activate(): void {
-            root.active = true;
+            policy.idle();
         }
 
         function deactivate(): void {
-            root.active = false;
+            policy.input();
+        }
+
+        function updatePresence(state: string): void {
+            policy.presence(state);
+        }
+
+        function status(): string {
+            return JSON.stringify({
+                presence: policy.presenceState,
+                inputIdle: policy.inputIdle,
+                inputOverride: policy.wakeGrace.running,
+                active: root.active
+            });
         }
 
         function isVisible(): bool {
