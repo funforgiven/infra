@@ -1,0 +1,56 @@
+# Recovery templates; install-rodecaster-midi.py inserts the SOPS webhook IDs.
+# Payloads cannot select an arbitrary entity or service.
+- id: rodecaster_loft_light_toggle
+  alias: RODECaster - Loft light toggle
+  description: MIDI channel 16 CC 106 toggles the loft bulb instantly.
+  triggers:
+  - trigger: webhook
+    webhook_id: __LOFT_LIGHT_WEBHOOK_ID__
+    allowed_methods: [POST]
+    local_only: true
+  conditions:
+  - condition: template
+    value_template: "{{ states('light.0x001788011015148f') in ['on', 'off'] }}"
+  actions:
+  - action: light.toggle
+    target:
+      entity_id: light.0x001788011015148f
+    data:
+      transition: 0
+  - delay:
+      milliseconds: 300
+  mode: single
+  max_exceeded: silent
+  initial_state: true
+  trace:
+    stored_traces: 10
+
+- id: rodecaster_loft_ac_airflow
+  alias: RODECaster - Loft AC comfort or swing
+  description: MIDI channel 16 CC 107 alternates vertical Comfort Airflow and Swing.
+  triggers:
+  - trigger: webhook
+    webhook_id: __LOFT_AIRFLOW_WEBHOOK_ID__
+    allowed_methods: [POST]
+    local_only: true
+  conditions:
+  - condition: template
+    value_template: >-
+      {{ has_value('climate.daikinap90808_room_temperature') and
+         state_attr('climate.daikinap90808_room_temperature', 'swing_mode') in ['stop', 'swing', 'windnice'] and
+         'windnice' in (state_attr('climate.daikinap90808_room_temperature', 'swing_modes') or []) and
+         'swing' in (state_attr('climate.daikinap90808_room_temperature', 'swing_modes') or []) }}
+  actions:
+  - action: climate.set_swing_mode
+    target:
+      entity_id: climate.daikinap90808_room_temperature
+    data:
+      swing_mode: >-
+        {{ 'swing' if state_attr('climate.daikinap90808_room_temperature', 'swing_mode') == 'windnice' else 'windnice' }}
+  - delay:
+      seconds: 2
+  mode: single
+  max_exceeded: silent
+  initial_state: true
+  trace:
+    stored_traces: 10
