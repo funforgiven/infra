@@ -1,7 +1,20 @@
 _: {
   home.gui =
-    { lib, pkgs, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     let
+      chatLayout = pkgs.writeShellApplication {
+        name = "niri-chat-layout";
+        text = ''
+          exec ${lib.getExe pkgs.python3} ${./chat-layout.py} \
+            --niri ${lib.getExe config.programs.niri.package} "$@"
+        '';
+      };
+
       graphicalApplicationService =
         {
           command,
@@ -34,7 +47,35 @@ _: {
         };
     in
     {
+      home.packages = [ chatLayout ];
+
       systemd.user.services = {
+        niri-chat-layout = {
+          Unit = {
+            Description = "Stack Telegram above Discord on the right monitor";
+            PartOf = [ "graphical-session.target" ];
+            Requisite = [ "graphical-session.target" ];
+            ConditionEnvironment = "NIRI_SOCKET";
+            After = [
+              "graphical-session.target"
+              "discord.service"
+              "telegram.service"
+            ];
+            Wants = [
+              "discord.service"
+              "telegram.service"
+            ];
+          };
+          Service = {
+            Type = "oneshot";
+            ExecStart = lib.getExe chatLayout;
+            TimeoutStartSec = 130;
+            RemainAfterExit = true;
+            Slice = "session-graphical.slice";
+          };
+          Install.WantedBy = [ "graphical-session.target" ];
+        };
+
         discord = graphicalApplicationService {
           description = "Discord";
           command = lib.getExe pkgs.discord;
