@@ -111,7 +111,6 @@ in
             repeat-rate = 50;
             xkb = {
               layout = physicalLayout;
-              options = "caps:super";
             };
           };
 
