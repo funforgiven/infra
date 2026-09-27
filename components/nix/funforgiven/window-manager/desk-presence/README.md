@@ -7,7 +7,8 @@ it sends no Home Assistant service commands.
 
 - Presence keeps all screens awake, including while reading without input.
 - A clear desk activates Quickshell's existing black overlay. The sensor
-  itself waits 10 seconds before reporting absence.
+  uses medium sensitivity and waits 30 seconds before reporting absence;
+  Quickshell follows that report directly.
 - Returning clears the overlay. Keyboard, pointer and touch input also wake
   it, allowing 30 seconds for the presence sensor to catch up.
 - If HA disconnects or the entity becomes unavailable, the ordinary
