@@ -203,8 +203,13 @@ complete the isolated restore below before treating the migration as recovered.
 ## Restore and upgrades
 
 1. Create an isolated recovery VM using the same pinned Ubuntu image and UniFi
-   installer. Its security group must allow only operator SSH/UI and the
-   temporary offsite restore connection. It must have **no path to VLAN 90,
+   installer. Complete blank installation before loading the saved identity,
+   then restrict its security group to operator SSH/UI and the temporary
+   offsite restore connection. If it uses DHCP, explicitly allow requests to
+   the services DHCP server `192.168.80.1` and broadcast address on UDP 67,
+   plus replies from that server on UDP 68. With all egress removed, this OVN
+   network cannot renew the VM's address after reboot. All other egress must
+   remain blocked before the restored controller starts, with **no path to VLAN 90,
    production APs, production inform address or UniFi cloud remote access**.
    Never attach the production floating IP to a test clone.
 2. Deliver the restore credential and Restic password privately. Restore a
@@ -217,8 +222,11 @@ complete the isolated restore below before treating the migration as recovered.
 4. Extract `home/uosserver`, `var/lib/uosserver`, `var/lib/unifi-proxy` and the
    declared UniFi service units with numeric owners/xattrs preserved. Restore
    scripts/proxy configuration when recovering the full host. Keep recovery
-   SSH keys and networking independent. Start the controller while still
-   isolated, and log in through the restricted recovery UI.
+   SSH keys and networking independent. Reboot the recovery VM while retaining
+   network isolation so Podman recreates its volatile runtime directories for
+   the restored container. Restarting only `uosserver` after replacing a blank
+   installation's persistent state can fail with `cannot chown run directory`.
+   Verify controller startup, then log in through the restricted recovery UI.
 5. Verify the site, AP MAC, both VLAN mappings, SSIDs, owner account and native
    backup settings. APs should appear disconnected in isolation. Record the
    snapshot ID, versions and the restore result; then shut down the recovery

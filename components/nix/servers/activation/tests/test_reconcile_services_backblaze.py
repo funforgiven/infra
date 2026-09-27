@@ -12,6 +12,7 @@ from reconcile_services_backblaze import (
     BackupContract,
     ReconcileError,
     ServicesBackblazeReconciler,
+    _bucket_policy_matches,
 )
 from initialize_services_restic import ResticRunner, ServicesResticInitializer
 from runtime_contract import CONTRACT_PATH
@@ -226,6 +227,38 @@ class ServicesBackblazeReconcilerTest(unittest.TestCase):
                 for spec in self.contract.keys
             )
         )
+
+    def test_provider_rule_order_and_null_defaults_do_not_rewrite_policy(self) -> None:
+        desired = (
+            {"fileNamePrefix": "undercloud/", "daysFromHidingToDeleting": 30},
+            {"fileNamePrefix": "services/", "daysFromHidingToDeleting": 30},
+        )
+        bucket = FakeClient(self.contract).bucket(self.contract.bucket_name)
+        bucket["lifecycleRules"] = [
+            dict(rule, daysFromUploadingToHiding=None,
+                 daysFromStartingToCancelingUnfinishedLargeFiles=None)
+            for rule in reversed(desired)
+        ]
+        self.assertTrue(_bucket_policy_matches(bucket, desired))
+        client = object.__new__(BackblazeClient)
+        client.call = MagicMock()
+        self.assertFalse(client.update_bucket_policy(bucket, desired))
+        client.call.assert_not_called()
+
+    def test_retention_or_encryption_changes_still_report_drift(self) -> None:
+        desired = ({"fileNamePrefix": "services/", "daysFromHidingToDeleting": 30},)
+        bucket = FakeClient(self.contract).bucket(self.contract.bucket_name)
+        for actual in [
+            [{"fileNamePrefix": "services/", "daysFromHidingToDeleting": 7}],
+            [dict(desired[0], daysFromStartingToCancelingUnfinishedLargeFiles=1)],
+            [],
+        ]:
+            with self.subTest(actual=actual):
+                bucket["lifecycleRules"] = actual
+                self.assertFalse(_bucket_policy_matches(bucket, desired))
+        bucket["lifecycleRules"] = list(desired)
+        bucket["defaultServerSideEncryption"] = {"mode": "SSE-B2", "algorithm": "unexpected"}
+        self.assertFalse(_bucket_policy_matches(bucket, desired))
 
     def test_each_declared_host_requires_a_restic_password(self) -> None:
         document = backup_document()

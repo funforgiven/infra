@@ -248,18 +248,8 @@ class BackblazeClient:
                 return keys
 
     def update_bucket_policy(self, bucket: dict, lifecycle_rules: tuple[dict, ...]) -> bool:
-        encryption = _encryption_value(bucket)
-        encryption_matches = (
-            isinstance(encryption, dict)
-            and encryption.get("mode") == "SSE-B2"
-            and encryption.get("algorithm") in (None, "AES256")
-        )
         desired_rules = list(lifecycle_rules)
-        if (
-            bucket.get("bucketType") == "allPrivate"
-            and encryption_matches
-            and bucket.get("lifecycleRules") == desired_rules
-        ):
+        if _bucket_policy_matches(bucket, lifecycle_rules):
             return False
         payload = {
             "accountId": self.account_id,
@@ -531,8 +521,30 @@ def _bucket_policy_matches(bucket: dict, lifecycle_rules: tuple[dict, ...]) -> b
         bucket.get("bucketType") == "allPrivate"
         and isinstance(encryption, dict)
         and encryption.get("mode") == "SSE-B2"
-        and bucket.get("lifecycleRules") == list(lifecycle_rules)
+        and encryption.get("algorithm") in (None, "AES256")
+        and _lifecycle_rules_match(bucket.get("lifecycleRules"), lifecycle_rules)
     )
+
+
+def _lifecycle_rules_match(actual: object, desired: tuple[dict, ...]) -> bool:
+    if not isinstance(actual, list) or not all(isinstance(rule, dict) for rule in actual):
+        return False
+
+    def normalized(rules: list[dict] | tuple[dict, ...]) -> list[str]:
+        result = []
+        for rule in rules:
+            # B2 sorts rules and returns optional, unset durations as null.
+            value = dict(rule)
+            for field in (
+                "daysFromUploadingToHiding",
+                "daysFromHidingToDeleting",
+                "daysFromStartingToCancelingUnfinishedLargeFiles",
+            ):
+                value.setdefault(field, None)
+            result.append(json.dumps(value, sort_keys=True))
+        return sorted(result)
+
+    return normalized(actual) == normalized(desired)
 
 
 def _encryption_value(bucket: dict) -> dict:

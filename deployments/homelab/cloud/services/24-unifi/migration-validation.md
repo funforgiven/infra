@@ -1,11 +1,11 @@
-# Migration validation — 2026-09-26
+# Migration validation — 2026-09-27
 
 The controller and AP are online using a **temporary 1 Gb/s Ethernet limit** on
 switch port 6. Automatic 2.5 Gb/s negotiation does not sustain connectivity on
 the current cable/switch path, including after updating the AP to 8.7.11. This
-record includes recovery, wireless and gateway checks through 23:25 UTC. The owner
-accepted retaining 1 Gb/s for now; final wireless throughput and offsite-recovery
-acceptance remain pending.
+record includes the 2026-09-26 migration and the following day's offsite backup
+verification. The owner accepted retaining 1 Gb/s and reported good wireless
+speeds after tuning.
 
 ## Verified deployment
 
@@ -47,8 +47,10 @@ The private access and monitoring rollout is verified:
 - Prometheus reports healthy node-metrics, AP-metrics and origin-probe targets.
   `unifi_service_up`, `unifi_https_up` and `probe_success` are 1; AP uptime is
   present. A transient poller reauthentication failure cleared on a later
-  scrape, and the AP-metrics alert cleared. The backup-stale alert remains
-  pending because no offsite backup has succeeded.
+  scrape, and the AP-metrics alert cleared. The first offsite backup succeeded
+  on 2026-09-27 at 00:05:35 UTC and exported its success timestamp.
+  Prometheus subsequently observed that timestamp, all three targets were
+  healthy, and `ALERTS{alertname=~"UniFi.*"}` returned no active alerts.
 - Both undercloud UniFi/DNS waves and the services UniFi/Gateway waves applied
   the published revision. The UniFi Terraform resource is Ready and reports
   **Plan no changes**, confirming adoption of the already-provisioned VM
@@ -170,22 +172,73 @@ directory `0700`). Its password is the existing SOPS
 `UNIFI_BACKUP_RESTIC_PASSWORD`. The source encrypted repository also remains on
 the controller VM at `/var/lib/unifi-local-recovery`.
 
-This is **not an offsite backup or a booted restore test**. The B2 master intake
-files are empty, so the separate prefix-scoped UniFi writer and initial offsite
-backup remain pending. No successful offsite-backup metric was fabricated.
-Native Network configuration-only backups are scheduled daily at 01:00 UTC;
-the first scheduled file has not yet been verified. Follow the isolated restore
-procedure in the runbook after enrollment, keeping the restored controller
-unable to contact production APs.
+That earlier checkpoint is local. On 2026-09-27, the standard B2 reconciler
+created `infra-services-unifi-backup-writer`, restricted to
+`fahrican-cloud-recovery/services/hosts/unifi/`. Credentials were persisted in
+SOPS and installed in root-owned mode-`0400` runtime files under a mode-`0700`
+directory. The existing Restic password was reused. Both mode-`0600` master
+intake files were cleared after reconciliation; no master credential was
+installed on the VM. Six other configured writers authenticated successfully
+and retained their existing credentials and prefix restrictions.
+
+The first offsite snapshot is
+`7dff5a25e3a904f07fc1cf72852d15a52add5fabc172233195ee6250aa8d3df0`,
+taken at 00:03:30 UTC. Upload and retention completed at 00:05:35 UTC. The
+controller was restarted before upload, and its authenticated production API
+still reported the AP connected with four clients afterward. The snapshot
+processed 3.251 GiB and stored 1.144 GiB after compression/deduplication.
+`restic check --read-data` read all 72 packs with no errors, and an offsite
+restore produced a completely readable archive with SHA-256
+`329b1ce3ea49c116338b3f19f0b44ddf323e52bd52336f5578f1bd39800b53a5`.
+
+The offsite archive was then restored onto a separate VM using the same pinned
+Ubuntu image and UniFi OS 5.1.42 installer. Its host key was pinned through the
+authenticated OpenStack console. Before receiving the saved identity, its
+general egress rule was removed. Only operator SSH through the production VM
+and local DHCP request/reply traffic were allowed; no production floating IP
+was attached. API inspection verified the exact security group and secured
+port, and connection probes to the AP, production inform endpoint and internet
+failed as expected.
+
+The archive's SHA-256 matched after transfer. UID/GID `1001` and subordinate
+range `165536:65536` matched the saved account mappings. Initial startup exposed
+stale Podman runtime state from the blank installation; rebooting the isolated
+recovery VM recreated it and started the saved controller successfully. The
+runbook now records that reboot and the required DHCP-only firewall exception.
+
+Authenticated verification on the running recovery controller passed:
+
+- Local owner login and the `Homelab WiFi` / default site were restored.
+- Network reported `10.6.106`; the adopted U7 Pro Max MAC and firmware
+  `8.7.11.19419` were retained. Its state was disconnected, as isolation requires.
+- Rooftrollen retained VLAN 10, 5/6 GHz, MLO and required PMF;
+  Rooftrollen_IoT retained VLAN 50, 2.4 GHz and its separate security settings.
+  Both PSKs and security fields matched production in memory without printing
+  credentials. The networks remained third-party VLAN-only with no DHCP server.
+- Turkey country code 792, diagnostics disabled and native backup settings
+  matched production. Both verification sessions logged out.
+- The restored origin CA and certificate passed hostname verification, and
+  HTTPS through the restored nginx origin returned HTTP 200.
+
+The recovery controller was stopped and its container verified stopped before
+cleanup. The temporary VM, boot volume, port and security group were deleted;
+their OpenStack API lookups returned HTTP 404. The additional plaintext restore
+staging directory on production was removed. The normal backup staging archive
+and encrypted local migration checkpoint remain available. Production
+`uosserver`, nginx and UnPoller are active, the backup unit reports success,
+and the daily timer is enabled.
+
+Native Network configuration-only backups run daily at **01:00 Europe/Istanbul**
+(22:00 UTC on the preceding date), correcting the earlier UTC schedule note.
+`autobackup_10.6.106_20260926_2200_1790460000018.unf` exists at 20,992 bytes;
+the separate pre-upgrade `10.5.67.unf` also exists. The full offsite archive,
+rather than a configuration-only `.unf`, was used for the booted restore above.
 
 ## Remaining acceptance checks
 
 1. Verify a real 6-GHz or MLO client association. The owner has accepted the
    improved speeds; retain the approved 1 Gb/s Ethernet limit.
-2. Refill the B2 master intake privately, reconcile the restricted writer, run
-   the first offsite backup and complete an isolated restore with login/site
-   verification.
-3. Join each WLAN with real clients and prove the expected VLAN address, IoT
+2. Join each WLAN with real clients and prove the expected VLAN address, IoT
    restrictions, Home Assistant discovery/control and administration VPN access
    from outside the LAN. Qualify 6 GHz separately in the Turkey domain.
 
@@ -193,3 +246,8 @@ Repository validation passed: the cloud configuration check, 38 network tests,
 five backup ordering/failure tests, 43 credential activation tests, formatting
 and secret scanning. The final OpenTofu plan reported no changes for the live
 controller resources.
+
+The B2 enrollment additionally passed `cloud-configuration` and
+`services-activation-contract`, including the lifecycle-response normalization
+regressions. The deployed backup unit now provisions a root-only Restic cache
+directory, removing the systemd environment's missing-home cache warning.
