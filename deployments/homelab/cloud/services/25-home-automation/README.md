@@ -410,6 +410,43 @@ HA validates, saves and reloads it; the live automation and room assignments
 are included in application backups. This file is not a Kubernetes resource
 and needs no pod restart.
 
+### FP300 recovery profiles
+
+`fp300-profiles.yaml` records the three sensor profiles. Publish only each
+entry's `settings` mapping to `zigbee2mqtt/<id>/set` with QoS 1 and retain
+false, then read the settings back through `/get`. These battery devices may
+need a single short button press before accepting queued configuration writes.
+
+All three use both PIR and radar, fixed sensitivity with adaptive sensitivity
+and AI interference-source identification off, light sampling off, and LED
+suppression from 21:00 to 09:00. Climate reporting uses custom sampling with
+both threshold and interval reporting. Humidity thresholds are percentage
+points. Temperature and humidity have no reference-instrument calibration.
+
+| Setting | Loft desk | Bathroom | Bedroom |
+| --- | --- | --- | --- |
+| Sensitivity | Medium | High | Medium |
+| Sensor absence delay | 30 s | 10 s | 30 s |
+| PIR interval | 2 s | 2 s | 30 s |
+| Radar range | 0–2 m | 0–4 m | 0–6 m |
+| Climate sampling | 300 s | 60 s | 300 s |
+| Temperature reporting interval / threshold | 1800 s / 0.3 °C | 600 s / 0.2 °C | 1800 s / 0.3 °C |
+| Humidity reporting interval / threshold | 1800 s / 3 points | 600 s / 2 points | 1800 s / 3 points |
+
+After final placement and range setup, run `spatial_learning: Start Learning`
+separately while the detection area stays empty for at least 30 seconds.
+Coordinate this with the occupants; profile replay never starts learning.
+The bedroom's farthest useful point is approximately 7–8 m from its current
+sensor position, beyond the FP300's 6 m configurable maximum. This profile
+does not establish reliable coverage at that point.
+
+On September 27, all 57 profile settings matched the sensors' reported state.
+After the owner confirmed empty detection areas, learning was requested on
+each sensor and observed for 45 seconds with no sensor warnings or errors.
+All three reported clear afterward and retained their configured profiles.
+Spatial learning exposes no readable completion flag; these checks confirm
+the observation window and resulting state, not a readable learned-room model.
+
 ### Loft desk FP300
 
 The second FP300, `0x54ef4410017220eb`, is **Fahrican Loft desk sensor** in
@@ -419,8 +456,8 @@ temperature and humidity; the Loft view also shows desk presence.
 
 For a seat less than one metre away, the device uses medium sensitivity,
 `presence_detection_options: both`, adaptive sensitivity off, and radar
-range `63` (the six 0.25 m bands from 0 to 1.5 m). The absence delay is
-30 seconds and the PIR interval is 5 seconds. Both PIR and radar remain
+range `255` (the eight 0.25 m bands from 0 to 2 m). The absence delay is
+30 seconds and the PIR interval is 2 seconds. Both PIR and radar remain
 enabled so someone sitting still can keep the display awake. Use the
 combined `presence` entity for the desktop; PIR clearing alone does not
 mean the desk is empty.
@@ -430,12 +467,10 @@ low/10-second profile after brief false absence reports while seated.
 The desktop follows reported presence directly; the sensor owns the
 absence confirmation delay.
 
-Climate sampling is `custom`, once every 60 seconds. Temperature reports
-on a 0.3 °C change or every 600 seconds; humidity reports on a 2 percentage
-point change or every 600 seconds. Both reporting modes are
-`threshold and interval`. These values were read back from the device
-after configuration on September 27. The device's climate readings are
-not calibrated against a reference instrument.
+Climate sampling is `custom`, once every 300 seconds. Temperature reports
+on a 0.3 °C change or every 1800 seconds; humidity reports on a 3 percentage
+point change or every 1800 seconds. Both reporting modes are
+`threshold and interval`.
 
 Parmigiano's [presence reader](../../../../../components/nix/funforgiven/window-manager/desk-presence/README.md)
 connects over the existing HA HTTPS endpoint using a dedicated local-only,
@@ -447,15 +482,12 @@ are recoverable from this repository.
 ### Bedroom FP300
 
 The third FP300, `0x54ef44100172614d`, is **Fahrican Bedroom presence sensor**
-in the Fahrican Bedroom area. The owner confirmed that its existing placement
-detects the bedroom reliably without covering adjacent rooms. Keep its working
-detection settings: medium sensitivity, both PIR and radar, adaptive sensitivity
-on, radar range `16777215`, absence delay 10 seconds, and PIR interval 30 seconds.
-No spatial learning, reset or sensitivity change was applied during assignment.
-Climate reporting matches the loft desk profile: custom sampling every 60 seconds,
-reporting every 600 seconds or after a 0.3 °C / 2 percentage point change.
-The sleepy device accepted these writes after waking; all eight climate settings
-and the seven unchanged detection settings were verified through HA on September 27.
+in the Fahrican Bedroom area. Its profile uses medium sensitivity, both PIR
+and radar, adaptive sensitivity off, radar range `16777215`, absence delay
+30 seconds, and PIR interval 30 seconds. Climate reporting matches the loft
+desk profile: custom sampling every 300 seconds, reporting every 1800 seconds
+or after a 0.3 °C / 3 percentage point change. Presence is used for dashboard
+status and history; it does not automatically control the bedroom light.
 
 Both new FP300s now have temperature/humidity chips and an occupancy status on
 Home, presence and motion cards plus a three-hour presence/motion/light history
@@ -475,10 +507,15 @@ it on and keeps it on while radar detects a stationary occupant. Both readings
 must be clear before turning off: PIR can clear while radar still detects
 someone. Keep `presence_detection_options: both`, `motion_sensitivity: high`,
 `ai_sensitivity_adaptive: OFF`, `pir_detection_interval: 2` and
-`absence_delay_timer: 10` on the sensor. The PIR interval is at the supported
-minimum to test faster detection, at the cost of increased battery use. It is
+`absence_delay_timer: 10` on the sensor, with radar range `65535` (0–4 m).
+The PIR interval is at the supported minimum for frequent detection,
+at the cost of increased battery use. It is
 not a guaranteed entry-to-light latency. See the
 [FP300 device documentation](https://www.zigbee2mqtt.io/devices/PS-S04D.html).
+
+Climate sampling is `custom` every 60 seconds. Temperature reports every
+600 seconds or after a 0.2 °C change; humidity reports every 600 seconds or
+after a 2 percentage point change. Both modes are `threshold and interval`.
 
 Commands have no fade and there is no maximum occupied duration. Once both
 readings are clear, HA waits 20 seconds before turning off, making the total
@@ -489,20 +526,22 @@ still turn the light on. HA startup, automation reload and relay availability
 recovery reconcile the light with current sensor states. The relay remains
 manually operable between sensor state transitions.
 
-The owner reported intermittent, very short-range radar detection even after
-high sensitivity and empty-room spatial learning. On September 26, direct
+During initial placement, the owner reported intermittent, very short-range
+radar detection even after high sensitivity and empty-room spatial learning.
+On September 26, direct
 device reads returned PIR active with radar presence inactive; one earlier
 event had a 24-second gap between those reports. The owner subsequently
 confirmed near-contact-only detection persisted with fixed high sensitivity
 and the shorter PIR interval. Received motion reports switched the relay on
 within about half a second. A supported sensor restart was confirmed by its
 power-outage counter increasing, and standard device reconfiguration returned
-`status: ok`, with the tuned settings preserved. Detection from 1–2 metres in
-an open position outside the bathroom remains to be tested to distinguish
-placement/interference from a sensor fault. Automatic lighting is not yet
+`status: ok`, with the tuned settings preserved. At that stage, detection from
+1–2 metres outside the bathroom remained to be tested to distinguish
+placement/interference from a sensor fault, and automatic lighting was not yet
 qualified as reliable. The sensor runs firmware `0.0.0_6542`; Zigbee2MQTT
 2.14.1 includes the upstream presence/PIR reporting fix, and both coordinator
-bindings and configured report entries are present. Do not treat cached
+bindings and configured report entries are present. The owner later repositioned
+the sensor and confirmed satisfactory bathroom detection. Do not treat cached
 `target_distance: 0` as proof of a failed radar; distance tracking is a separate
 diagnostic function.
 
@@ -522,8 +561,8 @@ seconds later. Combined mode was restored and verified at 21:06:43.799. This
 shows that disabling radar does not eliminate the delay; it does not establish
 whether the remaining delay is in PIR detection/firmware or device-specific
 Zigbee reporting. Do not attribute it to a HA turn-on timer or to waiting for
-radar confirmation. Reliable detection and stationary presence at 3–4 metres
-remain unqualified.
+radar confirmation. These earlier tests did not establish reliable detection
+and stationary presence at 3–4 metres before the placement correction.
 
 ## Monitoring and backup
 

@@ -1,0 +1,74 @@
+# Recovery profiles: publish each settings mapping to
+# zigbee2mqtt/<id>/set with QoS 1 and retain false, then read it back via /get.
+# Briefly press the sensor button if configuration writes are waiting
+# for wakeup.
+# After final placement/range changes, run spatial_learning separately with the
+# detection area empty. Learning is intentionally excluded from profile replay.
+# Range masks enable consecutive 0.25 m bands: 255 = 2 m, 65535 = 4 m,
+# 16777215 = 6 m (device maximum; the far bedroom point is about 7-8 m away).
+- id: '0x54ef4410017220eb'
+  name: Fahrican Loft desk sensor
+  settings:
+    presence_detection_options: both
+    motion_sensitivity: medium
+    absence_delay_timer: 30
+    pir_detection_interval: 2
+    ai_sensitivity_adaptive: 'OFF'
+    ai_interference_source_selfidentification: 'OFF'
+    temp_and_humidity_sampling: custom
+    temp_and_humidity_sampling_period: 300
+    temp_reporting_mode: threshold and interval
+    temp_reporting_interval: 1800
+    temp_reporting_threshold: 0.3
+    humidity_report_mode: threshold and interval
+    humidity_reporting_interval: 1800
+    humidity_reporting_threshold: 3
+    light_sampling: 'off'
+    led_disabled_night: true
+    schedule_start_time: '21:00'
+    schedule_end_time: 09:00
+    detection_range: 255
+- id: '0x54ef441001724e3e'
+  name: Fahrican Bathroom presence sensor
+  settings:
+    presence_detection_options: both
+    motion_sensitivity: high
+    absence_delay_timer: 10
+    pir_detection_interval: 2
+    ai_sensitivity_adaptive: 'OFF'
+    ai_interference_source_selfidentification: 'OFF'
+    temp_and_humidity_sampling: custom
+    temp_and_humidity_sampling_period: 60
+    temp_reporting_mode: threshold and interval
+    temp_reporting_interval: 600
+    temp_reporting_threshold: 0.2
+    humidity_report_mode: threshold and interval
+    humidity_reporting_interval: 600
+    humidity_reporting_threshold: 2
+    light_sampling: 'off'
+    led_disabled_night: true
+    schedule_start_time: '21:00'
+    schedule_end_time: 09:00
+    detection_range: 65535
+- id: '0x54ef44100172614d'
+  name: Fahrican Bedroom presence sensor
+  settings:
+    presence_detection_options: both
+    motion_sensitivity: medium
+    absence_delay_timer: 30
+    pir_detection_interval: 30
+    ai_sensitivity_adaptive: 'OFF'
+    ai_interference_source_selfidentification: 'OFF'
+    temp_and_humidity_sampling: custom
+    temp_and_humidity_sampling_period: 300
+    temp_reporting_mode: threshold and interval
+    temp_reporting_interval: 1800
+    temp_reporting_threshold: 0.3
+    humidity_report_mode: threshold and interval
+    humidity_reporting_interval: 1800
+    humidity_reporting_threshold: 3
+    light_sampling: 'off'
+    led_disabled_night: true
+    schedule_start_time: '21:00'
+    schedule_end_time: 09:00
+    detection_range: 16777215
