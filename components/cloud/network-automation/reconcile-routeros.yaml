@@ -788,6 +788,9 @@
     - name: Reconcile the CCR2004 LAN ports and housemate network
       ansible.builtin.import_tasks: tasks/reconcile-routeros-lan.yaml
 
+    - name: Reconcile Steam access between the trusted and housemate networks
+      ansible.builtin.import_tasks: tasks/reconcile-routeros-lan-peers.yaml
+
     - name: Reconcile the WireGuard admin boundary
       ansible.builtin.import_tasks: tasks/reconcile-routeros-wireguard.yaml
 

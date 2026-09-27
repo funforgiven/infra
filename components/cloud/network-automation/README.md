@@ -16,6 +16,8 @@ objects absent from its input.
 - server-port speed, FEC, LACP, and MTU settings;
 - CCR bridge VLAN membership, parallel migration trunks on ports 2/15, and
   HOUSEMATE VLAN 70 with DHCP and internet access on ports 3/4;
+- Steam transfers and discovery in both directions between HOUSEMATE VLAN 70
+  and TRUSTED VLAN 10;
 - the VLAN-90 management DHCP server and declared static leases;
 - the private `cloud.fahrican.com` DNS forward;
 - the `wg-admin` interface and its limited firewall rules;

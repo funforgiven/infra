@@ -1,0 +1,145 @@
+---
+- name: Validate the client VLAN peer rules
+  ansible.builtin.assert:
+    that:
+      - routeros_lan_peer_rules | length == 4
+      - >-
+        routeros_lan_peer_rules | map(attribute='comment') | unique | length
+        == routeros_lan_peer_rules | length
+      - >-
+        item.comment is match('^infra: ') and
+        item.comment is search(' Steam (transfer|discovery)$')
+      - >-
+        (item.protocol == 'tcp' and item.destination_port == '27040') or
+        (item.protocol == 'udp' and item.destination_port == '27031-27036')
+      - item.source_interface != item.destination_interface
+      - >-
+        [item.source_interface, item.destination_interface] | sort ==
+        [routeros_provider_network.trusted_interface,
+        routeros_housemate.interface] | sort
+      - item.source_network != item.destination_network
+      - >-
+        [item.source_network, item.destination_network] | sort ==
+        ['10.21.10.0/24', routeros_housemate.network] | sort
+  loop: "{{ routeros_lan_peer_rules }}"
+  loop_control:
+    label: "{{ item.comment }}"
+  tags: [always, inventory-contract]
+
+- name: Require client VLAN interfaces and the final forward drop
+  community.routeros.command:
+    commands:
+      - >-
+        :if ([:len [/interface vlan find where
+        name="{{ item.source_interface }}" and disabled=no]] != 1)
+        do={ :error "source client VLAN interface missing" };
+        :if ([:len [/interface vlan find where
+        name="{{ item.destination_interface }}" and disabled=no]] != 1)
+        do={ :error "destination client VLAN interface missing" };
+        :local drop [/ip firewall filter find where
+        comment="infra: forward final drop"];
+        :if ([:len $drop] != 1) do={ :error "final forward drop missing" };
+        :if ([/ip firewall filter get $drop chain] != "infra-forward" or
+        [/ip firewall filter get $drop action] != "drop" or
+        [/ip firewall filter get $drop disabled] != false)
+        do={ :error "final forward drop mismatch" };
+        :if ([:len [/ip firewall filter find where
+        comment="{{ item.comment }}"]] > 1)
+        do={ :error "duplicate client VLAN peer rule" };
+        :put ("__infra_" . "peer_ok__")
+    wait_for:
+      - result[0] contains "__infra_peer_ok__"
+    retries: 1
+  loop: "{{ routeros_lan_peer_rules }}"
+  loop_control:
+    label: "{{ item.comment }}"
+  changed_when: false
+  tags: [always]
+
+- name: Read current client VLAN peer rules
+  community.routeros.command:
+    commands:
+      - >-
+        /ip firewall filter print detail without-paging where
+        comment="{{ item.comment }}"
+  loop: "{{ routeros_lan_peer_rules }}"
+  loop_control:
+    label: "{{ item.comment }}"
+  changed_when: false
+  tags: [always]
+
+- name: Reconcile Steam access between trusted and housemate devices
+  community.routeros.command:
+    commands:
+      - >-
+        :local drop [/ip firewall filter find where
+        comment="infra: forward final drop"];
+        :local row [/ip firewall filter find where
+        comment="{{ item.comment }}"];
+        :if ([:len $row] = 0) do={
+        :set row [/ip firewall filter add comment="{{ item.comment }}"
+        chain=infra-forward action=accept disabled=no
+        protocol={{ item.protocol }} dst-port={{ item.destination_port }}
+        src-address="{{ item.source_network }}"
+        dst-address="{{ item.destination_network }}"
+        in-interface="{{ item.source_interface }}"
+        out-interface="{{ item.destination_interface }}" place-before=$drop]
+        } else={
+        /ip firewall filter set $row
+        chain=infra-forward action=accept disabled=no
+        protocol={{ item.protocol }} dst-port={{ item.destination_port }}
+        src-address="{{ item.source_network }}"
+        dst-address="{{ item.destination_network }}"
+        in-interface="{{ item.source_interface }}"
+        out-interface="{{ item.destination_interface }}" };
+        /ip firewall filter move $row destination=$drop;
+        :put ("__infra_" . "peer_ok__")
+    wait_for:
+      - result[0] contains "__infra_peer_ok__"
+    retries: 1
+  loop: "{{ routeros_lan_peer_rules }}"
+  loop_control:
+    label: "{{ item.comment }}"
+  tags: [never, apply, lan-peers]
+
+- name: Prove client VLAN peer rules and their ordering
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/ip firewall filter find where
+        comment="{{ item.comment }}"];
+        :if ([:len $row] != 1) do={ :error "client VLAN peer rule missing" };
+        :if ([/ip firewall filter get $row chain] != "infra-forward" or
+        [/ip firewall filter get $row action] != "accept" or
+        [/ip firewall filter get $row disabled] != false or
+        [:tostr [/ip firewall filter get $row src-address]] !=
+        "{{ item.source_network }}" or
+        [:tostr [/ip firewall filter get $row dst-address]] !=
+        "{{ item.destination_network }}" or
+        [/ip firewall filter get $row in-interface] !=
+        "{{ item.source_interface }}" or
+        [/ip firewall filter get $row out-interface] !=
+        "{{ item.destination_interface }}" or
+        [:tostr [/ip firewall filter get $row protocol]] !=
+        "{{ item.protocol }}" or
+        [:tostr [/ip firewall filter get $row src-port]] != "" or
+        [:tostr [/ip firewall filter get $row dst-port]] !=
+        "{{ item.destination_port }}")
+        do={ :error "client VLAN peer rule mismatch" };
+        :local seen false;
+        :foreach rule in=[/ip firewall filter find where chain="infra-forward"]
+        do={
+        :if ([/ip firewall filter get $rule comment] = "{{ item.comment }}")
+        do={ :set seen true };
+        :if ([/ip firewall filter get $rule comment] =
+        "infra: forward final drop" and $seen = false)
+        do={ :error "client VLAN peer rule follows final drop" } };
+        :put ("__infra_" . "peer_ok__")
+    wait_for:
+      - result[0] contains "__infra_peer_ok__"
+    retries: 1
+  loop: "{{ routeros_lan_peer_rules }}"
+  loop_control:
+    label: "{{ item.comment }}"
+  changed_when: false
+  tags: [never, apply, lan-peers]

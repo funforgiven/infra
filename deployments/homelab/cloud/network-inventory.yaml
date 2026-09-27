@@ -141,6 +141,35 @@ all:
             pool: pool-housemate
             pool_range: 10.21.70.100-10.21.70.199
             lease_time: 1d
+          routeros_lan_peer_rules:
+            - comment: "infra: TRUSTED to HOUSEMATE Steam transfer"
+              source_interface: vlan10-trusted
+              source_network: 10.21.10.0/24
+              destination_interface: vlan70-housemate
+              destination_network: 10.21.70.0/24
+              protocol: tcp
+              destination_port: "27040"
+            - comment: "infra: HOUSEMATE to TRUSTED Steam transfer"
+              source_interface: vlan70-housemate
+              source_network: 10.21.70.0/24
+              destination_interface: vlan10-trusted
+              destination_network: 10.21.10.0/24
+              protocol: tcp
+              destination_port: "27040"
+            - comment: "infra: TRUSTED to HOUSEMATE Steam discovery"
+              source_interface: vlan10-trusted
+              source_network: 10.21.10.0/24
+              destination_interface: vlan70-housemate
+              destination_network: 10.21.70.0/24
+              protocol: udp
+              destination_port: "27031-27036"
+            - comment: "infra: HOUSEMATE to TRUSTED Steam discovery"
+              source_interface: vlan70-housemate
+              source_network: 10.21.70.0/24
+              destination_interface: vlan10-trusted
+              destination_network: 10.21.10.0/24
+              protocol: udp
+              destination_port: "27031-27036"
           routeros_management_dhcp:
             name: dhcp-management
             interface: vlan90-mgmt

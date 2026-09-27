@@ -48,11 +48,23 @@ Ports 3 and 4 share HOUSEMATE VLAN 70 (`10.21.70.0/24`), separate from GUEST
 VLAN 60. They accept untagged client traffic, use PVID 70 and ingress filtering,
 and reject VLAN-tagged client traffic. The gateway and DNS server are
 `10.21.70.1`; DHCP leases `10.21.70.100–199` for one day. Devices on these two
-ports can communicate with each other and reach the internet. Other traffic retains its existing
-policy, and router administration is governed separately
+ports can communicate with each other and reach the internet. Four explicit
+forward rules allow Steam traffic in both directions between HOUSEMATE
+(`10.21.70.0/24`) and TRUSTED (`10.21.10.0/24`): TCP 27040 for transfers and
+UDP 27031–27036 for discovery. Each rule matches both subnets and both VLAN
+interfaces. Other traffic retains its existing policy, and router administration
+is governed separately
 by the input firewall. The existing public game port reflections remain
 available through `INFRA-LAN`. Devices moved from the legacy
 LAN need a fresh DHCP lease. The still-connected legacy port 16 is preserved.
+
+Steam local transfers use TCP 27040 and UDP 27031–27036 for discovery. Both
+clients must enable local transfers for friends (or any user), and their host
+firewalls must permit them. The workstation NixOS configuration already enables
+`programs.steam.localNetworkGameTransfers.openFirewall`. Routed access does not
+relay subnet broadcasts; Steam discovery and an actual transfer still need to
+be checked between the two running clients. See
+[Valve's local-transfer requirements](https://help.steampowered.com/en/faqs/view/46BD-6BA8-B012-CE43).
 
 All qualified server links use forced `25G-baseCR`, RS-FEC (`fec91`),
 active/fast 802.3ad, minimum links 1, layer-3+4 hashing, and MTU 9000. Every
@@ -160,6 +172,9 @@ Use `--limit core_router --tags lan-ports` to reconcile the CCR bridge VLANs,
 the current/replacement Omada trunks, and the housemate network and access
 ports after the read-only preflight. This tag enables writes; omit it for
 inspection only.
+Use `--limit core_router --tags lan-peers` to reconcile the four Steam client-VLAN
+forward rules after preflight. This tag enables writes and verifies both rule
+contents and placement before the final forward drop.
 Use `--limit core_router --tags wan-port-forwards` to reconcile only the
 declared Factorio/Valheim WAN/reflection and Syncthing destination-NAT rows after the
 usual preflight.

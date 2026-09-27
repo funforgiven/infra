@@ -121,6 +121,40 @@ class NetworkInventoryTests(unittest.TestCase):
         self.assertNotIn("Reconcile the external provider network\t", selected)
         self.assertNotIn("Reconcile Git-owned WAN port forwards\t", selected)
 
+    def test_client_vlan_access_is_mutual_and_confined_to_the_two_subnets(self) -> None:
+        rules = self.router["routeros_lan_peer_rules"]
+        self.assertEqual(4, len(rules))
+        self.assertEqual(
+            {
+                ("vlan10-trusted", "10.21.10.0/24",
+                 "vlan70-housemate", "10.21.70.0/24"),
+                ("vlan70-housemate", "10.21.70.0/24",
+                 "vlan10-trusted", "10.21.10.0/24"),
+            },
+            {
+                (row["source_interface"], row["source_network"],
+                 row["destination_interface"], row["destination_network"])
+                for row in rules
+            },
+        )
+        for source in ("vlan10-trusted", "vlan70-housemate"):
+            self.assertEqual(
+                {("tcp", "27040"), ("udp", "27031-27036")},
+                {(row["protocol"], row["destination_port"])
+                 for row in rules if row["source_interface"] == source},
+            )
+        selected = subprocess.run(
+            ["ansible-playbook", "--list-tasks", "--limit", "core_router",
+             "--tags", "lan-peers", "reconcile-routeros.yaml"],
+            cwd=PLAYBOOK.parent, check=True, capture_output=True, text=True,
+        ).stdout
+        mutation = "Reconcile Steam access between trusted and housemate devices"
+        preflight = "Require client VLAN interfaces and the final forward drop"
+        self.assertLess(selected.index(preflight), selected.index(mutation))
+        self.assertIn("Prove client VLAN peer rules and their ordering", selected)
+        self.assertNotIn("Reconcile the CCR bridge VLAN table\t", selected)
+        self.assertNotIn("Reconcile housemate internet access\t", selected)
+
     def test_server_link_policy_matches_the_physical_map(self) -> None:
         bonds = self.switch["crs_cloud_fabric"]["server_bonds"]
         self.assertEqual(
