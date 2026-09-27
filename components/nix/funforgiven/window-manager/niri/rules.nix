@@ -15,7 +15,7 @@ _: {
               app-id = "(?i)^discord$";
             }
           ];
-          open-on-workspace = "discord";
+          open-on-workspace = "chat";
           open-maximized = true;
         }
         {
@@ -31,7 +31,7 @@ _: {
               title = "^Media viewer$";
             }
           ];
-          open-on-workspace = "telegram";
+          open-on-workspace = "chat";
           open-maximized = true;
         }
         {

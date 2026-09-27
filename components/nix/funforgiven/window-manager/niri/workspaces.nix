@@ -8,12 +8,8 @@ _: {
     in
     {
       programs.niri.settings.workspaces = {
-        "01-discord" = {
-          name = "discord";
-          open-on-output = outputs.secondary.identifier;
-        };
-        "02-telegram" = {
-          name = "telegram";
+        "01-chat" = {
+          name = "chat";
           open-on-output = outputs.portrait.identifier;
         };
         "03-steam" = {

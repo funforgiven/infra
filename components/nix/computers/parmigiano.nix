@@ -86,7 +86,7 @@ in
           scale = 1.5;
           position = {
             x = 0;
-            y = 100;
+            y = 560;
           };
           transform.rotation = 0;
           variableRefreshRate = "on-demand";
@@ -104,9 +104,9 @@ in
           scale = 1.5;
           position = {
             x = 5120;
-            y = -490;
+            y = -115;
           };
-          transform.rotation = 90;
+          transform.rotation = 270;
           variableRefreshRate = "on-demand";
           focusAtStartup = false;
         };
