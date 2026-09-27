@@ -1,0 +1,55 @@
+# Desk presence and the AMOLED saver
+
+Parmigiano uses the Fahrican Loft desk FP300's
+`binary_sensor.0x54ef4410017220eb_presence` through Home Assistant's TLS
+WebSocket API. The `desk-presence.service` user service only reads states;
+it sends no Home Assistant service commands.
+
+- Presence keeps all screens awake, including while reading without input.
+- A clear desk activates Quickshell's existing black overlay. The sensor
+  itself waits 10 seconds before reporting absence.
+- Returning clears the overlay. Keyboard, pointer and touch input also wake
+  it, allowing 30 seconds for the presence sensor to catch up.
+- If HA disconnects or the entity becomes unavailable, the ordinary
+  30-second input-idle timer takes over. A 45-second lease also expires
+  stale presence if the reader crashes. Healthy connections renew the lease
+  every 10 seconds and resynchronize after Quickshell restarts.
+
+The one-second swayidle timeout only listens for input resume; it does not
+blank the display. The 30-second timeout tracks the fallback idle state.
+Niri's cursor still hides after 30 seconds. This is a screensaver, not a
+session lock or a way to unlock a locked session.
+
+## Credential and recovery
+
+The local-only **Parmigiano desk presence** HA user belongs to the built-in
+`system-read-only` group. Its long-lived token and recovery login are SOPS
+encrypted in `secrets/home-assistant-presence.yaml`. Only the token is
+deployed, as user-owned mode `0400`
+`/run/secrets/home-assistant-presence-token`; systemd passes it using
+`LoadCredential`. No plaintext token is embedded in the Nix store or command
+line. The reader requires normal TLS certificate validation.
+
+Apply the NixOS configuration to install both the secret and the user service.
+The service starts with `graphical-session.target` and reconnects after HA or
+network interruptions. After rotating the token, rebuild and restart
+`desk-presence.service` to refresh systemd's credential copy.
+
+```sh
+systemctl --user status desk-presence swayidle
+journalctl --user -u desk-presence -n 30
+qs -c funforgiven-shell ipc call amoled status
+```
+
+For temporary ordinary idle behavior, stop `desk-presence.service`. Its stop
+action clears the presence override. Starting it restores sensor control.
+
+Tests cover occupied reading, absence before the idle timeout, input wake,
+unavailable data, lease expiry, initial state, event updates and reconnect
+cleanup:
+
+```sh
+nix build .#checks.x86_64-linux.desk-presence-reader \
+  .#checks.x86_64-linux.quickshell-qml-interactions \
+  .#checks.x86_64-linux.funforgiven-shell-qml
+```

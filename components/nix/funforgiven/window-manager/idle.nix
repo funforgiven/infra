@@ -14,6 +14,7 @@ in
       idleTimeoutSeconds = 30;
       cursorHideDelayMilliseconds = idleTimeoutSeconds * 1000;
       quickshell = lib.getExe' config.programs.quickshell.package "qs";
+      presencePython = pkgs.python3.withPackages (ps: [ ps.websocket-client ]);
       swayidle = pkgs.swayidle.override {
         systemdSupport = false;
       };
@@ -30,6 +31,20 @@ in
         ];
       activateOverlay = ipc "activate";
       deactivateOverlay = ipc "deactivate";
+      idleTimeouts = [
+        {
+          # Wake on input even when presence blanked the screen before the
+          # fallback timeout. This timeout itself never blanks the screen.
+          timeout = 1;
+          command = "${pkgs.coreutils}/bin/true";
+          resumeCommand = deactivateOverlay;
+        }
+        {
+          timeout = idleTimeoutSeconds;
+          command = activateOverlay;
+          resumeCommand = deactivateOverlay;
+        }
+      ];
     in
     {
       programs.niri.settings.cursor.hide-after-inactive-ms = cursorHideDelayMilliseconds;
@@ -39,13 +54,7 @@ in
         package = swayidle;
         extraArgs = [ "-w" ];
         systemdTargets = [ "graphical-session.target" ];
-        timeouts = [
-          {
-            timeout = idleTimeoutSeconds;
-            command = activateOverlay;
-            resumeCommand = deactivateOverlay;
-          }
-        ];
+        timeouts = idleTimeouts;
       };
 
       assertions = [
@@ -54,15 +63,8 @@ in
           message = "The AMOLED idle daemon must keep swayidle's wait mode enabled.";
         }
         {
-          assertion =
-            config.services.swayidle.timeouts == [
-              {
-                timeout = idleTimeoutSeconds;
-                command = activateOverlay;
-                resumeCommand = deactivateOverlay;
-              }
-            ];
-          message = "The AMOLED idle daemon must have exactly one 30-second activate/deactivate timeout.";
+          assertion = config.services.swayidle.timeouts == idleTimeouts;
+          message = "The AMOLED idle daemon must retain input wake and the 30-second presence failure fallback.";
         }
         {
           assertion =
@@ -74,6 +76,39 @@ in
           message = "The AMOLED idle daemon must not add lock, suspend, or resume event commands.";
         }
       ];
+
+      systemd.user.services.desk-presence = {
+        Unit = {
+          Description = "Fahrican Loft desk presence screen control";
+          After = [ "quickshell.service" ];
+          Wants = [ "quickshell.service" ];
+          PartOf = [ "graphical-session.target" ];
+          Requisite = [ "graphical-session.target" ];
+        };
+        Service = {
+          ExecStart = lib.escapeShellArgs [
+            "${presencePython}/bin/python3"
+            "${./desk-presence/reader.py}"
+            "--url"
+            "wss://home.fahrican.com/api/websocket"
+            "--entity"
+            "binary_sensor.0x54ef4410017220eb_presence"
+            "--quickshell"
+            quickshell
+            "--config"
+            configName
+          ];
+          LoadCredential = [ "ha-token:/run/secrets/home-assistant-presence-token" ];
+          ExecStopPost = "-${ipc "updatePresence"} unknown";
+          Restart = "always";
+          RestartSec = 5;
+          NoNewPrivileges = true;
+          RestrictSUIDSGID = true;
+          UMask = "0077";
+          Slice = "background-graphical.slice";
+        };
+        Install.WantedBy = [ "graphical-session.target" ];
+      };
 
       systemd.user.services.swayidle = {
         Unit = {

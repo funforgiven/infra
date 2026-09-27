@@ -34,6 +34,16 @@
     in
     {
       checks = lib.mkIf (system == hostModel.system) {
+        desk-presence-reader =
+          pkgs.runCommandLocal "desk-presence-reader-tests"
+            {
+              nativeBuildInputs = [ (pkgs.python3.withPackages (ps: [ ps.websocket-client ])) ];
+            }
+            ''
+              export PYTHONDONTWRITEBYTECODE=1
+              python -m unittest discover -s ${../funforgiven/window-manager/desk-presence} -v
+              touch "$out"
+            '';
         quickshell-theme-contrast =
           pkgs.runCommandLocal "quickshell-theme-contrast"
             {

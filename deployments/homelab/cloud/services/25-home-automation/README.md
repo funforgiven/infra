@@ -394,6 +394,37 @@ HA validates, saves and reloads it; the live automation and room assignments
 are included in application backups. This file is not a Kubernetes resource
 and needs no pod restart.
 
+### Loft desk FP300
+
+The second FP300, `0x54ef4410017220eb`, is **Fahrican Loft desk sensor** in
+the Fahrican Loft area. Its Zigbee2MQTT name and HA entity IDs remain based
+on the IEEE address. The Home, Climate and Loft dashboard views show its
+temperature and humidity; the Loft view also shows desk presence.
+
+For a seat less than one metre away, the device uses low sensitivity,
+`presence_detection_options: both`, adaptive sensitivity off, and radar
+range `63` (the six 0.25 m bands from 0 to 1.5 m). The absence delay is
+10 seconds and the PIR interval is 5 seconds. Both PIR and radar remain
+enabled so someone sitting still can keep the display awake. Use the
+combined `presence` entity for the desktop; PIR clearing alone does not
+mean the desk is empty.
+
+Climate sampling is `custom`, once every 60 seconds. Temperature reports
+on a 0.3 °C change or every 600 seconds; humidity reports on a 2 percentage
+point change or every 600 seconds. Both reporting modes are
+`threshold and interval`. These values were read back from the device
+after configuration on September 27. The device's climate readings are
+not calibrated against a reference instrument.
+
+Parmigiano's [presence reader](../../../../../components/nix/funforgiven/window-manager/desk-presence/README.md)
+connects over the existing HA HTTPS endpoint using a dedicated local-only,
+read-only account. It controls the PC's AMOLED saver, not the loft lights.
+The sensor configuration and HA device/area registry are included in the
+normal application backups; the desktop service and encrypted credential
+are recoverable from this repository.
+
+### Bathroom FP300
+
 The Fahrican Bathroom FP300 (`0x54ef441001724e3e`, model PS-S04D) controls the
 SONOFF relay `switch.0xe456acfffe5cd047`. The relay was previously mislabeled
 as Fahrican Bedroom; its entity ID and Zigbee2MQTT friendly name stay stable.

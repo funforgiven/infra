@@ -24,6 +24,10 @@ let
   };
   consumerSecretNames = builtins.attrNames apiTokenKeys ++ [ "github-ssh-key" ];
   runtimeSecretSpecs = {
+    home-assistant-presence-token = {
+      key = "desktop_presence/token";
+      sopsFile = ../../../secrets/home-assistant-presence.yaml;
+    };
     homelab-routeros-ccr2004-login-password = {
       key = "routeros/ccr2004_login_password";
       sopsFile = routerosSecretsFile;
