@@ -10,6 +10,8 @@
     dendritic.input.physicalXkbLayout = "tr";
 
     nixos.modules.funforgiven-input = {
+      hardware.keyboard.qmk.enable = true;
+
       services = {
         libinput.enable = true;
         xserver.xkb.layout = config.dendritic.input.physicalXkbLayout;
