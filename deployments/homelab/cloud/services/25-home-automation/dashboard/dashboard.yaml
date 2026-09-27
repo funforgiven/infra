@@ -51,10 +51,9 @@ views:
     cards:
     - type: custom:mushroom-template-card
       primary: Fahrican Loft
-      secondary: 6th floor · {{ (states('sensor.0x54ef4410017220eb_temperature') | float | round(1) | string) +
-        ' °C' if has_value('sensor.0x54ef4410017220eb_temperature') else 'Temperature unavailable' }} · {{ (states('sensor.0x54ef4410017220eb_humidity')
-        | float | round(0) | int | string) + '%' if has_value('sensor.0x54ef4410017220eb_humidity') else 'Humidity
-        unavailable' }}
+      secondary: 6th floor · {{ 'At desk' if is_state('binary_sensor.0x54ef4410017220eb_presence', 'on') else 'Desk
+        clear' if is_state('binary_sensor.0x54ef4410017220eb_presence', 'off') else 'Desk presence unavailable'
+        }}
       icon: mdi:sofa-outline
       color: rgb(135, 156, 242)
       tap_action:
@@ -98,6 +97,22 @@ views:
       alignment: start
       chips:
       - type: template
+        icon: mdi:thermometer
+        content: '{{ (states(entity) | float | round(1) | string) + '' °C'' if is_number(states(entity)) else ''Unavailable''
+          }}'
+        icon_color: indigo
+        tap_action:
+          action: more-info
+        entity: sensor.0x54ef4410017220eb_temperature
+      - type: template
+        icon: mdi:water-percent
+        content: '{{ (states(entity) | float | round | string) + ''%'' if is_number(states(entity)) else ''Unavailable''
+          }}'
+        icon_color: indigo
+        tap_action:
+          action: more-info
+        entity: sensor.0x54ef4410017220eb_humidity
+      - type: template
         icon: mdi:air-conditioner
         content: '{{ (states(entity) | replace(''_'', '' '') | capitalize) + ('' · '' + (state_attr(entity, ''temperature'')
           | string) + ''°'' if is_number(state_attr(entity, ''temperature'')) else '''') if has_value(entity) else
@@ -126,7 +141,9 @@ views:
     cards:
     - type: custom:mushroom-template-card
       primary: Fahrican Bedroom
-      secondary: 6th floor
+      secondary: 6th floor · {{ 'Occupied' if is_state('binary_sensor.0x54ef44100172614d_presence', 'on') or is_state('binary_sensor.0x54ef44100172614d_pir_detection',
+        'on') else 'Clear' if is_state('binary_sensor.0x54ef44100172614d_presence', 'off') and is_state('binary_sensor.0x54ef44100172614d_pir_detection',
+        'off') else 'Presence unavailable' }}
       icon: mdi:bed-king-outline
       color: rgb(183, 147, 218)
       tap_action:
@@ -169,6 +186,22 @@ views:
     - type: custom:mushroom-chips-card
       alignment: start
       chips:
+      - type: template
+        icon: mdi:thermometer
+        content: '{{ (states(entity) | float | round(1) | string) + '' °C'' if is_number(states(entity)) else ''Unavailable''
+          }}'
+        icon_color: purple
+        tap_action:
+          action: more-info
+        entity: sensor.0x54ef44100172614d_temperature
+      - type: template
+        icon: mdi:water-percent
+        content: '{{ (states(entity) | float | round | string) + ''%'' if is_number(states(entity)) else ''Unavailable''
+          }}'
+        icon_color: purple
+        tap_action:
+          action: more-info
+        entity: sensor.0x54ef44100172614d_humidity
       - type: template
         icon: mdi:palette-outline
         content: Color & warmth
@@ -776,6 +809,63 @@ views:
   - type: grid
     cards:
     - type: custom:mushroom-title-card
+      title: Fahrican Bedroom
+      grid_options:
+        columns: 12
+        rows: auto
+      subtitle: 6th floor
+    - type: custom:mushroom-template-card
+      primary: Temperature
+      secondary: '{{ (states(entity) | float | round(1) | string) + '' °C'' if is_number(states(entity)) else ''Unavailable''
+        }}'
+      icon: mdi:thermometer
+      color: purple
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: sensor.0x54ef44100172614d_temperature
+    - type: custom:mushroom-template-card
+      primary: Humidity
+      secondary: '{{ (states(entity) | float | round(1) | string) + '' %'' if is_number(states(entity)) else ''Unavailable''
+        }}'
+      icon: mdi:water-percent
+      color: purple
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: sensor.0x54ef44100172614d_humidity
+    - type: history-graph
+      title: Bedroom · last 12 hours
+      hours_to_show: 12
+      entities:
+      - entity: sensor.0x54ef44100172614d_temperature
+        name: Temperature
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+    - type: history-graph
+      title: Bedroom · last 12 hours
+      hours_to_show: 12
+      entities:
+      - entity: sensor.0x54ef44100172614d_humidity
+        name: Humidity
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+    column_span: 1
+  - type: grid
+    cards:
+    - type: custom:mushroom-title-card
       title: Fahrican Bathroom
       grid_options:
         columns: 12
@@ -844,6 +934,9 @@ views:
       show_forecast: true
       card_mod:
         style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      grid_options:
+        columns: 12
+        rows: auto
     - type: custom:mushroom-template-card
       primary: AC cooling today
       secondary: '{{ (states(entity) | float | round(1) | string) + '' kWh'' if is_number(states(entity)) else ''Unavailable''
@@ -876,7 +969,7 @@ views:
       card_mod:
         style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
       entity: sensor.daikinap90808_climatecontrol_cooling_monthly_electrical_consumption
-    column_span: 1
+    column_span: 3
   header:
     card:
       type: markdown
@@ -1170,8 +1263,8 @@ views:
     cards:
     - type: custom:mushroom-template-card
       primary: Desk presence
-      secondary: '{{ ''At desk · screen awake'' if is_state(entity, ''on'') else ''Desk clear'' if is_state(entity,
-        ''off'') else ''Unavailable'' }}'
+      secondary: '{{ ''At desk'' if is_state(entity, ''on'') else ''Desk clear'' if is_state(entity, ''off'') else
+        ''Unavailable'' }}'
       icon: mdi:desk
       color: '{{ ''indigo'' if is_state(entity, ''on'') else ''disabled'' }}'
       entity: binary_sensor.0x54ef4410017220eb_presence
@@ -1182,6 +1275,24 @@ views:
         rows: auto
       card_mod:
         style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); }'
+      icon_tap_action:
+        action: more-info
+    - type: custom:mushroom-template-card
+      primary: Desk motion
+      secondary: '{{ ''Motion detected'' if is_state(entity, ''on'') else ''Clear'' if is_state(entity, ''off'')
+        else ''Unavailable'' }}'
+      icon: mdi:motion-sensor
+      color: indigo
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: binary_sensor.0x54ef4410017220eb_pir_detection
     - type: custom:mushroom-template-card
       primary: Temperature
       secondary: '{{ (states(entity) | float | round(1) | string) + '' °C'' if is_number(states(entity)) else ''Unavailable''
@@ -1214,6 +1325,18 @@ views:
       card_mod:
         style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
       entity: sensor.0x54ef4410017220eb_humidity
+    - type: history-graph
+      title: Desk presence · last 3 hours
+      hours_to_show: 3
+      entities:
+      - entity: binary_sensor.0x54ef4410017220eb_presence
+        name: Presence
+      - entity: binary_sensor.0x54ef4410017220eb_pir_detection
+        name: Motion
+      - entity: light.0x001788011015148f
+        name: Light
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
     - type: custom:mushroom-template-card
       primary: Dimmer control
       secondary: '{{ states(entity) | replace(''_'', '' '') | capitalize }}'
@@ -1276,9 +1399,85 @@ views:
         style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color); background:
           linear-gradient(125deg, rgba(183, 147, 218, .13), rgba(183, 147, 218, .035)), var(--ha-card-background);
           padding: 4px; }'
+    - type: custom:mushroom-template-card
+      primary: Presence
+      secondary: '{{ ''Occupied'' if is_state(entity, ''on'') else ''Clear'' if is_state(entity, ''off'') else ''Unavailable''
+        }}'
+      icon: mdi:human
+      color: purple
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: binary_sensor.0x54ef44100172614d_presence
+    - type: custom:mushroom-template-card
+      primary: Motion
+      secondary: '{{ ''Motion detected'' if is_state(entity, ''on'') else ''Clear'' if is_state(entity, ''off'')
+        else ''Unavailable'' }}'
+      icon: mdi:motion-sensor
+      color: purple
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: binary_sensor.0x54ef44100172614d_pir_detection
     column_span: 1
   - type: grid
     cards:
+    - type: custom:mushroom-template-card
+      primary: Temperature
+      secondary: '{{ (states(entity) | float | round(1) | string) + '' °C'' if is_number(states(entity)) else ''Unavailable''
+        }}'
+      icon: mdi:thermometer
+      color: purple
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: sensor.0x54ef44100172614d_temperature
+    - type: custom:mushroom-template-card
+      primary: Humidity
+      secondary: '{{ (states(entity) | float | round(1) | string) + '' %'' if is_number(states(entity)) else ''Unavailable''
+        }}'
+      icon: mdi:water-percent
+      color: purple
+      tap_action:
+        action: more-info
+      icon_tap_action:
+        action: more-info
+      grid_options:
+        columns: 12
+        rows: auto
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
+      entity: sensor.0x54ef44100172614d_humidity
+    - type: history-graph
+      title: Bedroom · last 3 hours
+      hours_to_show: 3
+      entities:
+      - entity: binary_sensor.0x54ef44100172614d_presence
+        name: Presence
+      - entity: binary_sensor.0x54ef44100172614d_pir_detection
+        name: Motion
+      - entity: light.0x0017880110151bb9
+        name: Light
+      card_mod:
+        style: 'ha-card { border-radius: 24px; box-shadow: none; border: 1px solid var(--divider-color);  }'
     - type: custom:mushroom-template-card
       primary: Dimmer control
       secondary: '{{ states(entity) | replace(''_'', '' '') | capitalize }}'

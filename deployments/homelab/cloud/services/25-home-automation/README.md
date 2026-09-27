@@ -423,6 +423,26 @@ The sensor configuration and HA device/area registry are included in the
 normal application backups; the desktop service and encrypted credential
 are recoverable from this repository.
 
+### Bedroom FP300
+
+The third FP300, `0x54ef44100172614d`, is **Fahrican Bedroom presence sensor**
+in the Fahrican Bedroom area. The owner confirmed that its existing placement
+detects the bedroom reliably without covering adjacent rooms. Keep its working
+detection settings: medium sensitivity, both PIR and radar, adaptive sensitivity
+on, radar range `16777215`, absence delay 10 seconds, and PIR interval 30 seconds.
+No spatial learning, reset or sensitivity change was applied during assignment.
+Climate reporting matches the loft desk profile: custom sampling every 60 seconds,
+reporting every 600 seconds or after a 0.3 °C / 2 percentage point change.
+The sleepy device accepted these writes after waking; all eight climate settings
+and the seven unchanged detection settings were verified through HA on September 27.
+
+Both new FP300s now have temperature/humidity chips and an occupancy status on
+Home, presence and motion cards plus a three-hour presence/motion/light history
+in their room views, and twelve-hour temperature/humidity histories in Climate.
+The loft occupancy label specifically describes the desk, matching its limited
+detection range. Dashboard status does not assert that the PC is awake; actual
+desktop status is available from the presence reader's Quickshell IPC.
+
 ### Bathroom FP300
 
 The Fahrican Bathroom FP300 (`0x54ef441001724e3e`, model PS-S04D) controls the
