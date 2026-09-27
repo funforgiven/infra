@@ -74,6 +74,53 @@ class NetworkInventoryTests(unittest.TestCase):
         self.assertTrue(all(len(bond["members"]) == 2 for bond in bonds))
         self.assertEqual(len(ports), len(set(ports)))
 
+    def test_ccr_migration_preserves_trunks_and_separates_housemate_ports(self) -> None:
+        lan = self.router["routeros_lan"]
+        housemate = self.router["routeros_housemate"]
+        vlans = {row["id"]: row for row in lan["bridge_vlans"]}
+        self.assertEqual(["ether2", "ether15"], lan["trunk_ports"])
+        self.assertEqual(["ether3", "ether4"], housemate["ports"])
+        self.assertEqual(70, housemate["vlan_id"])
+        self.assertEqual("10.21.70.0/24", housemate["network"])
+        self.assertEqual([lan["bridge"]], vlans[70]["tagged"])
+        self.assertEqual(housemate["ports"], vlans[70]["untagged"])
+        for vlan_id, row in vlans.items():
+            self.assertFalse(set(row["tagged"]) & set(row["untagged"]))
+            self.assertFalse({"ether1", "ether8"} & set(row["tagged"] + row["untagged"]))
+            if vlan_id == 70:
+                continue
+            self.assertFalse(set(housemate["ports"]) & set(row["tagged"] + row["untagged"]))
+            membership = row["untagged"] if vlan_id == 1 else row["tagged"]
+            self.assertTrue(set(lan["trunk_ports"]) <= set(membership))
+            # Keep the already connected legacy hybrid port exactly as observed.
+            self.assertEqual(vlan_id != 40, "ether16" in membership)
+        provider = self.router["routeros_provider_network"]
+        self.assertEqual(
+            [provider["bridge"], *lan["trunk_ports"]],
+            vlans[provider["vlan_id"]]["tagged"],
+        )
+
+    def test_lan_port_tag_preserves_preflight_and_limits_writes(self) -> None:
+        def selected_tasks(*arguments: str) -> str:
+            return subprocess.run(
+                ["ansible-playbook", "--list-tasks", "--limit", "core_router",
+                 *arguments, "reconcile-routeros.yaml"],
+                cwd=PLAYBOOK.parent, check=True, capture_output=True, text=True,
+            ).stdout
+
+        readonly = selected_tasks()
+        selected = selected_tasks("--tags", "lan-ports")
+        mutation = "Reconcile housemate routing and DHCP before enabling access ports"
+        self.assertNotIn(mutation, readonly)
+        self.assertIn("Read the CCR LAN ports and VLANs", readonly)
+        self.assertIn(mutation, selected)
+        self.assertLess(selected.index("Read the CCR LAN ports and VLANs"), selected.index(mutation))
+        self.assertLess(selected.index(mutation), selected.index("Reconcile the housemate access ports"))
+        self.assertIn("Prove every CCR bridge VLAN membership", selected)
+        self.assertIn("Prove housemate routing and DHCP", selected)
+        self.assertNotIn("Reconcile the external provider network\t", selected)
+        self.assertNotIn("Reconcile Git-owned WAN port forwards\t", selected)
+
     def test_server_link_policy_matches_the_physical_map(self) -> None:
         bonds = self.switch["crs_cloud_fabric"]["server_bonds"]
         self.assertEqual(

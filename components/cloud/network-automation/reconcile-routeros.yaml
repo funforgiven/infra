@@ -429,7 +429,8 @@
           - routeros_provider_network.interface | length > 0
           - routeros_provider_network.vlan_id | int > 0
           - routeros_provider_network.bridge | length > 0
-          - routeros_provider_network.trunk | length > 0
+          - routeros_lan.trunk_ports | length > 0
+          - routeros_provider_network.bridge == routeros_lan.bridge
           - routeros_provider_network.address | length > 0
           - routeros_provider_network.network | length > 0
           - routeros_provider_network.nat_address_list | length > 0
@@ -593,10 +594,6 @@
             name="{{ routeros_provider_network.bridge }}" and disabled=no and
             vlan-filtering=yes]] != 1) do={
             :error "provider prerequisite: active VLAN-aware bridge missing" };
-            :if ([:len [/interface ethernet find where
-            default-name="{{ routeros_provider_network.trunk }}" and
-            disabled=no]] != 1) do={
-            :error "provider prerequisite: trunk interface missing" };
             :if ([:len [/interface vlan find where
             name="{{ routeros_provider_network.trusted_interface }}" and
             disabled=no]] != 1) do={
@@ -788,6 +785,9 @@
         var: ccr_preflight.stdout_lines
       tags: [always]
 
+    - name: Reconcile the CCR2004 LAN ports and housemate network
+      ansible.builtin.import_tasks: tasks/reconcile-routeros-lan.yaml
+
     - name: Reconcile the WireGuard admin boundary
       ansible.builtin.import_tasks: tasks/reconcile-routeros-wireguard.yaml
 
@@ -810,19 +810,6 @@
             comment="infra: {{ routeros_provider_network.name }}"
             disabled=no interface={{ routeros_provider_network.bridge }}
             vlan-id={{ routeros_provider_network.vlan_id }} };
-            :set row [/interface bridge vlan find where
-            bridge="{{ routeros_provider_network.bridge }}" and
-            vlan-ids={{ routeros_provider_network.vlan_id }}];
-            :if ([:len $row] = 0) do={
-            /interface bridge vlan add
-            bridge={{ routeros_provider_network.bridge }}
-            comment="infra: {{ routeros_provider_network.name }}"
-            tagged="{{ routeros_provider_network.bridge }},{{ routeros_provider_network.trunk }}"
-            untagged="" vlan-ids={{ routeros_provider_network.vlan_id }} } else={
-            /interface bridge vlan set $row
-            comment="infra: {{ routeros_provider_network.name }}"
-            tagged="{{ routeros_provider_network.bridge }},{{ routeros_provider_network.trunk }}"
-            untagged="" };
             :set row [/ip address find where
             comment="infra: {{ routeros_provider_network.name }} gateway"];
             :if ([:len $row] = 0) do={
@@ -1150,7 +1137,8 @@
             vlan-ids={{ routeros_provider_network.vlan_id }}];
             :if ([:len $row] != 1 or
             [:tostr [/interface bridge vlan get $row tagged]] !=
-            "{{ routeros_provider_network.bridge }};{{ routeros_provider_network.trunk }}" or
+            "{{ ([routeros_provider_network.bridge] +
+            routeros_lan.trunk_ports) | join(';') }}" or
             [:tostr [/interface bridge vlan get $row untagged]] != "") do={
             :error "provider postflight: invalid bridge VLAN" };
             :if ([:len [/ip address find where

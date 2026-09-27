@@ -101,6 +101,46 @@ all:
           ansible_host: 10.21.10.1
           routeros_login_password_file: >-
             /run/secrets/homelab-routeros-ccr2004-login-password
+          routeros_lan:
+            bridge: bridge-lan
+            # Move the Omada uplink from ether15 to ether2 when ready.
+            trunk_ports: [ether2, ether15]
+            bridge_vlans:
+              - id: 1
+                tagged: []
+                untagged: [bridge-lan, ether2, ether15, ether16]
+              - id: 10
+                tagged: [bridge-lan, ether2, ether15, ether16]
+                untagged: []
+              - id: 20
+                tagged: [bridge-lan, ether2, ether15, ether16]
+                untagged: []
+              - id: 40
+                tagged: [bridge-lan, ether2, ether15]
+                untagged: []
+              - id: 50
+                tagged: [bridge-lan, ether2, ether15, ether16]
+                untagged: []
+              - id: 60
+                tagged: [bridge-lan, ether2, ether15, ether16]
+                untagged: []
+              - id: 90
+                tagged: [bridge-lan, ether2, ether15, ether16]
+                untagged: []
+              - id: 70
+                tagged: [bridge-lan]
+                untagged: [ether3, ether4]
+          routeros_housemate:
+            vlan_id: 70
+            interface: vlan70-housemate
+            ports: [ether3, ether4]
+            address: 10.21.70.1/24
+            network: 10.21.70.0/24
+            gateway: 10.21.70.1
+            dhcp_server: dhcp-housemate
+            pool: pool-housemate
+            pool_range: 10.21.70.100-10.21.70.199
+            lease_time: 1d
           routeros_management_dhcp:
             name: dhcp-management
             interface: vlan90-mgmt
@@ -162,7 +202,6 @@ all:
             interface: vlan40-external
             vlan_id: 40
             bridge: bridge-lan
-            trunk: ether15
             address: 10.21.40.1/24
             network: 10.21.40.0/24
             nat_address_list: INFRA-LAN-NAT

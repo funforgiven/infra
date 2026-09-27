@@ -200,6 +200,26 @@ class RouterOSTerminalTransportTests(unittest.TestCase):
         self.assertEqual("2.21.2", ansible_release.__version__)
         self.assertEqual(declared, actual)
 
+    def test_lan_scripts_reject_errors_and_terminal_echo_as_success(self) -> None:
+        from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.parsing import (
+            Conditional,
+        )
+
+        tasks = yaml.safe_load(
+            (AUTOMATION_ROOT / "tasks/reconcile-routeros-lan.yaml").read_text()
+        )
+        for task in tasks:
+            module = task.get("community.routeros.command")
+            if not module or len(module["commands"]) != 1:
+                continue
+            with self.subTest(task=task["name"]):
+                self.assertEqual(1, module["retries"])
+                condition = Conditional(module["wait_for"][0])
+                command = module["commands"][0]
+                for response in (command, command + "\nhousemate gateway missing"):
+                    self.assertFalse(condition([response]))
+                self.assertTrue(condition([command + "\n__infra_lan_ok__"]))
+
 
 if __name__ == "__main__":
     unittest.main()
