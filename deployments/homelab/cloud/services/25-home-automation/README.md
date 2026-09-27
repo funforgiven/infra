@@ -417,13 +417,18 @@ the Fahrican Loft area. Its Zigbee2MQTT name and HA entity IDs remain based
 on the IEEE address. The Home, Climate and Loft dashboard views show its
 temperature and humidity; the Loft view also shows desk presence.
 
-For a seat less than one metre away, the device uses low sensitivity,
+For a seat less than one metre away, the device uses medium sensitivity,
 `presence_detection_options: both`, adaptive sensitivity off, and radar
 range `63` (the six 0.25 m bands from 0 to 1.5 m). The absence delay is
-10 seconds and the PIR interval is 5 seconds. Both PIR and radar remain
+30 seconds and the PIR interval is 5 seconds. Both PIR and radar remain
 enabled so someone sitting still can keep the display awake. Use the
 combined `presence` entity for the desktop; PIR clearing alone does not
 mean the desk is empty.
+
+Medium sensitivity and the 30-second sensor delay replace the initial
+low/10-second profile after brief false absence reports while seated.
+The desktop follows reported presence directly; the sensor owns the
+absence confirmation delay.
 
 Climate sampling is `custom`, once every 60 seconds. Temperature reports
 on a 0.3 °C change or every 600 seconds; humidity reports on a 2 percentage
