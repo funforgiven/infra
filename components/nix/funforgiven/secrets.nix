@@ -24,6 +24,10 @@ let
   };
   consumerSecretNames = builtins.attrNames apiTokenKeys ++ [ "github-ssh-key" ];
   runtimeSecretSpecs = {
+    home-assistant-midi-webhooks = {
+      key = "home_midi/webhooks";
+      sopsFile = ../../../secrets/home-assistant-midi.yaml;
+    };
     home-assistant-presence-token = {
       key = "desktop_presence/token";
       sopsFile = ../../../secrets/home-assistant-presence.yaml;

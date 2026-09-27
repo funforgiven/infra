@@ -172,6 +172,22 @@ with 30 seconds of refresh suppression after a command. This schedules about
 quota is exposed by the integration; scheduled polls are not the entire API
 request budget. Onecta requires internet and Daikin cloud availability.
 
+## RØDECaster MIDI controls
+
+The PC's [home MIDI listener](../../../../../components/nix/home-midi/README.md)
+maps channel 16 CC 106 to the loft bulb toggle and CC 107 to the Daikin's
+vertical Comfort Airflow (`windnice`) / Swing toggle. The two local-only POST
+webhook automations are recovered from `rodecaster-midi-automations.yaml` using
+`install-rodecaster-midi.py`; it inserts the private IDs from the SOPS file
+`secrets/home-assistant-midi.yaml` and verifies HA API readback.
+
+The bulb changes instantly. The AC action only calls `climate.set_swing_mode`;
+it uses the existing Onecta cloud connection and command quota, with no polling
+change. If the device is unavailable or does not expose both modes, the
+automation does not issue a command. The initial Stop position selects Comfort
+Airflow on the first press. Both automations and their traces remain in HA's
+normal backed-up state.
+
 ## Radio inventory
 
 | Role | Omada PoE port | Reserved IPv4 | Ethernet MAC | mDNS name |

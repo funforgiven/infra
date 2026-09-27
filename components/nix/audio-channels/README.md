@@ -171,6 +171,11 @@ MIDI under **Settings → System → MIDI**, then configure four SMART pads as
 | Voice | 104 | Voice Chat |
 | Music | 105 | Music |
 
+Two additional [home-control pads](../home-midi/README.md) use the same channel:
+CC **106** toggles the Fahrican Loft light, and CC **107** alternates the loft
+Daikin's vertical Comfort Airflow and Swing modes. They run through a separate
+listener and do not need a focused application or active audio.
+
 These controls are separate from the Duo's default fader and button MIDI
 messages. See RØDE's [MIDI trigger instructions](https://help.rode.com/hc/en-us/articles/8565481010063-MIDI-Triggers-for-R%C3%98DECaster-Pro-II-Duo)
 for editing a pad. The service opens only the Duo's named MIDI input, reconnects
