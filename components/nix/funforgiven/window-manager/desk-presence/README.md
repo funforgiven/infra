@@ -32,14 +32,18 @@ deployed, as user-owned mode `0400`
 line. The reader requires normal TLS certificate validation.
 
 Apply the NixOS configuration to install both the secret and the user service.
-The service starts with `graphical-session.target` and reconnects after HA or
-network interruptions. After rotating the token, rebuild and restart
-`desk-presence.service` to refresh systemd's credential copy.
+The service starts after `graphical-session.target` and Quickshell, and
+reconnects after HA or network interruptions. The explicit session ordering
+prevents a startup cycle that otherwise causes systemd to skip the reader at
+login and leave the screen saver using its 30-second idle fallback. After
+rotating the token, rebuild and restart `desk-presence.service` to refresh
+systemd's credential copy.
 
 ```sh
 systemctl --user status desk-presence swayidle
 journalctl --user -u desk-presence -n 30
 qs -c funforgiven-shell ipc call amoled status
+systemd-analyze --user verify --man=no ~/.config/systemd/user/desk-presence.service
 ```
 
 For temporary ordinary idle behavior, stop `desk-presence.service`. Its stop
