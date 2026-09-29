@@ -80,7 +80,13 @@ in
       systemd.user.services.desk-presence = {
         Unit = {
           Description = "Fahrican Loft desk presence screen control";
-          After = [ "quickshell.service" ];
+          # This target also wants the reader. Ordering explicitly after it
+          # prevents its default ordering from putting us before the session,
+          # while Quickshell and our graphical slice must start after it.
+          After = [
+            "graphical-session.target"
+            "quickshell.service"
+          ];
           Wants = [ "quickshell.service" ];
           PartOf = [ "graphical-session.target" ];
           Requisite = [ "graphical-session.target" ];
