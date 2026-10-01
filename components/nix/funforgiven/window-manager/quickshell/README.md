@@ -103,10 +103,10 @@ remaining DankMaterialShell process, unit, startup entry, or environment hook.
 
 ### Idle overlay and session lifecycle
 
-The loft desk FP300 now controls the overlay through the
-[desk presence reader](../desk-presence/README.md). Presence keeps the screen
-awake without keyboard or mouse activity; the 30-second idle timeout is the
-fallback when presence data is unavailable.
+The overlay activates after two minutes of input inactivity and clears on
+keyboard, pointer or touch input. The
+[desk presence reader](../desk-presence/README.md) is disabled in the Nix
+configuration after repeated occupied reports from an empty desk.
 
 1. Exercise the black overlay on every output, over fullscreen content, after
    hotplug, and with variable refresh enabled.
