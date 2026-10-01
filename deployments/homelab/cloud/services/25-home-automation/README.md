@@ -418,27 +418,30 @@ false, then read the settings back through `/get`. These battery devices may
 need a single short button press before accepting queued configuration writes.
 
 All three use both PIR and radar, fixed sensitivity with adaptive sensitivity
-and AI interference-source identification off, and LED suppression from
-21:00 to 09:00. Temperature, humidity and light use the built-in `low` sampling
-presets, which also manage reporting. The recovery profiles omit custom
-sampling periods, reporting intervals and thresholds; values still displayed
-in those custom controls do not describe the active Low preset. Temperature
+off, and LED suppression from 21:00 to 09:00. AI interference-source
+identification is enabled only on the loft desk sensor. Temperature, humidity
+and light use the built-in `low` sampling presets, which also manage reporting.
+The recovery profiles omit custom sampling periods, reporting intervals and
+thresholds; values still displayed in those custom controls do not describe
+the active Low preset. Temperature
 and humidity have no reference-instrument calibration. See the
 [FP300 device documentation](https://www.zigbee2mqtt.io/devices/PS-S04D.html).
 
 | Setting | Loft desk | Bathroom | Bedroom |
 | --- | --- | --- | --- |
-| Sensitivity | High | High | High |
+| Sensitivity | Medium | High | High |
+| AI interference identification | On | Off | Off |
 | Sensor absence delay | 30 s | 30 s | 30 s |
 | PIR interval | 30 s | 30 s | 30 s |
 | Radar range | 0–2 m (`255`) | 0–6 m (`16777215`) | 0–6 m (`16777215`) |
 | Temperature/humidity sampling and reporting | Low preset | Low preset | Low preset |
 | Light sampling and reporting | Low preset | Low preset | Low preset |
 
-The sensor owns the absence delay. The desktop follows reported desk presence
-directly, and the bathroom automation adds no further countdown. The bedroom
-has no presence-driven light automation. The 30-second PIR interval allows
-less frequent PIR detection than the earlier 2-second setting; it is not a
+The sensor owns the absence delay, and the bathroom automation adds no further
+countdown. Desktop presence control is disabled; the PC uses a two-minute
+input-idle screen saver. The bedroom has no presence-driven light automation.
+The 30-second PIR interval allows less frequent PIR detection than the earlier
+2-second setting; it is not a
 guaranteed entry-to-light latency, and battery savings are not quantified.
 
 After final placement and range setup, run `spatial_learning: Start Learning`
@@ -461,22 +464,26 @@ the Fahrican Loft area. Its Zigbee2MQTT name and HA entity IDs remain based
 on the IEEE address. The Home, Climate and Loft dashboard views show its
 temperature and humidity; the Loft view also shows desk presence.
 
-For a seat less than one metre away, the device uses high sensitivity,
+For a seat less than one metre away, the device uses medium sensitivity,
 `presence_detection_options: both`, adaptive sensitivity off, and radar
 range `255` (the eight 0.25 m bands from 0 to 2 m). The absence delay is
 30 seconds and the PIR interval is 30 seconds. Both PIR and radar remain
-enabled so someone sitting still can keep the display awake. Use the
-combined `presence` entity for the desktop; PIR clearing alone does not
-mean the desk is empty.
+enabled for presence reporting in Home Assistant. PIR clearing alone does
+not mean the desk is empty.
 
-The desktop follows reported presence directly; the sensor owns the
-absence confirmation delay.
+On September 30, AI interference-source identification was requested on this
+sensor after the owner reported presence persisting while away from the desk.
+Readback on October 2 confirmed it is on, with Medium sensitivity and adaptive
+sensitivity off. The owner still reported occupied state while away for an
+hour. Desktop presence control was therefore disabled in the Nix configuration
+and on the running desktop; the screen saver now follows 120 seconds of input
+inactivity. The sensor remains available for presence and climate reporting.
 
 Temperature, humidity and light use the shared Low presets above.
 
-Parmigiano's [presence reader](../../../../../components/nix/funforgiven/window-manager/desk-presence/README.md)
-connects over the existing HA HTTPS endpoint using a dedicated local-only,
-read-only account. It controls the PC's AMOLED saver, not the loft lights.
+Parmigiano's optional [presence reader](../../../../../components/nix/funforgiven/window-manager/desk-presence/README.md)
+uses the existing HA HTTPS endpoint with a dedicated local-only, read-only
+account. It is currently disabled.
 The sensor configuration and HA device/area registry are included in the
 normal application backups; the desktop service and encrypted credential
 are recoverable from this repository.
