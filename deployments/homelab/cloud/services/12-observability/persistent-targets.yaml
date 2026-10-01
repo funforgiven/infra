@@ -8,7 +8,14 @@ spec:
     - name: persistent-targets
       rules:
         - alert: TargetDown
-          expr: 100 * (count(up{job!="forge-windows-host"} == 0) by (cluster, job, namespace, service) / count(up{job!="forge-windows-host"}) by (cluster, job, namespace, service)) > 10
+          # UniFi AP telemetry has a single dedicated alert covering scrape
+          # failures and missing device metrics; keep node exporter coverage.
+          expr: >-
+            100 * (count by (cluster, job, namespace, service) (
+              (up{job!="forge-windows-host"} unless up{namespace="unifi",endpoint="ap-metrics"}) == 0
+            ) / count by (cluster, job, namespace, service) (
+              up{job!="forge-windows-host"} unless up{namespace="unifi",endpoint="ap-metrics"}
+            )) > 10
           for: 10m
           labels:
             severity: warning
@@ -16,3 +23,106 @@ spec:
             summary: One or more targets are unreachable.
             description: '{{ printf "%.4g" $value }}% of the {{ $labels.job }}/{{ $labels.service }} targets in {{ $labels.namespace }} namespace are down.'
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/general/targetdown
+    - name: services-job-health
+      rules:
+        # Failed pod attempts are not terminal Job failures. Keep one series
+        # per CronJob and resolve retained failure history on a newer success.
+        - record: services_cronjob_last_failed_start_timestamp_seconds
+          expr: >-
+            max by (namespace, cronjob) (
+              label_replace(
+                (kube_job_status_start_time
+                 and on (namespace, job_name) (kube_job_failed{condition="true"} == 1))
+                * on (namespace, job_name) group_left (owner_name)
+                max by (namespace, job_name, owner_name) (kube_job_owner{owner_kind="CronJob"}),
+                "cronjob", "$1", "owner_name", "(.+)"
+              )
+            )
+        - record: services_cronjob_unrecovered_failure
+          expr: >-
+            (
+              (services_cronjob_last_failed_start_timestamp_seconds
+               > on (namespace, cronjob)
+               max by (namespace, cronjob) (kube_cronjob_status_last_successful_time))
+              or
+              (services_cronjob_last_failed_start_timestamp_seconds
+               unless on (namespace, cronjob)
+               max by (namespace, cronjob) (kube_cronjob_status_last_successful_time))
+            )
+            and on (namespace, cronjob)
+            (max by (namespace, cronjob) (kube_cronjob_spec_suspend) == 0)
+        - alert: KubeJobFailed
+          expr: >-
+            services_cronjob_unrecovered_failure
+            unless services_cronjob_unrecovered_failure{namespace="backup-qualification",
+              cronjob=~"restore-qualification|forge-restore-qualification"}
+            unless services_cronjob_unrecovered_failure{namespace=~"forge|forge-ci|forge-control",
+              cronjob=~"forge-snapshot-backup|forge-linux-qualification|forge-linux-atollion-launcher|forge-(windows|macos)-qualification"}
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: Scheduled job has not recovered.
+            description: 'CronJob {{ $labels.namespace }}/{{ $labels.cronjob }} has no successful completion since its latest failed run.'
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+        - alert: KubeJobFailed
+          expr: >-
+            max by (namespace, job_name) (kube_job_failed{condition="true"} == 1)
+            unless on (namespace, job_name) kube_job_owner{owner_kind="CronJob"}
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: Job failed to complete.
+            description: 'Job {{ $labels.namespace }}/{{ $labels.job_name }} failed to complete. Inspect its logs before removing it.'
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+    - name: services-statefulset-updates
+      rules:
+        - alert: KubePodNotReady
+          # The isolated Forgejo verifier normally waits ~1h for offsite data.
+          # Its qualification Job enforces the restore deadline and alerts.
+          expr: >-
+            (sum by (namespace, pod, job, cluster) (
+              max by (namespace, pod, job, cluster) (
+                kube_pod_status_phase{job="kube-state-metrics",phase=~"Pending|Unknown"}
+                or (kube_pod_status_phase{job="kube-state-metrics",phase="Running"} == 1
+                    and on (namespace, pod, cluster)
+                    kube_pod_status_ready{condition="true",job="kube-state-metrics"} == 0)
+              ) * on (namespace, pod, cluster) group_left ()
+              topk by (namespace, pod, cluster) (1,
+                max by (namespace, pod, owner_kind, cluster) (kube_pod_owner{owner_kind!="Job"}))
+            ) > 0
+            unless on (namespace, pod, cluster)
+            kube_pod_status_reason{job="kube-state-metrics",reason="SchedulingGated"} == 1)
+            unless on (namespace, pod)
+            kube_pod_info{namespace="forge-restore",pod="forgejo-0"}
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: Pod has been in a non-ready state for more than 15 minutes.
+            description: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in a non-ready state for longer than 15 minutes.'
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubepodnotready
+        - alert: KubeStatefulSetUpdateNotRolledOut
+          # Forgejo explicitly uses OnDelete to preserve active Git and CI
+          # sessions; a pending template is not a stalled automatic rollout.
+          expr: >-
+            (
+              (max by (namespace, statefulset, job, cluster) (
+                kube_statefulset_status_current_revision{job="kube-state-metrics"}
+                unless kube_statefulset_status_update_revision{job="kube-state-metrics"}
+              ) * on (namespace, statefulset, job, cluster) (
+                kube_statefulset_replicas{job="kube-state-metrics"}
+                != kube_statefulset_status_replicas_updated{job="kube-state-metrics"}
+              ))
+              and on (namespace, statefulset, job, cluster)
+              (changes(kube_statefulset_status_replicas_updated{job="kube-state-metrics"}[5m]) == 0)
+            ) unless on (namespace, statefulset)
+            kube_statefulset_replicas{namespace="forge",statefulset="forgejo"}
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: StatefulSet update has not been rolled out.
+            description: 'StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} update has not been rolled out.'
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubestatefulsetupdatenotrolledout

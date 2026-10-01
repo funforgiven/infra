@@ -230,6 +230,28 @@ subjects:
   name: forge-restore-qualification
   namespace: backup-qualification
 ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: forge-restore-volume-cleanup
+rules:
+- apiGroups: ['']
+  resources: [persistentvolumes]
+  verbs: [get, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: forge-restore-volume-cleanup
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: forge-restore-volume-cleanup
+subjects:
+- kind: ServiceAccount
+  name: forge-restore-qualification
+  namespace: backup-qualification
+---
 apiVersion: batch/v1
 kind: CronJob
 metadata:

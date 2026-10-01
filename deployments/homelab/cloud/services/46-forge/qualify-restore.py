@@ -9,6 +9,7 @@ import ssl
 import time
 import urllib.error
 import urllib.request
+from restore_cleanup import cleanup
 
 credentials = Path("/var/run/secrets/kubernetes.io/serviceaccount")
 context = ssl.create_default_context(cafile=str(credentials / "ca.crt"))
@@ -18,7 +19,7 @@ base = "https://kubernetes.default.svc"
 def api(method, path, body=None, missing_ok=False):
     request = urllib.request.Request(base + path, method=method,
         headers={"Authorization": "Bearer " + (credentials / "token").read_text(),
-                 "Content-Type": "application/json"},
+                 "Content-Type": "application/json-patch+json" if method == "PATCH" else "application/json"},
         data=json.dumps(body).encode() if body is not None else None)
     try:
         with urllib.request.urlopen(request, context=context, timeout=30) as response:
@@ -48,13 +49,9 @@ if (datetime.datetime.now(datetime.UTC) - completed).total_seconds() > 93600:
     raise RuntimeError("Selected backup is older than 26 hours")
 
 target = "/api/v1/namespaces/forge-restore/"
-for resource in ["pods/forgejo-0", "persistentvolumeclaims/forgejo-data", "persistentvolumeclaims/forgejo-backups"]:
-    api("DELETE", target + resource, {"propagationPolicy": "Foreground"}, missing_ok=True)
-    deadline = time.monotonic() + 300
-    while api("GET", target + resource, missing_ok=True):
-        if time.monotonic() > deadline:
-            raise TimeoutError("Previous qualification volume or pod is still terminating")
-        time.sleep(5)
+
+
+cleanup(api)
 
 name = "forge-qualification-" + datetime.datetime.now(datetime.UTC).strftime("%Y%m%d%H%M%S")
 api("POST", velero + "/restores", {
@@ -85,3 +82,8 @@ while time.monotonic() < deadline:
     time.sleep(10)
 else:
     raise TimeoutError("Offsite restore or data verification did not finish within four hours")
+
+# Preserve failed restores for investigation; successful checks need only the
+# controller log and Velero Restore record, not months of scratch storage.
+cleanup(api)
+print("Disposable restore pod and volumes removed.", flush=True)

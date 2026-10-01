@@ -29,6 +29,21 @@ builds the Alertmanager values and token Secret from SOPS-encrypted inputs; do
 not put either value in this directory or reuse the bot token for another
 service.
 
+Failed CronJobs alert once per schedule and resolve when a newer run succeeds;
+retained failed Jobs are still available for diagnosis. Dedicated restore and
+Forgejo controller alerts replace the generic Job notification for those same
+incidents. UniFi's AP rule covers both scrape failure and missing AP telemetry,
+so its AP target is excluded from the generic `TargetDown` rule. Node metrics
+remain covered. Forgejo deliberately uses `OnDelete` updates and is excluded
+from the automatic StatefulSet rollout alert; availability alerts remain active.
+The isolated `forge-restore/forgejo-0` verifier is excluded from the generic
+15-minute readiness alert because its normal offsite transfer takes about an
+hour; its qualification deadline and failure/staleness alerts remain active.
+
+The retired `services-hosts`/`services_restic_last_success_unixtime` alert pair
+is removed. UniFi's offsite backup and native runner recovery sources are
+monitored by their service-specific rules.
+
 ## Check the stack
 
 Run these commands with the services-cluster kubeconfig:

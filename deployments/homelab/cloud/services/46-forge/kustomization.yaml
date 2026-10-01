@@ -68,6 +68,7 @@ configMapGenerator:
   namespace: backup-qualification
   files:
   - qualify-restore.py
+  - restore_cleanup.py
 - name: forge-native-configuration
   namespace: forge-control
   files:

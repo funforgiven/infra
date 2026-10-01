@@ -17,19 +17,5 @@ spec:
             severity: critical
           annotations:
             summary: "Synthetic probe failed for {{ $labels.instance }}"
-        - alert: ServicesHostExporterDown
-          expr: up{job="services-hosts"} == 0
-          for: 10m
-          labels:
-            severity: critical
-          annotations:
-            summary: "Host metrics are unavailable for {{ $labels.instance }}"
-        - alert: ServicesHostBackupStale
-          expr: >-
-            (time() - services_restic_last_success_unixtime) > (26 * 3600)
-            or absent(services_restic_last_success_unixtime)
-          for: 1h
-          labels:
-            severity: critical
-          annotations:
-            summary: A standalone service host has no successful Restic backup within 26 hours.
+        # Legacy NixOS service hosts are retired. UniFi and native Forgejo
+        # hosts have their own exporters and backup rules in their service waves.

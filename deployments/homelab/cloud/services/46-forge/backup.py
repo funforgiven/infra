@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Recovery metrics and a non-disruptive Velero freshness gate."""
 
+from contextlib import closing
 import datetime
 import json
 import os
@@ -33,7 +34,9 @@ class Metrics(BaseHTTPRequestHandler):
             # Forgejo 15 does not export Actions queue metrics. Read only
             # aggregate job state; never expose workflow contents or identities.
             try:
-                with sqlite3.connect((data / database).as_uri() + "?mode=ro", uri=True, timeout=2) as db:
+                # sqlite3's transaction context does not close the connection.
+                # Release its page cache and file descriptors on every scrape.
+                with closing(sqlite3.connect((data / database).as_uri() + "?mode=ro", uri=True, timeout=2)) as db:
                     counts = dict(db.execute("SELECT status, COUNT(*) FROM action_run_job GROUP BY status"))
                     oldest = db.execute("SELECT COALESCE(MIN(updated), 0) FROM action_run_job WHERE status = 5").fetchone()[0]
                     native = dict(db.execute("SELECT j.name, MAX(j.stopped) FROM action_run_job j "

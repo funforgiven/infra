@@ -86,18 +86,19 @@ spec:
         summary: Storage snapshot controller is unavailable
         description: Online Forgejo backups require this controller; existing offsite restores remain independent of it.
     - alert: ForgejoBackupStale
-      expr: (time() - forge_backup_completed_timestamp_seconds{service="forgejo"} >
-        28800) or absent(forge_backup_completed_timestamp_seconds{service="forgejo"})
+      expr: (time() - max(forge_backup_completed_timestamp_seconds{namespace="forge",service="forgejo"}) >
+        28800) or max(absent(forge_backup_completed_timestamp_seconds{namespace="forge",service="forgejo"}))
       for: 15m
+      keep_firing_for: 5m
       labels:
         severity: critical
+        namespace: forge
       annotations:
         summary: forgejo recovery archive is overdue
         description: No successful local recovery archive in eight hours; inspect
           the snapshot/export controller and backup metrics before relying on Velero.
     - alert: ForgejoRestoreQualificationFailed
-      expr: (kube_job_status_failed{namespace="backup-qualification"} > 0) and
-        on(namespace, job_name) kube_job_owner{namespace="backup-qualification",owner_kind="CronJob",owner_name="forge-restore-qualification"}
+      expr: services_cronjob_unrecovered_failure{namespace="backup-qualification",cronjob="forge-restore-qualification"}
       for: 15m
       labels:
         severity: critical
