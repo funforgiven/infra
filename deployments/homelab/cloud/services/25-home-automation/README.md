@@ -345,15 +345,19 @@ retain their original registry IDs. Both the Matter lock and MQTT activity
 device belong to Fahrican Loft, at the external door. The SONOFF `d047` relay
 and Aqara FP300 `4e3e` presence sensor belong to Fahrican Bathroom.
 
-`hue-dimmer-automations.yaml` contains four HA automation recovery copies.
+`hue-dimmer-automations.yaml` contains five HA automation recovery copies.
 Install each mapping with `POST /api/config/automation/config/<id>`. The power
 button's `on_press` event toggles the paired bulb's current HA state. Brightness
 up/down press and hold events apply steps of 25 percentage points, with zero
-transition. Release events and the unassigned Hue button are ignored. Each
+transition. Release events and unassigned Hue buttons are ignored. Each
 room's dimmer automation has an ordered action queue; unavailable bulbs are
 skipped. The two Fahrican Bedroom dimmers share the same automation and queue,
 so either remote acts on the bulb's current state. The bedside dimmer is named
 `Fahrican Bedroom bedside dimmer` and assigned to `fahrican_bedroom` in HA.
+Its Hue button (`off_press`) has a separate automation that toggles the
+Fahrican Loft light `light.0x001788011015148f` with zero transition. Its power
+and brightness buttons continue to control the bedroom bulb. Hold and release
+events on the Hue button do not add toggles.
 MQTT trigger payloads explicitly use UTF-8 decoding. All five Hue bulbs use
 `hue_native_control: true` and `transition: 0`. `hue-device-options.yaml`
 contains recovery payloads: publish each mapping to
