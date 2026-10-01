@@ -1,6 +1,7 @@
 # Recovery copies: install each mapping through HA's automation config API.
 # Remove dimmer-to-bulb bindings before enabling. Keep coordinator bindings.
-# The Hue button remains available for a future scene assignment.
+# The bedside dimmer's Hue button toggles the loft light; other Hue buttons
+# remain available for future assignments.
 - &hue_dimmer
   id: hue_dimmer_a389_fahrican_loft
   alias: Fahrican Loft dimmer
@@ -79,3 +80,28 @@
     encoding: utf-8
   variables:
     light_entity: light.0x001788010c0179eb
+- id: hue_dimmer_c45f_bedside_loft_toggle
+  alias: Fahrican Bedroom bedside Hue button
+  description: >-
+    The bedside dimmer's Hue button toggles the loft light instantly.
+    Only the initial press is handled so release and hold events do not
+    toggle it again.
+  triggers:
+  - trigger: mqtt
+    topic: zigbee2mqtt/0x001788010edcc45f/action
+    payload: off_press
+    encoding: utf-8
+  conditions:
+  - condition: template
+    value_template: "{{ states('light.0x001788011015148f') in ['on', 'off'] }}"
+  actions:
+  - action: light.toggle
+    target:
+      entity_id: light.0x001788011015148f
+    data:
+      transition: 0
+  mode: queued
+  max: 20
+  initial_state: true
+  trace:
+    stored_traces: 10
