@@ -274,8 +274,8 @@ in
     {
       assertions = [
         {
-          assertion = lib.getVersion pkgs.quickshell == "0.3.0";
-          message = "This shell requires Quickshell 0.3.0.";
+          assertion = lib.getVersion config.programs.quickshell.package == "0.3.1";
+          message = "This shell requires Quickshell 0.3.1.";
         }
         {
           assertion = !config.services.mako.enable;

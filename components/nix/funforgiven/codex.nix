@@ -10,38 +10,10 @@ _: {
         ...
       }:
       let
-        codexVersion = "0.153.3";
         python = pkgs.python312;
-        codexPackage = pkgs.codex.overrideAttrs (
-          finalAttrs: _: {
-            version = codexVersion;
-            src = pkgs.fetchFromGitHub {
-              owner = "openai";
-              repo = "codex";
-              tag = "rust-v${finalAttrs.version}";
-              hash = "sha256-JujjJx9GHcTgirqEFr9tc4Ghzx65YNOqpNCc7rtthfI=";
-            };
-            cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
-              inherit (finalAttrs)
-                pname
-                version
-                src
-                sourceRoot
-                ;
-              hash = "sha256-GG6kOXmCdq+bZLU2ul0DIVL8lDuweayvZvXn6+bcUZw=";
-            };
-          }
-        );
         terraformMcpServer = pkgs.terraform-mcp-server;
       in
       {
-        assertions = [
-          {
-            assertion = codexPackage.version == codexVersion;
-            message = "The Codex package must provide the pinned ${codexVersion} release.";
-          }
-        ];
-
         home.packages = [
           pkgs.awscli2
           pkgs.fd
@@ -54,7 +26,7 @@ _: {
 
         programs.codex = {
           enable = true;
-          package = codexPackage;
+          package = pkgs.codex;
 
           settings = {
             model = "gpt-6-astra";
