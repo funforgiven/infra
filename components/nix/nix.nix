@@ -15,6 +15,7 @@
         trusted-users = [
           "@wheel"
         ];
+        nix-path = [ "nixpkgs=${inputs.nixpkgs}" ];
         warn-dirty = false;
       };
 
@@ -30,7 +31,6 @@
       };
 
       registry.nixpkgs.flake = inputs.nixpkgs;
-      nixPath = [ "nixpkgs=${inputs.nixpkgs}" ];
     };
   };
 }

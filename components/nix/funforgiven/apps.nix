@@ -1,6 +1,7 @@
 _: {
   dendritic.nixpkgs.allowUnfreePackages = [
     "discord"
+    "discord-unwrapped"
     "r2modman"
     "unrar"
   ];
