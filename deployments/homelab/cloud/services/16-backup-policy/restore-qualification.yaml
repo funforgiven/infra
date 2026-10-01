@@ -225,7 +225,7 @@ data:
     set -eu
 
     kubectl=/tmp/kubectl
-    curl -fsSL -o "$kubectl" \
+    curl --retry 3 -fsSL -o "$kubectl" \
       https://dl.k8s.io/release/v1.36.2/bin/linux/amd64/kubectl
     printf '%s  %s\n' \
       1e9045ec32bea85da43de85f0065358529ea7c7a152eca78154fba5b58c27d82 \
@@ -234,8 +234,16 @@ data:
 
     backup="$($kubectl -n velero get backups.velero.io \
       -l velero.io/schedule-name=services-daily \
-      --sort-by=.metadata.creationTimestamp \
-      -o jsonpath='{.items[-1:].metadata.name}')"
+      -o json | python3 -c '
+    import datetime, json, sys
+    now = datetime.datetime.now(datetime.UTC)
+    eligible = [b for b in json.load(sys.stdin)["items"]
+                if b.get("status", {}).get("phase") == "Completed"
+                and 0 <= (now - datetime.datetime.fromisoformat(
+                    b["status"]["completionTimestamp"])).total_seconds() < 93600]
+    if eligible:
+        print(max(eligible, key=lambda b: b["metadata"]["creationTimestamp"])["metadata"]["name"])
+    ')"
     case "$backup" in
       services-daily-[a-z0-9-]*) ;;
       *)
@@ -256,7 +264,7 @@ data:
     done
 
     suffix="${backup#services-daily-}"
-    restore="qualification-$suffix"
+    restore="qualification-$suffix-$(date -u +%Y%m%d%H%M%S)"
     sed "s/BACKUP_NAME/$backup/; s/RESTORE_NAME/$restore/" \
       /config/restore.yaml | "$kubectl" create -f -
 
@@ -266,7 +274,7 @@ data:
         -o jsonpath='{.status.phase}' 2>/dev/null || true)"
       case "$phase" in
         Completed) break ;;
-        Failed|PartiallyFailed)
+        Failed|PartiallyFailed|FailedValidation)
           echo "Restore qualification entered phase $phase." >&2
           exit 1
           ;;
@@ -332,7 +340,8 @@ metadata:
   name: restore-qualification
   namespace: backup-qualification
 spec:
-  schedule: "0 5 1 * *"
+  # Daily Velero starts at 05:30 Istanbul; qualify after it can complete.
+  schedule: "0 7 1 * *"
   timeZone: Europe/Istanbul
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 3600
@@ -405,8 +414,8 @@ spec:
       rules:
         - alert: ServicesRestoreQualificationFailed
           expr: >-
-            kube_job_status_failed{namespace="backup-qualification",
-            job_name=~"restore-qualification-.*"} > 0
+            services_cronjob_unrecovered_failure{namespace="backup-qualification",
+            cronjob="restore-qualification"}
           for: 15m
           labels:
             severity: critical

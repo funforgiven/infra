@@ -225,7 +225,14 @@ a local copy alone is not an offsite recovery qualification.
 
 The monthly `backup-qualification/forge-restore-qualification` CronJob restores
 the latest completed daily backup into fresh `forge-restore` volumes. Its
-service account can delete only the two test PVCs and the test pod. Calico
+service account can delete only the two test PVCs and the test pod. It also has
+PV get/patch permission for cleanup: the code checks the restore label, scratch
+StorageClass, namespace and claim UID, then uses conditional JSON Patch before
+releasing a volume. Velero restores the source PV's `Retain` policy even when
+the scratch class specifies `Delete`, so the policy must be corrected after
+verification. Successful drills remove their pod and both disposable volumes;
+failed drills remain for diagnosis. Completion is not reported until cleanup
+finishes, and controller logs plus the Velero Restore retain the evidence. Calico
 denies all ingress and egress in that namespace. Restore modifiers remove
 production bootstrap and replace application containers with verification
 processes; no duplicate Forgejo or OAuth callback runs during the test. The

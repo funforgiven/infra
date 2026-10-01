@@ -10,7 +10,7 @@ covers the `backup-qualification`, `finance`, `forge`, `games`, `home-automation
 | --- | --- | --- | --- |
 | `services-daily` | 02:30 UTC every day (`30 2 * * *`) | 720 hours (30 days) | Daily application backup |
 | `services-weekly` | 03:15 UTC every Sunday (`15 3 * * 0`) | 2160 hours (90 days) | Weekly application backup |
-| `restore-qualification` | `0 5 1 * *`, `Europe/Istanbul` | Latest restored namespace remains until the next run | Monthly B2 restore test |
+| `restore-qualification` | `0 7 1 * *`, `Europe/Istanbul` | Latest restored namespace remains until the next run | Monthly B2 restore test |
 
 The Velero controller runs the backup schedules in UTC.
 
@@ -63,9 +63,10 @@ named save before the filesystem copy begins. Valheim's hook briefly stops the
 game, archives the entire 1.0 world directory with a checksum, and resumes play
 before the filesystem copy. Its archive is the coordinated recovery source.
 
-On the first day of each month, the restore job selects the newest
-`services-daily` backup. It fails if that backup is not `Completed`; it does not
-fall back to an older backup. The job then:
+At 07:00 Istanbul on the first day of each month, after the 05:30 daily backup,
+the restore job selects the newest `Completed` `services-daily` backup whose
+completion is less than 26 hours old. It fails if none qualifies. Unique restore
+names let an on-demand retry validate the same backup again. The job then:
 
 1. deletes only `backup-qualification-restore` and waits for it to disappear;
 2. deletes `games-restore` through the same narrow resource-name permission;

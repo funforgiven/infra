@@ -116,7 +116,7 @@ ConditionPathExists=/var/lib/unifi-poller/environment
 [Service]
 Restart=on-failure
 RestartSec=15
-ExecStart=/usr/bin/podman run --rm --name unifi-poller --network host --user 65534:65534 --cap-drop ALL --read-only --security-opt no-new-privileges --env-file /var/lib/unifi-poller/environment --env UP_INFLUXDB_DISABLE=true --env UP_PROMETHEUS_NAMESPACE=unifi --env UP_UNIFI_DEFAULT_URL=https://127.0.0.1:11443 --env UP_UNIFI_DEFAULT_VERIFY_SSL=false --env UP_UNIFI_DEFAULT_SAVE_DPI=false --env UP_UNIFI_DEFAULT_HASH_PII=true --env UP_PROMETHEUS_HTTP_LISTEN=0.0.0.0:9130 ghcr.io/unpoller/unpoller:v2.21.0@sha256:a08b532be181256318211b6170691e316d29ac04575bc54d59620189953f03aa
+ExecStart=/usr/bin/podman run --rm --replace --name unifi-poller --network host --user 65534:65534 --cap-drop ALL --read-only --security-opt no-new-privileges --env-file /var/lib/unifi-poller/environment --env UP_INFLUXDB_DISABLE=true --env UP_PROMETHEUS_NAMESPACE=unifi --env UP_UNIFI_DEFAULT_URL=https://127.0.0.1:11443 --env UP_UNIFI_DEFAULT_VERIFY_SSL=false --env UP_UNIFI_DEFAULT_SAVE_DPI=false --env UP_UNIFI_DEFAULT_HASH_PII=true --env UP_PROMETHEUS_HTTP_LISTEN=0.0.0.0:9130 ghcr.io/unpoller/unpoller:v2.21.0@sha256:a08b532be181256318211b6170691e316d29ac04575bc54d59620189953f03aa
 ExecStop=/usr/bin/podman stop --time 20 unifi-poller
 TimeoutStartSec=180
 TimeoutStopSec=30

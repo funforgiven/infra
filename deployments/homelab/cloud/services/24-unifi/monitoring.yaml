@@ -70,12 +70,13 @@ spec:
             description: Check unifi-renew-tls.timer and its service; never disable backend certificate verification.
         - alert: UniFiAPMetricsMissing
           expr: >-
-            up{namespace="unifi",endpoint="ap-metrics"} == 0
+            max(up{namespace="unifi",endpoint="ap-metrics"} == 0
             or absent(up{namespace="unifi",endpoint="ap-metrics"})
-            or absent(unifi_device_uptime_seconds{type="uap"})
+            or absent(unifi_device_uptime_seconds{namespace="unifi",type="uap"}))
           for: 10m
           labels:
             severity: warning
+            namespace: unifi
           annotations:
             summary: UniFi AP telemetry is missing
             description: Check the local read-only UnPoller account and AP adoption; exporter HTTP health alone is insufficient.
