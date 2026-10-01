@@ -11,8 +11,10 @@ in
       ...
     }:
     let
-      idleTimeoutSeconds = 30;
-      cursorHideDelayMilliseconds = idleTimeoutSeconds * 1000;
+      idleTimeoutSeconds = 120;
+      cursorHideDelayMilliseconds = 30000;
+      # Disabled after repeated occupied reports from an empty desk.
+      deskPresenceEnabled = false;
       quickshell = lib.getExe' config.programs.quickshell.package "qs";
       presencePython = pkgs.python3.withPackages (ps: [ ps.websocket-client ]);
       swayidle = pkgs.swayidle.override {
@@ -64,7 +66,7 @@ in
         }
         {
           assertion = config.services.swayidle.timeouts == idleTimeouts;
-          message = "The AMOLED idle daemon must retain input wake and the 30-second presence failure fallback.";
+          message = "The AMOLED idle daemon must retain input wake and the two-minute inactivity timeout.";
         }
         {
           assertion =
@@ -77,7 +79,7 @@ in
         }
       ];
 
-      systemd.user.services.desk-presence = {
+      systemd.user.services.desk-presence = lib.mkIf deskPresenceEnabled {
         Unit = {
           Description = "Fahrican Loft desk presence screen control";
           # This target also wants the reader. Ordering explicitly after it
