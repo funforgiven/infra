@@ -8,7 +8,6 @@ spec:
   # identity. Temporary AWS bootstrap credentials are not deployed.
   suspend: false
   interval: 10m
-  timeout: 30m
   retryInterval: 1m
   approvePlan: auto
   destroyResourcesOnDeletion: false
