@@ -21,6 +21,8 @@ _: {
         after = [
           "network-online.target"
           "stalwart.service"
+          # ACME reconciliation waits for the local management listener.
+          "stalwart-acme-reconcile.service"
         ];
         wants = [ "network-online.target" ];
         serviceConfig = {
