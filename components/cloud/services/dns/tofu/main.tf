@@ -48,6 +48,7 @@ locals {
     "cache",
     "git",
     "home",
+    "mail-admin",
     "music",
     "upload",
     "unifi",

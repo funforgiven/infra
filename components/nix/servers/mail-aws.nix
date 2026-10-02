@@ -304,7 +304,7 @@ _: {
                 "admin-account":{
                   "@type":"User","name":"admin","domainId":"#primary-domain",
                   "description":"System administrator","roles":{"@type":"Admin"},
-                  "credentials":password($admin)
+                  "credentials":(password($admin) | ."0".allowedIps = {"127.0.0.1/32":true,"::1/128":true})
                 },
                 "primary-mailbox":{
                   "@type":"User","name":"fahrican","domainId":"#primary-domain",
@@ -314,7 +314,14 @@ _: {
               }},
               {"@type":"reconcile","object":"NetworkListener","matchOn":["name"],"value":{
                 "smtp":{"name":"smtp","protocol":"smtp","bind":{"[::]:25":true},"useTls":true,"tlsImplicit":false},
-                "https":{"name":"https","protocol":"http","bind":{"[::]:443":true},"useTls":true,"tlsImplicit":true}
+                "https":{"name":"https","protocol":"http","bind":{"[::]:443":true},"useTls":true,"tlsImplicit":true},
+                "management":{"name":"management","protocol":"http","bind":{"127.0.0.1:8081":true},"useTls":false}
+              }},
+              {"@type":"update","object":"Http","value":{
+                "enableHsts":true,"useXForwarded":false,"redirectRoot":"/.well-known/jmap",
+                "allowedEndpoints":{"match":{"0":{
+                  "if":"listener != \u0027management\u0027 && contains([\u0027admin\u0027, \u0027account\u0027, \u0027api\u0027], split(url_path, \u0027/\u0027)[1])",
+                  "then":"404"}},"else":"200"}
               }}
             ' | ${cliPackage}/bin/stalwart-cli apply --stdin --json --quiet >/dev/null
 
@@ -343,7 +350,7 @@ _: {
         runtimeInputs = [ pkgs.jq ];
         text = ''
           set -euo pipefail
-          export STALWART_URL=https://127.0.0.1:443
+          export STALWART_URL=http://127.0.0.1:8081
           export STALWART_USER=admin@fahrican.com
           STALWART_PASSWORD="$(< ${runtimeDirectory}/admin-password)"
           export STALWART_PASSWORD
@@ -375,7 +382,7 @@ _: {
         ];
         text = ''
           set -euo pipefail
-          export STALWART_URL=https://127.0.0.1:443
+          export STALWART_URL=http://127.0.0.1:8081
           export STALWART_USER=admin@fahrican.com
           STALWART_PASSWORD="$(< ${runtimeDirectory}/admin-password)"
           export STALWART_PASSWORD

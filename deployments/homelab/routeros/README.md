@@ -140,6 +140,15 @@ uses `10.21.91.1` for private DNS. The stable `10.21.40.122` services Gateway
 fronts every personal service hostname, so publishing another application on
 that Gateway does not require another WireGuard route or firewall rule.
 
+The mail administration backend is an isolated peer on the same WireGuard
+interface at `10.21.91.3/32`. Only the services router's `10.21.40.154/32` source
+may reach its port 8080; Envoy admits end users to that route only from the admin
+VPN. Early input and forward drops prevent the mail peer from initiating any
+router or homelab connection, while established replies continue normally. Its
+preshared key is in `secrets/mail-vpn.yaml`, exposed by sops-nix at the declared
+runtime path. The private mail route uses the existing services Gateway and does
+not change administrator client routes.
+
 ## Current reconciliation
 
 Enter the repository shell and validate the standard Ansible/YAML/Python

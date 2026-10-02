@@ -14,6 +14,27 @@ SPEC.loader.exec_module(ops)
 
 
 class MailOperationsTest(unittest.TestCase):
+    def test_admin_policy_scopes_password_api_keys_and_app_passwords_without_replacing_them(self):
+        account = {"id": "admin", "roles": {"@type": "Admin"}, "credentials": {
+            "0": {"@type": "Password", "otpAuth": "existing MFA", "secret": "existing hash"},
+            "2": {"@type": "ApiKey", "secret": "existing key"},
+            "5": {"@type": "AppPassword", "secret": "existing app password"}}}
+        plans = ops.admin_credential_policy([account, {
+            "id": "user", "roles": {"@type": "User"}, "credentials": {"0": {}}}])
+        self.assertEqual(len(plans), 1)
+        self.assertEqual(plans[0]["id"], "admin")
+        self.assertEqual(set(plans[0]["value"]), {
+            "credentials/0/allowedIps", "credentials/2/allowedIps", "credentials/5/allowedIps"})
+        for allowed in plans[0]["value"].values():
+            self.assertEqual(allowed, {"127.0.0.1/32": True, "::1/128": True})
+        self.assertNotIn("existing", json.dumps(plans))
+        self.assertEqual(account["credentials"]["0"]["otpAuth"], "existing MFA")
+
+    def test_admin_policy_refuses_to_silently_skip_missing_administrators(self):
+        for accounts in ([], [{"id": "admin", "roles": {"@type": "Admin"}}]):
+            with self.subTest(accounts=accounts), self.assertRaises(ops.OperationError):
+                ops.admin_credential_policy(accounts)
+
     def jmap_canary(self, role="inbox", raw=None):
         message = email.message.EmailMessage()
         message["Subject"] = "mail-readiness-token"

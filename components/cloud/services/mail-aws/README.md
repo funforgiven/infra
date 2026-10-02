@@ -219,8 +219,8 @@ Gmail inbox with its attachment.
 | JMAP discovery / session | `https://mail.fahrican.com/.well-known/jmap` |
 | JMAP API | `https://mail.fahrican.com/jmap/` (use the discovered `apiUrl`) |
 | Sending | JMAP `EmailSubmission/set` over HTTPS |
-| Account web interface | `https://mail.fahrican.com/account` |
-| Administration | `https://mail.fahrican.com/admin` |
+| Account web interface (VPN) | `https://mail-admin.fahrican.com/account` |
+| Administration (VPN) | `https://mail-admin.fahrican.com/admin` |
 
 Clients discover upload, download, and push URLs from the authenticated JMAP
 session. They need no IMAP or SMTP client settings. Use the mailbox credential
@@ -228,3 +228,46 @@ session. They need no IMAP or SMTP client settings. Use the mailbox credential
 
 The mailbox and administrator credentials remain in their existing AWS Secrets
 Manager containers; do not place them in Git, tickets, or command arguments.
+
+
+## Private administration
+
+Connect the existing `wg-admin` VPN before opening the administration or account
+interface. `mail-admin.fahrican.com` resolves to the existing private services
+Gateway, `10.21.40.122`; its Envoy authorization policy permits only
+`10.21.91.0/24`. Existing split-tunnel client routes already cover this address.
+Even the trusted LAN is denied when it is not using the VPN. Public JMAP and
+SMTP continue to use `mail.fahrican.com` without the VPN.
+
+The Gateway terminates HTTPS using its DNS-validated certificate and reaches the
+mail instance through WireGuard. The mail backend peer is `10.21.91.3/32` and
+accepts only the services router's `10.21.40.154/32` source on port 8080. That
+port is bound to the tunnel address and permitted only on the tunnel interface;
+AWS still admits only public TCP 25 and 443. Router rules forbid this backend
+peer from initiating connections to either the router or other homelab services.
+The WAN endpoint, peer public keys, and backend source address are declared in
+`deployments/homelab/cloud/mail-admin-vpn.json`; update both deployment and
+RouterOS inventory if those network assignments change.
+
+The private proxy reaches Stalwart on loopback port 8081. Only discovery responses
+have their public origin rewritten for the private UI; JMAP data responses and
+mail content are forwarded unchanged. Public `/admin`, `/account`, and `/api`
+paths return 404. Administration shares JMAP with mail, so path restrictions alone
+are insufficient: all credentials on built-in administrator accounts are also
+restricted to loopback IPs, including cached Basic and OAuth authentication.
+The reconciler updates credential IP restrictions without replacing passwords,
+MFA enrollment, or existing app/API keys. Any newly created administrator or
+administrator credential must receive the same restriction before use; run
+`systemctl start mail-reconcile` locally after such changes. Public mail users
+keep their normal JMAP access.
+
+Local maintenance uses `http://127.0.0.1:8081` and remains available if the VPN is
+down. AWS Systems Manager is the recovery path for the host. Tunnel private and
+preshared keys are stored in `secrets/mail-vpn.yaml` under SOPS and in the dedicated
+`fahrican/stalwart/vpn` AWS secret, outside Terraform state. To republish the
+credential after restoring its secret container, use the scoped mail provisioning
+environment and stream `sops --decrypt --output-type json secrets/mail-vpn.yaml`
+into `aws --region eu-central-1 secretsmanager put-secret-value --secret-id
+fahrican/stalwart/vpn --secret-string file:///dev/stdin`; discard the returned
+version metadata. The router receives only the preshared key through its sops-nix
+runtime file. Restart `wg-quick-wg-mail` after an intentional key rotation.
