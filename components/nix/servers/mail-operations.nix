@@ -46,7 +46,9 @@ _: {
         wantedBy = [ "timers.target" ];
         timerConfig = {
           OnCalendar = schedule;
-          OnBootSec = delay;
+          # OnBootSec has already elapsed after a first-boot Nix build.
+          # Delay from timer activation so health checks do not race listeners.
+          OnActiveSec = delay;
           Persistent = true;
           RandomizedDelaySec = "30s";
         };
