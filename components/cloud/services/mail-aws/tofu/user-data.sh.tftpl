@@ -46,6 +46,18 @@ source_path="$(
     '
 )"
 
-exec nixos-rebuild switch \
-  --option experimental-features 'nix-command flakes verified-fetches' \
-  --flake "$source_path#mail-aws"
+# Build explicitly with the AMI's Nix CLI. Re-executing the newer
+# nixos-rebuild frontend on this pinned AMI can use unsupported CLI flags.
+# Bound concurrency for the 1 GiB appliance and keep the closure rooted until
+# the system profile owns it.
+echo 'Building the verified mail appliance configuration.'
+system_path="$(
+  nix --extra-experimental-features 'nix-command flakes verified-fetches' build \
+    --max-jobs 1 --cores 1 \
+    --out-link /root/stalwart-bootstrap-system --print-out-paths \
+    "$source_path#nixosConfigurations.mail-aws.config.system.build.toplevel"
+)"
+nix-env --profile /nix/var/nix/profiles/system --set "$system_path"
+rm -f /root/stalwart-bootstrap-system
+echo 'Activating the verified mail appliance configuration.'
+exec "$system_path/bin/switch-to-configuration" switch
