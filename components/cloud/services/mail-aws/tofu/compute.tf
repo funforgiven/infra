@@ -185,7 +185,12 @@ resource "aws_instance" "mail" {
 }
 
 resource "aws_eip" "mail" {
-  domain = "vpc"
+  domain   = "vpc"
+  instance = aws_instance.mail.id
+
+  # Reassociate the retained allocation in place after readiness. A separate
+  # ForceNew association can disassociate the live endpoint during cleanup.
+  depends_on = [terraform_data.mail_ready]
 
   tags = { Name = "stalwart-mail" }
 
@@ -206,14 +211,11 @@ resource "terraform_data" "mail_ready" {
   }
 }
 
-resource "aws_eip_association" "mail" {
-  allocation_id       = aws_eip.mail.id
-  instance_id         = aws_instance.mail.id
-  allow_reassociation = true
-  depends_on          = [terraform_data.mail_ready]
-
+# Transfer association ownership to aws_eip.mail without disassociating it.
+removed {
+  from = aws_eip_association.mail
   lifecycle {
-    create_before_destroy = true
+    destroy = false
   }
 }
 
