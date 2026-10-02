@@ -22,52 +22,18 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: Probe
 metadata:
-  name: mail-smtps-endpoint
+  name: mail-jmap-endpoint
   namespace: services-observability
 spec:
   interval: 60s
   scrapeTimeout: 15s
-  jobName: mail-smtps
-  module: mail_smtps
+  jobName: mail-jmap
+  module: mail_jmap
   prober:
     url: blackbox-exporter.services-observability.svc.cluster.local:9115
   targets:
     staticConfig:
       static:
-        - mail.fahrican.com:465
----
-apiVersion: monitoring.coreos.com/v1
-kind: Probe
-metadata:
-  name: mail-imaps-endpoint
-  namespace: services-observability
-spec:
-  interval: 60s
-  scrapeTimeout: 15s
-  jobName: mail-imaps
-  module: mail_imaps
-  prober:
-    url: blackbox-exporter.services-observability.svc.cluster.local:9115
-  targets:
-    staticConfig:
-      static:
-        - mail.fahrican.com:993
----
-apiVersion: monitoring.coreos.com/v1
-kind: Probe
-metadata:
-  name: mail-submission-endpoint
-  namespace: services-observability
-spec:
-  interval: 60s
-  scrapeTimeout: 15s
-  jobName: mail-submission
-  module: mail_submission
-  prober:
-    url: blackbox-exporter.services-observability.svc.cluster.local:9115
-  targets:
-    staticConfig:
-      static:
-        - mail.fahrican.com:587
-# Inbound port 25 is tested by the AWS mail canary through Resend, which can
-# reach public MX servers. The homelab ISP blocks outbound port 25.
+        - https://mail.fahrican.com/.well-known/jmap
+# Authenticated JMAP and inbound delivery are verified by the AWS mail canary.
+# The homelab ISP blocks outbound port 25.

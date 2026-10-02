@@ -10,7 +10,7 @@ spec:
         - alert: ServicesEndpointDown
           expr: >-
             (probe_success{job="services-http"} == 0)
-            or (probe_success{job=~"mail-(smtps|imaps|submission)"} == 0)
+            or (probe_success{job="mail-jmap"} == 0)
           for: 10m
           labels:
             severity: critical
@@ -18,7 +18,7 @@ spec:
             summary: "Synthetic probe failed for {{ $labels.instance }}"
         - alert: MailCertificateExpiring
           expr: >-
-            probe_ssl_earliest_cert_expiry{job=~"mail-(smtps|imaps|submission)"}
+            probe_ssl_earliest_cert_expiry{job="mail-jmap"}
             - time() < 21 * 86400
           for: 15m
           labels:

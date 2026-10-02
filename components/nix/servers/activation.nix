@@ -214,9 +214,6 @@
                 awsMailConfiguration.networking.firewall.allowedTCPPorts == [
                   25
                   443
-                  465
-                  587
-                  993
                 ]
               then
                 "1"

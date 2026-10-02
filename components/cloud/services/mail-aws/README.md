@@ -62,7 +62,7 @@ After an infrastructure or host change, verify:
 - the S3 read/write probe;
 - all declared CloudWatch alarms;
 - the SNS subscription; and
-- public HTTPS, submission, IMAPS, MX, and TLS hostname behavior.
+- public JMAP discovery, authenticated mail/submission methods, MX, and TLS hostname behavior.
 
 For DNS changes, also verify DKIM, SPF, DMARC, autoconfiguration records, and
 the EIP forward/reverse mapping.
@@ -75,7 +75,8 @@ nix run .#publish-aws-mail-resend
 ```
 
 Wait for `stalwart-resend-reconcile` to converge, then send an independent test
-message through the public MX and confirm it over authenticated IMAPS.
+message through the public MX and confirm it over authenticated JMAP, including
+a downloaded attachment.
 
 ## Recovery
 
@@ -109,8 +110,8 @@ The `mail-operations` command and corresponding systemd services provide:
 
 | Service | Schedule | Success condition |
 | --- | --- | --- |
-| `mail-health` | Every five minutes | Stalwart active, valid IMAPS certificate, SMTP STARTTLS, readable queue |
-| `mail-canary` | Twice per hour | External Resend delivery reaches the public MX and the dedicated IMAP inbox with an intact attachment |
+| `mail-health` | Every five minutes | Stalwart active, valid HTTPS certificate, authenticated JMAP inbox and sending identity, SMTP STARTTLS, readable queue |
+| `mail-canary` | Twice per hour | External Resend delivery reaches the public MX and the dedicated JMAP inbox with an intact attachment |
 | `mail-backup` | Daily, 02:10 UTC | Native mailbox export and database dump validate and upload to encrypted offsite storage |
 | `mail-restore-check` | Sunday, 04:10 UTC | Latest offsite snapshot downloads, hashes match, SQLite integrity passes, PostgreSQL archive is readable |
 
@@ -118,9 +119,9 @@ All four checks also run shortly after boot. Missing success records and missing
 CloudWatch samples alert; a failed command never advances the success timestamp.
 The canary has a separate 100 MiB account and deletes only its verified messages.
 It uses 48 messages per day from the Resend allowance. Failed or junk delivery is
-an alarm condition. Homelab blackbox probes separately check SMTPS, submission
-STARTTLS, and IMAPS with certificate validation. The homelab ISP blocks outbound
-port 25, so public inbound delivery is tested by the external canary.
+an alarm condition. The homelab blackbox probe separately checks JMAP discovery,
+advertised mail and submission capabilities, and the HTTPS certificate. The
+homelab ISP blocks outbound port 25, so public inbound delivery is tested by the external canary.
 
 Backup retention is 14 daily, eight weekly, and 12 monthly snapshots. Weekly
 verification serializes with backups before pruning. B2 lifecycle retention of
@@ -155,9 +156,11 @@ Never run an unreviewed import or `--prune` against the live account.
 
 ## Security and migration boundary
 
-Submission advertises authentication only after TLS. Outbound Resend delivery
-uses implicit TLS on port 465 with certificate validation. The owner mailbox
-receives `postmaster`, `abuse`, `dmarc`, and `tls-reports` aliases. MTA-STS uses
+Clients use JMAP over HTTPS for both reading and sending. IMAP and SMTP client
+submission listeners are disabled; both firewalls permit only inbound SMTP
+(port 25) and HTTPS (port 443). Incoming server-to-server SMTP supports STARTTLS
+and does not advertise AUTH. Outbound Resend delivery still uses implicit TLS
+on port 465 with certificate validation. The owner mailbox receives `postmaster`, `abuse`, `dmarc`, and `tls-reports` aliases. MTA-STS uses
 `enforce` with a seven-day policy lifetime; DNS also advertises SMTP TLS reports.
 The server release is pinned to the verified upstream 0.16.24 ARM artifact.
 
@@ -202,16 +205,26 @@ for a full Gmail archive. An independent Resend-to-MX inbound test passed, and a
 Stalwart-to-Gmail message reached the inbox with an attachment and Gmail reporting
 SPF, DKIM, and DMARC passes. Re-run the rehearsal after importing Gmail history.
 
+The JMAP qualification also verified attachment upload, draft import,
+`EmailSubmission/set`, and live Email state-change events over the advertised
+server-sent event endpoint. The JMAP-submitted message arrived in the owner
+Gmail inbox with its attachment.
+
 ## Client connection settings
 
 | Setting | Value |
 | --- | --- |
 | Username | `fahrican@fahrican.com` |
-| IMAP | `mail.fahrican.com:993`, implicit TLS |
-| SMTP | `mail.fahrican.com:465`, implicit TLS, authentication required |
-| Alternate SMTP | `mail.fahrican.com:587`, STARTTLS required |
+| Server | `https://mail.fahrican.com` |
+| JMAP discovery / session | `https://mail.fahrican.com/.well-known/jmap` |
+| JMAP API | `https://mail.fahrican.com/jmap/` (use the discovered `apiUrl`) |
+| Sending | JMAP `EmailSubmission/set` over HTTPS |
 | Account web interface | `https://mail.fahrican.com/account` |
 | Administration | `https://mail.fahrican.com/admin` |
+
+Clients discover upload, download, and push URLs from the authenticated JMAP
+session. They need no IMAP or SMTP client settings. Use the mailbox credential
+(or a separately enrolled app credential), not the administrator login.
 
 The mailbox and administrator credentials remain in their existing AWS Secrets
 Manager containers; do not place them in Git, tickets, or command arguments.
