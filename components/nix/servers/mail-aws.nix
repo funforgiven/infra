@@ -151,10 +151,10 @@ _: {
           # A replacement EC2 root reconstructs the only local Stalwart file
           # from the managed RDS credential; all registry and mail state already
           # lives in RDS and S3.
+          restore_existing=false
           if [[ ! -e "$config_file" && -r "$admin_file" ]]; then
             write_data_store_config
-            touch "$marker"
-            exit 0
+            restore_existing=true
           fi
 
           if [[ ! -e "$config_file" ]]; then
@@ -241,6 +241,33 @@ _: {
           fi
           start_server
 
+          if [[ "$restore_existing" == true ]]; then
+            # Existing RDS registries need new listeners and access restrictions
+            # before the normal server starts. Preserve passwords and MFA.
+            jq --compact-output --null-input '
+              {"@type":"upsert","object":"NetworkListener","matchOn":["name"],"value":{
+                "management":{"name":"management","protocol":"http","bind":{"127.0.0.1:8081":true},"useTls":false}
+              }},
+              {"@type":"update","object":"Http","value":{
+                "enableHsts":true,"useXForwarded":false,"redirectRoot":"/.well-known/jmap",
+                "allowedEndpoints":{"match":{"0":{
+                  "if":"listener != \u0027management\u0027 && (contains([\u0027admin\u0027, \u0027account\u0027], split(path, \u0027/\u0027)[1]) || (split(path, \u0027/\u0027)[1] == \u0027api\u0027 && !contains([\u0027auth\u0027, \u0027discover\u0027], split(path, \u0027/\u0027)[2])))",
+                  "then":"404"}},"else":"200"}
+              }}
+            ' | ${cliPackage}/bin/stalwart-cli apply --stdin --json --quiet >/dev/null
+            ${cliPackage}/bin/stalwart-cli query Account --fields id,roles,credentials --json | jq --compact-output '
+              select(.roles["@type"] == "Admin") |
+              {"@type":"update","object":"Account","id":.id,"value":(
+                .credentials | keys | map({key:("credentials/" + . + "/allowedIps"),
+                  value:{"127.0.0.1/32":true,"::1/128":true}}) | from_entries
+              )}
+            ' | ${cliPackage}/bin/stalwart-cli apply --stdin --json --quiet >/dev/null
+            stop_server
+            touch "$marker"
+            rm -f ${stateDirectory}/bootstrap-{recovery,admin,mailbox}-password
+            exit 0
+          fi
+
           if [[ ! -e "$config_file" ]]; then
             jq --compact-output --null-input \
               --arg host "$STALWART_RDS_HOST" \
@@ -320,7 +347,7 @@ _: {
               {"@type":"update","object":"Http","value":{
                 "enableHsts":true,"useXForwarded":false,"redirectRoot":"/.well-known/jmap",
                 "allowedEndpoints":{"match":{"0":{
-                  "if":"listener != \u0027management\u0027 && (contains([\u0027admin\u0027, \u0027account\u0027], split(url_path, \u0027/\u0027)[1]) || (split(url_path, \u0027/\u0027)[1] == \u0027api\u0027 && !contains([\u0027auth\u0027, \u0027discover\u0027], split(url_path, \u0027/\u0027)[2])))",
+                  "if":"listener != \u0027management\u0027 && (contains([\u0027admin\u0027, \u0027account\u0027], split(path, \u0027/\u0027)[1]) || (split(path, \u0027/\u0027)[1] == \u0027api\u0027 && !contains([\u0027auth\u0027, \u0027discover\u0027], split(path, \u0027/\u0027)[2])))",
                   "then":"404"}},"else":"200"}
               }}
             ' | ${cliPackage}/bin/stalwart-cli apply --stdin --json --quiet >/dev/null
