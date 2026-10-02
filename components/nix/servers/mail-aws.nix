@@ -152,8 +152,10 @@ _: {
           # from the managed RDS credential; all registry and mail state already
           # lives in RDS and S3.
           restore_existing=false
-          if [[ ! -e "$config_file" && -r "$admin_file" ]]; then
-            write_data_store_config
+          if [[ -r "$admin_file" && -r "$mailbox_file" ]]; then
+            if [[ ! -e "$config_file" ]]; then
+              write_data_store_config
+            fi
             restore_existing=true
           fi
 
@@ -201,7 +203,10 @@ _: {
           done
 
           recovery_password="$(< ${stateDirectory}/bootstrap-recovery-password)"
-          export STALWART_URL=http://127.0.0.1:8080
+          # Recovery binds a wildcard socket. Keep it away from the VPN proxy
+          # on 8080; this recovery port is closed by both host and AWS firewalls.
+          export STALWART_RECOVERY_MODE_PORT=18080
+          export STALWART_URL=http://127.0.0.1:18080
           export STALWART_USER=bootstrap
           export STALWART_PASSWORD="$recovery_password"
           export STALWART_RECOVERY_ADMIN="bootstrap:$recovery_password"
@@ -221,7 +226,7 @@ _: {
             server_pid=$!
 
             for _ in $(seq 1 120); do
-              if curl --silent --output /dev/null http://127.0.0.1:8080/.well-known/jmap; then
+              if curl --silent --output /dev/null http://127.0.0.1:18080/.well-known/jmap; then
                 return 0
               fi
               if ! kill -0 "$server_pid" 2>/dev/null; then
