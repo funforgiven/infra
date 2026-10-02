@@ -8,6 +8,7 @@ spec:
   # identity. Temporary AWS bootstrap credentials are not deployed.
   suspend: false
   interval: 10m
+  timeout: 30m
   retryInterval: 1m
   approvePlan: auto
   destroyResourcesOnDeletion: false
@@ -17,7 +18,7 @@ spec:
     name: services-tofu-source
   vars:
     - name: source_revision
-      value: "9bf1a2756b3f0628af32f68d1290736e201e0263"
+      value: "8d0825934b01845e8797766963d95e7ccc0fb8a0"
     - name: nixos_ami_id
       value: "ami-019a83797574d9161"
     - name: enable_reverse_dns
