@@ -17,7 +17,7 @@ spec:
     name: services-tofu-source
   vars:
     - name: source_revision
-      value: "de791c6d404c5a273f64fec7d695584d889af1d7"
+      value: "9b742280a09ce0efeb4cbc5cf58e2b9fa8c965f4"
     - name: nixos_ami_id
       value: "ami-019a83797574d9161"
     - name: enable_reverse_dns
