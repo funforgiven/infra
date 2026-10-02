@@ -144,6 +144,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: services-network
+  labels:
+    gateway.fahrican.com/services: allowed
 ---
 apiVersion: v1
 kind: Namespace
