@@ -167,3 +167,32 @@ recovery; AWS PITR and versioned blobs provide a more recent same-provider path.
 Keep Gmail available through a staged migration, verify real client behavior,
 and enroll administrator MFA before retiring the old mailbox. This deployment
 does not copy Gmail history or alter the Gmail account.
+
+## Isolated mailbox restore rehearsal
+
+`mail-restore-drill` is a separately built operator tool. Download the selected
+Restic snapshot into a root-only temporary directory, then build this repository's
+tool on the mail host before entering the isolated network namespace:
+
+```sh
+drill="$(nix build --no-link --print-out-paths .#mail-restore-drill)"
+stalwart_binary="$(sed -n 's/^ExecStart=\([^ ]*\).*/\1/p' /etc/systemd/system/stalwart.service)"
+sudo systemd-run --wait --pipe --collect \
+  --property=PrivateNetwork=yes --property=RuntimeMaxSec=1h \
+  "$drill/bin/mail-restore-drill" /path/to/restored/fahrican.sqlite "$stalwart_binary"
+```
+
+The tool refuses the host network namespace. It initializes disposable SQLite
+storage, restores into a fresh Stalwart account, exports that account again, and
+compares every blob byte, message date, keyword, mailbox membership, and folder
+hierarchy. It removes the temporary server and store afterward. The restored
+identity may coexist with the target's automatically created default identity;
+mail comparison does not depend on identity counts. No production database or
+blob store is supplied to the isolated server.
+
+Qualification on 2026-10-02 restored the current seven-message mailbox into
+Stalwart 0.16.24 and verified seven blobs and five folders. The import/export
+phase took 36 seconds for this small sample; this is not a recovery-time estimate
+for a full Gmail archive. An independent Resend-to-MX inbound test passed, and a
+Stalwart-to-Gmail message reached the inbox with an attachment and Gmail reporting
+SPF, DKIM, and DMARC passes. Re-run the rehearsal after importing Gmail history.
