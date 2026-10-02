@@ -122,7 +122,7 @@ def run(command, *, env=None, stdin=None, timeout=120):
 
 def cli(arguments, stdin=None):
     env = os.environ.copy()
-    env.update(STALWART_URL=f"https://{HOST}", STALWART_USER=f"admin@{DOMAIN}",
+    env.update(STALWART_URL="http://127.0.0.1:8081", STALWART_USER=f"admin@{DOMAIN}",
                STALWART_PASSWORD=(SECRETS / "admin-password").read_text().strip())
     return run(["stalwart-cli", *arguments], env=env, stdin=stdin)
 
@@ -130,6 +130,24 @@ def cli(arguments, stdin=None):
 def objects(kind, fields):
     return [json.loads(line) for line in cli([
         "query", kind, "--fields", fields, "--json"]).splitlines() if line.strip()]
+
+
+def admin_credential_policy(accounts):
+    """Restrict every existing built-in administrator credential, preserving MFA."""
+    updates = []
+    for account in accounts:
+        if account.get("roles", {}).get("@type") != "Admin":
+            continue
+        credentials = account.get("credentials", {})
+        if not credentials:
+            raise OperationError("Administrator has no manageable credentials")
+        updates.append({"@type": "update", "object": "Account", "id": account["id"],
+                        "value": {f"credentials/{index}/allowedIps":
+                                  {"127.0.0.1/32": True, "::1/128": True}
+                                  for index in credentials}})
+    if not updates:
+        raise OperationError("Administrator credential policy has no target")
+    return updates
 
 
 def reconcile():
@@ -143,7 +161,7 @@ def reconcile():
         sm.put_secret_value(SecretId="fahrican/stalwart/canary", SecretString=password)
     domains = objects("Domain", "id,name")
     domain_id = next(d["id"] for d in domains if d["name"] == DOMAIN)
-    accounts = objects("Account", "id,name,aliases")
+    accounts = objects("Account", "id,name,aliases,roles,credentials")
     owner = next(a for a in accounts if a["name"] == "fahrican")
     aliases = dict(owner.get("aliases", {}))
     for name in ("postmaster", "abuse", "dmarc", "tls-reports"):
@@ -165,13 +183,21 @@ def reconcile():
             "smtp": {"name": "smtp", "protocol": "smtp", "bind": {"[::]:25": True},
                      "useTls": True, "tlsImplicit": False},
             "https": {"name": "https", "protocol": "http", "bind": {"[::]:443": True},
-                      "useTls": True, "tlsImplicit": True}}},
-        {"@type": "update", "object": "Http", "value": {"enableHsts": True}},
+                      "useTls": True, "tlsImplicit": True},
+            "management": {"name": "management", "protocol": "http",
+                           "bind": {"127.0.0.1:8081": True}, "useTls": False}}},
+        {"@type": "update", "object": "Http", "value": {
+            "enableHsts": True, "useXForwarded": False,
+            "redirectRoot": "/.well-known/jmap",
+            "allowedEndpoints": {"match": {"0": {
+                "if": "listener != 'management' && contains(['admin', 'account', 'api'], split(url_path, '/')[1])",
+                "then": "404"}}, "else": "200"}}},
         {"@type": "update", "object": "Domain", "id": domain_id,
          "value": {"reportAddressUri": "mailto:tls-reports@fahrican.com"}},
         {"@type": "update", "object": "MtaSts", "value": {
             "mode": "enforce", "maxAge": 604800000, "mxHosts": {HOST: True}}},
     ]
+    plans.extend(admin_credential_policy(accounts))
     cli(["apply", "--stdin", "--json", "--quiet"], "\n".join(json.dumps(p) for p in plans))
 
 

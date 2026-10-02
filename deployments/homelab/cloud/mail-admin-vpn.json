@@ -1,0 +1,8 @@
+{
+  "address": "10.21.91.3/32",
+  "backendAddress": "10.21.91.3",
+  "gatewaySource": "10.21.40.154/32",
+  "endpoint": "31.223.15.252:51820",
+  "routerPublicKey": "9dMB5tJh8vKmqyWREDjjOk7bg3YOGRjqMbbEIk9uSlI=",
+  "publicKey": "jaI0L8qCMPzGwBHH4HUc1iy/CL9oCmLxFnFlo378MgA="
+}

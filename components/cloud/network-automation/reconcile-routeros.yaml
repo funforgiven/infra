@@ -883,12 +883,14 @@
             /ip firewall filter add action=accept chain={{ item.chain }}
             comment="{{ item.comment }}" disabled=no
             dst-address={{ item.destination | default('0.0.0.0/0') }}
+            src-address={{ item.source_address | default('0.0.0.0/0') }}
             dst-port={{ item.destination_port }}
             in-interface={{ item.source_interface }}
             protocol={{ item.protocol }} place-before=$drop } else={
             /ip firewall filter set $row action=accept chain={{ item.chain }}
             disabled=no
             dst-address={{ item.destination | default('0.0.0.0/0') }}
+            src-address={{ item.source_address | default('0.0.0.0/0') }}
             dst-port={{ item.destination_port }}
             in-interface={{ item.source_interface }}
             protocol={{ item.protocol }} };
@@ -1181,6 +1183,7 @@
             chain="{{ item.chain }}" and comment="{{ item.comment }}" and
             action=accept and disabled=no and
             dst-address={{ item.destination | default('0.0.0.0/0') }} and
+            src-address={{ item.source_address | default('0.0.0.0/0') }} and
             dst-port={{ item.destination_port }} and
             in-interface="{{ item.source_interface }}" and
             protocol={{ item.protocol }}]] != 1) do={

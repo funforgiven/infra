@@ -48,6 +48,10 @@ let
       key = "routeros/ccr2004_wireguard_parmigiano_preshared_key";
       sopsFile = routerosSecretsFile;
     };
+    homelab-routeros-ccr2004-wireguard-mail-preshared-key = {
+      key = "preshared_key";
+      sopsFile = ../../../secrets/mail-vpn.yaml;
+    };
     homelab-routeros-ccr2004-mullvad-private-key = {
       key = "routeros/ccr2004_mullvad_private_key";
       sopsFile = routerosSecretsFile;

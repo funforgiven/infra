@@ -269,6 +269,29 @@ class NetworkInventoryTests(unittest.TestCase):
             self.playbook,
         )
 
+    def test_mail_backend_peer_is_isolated_and_gateway_is_vpn_only(self) -> None:
+        vpn = json.loads((ROOT / "deployments/homelab/cloud/mail-admin-vpn.json").read_text())
+        peers = self.router["routeros_wireguard"]["peers"]
+        peer = next(peer for peer in peers if peer["name"] == "mail-aws")
+        self.assertTrue(peer["isolated_backend"])
+        self.assertEqual(vpn["address"], peer["allowed_address"])
+        self.assertEqual(vpn["publicKey"], peer["public_key"])
+        rule = next(rule for rule in self.router["routeros_access_rules"]
+                    if rule["comment"] == "infra: services gateway to mail administration")
+        self.assertEqual(rule["destination"], vpn["address"])
+        self.assertEqual(rule["source_address"], vpn["gatewaySource"])
+        self.assertEqual(rule["destination_port"], "8080")
+        resources = list(yaml.safe_load_all((ROOT / "deployments/homelab/cloud/services/20-platform-gateway/mail-admin.yaml").read_text()))
+        policy = next(obj for obj in resources if obj["kind"] == "SecurityPolicy")["spec"]["authorization"]
+        self.assertEqual(policy["defaultAction"], "Deny")
+        self.assertEqual(policy["rules"], [{"action": "Allow", "principal": {"clientCIDRs": ["10.21.91.0/24"]}}])
+        endpoint = next(obj for obj in resources if obj["kind"] == "EndpointSlice")
+        self.assertEqual(endpoint["endpoints"][0]["addresses"], [vpn["backendAddress"]])
+        wireguard_tasks = (ROOT / "components/cloud/network-automation/tasks/reconcile-routeros-wireguard.yaml").read_text()
+        self.assertIn("connection-state=new", wireguard_tasks)
+        self.assertIn("place-before=0", wireguard_tasks)
+        self.assertIn("selectattr('isolated_backend')", wireguard_tasks)
+
     def test_mullvad_routes_only_ototoy_from_trusted_vlan(self) -> None:
         mullvad = self.router["routeros_mullvad"]
         routing = mullvad["routing"]
@@ -555,6 +578,14 @@ class NetworkInventoryTests(unittest.TestCase):
                     "10.21.20.131",
                     "tcp",
                     "443",
+                ),
+                (
+                    "infra: services gateway to mail administration",
+                    "infra-forward",
+                    "vlan40-external",
+                    "10.21.91.3/32",
+                    "tcp",
+                    "8080",
                 ),
                 (
                     "infra: UniFi AP inform", "infra-forward", "vlan90-mgmt",

@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mail-admin
+  namespace: services-network
+spec:
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: mail-admin
+  namespace: services-network
+  labels:
+    kubernetes.io/service-name: mail-admin
+    endpointslice.kubernetes.io/managed-by: infra.fahrican.com
+addressType: IPv4
+ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+endpoints:
+  - addresses: [10.21.91.3]
+    conditions:
+      ready: true
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: mail-admin
+  namespace: services-network
+spec:
+  parentRefs:
+    - name: services
+      sectionName: https
+  hostnames:
+    - mail-admin.fahrican.com
+  rules:
+    - backendRefs:
+        - name: mail-admin
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: mail-admin-vpn
+  namespace: services-network
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: mail-admin
+  authorization:
+    defaultAction: Deny
+    rules:
+      - action: Allow
+        principal:
+          clientCIDRs:
+            - 10.21.91.0/24

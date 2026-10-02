@@ -44,11 +44,12 @@
       - /ip firewall filter print detail without-paging where comment~"WireGuard"
   register: routeros_wireguard_preflight
   changed_when: false
+  no_log: true
   tags: [always]
 
 - name: Show the WireGuard preflight without credentials
   ansible.builtin.debug:
-    var: routeros_wireguard_preflight.stdout_lines
+    msg: "WireGuard state read; credential-bearing interface and peer fields are suppressed."
   tags: [always]
 
 - name: Load the WireGuard server private key
@@ -179,6 +180,45 @@
   no_log: true
   tags: [never, apply]
 
+- name: Isolate backend peers from initiating router or homelab connections
+  community.routeros.command:
+    commands:
+      - >-
+        :foreach chain in={"{{ routeros_wireguard.input_chain }}";"{{ routeros_wireguard.forward_chain }}"} do={
+        :local comment ("infra: isolate WireGuard {{ item.name }} " . $chain);
+        :local row [/ip firewall filter find where comment=$comment];
+        :if ([:len $row] > 1) do={ :error "duplicate WireGuard isolation rule" };
+        :if ([:len $row] = 0) do={
+        /ip firewall filter add chain=$chain action=drop
+        in-interface="{{ routeros_wireguard.name }}" src-address={{ item.allowed_address }}
+        connection-state=new comment=$comment disabled=no place-before=0
+        } else={
+        /ip firewall filter set $row chain=$chain action=drop
+        in-interface="{{ routeros_wireguard.name }}" src-address={{ item.allowed_address }}
+        connection-state=new disabled=no;
+        /ip firewall filter move $row destination=0 } }
+  loop: "{{ routeros_wireguard.peers | selectattr('isolated_backend', 'defined') | selectattr('isolated_backend') | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  tags: [never, apply]
+
+- name: Prove backend peers cannot initiate router or homelab connections
+  community.routeros.command:
+    commands:
+      - >-
+        :foreach chain in={"{{ routeros_wireguard.input_chain }}";"{{ routeros_wireguard.forward_chain }}"} do={
+        :local comment ("infra: isolate WireGuard {{ item.name }} " . $chain);
+        :if ([:len [/ip firewall filter find where comment=$comment and
+        chain=$chain and action=drop and disabled=no and
+        in-interface="{{ routeros_wireguard.name }}" and
+        src-address={{ item.allowed_address }} and connection-state=new]] != 1) do={
+        :error "WireGuard backend isolation failed" } }
+  loop: "{{ routeros_wireguard.peers | selectattr('isolated_backend', 'defined') | selectattr('isolated_backend') | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  changed_when: false
+  tags: [never, apply]
+
 - name: Read reconciled WireGuard admin state
   community.routeros.command:
     commands:
@@ -188,6 +228,7 @@
       - /ip firewall filter print detail without-paging where comment~"WireGuard"
   register: routeros_wireguard_postflight
   changed_when: false
+  no_log: true
   tags: [never, apply]
 
 - name: Prove the WireGuard admin interface, address, and WAN endpoint
