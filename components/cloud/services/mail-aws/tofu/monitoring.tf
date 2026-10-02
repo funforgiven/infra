@@ -72,11 +72,11 @@ locals {
   mail_health_alarms = {
     service = {
       metric      = "ServiceHealthy", comparison = "LessThanThreshold", threshold = 1
-      description = "Stalwart, SMTP/TLS, IMAP/TLS, or queue inspection failed, or health telemetry stopped"
+      description = "Stalwart, authenticated JMAP, incoming SMTP/TLS, or queue inspection failed, or health telemetry stopped"
     }
     inbound_delivery = {
       metric      = "InboundAgeSeconds", comparison = "GreaterThanThreshold", threshold = 3600
-      description = "No verified Resend-to-public-MX-to-authenticated-IMAP delivery within one hour"
+      description = "No verified Resend-to-public-MX-to-authenticated-JMAP delivery with an intact attachment within one hour"
     }
     backup = {
       metric      = "BackupAgeSeconds", comparison = "GreaterThanThreshold", threshold = 90000
