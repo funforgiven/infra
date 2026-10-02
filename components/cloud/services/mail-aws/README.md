@@ -272,3 +272,9 @@ into `aws --region eu-central-1 secretsmanager put-secret-value --secret-id
 fahrican/stalwart/vpn --secret-string file:///dev/stdin`; discard the returned
 version metadata. The router receives only the preshared key through its sops-nix
 runtime file. Restart `wg-quick-wg-mail` after an intentional key rotation.
+
+Independent homelab probes check every minute that the public admin and schema
+paths return 404 and that the private panel returns 403 without a VPN source.
+An access restriction failure raises an alert after five minutes. Replacement
+instances must serve public JMAP and MTA-STS and reject the public panel before
+the retained mail address can move to them.

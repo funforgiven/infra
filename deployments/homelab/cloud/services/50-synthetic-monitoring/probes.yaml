@@ -37,3 +37,38 @@ spec:
         - https://mail.fahrican.com/.well-known/jmap
 # Authenticated JMAP and inbound delivery are verified by the AWS mail canary.
 # The homelab ISP blocks outbound port 25.
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: mail-public-admin-denied
+  namespace: services-observability
+spec:
+  interval: 60s
+  scrapeTimeout: 15s
+  jobName: mail-admin-public
+  module: mail_public_admin_denied
+  prober:
+    url: blackbox-exporter.services-observability.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+        - https://mail.fahrican.com/admin/
+        - https://mail.fahrican.com/api/schema
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: mail-private-admin-denied-without-vpn
+  namespace: services-observability
+spec:
+  interval: 60s
+  scrapeTimeout: 15s
+  jobName: mail-admin-private
+  module: mail_private_admin_denied
+  prober:
+    url: blackbox-exporter.services-observability.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+        - https://mail-admin.fahrican.com/admin/

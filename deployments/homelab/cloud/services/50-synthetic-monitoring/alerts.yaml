@@ -25,5 +25,12 @@ spec:
             severity: warning
           annotations:
             summary: "Mail TLS certificate expires within 21 days on {{ $labels.instance }}"
+        - alert: MailAdminAccessRestrictionFailed
+          expr: probe_success{job=~"mail-admin-(public|private)"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Mail administration access restriction check failed for {{ $labels.instance }}"
         # Legacy NixOS service hosts are retired. UniFi and native Forgejo
         # hosts have their own exporters and backup rules in their service waves.
