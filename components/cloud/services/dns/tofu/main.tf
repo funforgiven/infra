@@ -114,6 +114,24 @@ resource "cloudflare_dns_record" "dmarc" {
   comment = "Git-managed DMARC policy"
 }
 
+resource "cloudflare_dns_record" "mta_sts" {
+  zone_id = data.cloudflare_zone.fahrican.zone_id
+  name    = "_mta-sts.fahrican.com"
+  type    = "TXT"
+  content = "v=STSv1; id=20261002"
+  ttl     = 300
+  comment = "Bump the policy ID when the served MTA-STS policy changes"
+}
+
+resource "cloudflare_dns_record" "tls_reports" {
+  zone_id = data.cloudflare_zone.fahrican.zone_id
+  name    = "_smtp._tls.fahrican.com"
+  type    = "TXT"
+  content = "v=TLSRPTv1; rua=mailto:tls-reports@fahrican.com"
+  ttl     = 300
+  comment = "Mail transport security reports delivered to the declared owner alias"
+}
+
 resource "cloudflare_dns_record" "stalwart_dkim" {
   for_each = local.stalwart_dkim_records
 

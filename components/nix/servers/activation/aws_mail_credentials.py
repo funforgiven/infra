@@ -562,19 +562,43 @@ class AwsMailCredentials:
             intake.clear()
 
     def publish_resend(self) -> None:
+        resend = self.store.read(RESEND_FILE, RESEND_KEY)
+        if not resend:
+            raise AwsMailCredentialError("Resend ciphertext is not enrolled")
+        self._publish(RESEND_SECRET_ID, resend)
+
+    def publish_backup(self) -> None:
+        values = {}
+        for key in (
+            "MAIL_AWS_BACKUP_B2_APPLICATION_KEY_ID",
+            "MAIL_AWS_BACKUP_B2_APPLICATION_KEY",
+            "MAIL_AWS_BACKUP_RESTIC_PASSWORD",
+        ):
+            route = (
+                self.contract.managed_credential(key)
+                if key.endswith("RESTIC_PASSWORD")
+                else self.contract.provisioned_credential(key)
+            )
+            value = self.store.read(route.secret_file, key)
+            if not value:
+                raise AwsMailCredentialError(f"{key} is not enrolled")
+            values[key] = value
+        self._publish("fahrican/stalwart/backup", json.dumps(values))
+
+    def _publish(self, secret_id: str, value: str) -> None:
         auth = {
             key: self.store.read(
                 self.contract.provisioned_credential(key).secret_file, key
             )
             for key in AUTH_KEYS
         }
-        resend = self.store.read(RESEND_FILE, RESEND_KEY)
-        if any(not value for value in auth.values()) or not resend:
+        if any(not credential for credential in auth.values()):
             raise AwsMailCredentialError(
-                "AWS provisioning or Resend ciphertext is not enrolled"
+                "AWS provisioning ciphertext is not enrolled"
             )
         environment = os.environ.copy()
         environment.update({key: value for key, value in auth.items() if value})
+        environment.pop("AWS_SESSION_TOKEN", None)
         result = subprocess.run(
             [
                 "aws",
@@ -583,11 +607,11 @@ class AwsMailCredentials:
                 "--region",
                 AWS_REGION,
                 "--secret-id",
-                RESEND_SECRET_ID,
+                secret_id,
                 "--secret-string",
                 "file:///dev/stdin",
             ],
-            input=resend,
+            input=value,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             text=True,
@@ -596,13 +620,13 @@ class AwsMailCredentials:
         )
         if result.returncode != 0:
             raise AwsMailCredentialError(
-                "AWS rejected the Resend secret publication; no value was displayed"
+                "AWS rejected the secret publication; no value was displayed"
             )
 
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("provisioning", "resend"))
+    parser.add_argument("action", choices=("provisioning", "resend", "backup"))
     parser.add_argument("--repository-root", type=Path, default=Path.cwd())
     return parser.parse_args()
 
@@ -617,6 +641,9 @@ def main() -> int:
                 "AWS mail provisioning credentials enrolled; temporary key revoked "
                 "and intake files cleared."
             )
+        elif arguments.action == "backup":
+            credentials.publish_backup()
+            message = "AWS mail backup credential published without displaying it."
         else:
             credentials.publish_resend()
             message = "AWS mail Resend credential published without displaying it."

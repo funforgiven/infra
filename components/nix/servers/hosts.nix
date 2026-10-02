@@ -9,6 +9,7 @@ _: {
         "services-server-common"
         "services-aws-guest"
         "services-aws-mail"
+        "services-aws-mail-operations"
       ];
     };
   };

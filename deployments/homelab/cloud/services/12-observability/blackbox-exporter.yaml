@@ -17,6 +17,36 @@ data:
         timeout: 10s
         tcp:
           preferred_ip_protocol: ip4
+      mail_smtps:
+        prober: tcp
+        timeout: 10s
+        tcp:
+          preferred_ip_protocol: ip4
+          tls: true
+          query_response:
+            - expect: "^220"
+      mail_imaps:
+        prober: tcp
+        timeout: 10s
+        tcp:
+          preferred_ip_protocol: ip4
+          tls: true
+          query_response:
+            - expect: "^\\* OK"
+      mail_submission:
+        prober: tcp
+        timeout: 10s
+        tcp:
+          preferred_ip_protocol: ip4
+          query_response:
+            - expect: "^220"
+            - send: "EHLO probe.fahrican.com"
+            - expect: "^250[ -]STARTTLS"
+            - send: "STARTTLS"
+            - expect: "^220"
+            - starttls: true
+            - send: "EHLO probe.fahrican.com"
+            - expect: "^250"
 ---
 apiVersion: v1
 kind: Service

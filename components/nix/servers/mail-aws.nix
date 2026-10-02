@@ -9,7 +9,27 @@ _: {
       stateDirectory = "/var/lib/stalwart";
       runtimeDirectory = "/run/stalwart-secrets";
       deploymentEnvironment = "/etc/stalwart-bootstrap/aws.env";
-      stalwartPackage = pkgs.stalwart_0_16;
+      # Nixpkgs currently packages 0.16.23. Pin the official static release so
+      # the mail appliance receives the 0.16.24 IMAP and spam-filter fixes.
+      # Digests are the SHA-256 values published on the upstream release assets.
+      stalwartPackage = pkgs.stdenvNoCC.mkDerivation {
+        pname = "stalwart";
+        version = "0.16.24";
+        src = pkgs.fetchurl {
+          url = "https://github.com/stalwartlabs/stalwart/releases/download/v0.16.24/stalwart-aarch64-unknown-linux-musl.tar.gz";
+          hash = "sha256-+/C3Dv8J9GQH4iQlBzeVTBB6ArCZZAIdX/STDEEpaAY=";
+        };
+        sourceRoot = ".";
+        dontConfigure = true;
+        dontBuild = true;
+        dontStrip = true;
+        installPhase = ''
+          install -Dm755 stalwart "$out/bin/stalwart"
+        '';
+        meta = pkgs.stalwart_0_16.meta // {
+          platforms = [ "aarch64-linux" ];
+        };
+      };
       cliPackage = pkgs.stalwart-cli;
       rdsCaBundle = pkgs.fetchurl {
         name = "aws-rds-eu-central-1-ca-bundle.pem";
@@ -335,8 +355,8 @@ _: {
             {"@type":"upsert","object":"MtaRoute","matchOn":["name"],"value":{
               "resend":{
                 "@type":"Relay","name":"resend","description":"Resend outbound relay",
-                "address":"smtp.resend.com","port":587,"protocol":"smtp",
-                "implicitTls":false,"allowInvalidCerts":false,"authUsername":"resend",
+                "address":"smtp.resend.com","port":465,"protocol":"smtp",
+                "implicitTls":true,"allowInvalidCerts":false,"authUsername":"resend",
                 "authSecret":{"@type":"File","filePath":"${runtimeDirectory}/resend-password"}
               }
             }},

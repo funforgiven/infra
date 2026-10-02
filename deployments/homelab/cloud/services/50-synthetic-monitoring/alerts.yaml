@@ -10,12 +10,20 @@ spec:
         - alert: ServicesEndpointDown
           expr: >-
             (probe_success{job="services-http"} == 0)
-            or (probe_success{job="mail-tcp",
-            instance!="mail.fahrican.com:25"} == 0)
+            or (probe_success{job=~"mail-(smtps|imaps|submission)"} == 0)
           for: 10m
           labels:
             severity: critical
           annotations:
             summary: "Synthetic probe failed for {{ $labels.instance }}"
+        - alert: MailCertificateExpiring
+          expr: >-
+            probe_ssl_earliest_cert_expiry{job=~"mail-(smtps|imaps|submission)"}
+            - time() < 21 * 86400
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Mail TLS certificate expires within 21 days on {{ $labels.instance }}"
         # Legacy NixOS service hosts are retired. UniFi and native Forgejo
         # hosts have their own exporters and backup rules in their service waves.

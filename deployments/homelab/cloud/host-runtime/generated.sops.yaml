@@ -4,6 +4,7 @@ data:
     GITLAB_ROOT_PASSWORD: ENC[AES256_GCM,data:nzpOoAjbUbdV12vuqKCy/aMZ+NB3jjpAbSy6q0F1mdIdPOuNr/N2Fg1FgVXnGzZsi/GA+x6275PrBFjyRX9SFb6Tnxn83fgGrV4GyIycMqMKm/0vj9L2yQ==,iv:aBmTt6JV8wGqY47ysgrJ/KdlOrGzeLu7t1+0rDUGOLc=,tag:chkqyF6Vnibp/Bepz8xqbQ==,type:str]
     GITLAB_BACKUP_RESTIC_PASSWORD: ENC[AES256_GCM,data:Bi7J6BNHWhnxvU7DE7HyqdYPeZ4cnRUYMzzauPsqQY2cRb4K6zpU3FDXW0gbQ3a78y8z482yb9zfx9ja+6Qxs3rBtGQ9UO3ZnI816eML6NLjt4v5ZsXqow==,iv:lI0LsKeiiFzXLeX4mFTu1Y/ENjig0bTN6FkwYSvtIVI=,tag:kkxA/Sy8UF4xEbYCWYI72w==,type:str]
     UNIFI_BACKUP_RESTIC_PASSWORD: ENC[AES256_GCM,data:GNm/HK5Ha2Kl0ZagkvbooS+ZT/QBoTS20I8a4pZKaBkvemFzACa9U6rhK7xrpfSKxCMkPEBbSUeDK3v4af+kQnvNdpvS45uFgghCiaQUtSK5tNMjTUhG5g==,iv:ML2u4yjD15ECXhsimDvVuZCeHW07aln2aGTDSF8emN0=,tag:wwYLZJcAXInT0A6Fv+Zejg==,type:str]
+    MAIL_AWS_BACKUP_RESTIC_PASSWORD: ENC[AES256_GCM,data:Nu0fOktOwjXCSekxTmCpbYQy4mRyNDlT+BCNuNeOoYgHpUdCs1ASfLqzRxKekrt1+DJ7p8ldzmvUl7JL+wFVcc9JIe7eD1bOGSIO81Sw3RXPq5YpFwHUPQ==,iv:vbhgxLFNeeF8hoi1V9e80SSYSt7hZ/NBXyV7jMni3jQ=,tag:2axSziIvrHqmx49xZF4jzg==,type:str]
 sops:
     age:
         - enc: |
@@ -16,6 +17,6 @@ sops:
             -----END AGE ENCRYPTED FILE-----
           recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-09-26T19:39:14Z"
-    mac: ENC[AES256_GCM,data:iHbQWtc57vWZqTQO8z0dnGqclwIdEIeeZvM5IKUJRD6I+JMJLO6bWt6v84xiaRvwWAH3rxfN3/902mOL+1zsZ+1X+Zr2vlBQBCUlaukh/Ib9AhGr1Sub68iTOo2AB76nrWwwNmHZSmdy8IIDOOQlS1hXWtTpyHK5H3eGByqnZbQ=,iv:MjnJuYLUPwIaneMxdJGPW65R86R7Jig1id4maaFSgOw=,tag:M3+E89WP4h9ka+y2v8T8dQ==,type:str]
+    lastmodified: "2026-10-02T17:56:27Z"
+    mac: ENC[AES256_GCM,data:xLT3ss7eZ3sQR6QJeG4i52ahZwWUF79NSgZCBILZ9jv67N9e74yXVwiKX/iwWMnfJpJFpu4NJ55BcmHwgG3qB+d4Xf5OiUHi7pLNrITfXkKuOHlgDF/dNmGT3V0WwMlh+oQB47MGHrS5DMzL8iwAcYdYfHa4F96d9xjAxOVK110=,iv:amYaPBxiBryYayG2zFoBNs0Vkx1QqJHWYa/eTmSrJ1Q=,tag:JLzkycJbQMPi1FFvSw4TNg==,type:str]
     version: 3.13.3

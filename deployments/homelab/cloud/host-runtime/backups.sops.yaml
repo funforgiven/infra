@@ -4,6 +4,8 @@ data:
     HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY: ENC[AES256_GCM,data:3Hhnfkfd+uqv1wo0mGkhkgrxB/UnG9ln6aZhaD0tesg1JBmmWicVgIlh/wk=,iv:KsU6riQGzSIfriY6BqAES2JvLqnVH8rBjZEvVRp4Tkw=,tag:Q8abEYFXqvNpFD2qqOtdcw==,type:str]
     UNIFI_BACKUP_B2_APPLICATION_KEY_ID: ENC[AES256_GCM,data:hdy+1TFxbGpJpHPOcb6y3R3cauggz+JOqOyzbUTh4xDK3Qkx,iv:R7An0mw1yroE4250HLixZzoUpRMmhC6dIBFy3Qnu6yQ=,tag:c5N6UGWyomFlvYfJbCVKXw==,type:str]
     UNIFI_BACKUP_B2_APPLICATION_KEY: ENC[AES256_GCM,data:FkpWWRDTzXZ0RaMsE3b9PRPbFOeTVP93rZslEjFYGqWdGcbVQOlLlvOmKq4=,iv:LtbHhOj0udfSt4Nib4hnqfNnzUC6zeWSV8dTJiuz7ok=,tag:bbWDrdnvTJyxYC8BDqWd/A==,type:str]
+    MAIL_AWS_BACKUP_B2_APPLICATION_KEY_ID: ENC[AES256_GCM,data:CJGhFmyfj2JHhgq8ltK4W0PZ34HRWhdbH+aeQxoCofAvlqrm,iv:+sar9ZNi49MNoEQzl0/uFjnLXOSdHd3eFDz31hNWxtQ=,tag:oD/8eFxVulF6uqxhOvfvXA==,type:str]
+    MAIL_AWS_BACKUP_B2_APPLICATION_KEY: ENC[AES256_GCM,data:M+SFG8PYALNiOQyBm/7OZCQeHh7Epn4pWUIaWhDySnhKfMdU5VUkK0xNSPc=,iv:vxFxYnYB3FomevsFF2Gn9tfSkTWeYEaPKbjtGmBZPa0=,tag:vGwGWl79zWqfW3tGLf5DRA==,type:str]
 sops:
     age:
         - enc: |
@@ -16,6 +18,6 @@ sops:
             -----END AGE ENCRYPTED FILE-----
           recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-09-26T23:56:28Z"
-    mac: ENC[AES256_GCM,data:/PT8BRo/VHvERzlfwkUi2Hj4RT3la/DLasx8Chc3WEMP9yW/ly4R1ffTbLU8qqaIcATFhWDJ5CLqSvj3MI+UBUhgYl9gRoT27ZRUqTfLNQBSZCWNaWIOrwCtrVBUw2L4reLR0TXiFBz7D7WVE3wEux1Uoi8X8vovt+lDuLCkZoM=,iv:RNvMvf+ajIjqBRYFS73ea4UY7+t1Qm2x/4lC96eTUAE=,tag:PO2iTLuDxTVkhryaxk3iqw==,type:str]
+    lastmodified: "2026-10-02T17:56:25Z"
+    mac: ENC[AES256_GCM,data:8z3r/lYqPP44M4gb6R9uEITM3fB7kN/mQ8QNN9kOyh0Qm2sMop2KBQ1MeAxUTvQ6v2eTdjBC1L6qwWz7vDdibWE1GW7k/CImuh84WKcg8hLMUovoJjwkV1G6NBlL4BgIMJcpBYB5x9lYCI2qloN6H1Lb77Q9o6vsxAtRgBa7I4c=,iv:gYxV2aZSN8Hgc7d1zaOzGQ9A0R69e4Pd1HffTy0BbuM=,tag:ArtQd52RZM0OY+iIIagNcw==,type:str]
     version: 3.13.3
