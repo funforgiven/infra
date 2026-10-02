@@ -320,7 +320,7 @@ _: {
               {"@type":"update","object":"Http","value":{
                 "enableHsts":true,"useXForwarded":false,"redirectRoot":"/.well-known/jmap",
                 "allowedEndpoints":{"match":{"0":{
-                  "if":"listener != \u0027management\u0027 && contains([\u0027admin\u0027, \u0027account\u0027, \u0027api\u0027], split(url_path, \u0027/\u0027)[1])",
+                  "if":"listener != \u0027management\u0027 && (contains([\u0027admin\u0027, \u0027account\u0027], split(url_path, \u0027/\u0027)[1]) || (split(url_path, \u0027/\u0027)[1] == \u0027api\u0027 && !contains([\u0027auth\u0027, \u0027discover\u0027], split(url_path, \u0027/\u0027)[2])))",
                   "then":"404"}},"else":"200"}
               }}
             ' | ${cliPackage}/bin/stalwart-cli apply --stdin --json --quiet >/dev/null

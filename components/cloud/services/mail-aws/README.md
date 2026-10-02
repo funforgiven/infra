@@ -251,8 +251,9 @@ RouterOS inventory if those network assignments change.
 
 The private proxy reaches Stalwart on loopback port 8081. Only discovery responses
 have their public origin rewritten for the private UI; JMAP data responses and
-mail content are forwarded unchanged. Public `/admin`, `/account`, and `/api`
-paths return 404. Administration shares JMAP with mail, so path restrictions alone
+mail content are forwarded unchanged. Public `/admin`, `/account`, and management `/api`
+paths return 404. The `/api/auth` and `/api/discover` login helpers remain public
+so normal JMAP OAuth clients can sign in. Administration shares JMAP with mail, so path restrictions alone
 are insufficient: all credentials on built-in administrator accounts are also
 restricted to loopback IPs, including cached Basic and OAuth authentication.
 The reconciler updates credential IP restrictions without replacing passwords,

@@ -190,7 +190,7 @@ def reconcile():
             "enableHsts": True, "useXForwarded": False,
             "redirectRoot": "/.well-known/jmap",
             "allowedEndpoints": {"match": {"0": {
-                "if": "listener != 'management' && contains(['admin', 'account', 'api'], split(url_path, '/')[1])",
+                "if": "listener != 'management' && (contains(['admin', 'account'], split(url_path, '/')[1]) || (split(url_path, '/')[1] == 'api' && !contains(['auth', 'discover'], split(url_path, '/')[2])))",
                 "then": "404"}}, "else": "200"}}},
         {"@type": "update", "object": "Domain", "id": domain_id,
          "value": {"reportAddressUri": "mailto:tls-reports@fahrican.com"}},
