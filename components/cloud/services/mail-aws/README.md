@@ -99,6 +99,10 @@ compare non-secret schema and row counts. Disable the option afterward and
 require a no-change plan once OpenTofu removes the temporary database and
 security group.
 
+Host replacement waits for Stalwart on the temporary instance address before
+moving the retained EIP. A failed bootstrap leaves the old host serving mail.
+Public hostname and certificate checks run after cutover.
+
 ## Application checks and independent backups
 
 The `mail-operations` command and corresponding systemd services provide:
@@ -145,7 +149,7 @@ backup implementation before using them; the synthetic account is disposable.
 The PostgreSQL dump preserves registry and metadata, but message blobs for that
 dump still require the matching S3 versions. The independent portable archive
 contains its own blobs. Downloading and validating it does not itself prove a
-working mailbox restore: rehearse `vandelay export jmap` into a fresh isolated
+working mailbox restore: rehearse `vandelay export` into a fresh isolated
 Stalwart instance and compare messages and attachments before a full migration.
 Never run an unreviewed import or `--prune` against the live account.
 

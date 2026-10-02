@@ -12,6 +12,7 @@ import hashlib
 import imaplib
 import json
 import os
+import re
 from pathlib import Path
 import secrets
 import shutil
@@ -208,10 +209,15 @@ def canary():
     while time.monotonic() < deadline:
         with imaplib.IMAP4_SSL(HOST, ssl_context=ssl.create_default_context(), timeout=20) as mailbox:
             mailbox.login(CANARY, password)
-            for folder in ("INBOX", "Junk"):
+            folders = [(b"INBOX", False)]
+            for entry in mailbox.list()[1] or []:
+                match = re.match(rb'\([^)]*\\Junk[^)]*\) (?:"[^"]*"|NIL) (.+)$', entry or b"", re.I)
+                if match:
+                    folders.append((match[1], True))
+            for folder, is_junk in folders:
                 if mailbox.select(folder)[0] != "OK":
                     continue
-                status, found = mailbox.uid("search", None, "HEADER", "X-Infra-Probe", f'"{token}"')
+                status, found = mailbox.uid("search", None, "SUBJECT", f'"{token}"')
                 if status != "OK" or not found or not found[0]:
                     continue
                 for uid in found[0].split():
@@ -226,7 +232,7 @@ def canary():
                     # were verified. UID EXPUNGE never touches unrelated messages.
                     mailbox.uid("store", uid, "+FLAGS.SILENT", "(\\Deleted)")
                     mailbox.uid("expunge", uid)
-                if folder != "INBOX":
+                if is_junk:
                     raise OperationError("Canary was classified as junk")
                 write_state("canary.json", {"last_success": time.time()})
                 metrics({"InboundAgeSeconds": 0})
@@ -263,7 +269,7 @@ def backup():
     env["VANDELAY_PASSWORD"] = (SECRETS / "mailbox-password").read_text().strip()
     archive = payload / "fahrican.sqlite"
     run(["vandelay", "import", "jmap", "--url", f"https://{HOST}", "--auth-basic",
-         f"fahrican@{DOMAIN}", str(archive)], env=env, timeout=3600)
+         f"fahrican@{DOMAIN}", "--account-name", f"fahrican@{DOMAIN}", str(archive)], env=env, timeout=3600)
     validate_archive(archive)
     # The portable account archive is the independent recovery source. A
     # PostgreSQL dump additionally preserves the full server registry/metadata
