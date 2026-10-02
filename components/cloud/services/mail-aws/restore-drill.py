@@ -12,6 +12,7 @@ import hashlib
 import os
 from pathlib import Path
 import secrets
+import shutil
 import socket
 import sqlite3
 import subprocess
@@ -28,6 +29,10 @@ os.umask(0o077)
 if (os.stat('/proc/self/ns/net').st_ino == os.stat('/proc/1/ns/net').st_ino
         or len(Path('/proc/net/route').read_text().splitlines()) > 1):
     raise SystemExit('Restore drill requires an isolated network namespace.')
+# The drill creates a server database plus a second portable archive. Leave
+# space for SQLite journals and the running mail service throughout the test.
+if shutil.disk_usage('/var/lib/mail-operations').free < 3 * archive.stat().st_size + 5 * 1024 ** 3:
+    raise SystemExit('Insufficient free space for an isolated mailbox restore.')
 started = time.monotonic()
 with tempfile.TemporaryDirectory(prefix='mail-drill-', dir='/var/lib/mail-operations') as directory:
     work = Path(directory)
