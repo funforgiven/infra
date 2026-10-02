@@ -137,7 +137,7 @@ resource "aws_instance" "mail" {
   ]
 
   # Bootstrap and readiness use a temporary address. Move the retained EIP
-  # only after the replacement serves the existing Stalwart MTA-STS policy.
+  # only after the replacement serves MTA-STS and JMAP and blocks public admin.
   associate_public_ip_address = true
   source_dest_check           = true
   monitoring                  = false
