@@ -207,9 +207,10 @@ resource "terraform_data" "mail_ready" {
 }
 
 resource "aws_eip_association" "mail" {
-  allocation_id = aws_eip.mail.id
-  instance_id   = aws_instance.mail.id
-  depends_on    = [terraform_data.mail_ready]
+  allocation_id       = aws_eip.mail.id
+  instance_id         = aws_instance.mail.id
+  allow_reassociation = true
+  depends_on          = [terraform_data.mail_ready]
 
   lifecycle {
     create_before_destroy = true
