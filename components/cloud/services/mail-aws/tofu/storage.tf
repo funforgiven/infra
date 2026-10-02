@@ -226,3 +226,38 @@ resource "aws_secretsmanager_secret" "resend" {
     prevent_destroy = true
   }
 }
+
+resource "aws_secretsmanager_secret" "canary" {
+  name                    = "fahrican/stalwart/canary"
+  description             = "Generated credential for the isolated mail delivery canary account"
+  recovery_window_in_days = 30
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_secretsmanager_secret" "backup" {
+  name                    = "fahrican/stalwart/backup"
+  description             = "Prefix-restricted Backblaze key and Restic password enrolled outside OpenTofu"
+  recovery_window_in_days = 30
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+# Delegate publication of this one externally enrolled secret without granting
+# the provisioning identity permission to read any runtime secret.
+resource "aws_secretsmanager_secret_policy" "backup_publisher" {
+  secret_arn          = aws_secretsmanager_secret.backup.arn
+  block_public_policy = true
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "PublishMailBackupCredential"
+      Effect    = "Allow"
+      Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/fahrican-mail-gitops" }
+      Action    = "secretsmanager:PutSecretValue"
+      Resource  = aws_secretsmanager_secret.backup.arn
+    }]
+  })
+}

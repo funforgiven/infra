@@ -50,6 +50,7 @@ data:
         keys:
           - HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD
           - UNIFI_BACKUP_RESTIC_PASSWORD
+          - MAIL_AWS_BACKUP_RESTIC_PASSWORD
     provisionedSecrets:
       backblaze-services:
         provisioner: reconcile-services-backblaze
@@ -65,6 +66,8 @@ data:
           - HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY
           - UNIFI_BACKUP_B2_APPLICATION_KEY_ID
           - UNIFI_BACKUP_B2_APPLICATION_KEY
+          - MAIL_AWS_BACKUP_B2_APPLICATION_KEY_ID
+          - MAIL_AWS_BACKUP_B2_APPLICATION_KEY
       telegram-infrastructure:
         provisioner: reconcile-services-telegram
         secretFile: deployments/homelab/cloud/undercloud/81-services-foundation/runtime.sops.yaml

@@ -83,6 +83,8 @@ data "aws_iam_policy_document" "mail" {
         aws_secretsmanager_secret.admin.arn,
         aws_secretsmanager_secret.mailbox.arn,
         aws_secretsmanager_secret.resend.arn,
+        aws_secretsmanager_secret.canary.arn,
+        aws_secretsmanager_secret.backup.arn,
       ],
       var.enable_restore_qualification ? [
         aws_db_instance.restore_qualification[0].master_user_secret[0].secret_arn,
@@ -96,7 +98,19 @@ data "aws_iam_policy_document" "mail" {
     resources = [
       aws_secretsmanager_secret.admin.arn,
       aws_secretsmanager_secret.mailbox.arn,
+      aws_secretsmanager_secret.canary.arn,
     ]
+  }
+
+  statement {
+    sid       = "PublishMailHealth"
+    actions   = ["cloudwatch:PutMetricData"]
+    resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "cloudwatch:namespace"
+      values   = ["Fahrican/Mail"]
+    }
   }
 }
 
@@ -140,8 +154,9 @@ resource "aws_instance" "mail" {
   root_block_device {
     encrypted             = true
     delete_on_termination = true
-    volume_size           = 16
-    volume_type           = "gp3"
+    # Space for the portable mailbox archive and an isolated restore check.
+    volume_size = 64
+    volume_type = "gp3"
   }
 
   user_data = templatefile("${path.module}/user-data.sh.tftpl", {

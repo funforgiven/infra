@@ -47,6 +47,9 @@ bucket:
     - fileNamePrefix: services/hosts/unifi/
       daysFromUploadingToHiding: null
       daysFromHidingToDeleting: 30
+    - fileNamePrefix: services/hosts/mail-aws/
+      daysFromUploadingToHiding: null
+      daysFromHidingToDeleting: 30
 
 writer:
   keyName: infra-undercloud-backup-writer
@@ -155,6 +158,13 @@ services:
       - readFiles
       - writeFiles
   hosts:
+    - host: mail-aws
+      keyName: infra-services-mail-aws-backup-writer
+      namePrefix: services/hosts/mail-aws/
+      secretFile: deployments/homelab/cloud/host-runtime/backups.sops.yaml
+      idField: MAIL_AWS_BACKUP_B2_APPLICATION_KEY_ID
+      valueField: MAIL_AWS_BACKUP_B2_APPLICATION_KEY
+      resticPasswordField: MAIL_AWS_BACKUP_RESTIC_PASSWORD
     - host: home-assistant
       keyName: infra-services-home-assistant-backup-writer
       namePrefix: services/hosts/home-assistant/

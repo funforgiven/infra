@@ -67,3 +67,57 @@ resource "aws_cloudwatch_metric_alarm" "database_storage" {
     DBInstanceIdentifier = aws_db_instance.mail.identifier
   }
 }
+
+locals {
+  mail_health_alarms = {
+    service = {
+      metric      = "ServiceHealthy", comparison = "LessThanThreshold", threshold = 1
+      description = "Stalwart, SMTP/TLS, IMAP/TLS, or queue inspection failed, or health telemetry stopped"
+    }
+    inbound_delivery = {
+      metric      = "InboundAgeSeconds", comparison = "GreaterThanThreshold", threshold = 3600
+      description = "No verified Resend-to-public-MX-to-authenticated-IMAP delivery within one hour"
+    }
+    backup = {
+      metric      = "BackupAgeSeconds", comparison = "GreaterThanThreshold", threshold = 90000
+      description = "No successful encrypted offsite mailbox backup within 25 hours"
+    }
+    restore = {
+      metric      = "RestoreAgeSeconds", comparison = "GreaterThanThreshold", threshold = 691200
+      description = "No verified download and integrity check of the offsite backup within eight days"
+    }
+    disk = {
+      metric      = "RootFreeBytes", comparison = "LessThanThreshold", threshold = 5368709120
+      description = "Mail host has less than 5 GiB free for backup staging and runtime operation"
+    }
+    certificate = {
+      metric      = "CertificateSecondsRemaining", comparison = "LessThanThreshold", threshold = 1814400
+      description = "Mail TLS certificate expires within 21 days"
+    }
+    queue_age = {
+      metric      = "OldestQueuedSeconds", comparison = "GreaterThanThreshold", threshold = 3600
+      description = "A mail delivery has remained queued for more than one hour"
+    }
+    queue_size = {
+      metric      = "QueueMessages", comparison = "GreaterThanThreshold", threshold = 100
+      description = "More than 100 messages are awaiting delivery"
+    }
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "mail_health" {
+  for_each            = local.mail_health_alarms
+  alarm_name          = "stalwart-mail-${each.key}"
+  alarm_description   = each.value.description
+  comparison_operator = each.value.comparison
+  evaluation_periods  = 3
+  metric_name         = each.value.metric
+  namespace           = "Fahrican/Mail"
+  period              = 300
+  statistic           = "Average"
+  threshold           = each.value.threshold
+  treat_missing_data  = "breaching"
+  alarm_actions       = [aws_sns_topic.mail_alerts.arn]
+  ok_actions          = [aws_sns_topic.mail_alerts.arn]
+  dimensions          = { Service = local.service_name }
+}
