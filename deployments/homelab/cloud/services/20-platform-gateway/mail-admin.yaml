@@ -35,6 +35,7 @@ metadata:
 spec:
   parentRefs:
     - name: services
+      namespace: services-network
       sectionName: https
   hostnames:
     - mail-admin.fahrican.com
