@@ -165,8 +165,11 @@ This remains one EC2 node and single-AZ RDS, with daily independent backups.
 It accepts maintenance downtime and up to 24 hours of loss in an independent
 recovery; AWS PITR and versioned blobs provide a more recent same-provider path.
 Keep Gmail available through a staged migration, verify real client behavior,
-and enroll administrator MFA before retiring the old mailbox. This deployment
-does not copy Gmail history or alter the Gmail account.
+and enroll administrator MFA before retiring the old mailbox. The current
+reconcilers authenticate using the managed administrator credential: prepare and
+verify a separate app credential for them before making that login require MFA.
+Mailbox MFA likewise needs an app credential for the scheduled JMAP export.
+This deployment does not copy Gmail history or alter the Gmail account.
 
 ## Isolated mailbox restore rehearsal
 
@@ -188,7 +191,9 @@ compares every blob byte, message date, keyword, mailbox membership, and folder
 hierarchy. It removes the temporary server and store afterward. The restored
 identity may coexist with the target's automatically created default identity;
 mail comparison does not depend on identity counts. No production database or
-blob store is supplied to the isolated server.
+blob store is supplied to the isolated server. The rehearsal requires at least
+three times the archive size plus 5 GiB free for its temporary copies and SQLite
+journals; size staging storage for the imported mailbox before a large rehearsal.
 
 Qualification on 2026-10-02 restored the current seven-message mailbox into
 Stalwart 0.16.24 and verified seven blobs and five folders. The import/export
@@ -196,3 +201,17 @@ phase took 36 seconds for this small sample; this is not a recovery-time estimat
 for a full Gmail archive. An independent Resend-to-MX inbound test passed, and a
 Stalwart-to-Gmail message reached the inbox with an attachment and Gmail reporting
 SPF, DKIM, and DMARC passes. Re-run the rehearsal after importing Gmail history.
+
+## Client connection settings
+
+| Setting | Value |
+| --- | --- |
+| Username | `fahrican@fahrican.com` |
+| IMAP | `mail.fahrican.com:993`, implicit TLS |
+| SMTP | `mail.fahrican.com:465`, implicit TLS, authentication required |
+| Alternate SMTP | `mail.fahrican.com:587`, STARTTLS required |
+| Account web interface | `https://mail.fahrican.com/account` |
+| Administration | `https://mail.fahrican.com/admin` |
+
+The mailbox and administrator credentials remain in their existing AWS Secrets
+Manager containers; do not place them in Git, tickets, or command arguments.
