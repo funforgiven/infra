@@ -314,9 +314,6 @@ _: {
               }},
               {"@type":"reconcile","object":"NetworkListener","matchOn":["name"],"value":{
                 "smtp":{"name":"smtp","protocol":"smtp","bind":{"[::]:25":true},"useTls":true,"tlsImplicit":false},
-                "submission":{"name":"submission","protocol":"smtp","bind":{"[::]:587":true},"useTls":true,"tlsImplicit":false},
-                "submissions":{"name":"submissions","protocol":"smtp","bind":{"[::]:465":true},"useTls":true,"tlsImplicit":true},
-                "imaptls":{"name":"imaptls","protocol":"imap","bind":{"[::]:993":true},"useTls":true,"tlsImplicit":true},
                 "https":{"name":"https","protocol":"http","bind":{"[::]:443":true},"useTls":true,"tlsImplicit":true}
               }}
             ' | ${cliPackage}/bin/stalwart-cli apply --stdin --json --quiet >/dev/null
@@ -594,9 +591,6 @@ _: {
         firewall.allowedTCPPorts = [
           25
           443
-          465
-          587
-          993
         ];
       };
 

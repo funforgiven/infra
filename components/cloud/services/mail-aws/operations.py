@@ -4,15 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import datetime as dt
 import email
 from email import policy
 import fcntl
 import hashlib
-import imaplib
 import json
 import os
-import re
 from pathlib import Path
 import secrets
 import shutil
@@ -24,6 +23,7 @@ import subprocess
 import tempfile
 import time
 import urllib.request
+from urllib.parse import quote, urlsplit
 
 HOST = "mail.fahrican.com"
 DOMAIN = "fahrican.com"
@@ -33,10 +33,71 @@ SECRETS = Path("/run/stalwart-secrets")
 REGION = "eu-central-1"
 REPOSITORY = "s3:https://s3.us-west-004.backblazeb2.com/fahrican-cloud-recovery/services/hosts/mail-aws"
 ATTACHMENT = b"Stalwart readiness attachment v1\n"
+JMAP_CORE = "urn:ietf:params:jmap:core"
+JMAP_MAIL = "urn:ietf:params:jmap:mail"
+JMAP_SUBMISSION = "urn:ietf:params:jmap:submission"
 
 
 class OperationError(RuntimeError):
     """Only fixed, non-sensitive diagnostics may cross the logging boundary."""
+
+
+def jmap_url(url):
+    parsed = urlsplit(url)
+    if (parsed.scheme != "https" or parsed.hostname != HOST or parsed.port not in (None, 443)
+            or parsed.username is not None or parsed.password is not None or parsed.fragment):
+        raise OperationError("JMAP endpoint must use the public HTTPS origin")
+    return url
+
+
+class JmapRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, request, response, code, message, headers, new_url):
+        # Discovery redirects are expected; never forward credentials to another
+        # origin or permit a TLS downgrade, including on blob downloads.
+        return super().redirect_request(request, response, code, message, headers, jmap_url(new_url))
+
+
+class JmapClient:
+    def __init__(self, username, password):
+        self.authorization = "Basic " + base64.b64encode(f"{username}:{password}".encode()).decode()
+        self.opener = urllib.request.build_opener(JmapRedirect())
+        self.session = json.loads(self.request(f"https://{HOST}/.well-known/jmap"))
+        self.account = self.session.get("primaryAccounts", {}).get(JMAP_MAIL)
+        account = self.session.get("accounts", {}).get(self.account, {})
+        if (not self.account or account.get("isReadOnly", True)
+                or not {JMAP_CORE, JMAP_MAIL, JMAP_SUBMISSION} <= self.session.get("capabilities", {}).keys()
+                or not {JMAP_MAIL, JMAP_SUBMISSION} <= account.get("accountCapabilities", {}).keys()):
+            raise OperationError("JMAP mail and submission capabilities unavailable")
+        for key in ("apiUrl", "downloadUrl", "uploadUrl", "eventSourceUrl"):
+            jmap_url(self.session[key])
+
+    def request(self, url, data=None, content_type="application/json"):
+        request = urllib.request.Request(jmap_url(url), data=data, headers={
+            "Authorization": self.authorization, "Content-Type": content_type,
+            "User-Agent": "fahrican-mail-readiness/1"})
+        with self.opener.open(request, timeout=20) as response:
+            if response.status not in (200, 201):
+                raise OperationError("JMAP HTTP request failed")
+            result = response.read(1024 * 1024 + 1)
+        if len(result) > 1024 * 1024:
+            raise OperationError("JMAP probe response exceeded size limit")
+        return result
+
+    def call(self, method, arguments):
+        payload = {"using": [JMAP_CORE, JMAP_MAIL, JMAP_SUBMISSION],
+                   "methodCalls": [[method, {"accountId": self.account, **arguments}, "probe"]]}
+        response = json.loads(self.request(self.session["apiUrl"], json.dumps(payload).encode()))
+        for name, result, call_id in response.get("methodResponses", []):
+            if call_id == "probe" and name == method and result.get("accountId") == self.account:
+                return result
+        raise OperationError("JMAP method failed")
+
+    def download(self, blob_id):
+        url = self.session["downloadUrl"]
+        for key, value in {"accountId": self.account, "blobId": blob_id,
+                           "name": "readiness.eml", "type": "message/rfc822"}.items():
+            url = url.replace("{" + key + "}", quote(value, safe=""))
+        return self.request(url)
 
 
 def client(service):
@@ -99,8 +160,12 @@ def reconcile():
                        "credentials": {"0": {"@type": "Password", "secret": password}}}}},
         {"@type": "update", "object": "Account", "id": owner["id"], "value": {"aliases": aliases}},
         {"@type": "update", "object": "MtaStageAuth", "value": {"saslMechanisms": {
-            "match": {"0": {"if": "local_port != 25 && is_tls",
-                              "then": "[plain, login, oauthbearer, xoauth2]"}}, "else": "false"}}},
+            "match": {}, "else": "false"}}},
+        {"@type": "reconcile", "object": "NetworkListener", "matchOn": ["name"], "value": {
+            "smtp": {"name": "smtp", "protocol": "smtp", "bind": {"[::]:25": True},
+                     "useTls": True, "tlsImplicit": False},
+            "https": {"name": "https", "protocol": "http", "bind": {"[::]:443": True},
+                      "useTls": True, "tlsImplicit": True}}},
         {"@type": "update", "object": "Http", "value": {"enableHsts": True}},
         {"@type": "update", "object": "Domain", "id": domain_id,
          "value": {"reportAddressUri": "mailto:tls-reports@fahrican.com"}},
@@ -158,12 +223,16 @@ def health():
               "RootFreeBytes": shutil.disk_usage(STATE).free}
     try:
         run(["systemctl", "is-active", "--quiet", "stalwart.service"])
-        with socket.create_connection((HOST, 993), timeout=15) as raw:
+        with socket.create_connection((HOST, 443), timeout=15) as raw:
             with ssl.create_default_context().wrap_socket(raw, server_hostname=HOST) as connection:
                 values["CertificateSecondsRemaining"] = ssl.cert_time_to_seconds(
                     connection.getpeercert()["notAfter"]) - time.time()
-                if not connection.recv(4096).startswith(b"* OK"):
-                    raise OperationError("IMAP greeting failed")
+        jmap = JmapClient(CANARY, secret("canary"))
+        folders = jmap.call("Mailbox/get", {"properties": ["id", "role"]})["list"]
+        if not any(folder.get("role") == "inbox" for folder in folders):
+            raise OperationError("JMAP inbox unavailable")
+        if not jmap.call("Identity/get", {"properties": ["id"]})["list"]:
+            raise OperationError("JMAP sending identity unavailable")
         # Local SMTP proves the listener speaks SMTP and presents the right
         # certificate. The Resend canary separately proves the public MX path.
         with smtplib.SMTP("127.0.0.1", 25, timeout=15) as smtp:
@@ -189,9 +258,32 @@ def verify_canary(raw, token):
         raise OperationError("Canary attachment mismatch")
 
 
-def canary():
-    import base64
+def receive_canary(jmap, token):
+    ids = jmap.call("Email/query", {"filter": {"subject": token}, "limit": 20})["ids"]
+    if not ids:
+        return False
+    folders = jmap.call("Mailbox/get", {"properties": ["id", "role"]})["list"]
+    inbox = {folder["id"] for folder in folders if folder.get("role") == "inbox"}
+    junk = {folder["id"] for folder in folders if folder.get("role") == "junk"}
+    messages = jmap.call("Email/get", {"ids": ids, "properties": ["id", "blobId", "mailboxIds"]})
+    if messages.get("notFound") or {message["id"] for message in messages["list"]} != set(ids):
+        raise OperationError("JMAP canary retrieval incomplete")
+    for message in messages["list"]:
+        verify_canary(jmap.download(message["blobId"]), token)
+        # Only delete a message after its complete MIME identity and attachment
+        # have been verified; never clear other mail in the synthetic account.
+        result = jmap.call("Email/set", {"destroy": [message["id"]]})
+        if message["id"] not in (result.get("destroyed") or []):
+            raise OperationError("JMAP canary cleanup failed")
+        memberships = {key for key, value in message["mailboxIds"].items() if value}
+        if memberships & junk:
+            raise OperationError("Canary was classified as junk")
+        if not memberships & inbox:
+            raise OperationError("Canary did not reach the inbox")
+    return True
 
+
+def canary():
     token = "mail-readiness-" + secrets.token_hex(16)
     payload = {"from": f"Mail readiness <mail-canary@{DOMAIN}>", "to": [CANARY],
                "subject": token, "text": f"Synthetic mail delivery check. {token}",
@@ -204,39 +296,13 @@ def canary():
     with urllib.request.urlopen(request, timeout=30) as response:
         if response.status not in (200, 201) or not json.load(response).get("id"):
             raise OperationError("Canary submission failed")
-    password = secret("canary")
+    jmap = JmapClient(CANARY, secret("canary"))
     deadline = time.monotonic() + 240
     while time.monotonic() < deadline:
-        with imaplib.IMAP4_SSL(HOST, ssl_context=ssl.create_default_context(), timeout=20) as mailbox:
-            mailbox.login(CANARY, password)
-            folders = [(b"INBOX", False)]
-            for entry in mailbox.list()[1] or []:
-                match = re.match(rb'\([^)]*\\Junk[^)]*\) (?:"[^"]*"|NIL) (.+)$', entry or b"", re.I)
-                if match:
-                    folders.append((match[1], True))
-            for folder, is_junk in folders:
-                if mailbox.select(folder)[0] != "OK":
-                    continue
-                status, found = mailbox.uid("search", None, "SUBJECT", f'"{token}"')
-                if status != "OK" or not found or not found[0]:
-                    continue
-                for uid in found[0].split():
-                    status, data = mailbox.uid("fetch", uid, "(BODY.PEEK[])")
-                    if status != "OK":
-                        raise OperationError("Canary retrieval failed")
-                    raw = next((item[1] for item in data if isinstance(item, tuple)), None)
-                    if not raw:
-                        raise OperationError("Canary content missing")
-                    verify_canary(raw, token)
-                    # Delete only the exact message whose identity and attachment
-                    # were verified. UID EXPUNGE never touches unrelated messages.
-                    mailbox.uid("store", uid, "+FLAGS.SILENT", "(\\Deleted)")
-                    mailbox.uid("expunge", uid)
-                if is_junk:
-                    raise OperationError("Canary was classified as junk")
-                write_state("canary.json", {"last_success": time.time()})
-                metrics({"InboundAgeSeconds": 0})
-                return
+        if receive_canary(jmap, token):
+            write_state("canary.json", {"last_success": time.time()})
+            metrics({"InboundAgeSeconds": 0})
+            return
         time.sleep(10)
     raise OperationError("Canary did not arrive within four minutes")
 
@@ -337,7 +403,7 @@ def main():
         {"reconcile": reconcile, "health": health, "canary": canary, "backup": backup,
          "restore-check": restore_check}[args.action]()
     except Exception as error:
-        # Deliberately omit exception text from APIs/IMAP/SQL: it may contain
+        # Deliberately omit exception text from APIs/SQL: it may contain
         # credentials, recipients, or message content.
         detail = str(error) if isinstance(error, OperationError) else type(error).__name__
         print(f"Mail {args.action} failed: {detail}.", flush=True)
