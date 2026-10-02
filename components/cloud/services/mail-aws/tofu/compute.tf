@@ -85,6 +85,7 @@ data "aws_iam_policy_document" "mail" {
         aws_secretsmanager_secret.resend.arn,
         aws_secretsmanager_secret.canary.arn,
         aws_secretsmanager_secret.backup.arn,
+        aws_secretsmanager_secret.vpn.arn,
       ],
       var.enable_restore_qualification ? [
         aws_db_instance.restore_qualification[0].master_user_secret[0].secret_arn,

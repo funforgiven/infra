@@ -261,3 +261,27 @@ resource "aws_secretsmanager_secret_policy" "backup_publisher" {
     }]
   })
 }
+
+resource "aws_secretsmanager_secret" "vpn" {
+  name                    = "fahrican/stalwart/vpn"
+  description             = "WireGuard keypair and preshared key for the private administration backend"
+  recovery_window_in_days = 30
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_secretsmanager_secret_policy" "vpn_publisher" {
+  secret_arn          = aws_secretsmanager_secret.vpn.arn
+  block_public_policy = true
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "PublishMailVpnCredential"
+      Effect    = "Allow"
+      Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/fahrican-mail-gitops" }
+      Action    = "secretsmanager:PutSecretValue"
+      Resource  = aws_secretsmanager_secret.vpn.arn
+    }]
+  })
+}
