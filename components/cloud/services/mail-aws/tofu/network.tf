@@ -65,7 +65,7 @@ resource "aws_security_group" "mail" {
   vpc_id      = aws_vpc.mail.id
 
   dynamic "ingress" {
-    for_each = toset([25, 443, 465, 587, 993])
+    for_each = toset([25, 443])
     content {
       description = "Stalwart TCP ${ingress.value}"
       from_port   = ingress.value
