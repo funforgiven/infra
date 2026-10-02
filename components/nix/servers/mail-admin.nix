@@ -92,8 +92,8 @@ _: {
             extraConfig = proxy + ''
               sub_filter_types application/json;
               sub_filter_once off;
-              sub_filter 'https://mail.fahrican.com' 'https://mail-admin.fahrican.com';
-              sub_filter 'wss://mail.fahrican.com' 'wss://mail-admin.fahrican.com';
+              sub_filter 'https://mail.fahrican.com/' 'https://mail-admin.fahrican.com/';
+              sub_filter 'wss://mail.fahrican.com/' 'wss://mail-admin.fahrican.com/';
             '';
           };
         };
