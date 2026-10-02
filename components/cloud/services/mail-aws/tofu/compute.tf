@@ -135,10 +135,8 @@ resource "aws_instance" "mail" {
     aws_security_group.mail.id,
   ]
 
-  # The retained EIP is associated immediately after instance creation, but
-  # cloud-init starts first. A temporary subnet-assigned address keeps the
-  # verified Nix fetch from racing that association; AWS replaces it with the
-  # retained EIP as soon as the association converges.
+  # Bootstrap and readiness use a temporary address. Move the retained EIP
+  # only after the replacement serves the existing Stalwart MTA-STS policy.
   associate_public_ip_address = true
   source_dest_check           = true
   monitoring                  = false
@@ -196,9 +194,22 @@ resource "aws_eip" "mail" {
   }
 }
 
+resource "terraform_data" "mail_ready" {
+  triggers_replace = [aws_instance.mail.id]
+  input            = aws_instance.mail.public_ip
+
+  provisioner "local-exec" {
+    command = "sh ${path.module}/wait-ready.sh"
+    environment = {
+      MAIL_READY_IP = self.input
+    }
+  }
+}
+
 resource "aws_eip_association" "mail" {
   allocation_id = aws_eip.mail.id
   instance_id   = aws_instance.mail.id
+  depends_on    = [terraform_data.mail_ready]
 }
 
 resource "aws_eip_domain_name" "mail" {
