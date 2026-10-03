@@ -179,10 +179,11 @@ successful archival still depends on connectivity to Backblaze.
 - Replacing the selected routing pod produced 20 successful consecutive HTTPS
   probes through the remaining peers. This does not guarantee uninterrupted
   long-lived connections during every failure.
-- Public coordination, the OAuth authorization redirect and external STUN were
-  checked from AWS. Public setup/admin API requests were denied. Actual owner
+- Public coordination and external STUN were checked from AWS. The OAuth
+  authorization flow reached ZITADEL login. Public setup/admin API requests
+  were denied. Actual owner
   sign-in on a personal Linux/Android device remains the final user check.
-- Two independent restores from Backblaze passed without changing production.
+- Two restores from separate Backblaze backups passed without changing production.
 - The repository's 14 flake checks passed, including the access-boundary tests.
 
 The homelab's 40 GiB worker root disks have limited image/log headroom. One
