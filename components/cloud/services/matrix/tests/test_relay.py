@@ -69,6 +69,38 @@ class QueueTests(unittest.TestCase):
         )
         self.assertNotEqual(firing[0][0], resolved[0][0])
 
+    def test_changing_alert_annotations_are_accepted_and_exact_retries_deduplicate(
+        self,
+    ):
+        for status in ("firing", "resolved"):
+            with (
+                self.subTest(status=status),
+                tempfile.TemporaryDirectory() as directory,
+                patch("relay.time.time", return_value=2_000_000),
+            ):
+                alert = {
+                    "fingerprint": "same-alert",
+                    "startsAt": "2026-10-03T20:00:00Z",
+                    "endsAt": "2026-10-03T20:05:00Z",
+                    "status": status,
+                    "labels": {"alertname": "ChangingMetric", "severity": "warning"},
+                    "annotations": {"description": "Current value: 1"},
+                }
+                first = messages({"alerts": [alert]}, "alertmanager", "/alertmanager")
+                updated = dict(alert, annotations={"description": "Current value: 2"})
+                changed = messages(
+                    {"alerts": [updated]}, "alertmanager", "/alertmanager"
+                )
+                retry = messages({"alerts": [updated]}, "alertmanager", "/alertmanager")
+                queue = Queue(Path(directory) / "queue.sqlite")
+                self.addCleanup(queue.db.close)
+                queue.put_many("alertmanager", first)
+                changed_keys = queue.put_many("alertmanager", changed)
+                self.assertNotEqual(first[0][0], changed[0][0])
+                self.assertEqual(changed, retry)
+                self.assertEqual(queue.put_many("alertmanager", retry), changed_keys)
+                self.assertEqual(queue.stats()[0], 2)
+
 
 class EncryptionTests(unittest.TestCase):
     def test_invited_recipient_must_join_before_delivery_is_healthy(self):

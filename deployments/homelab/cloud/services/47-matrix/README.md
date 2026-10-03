@@ -48,7 +48,9 @@ The relay retains bot device `INFRA_ALERTS` on its existing PVC. The live
 Alertmanager configuration routes to Matrix and Telegram, with independent
 email for critical/error alerts. Its Matrix credential mount was verified and
 synthetic firing and resolved notifications were durably accepted by the relay.
-Both AWS availability and encrypted-delivery alarms have notifications enabled.
+After the phone pin deployed, both notifications were delivered and the queue
+was empty. Both AWS availability and encrypted-delivery alarms are healthy with
+notifications enabled.
 The rollout is in `dual` phase. The observation start in `rollout.json` stays
 unset until encrypted delivery to every intended recipient session is verified.
 
@@ -61,9 +63,12 @@ The relay still uses an explicit pin for that exact device; future devices need
 approval. A new or changed device pauses delivery and its independent heartbeat;
 alert intake stays durable and Telegram stays active. The phone's push
 registration failed during the brief rollout outage;
-no pusher was registered at the subsequent check. The public registration route
-and restricted `matrix.org` proxy are reachable. Retry notification setup and
-verify a background notification after approving the phone.
+notification troubleshooting subsequently passed and the phone registered an
+enabled HTTP pusher at `https://matrix.org/_matrix/push/v1/notify`. The public
+registration route and restricted `matrix.org` proxy are reachable. Verify a
+background notification while the phone is locked. A fresh encrypted mobile
+test was delivered and Synapse recorded a successful push-gateway response;
+recipient confirmation of the background notification remains pending.
 
 The native `forge-macos` host received only the monitoring changes on its
 running infrastructure baseline `07deb4bcbf45516003e18e54b066130ab4d687d8`.
@@ -244,6 +249,8 @@ only on `/notify`; they cannot impersonate another producer or choose a room.
 Acknowledgement follows a committed SQLite write. Stable event transactions
 allow retry after an ambiguous response or restart. Delivered bodies are
 erased from the queue; pending alert bodies remain local until delivery.
+Alertmanager transactions include a digest of the rendered message: changing
+metric annotations produce distinct updates, while exact retries deduplicate.
 The Matrix Alertmanager values Secret has the
 [`reconcile.fluxcd.io/watch: Enabled` label](https://fluxcd.io/flux/components/helm/helmreleases/#reacting-immediately-to-configuration-dependencies),
 so enrollment and cutover changes trigger the owning Helm release immediately.
