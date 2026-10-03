@@ -21,6 +21,14 @@ resource "zitadel_user_grant" "netbird_owner" {
   role_keys  = [zitadel_project_role.netbird_services.role_key]
 }
 
+resource "zitadel_user_grant" "netbird_funforgiven" {
+  org_id     = local.org_id
+  project_id = zitadel_project.netbird.id
+  # The owner's everyday account, also used by the Matrix project.
+  user_id   = "385540008259371450"
+  role_keys = [zitadel_project_role.netbird_services.role_key]
+}
+
 resource "zitadel_application_oidc" "netbird" {
   org_id                      = local.org_id
   project_id                  = zitadel_project.netbird.id
