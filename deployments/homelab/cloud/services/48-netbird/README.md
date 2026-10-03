@@ -54,9 +54,9 @@ to the existing private gateway and limited to the administrator workstation,
 native WireGuard network and undercloud controller hosts. Initial setup is
 performed through an authenticated Kubernetes port-forward.
 
-The ZITADEL project denies unassigned users. Initially only the existing owner
-identity receives its `netbird-services` role. A device authenticating as that
-user may initiate TCP 443 to the private gateway. There are no grants for peer
+The ZITADEL project denies unassigned users. The owner's everyday `funforgiven`
+account and the emergency account receive its `netbird-services` role. A device
+authenticating as either user may initiate TCP 443 to the private gateway. There are no grants for peer
 input, lateral client traffic, management VLANs, arbitrary cluster addresses or
 internet exit routing. The built-in all-to-all policy is disabled before the
 external identity provider or routing peers are enabled and is then managed by
