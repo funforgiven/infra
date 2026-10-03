@@ -264,7 +264,7 @@ resource "aws_secretsmanager_secret_policy" "backup_publisher" {
 
 resource "aws_secretsmanager_secret" "vpn" {
   name                    = "fahrican/stalwart/vpn"
-  description             = "WireGuard keypair and preshared key for the private administration backend"
+  description             = "Homelab and independent AWS WireGuard server keys and panel DNS validation token"
   recovery_window_in_days = 30
   lifecycle {
     prevent_destroy = true
