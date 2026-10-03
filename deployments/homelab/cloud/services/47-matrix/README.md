@@ -18,10 +18,13 @@ infrastructure access.
 The dedicated public Envoy VIP is `10.21.40.128`. RouterOS forwards only WAN
 TCP 443 to it and supplies narrow LAN reflection. The existing private gateway
 at `10.21.40.122` serves host alert intake. Public DNS uses the homelab's static
-IPv4 with Cloudflare proxying disabled. Private `cloud.fahrican.com` resolution
+IPv4 with Cloudflare proxying disabled. Services cert-manager performs DNS-01
+checks through public resolvers so the private `cloud.fahrican.com` zone cannot
+hide ACME challenge records; this follows the
+[cert-manager split DNS guidance](https://cert-manager.io/docs/configuration/acme/dns01/#setting-nameservers-for-dns01-self-check). Private `cloud.fahrican.com` resolution
 continues to reach the undercloud gateway, including private ZITADEL management.
 
-The Matrix wave is initially suspended. Generated signing keys, database
+The Matrix wave is enabled after identity and runtime enrollment. Generated signing keys, database
 passwords and MAS secrets are encrypted in `runtime.sops.yaml`, and the scoped
 email key is encrypted in `email.sops.yaml`. The tested runtime is published and
 pinned by digest in `kustomization.yaml`. OIDC and bot enrollment are still
@@ -141,6 +144,16 @@ read identity/DNS/AWS controller outputs; Matrix workloads run in `services-v1`.
    the relay never falls back to plaintext. The bot retains device
    `INFRA_ALERTS` and its crypto store on the `matrix-relay` PVC. Do not enroll a
    second bot with the same device against a fresh store.
+
+The services workers have DHCP host routes for `1.1.1.1` and `8.8.8.8`
+through an isolated secondary network. Certificate validation uses reachable
+public resolvers `9.9.9.9` and `149.112.112.112`.
+
+Magnum's Calico addon installs a global outbound allow at order 20. Matrix's
+Calico policies run at order 15, allow only the documented workload paths and
+end with explicit denial. The isolated restore namespace also has an early
+inbound and outbound denial. Keep the Calico and Kubernetes allowlists in sync.
+[Calico documents ordered evaluation and terminal Allow/Deny actions](https://docs.tigera.io/calico/latest/reference/resources/globalnetworkpolicy).
 
 ## Alert migration
 

@@ -38,7 +38,9 @@ spec:
     replicaCount: 2
     extraArgs:
       - --dns01-recursive-nameservers-only
-      - --dns01-recursive-nameservers=172.24.0.10:53
+      # Public ACME records must bypass split DNS and the worker DHCP routes
+      # that send 1.1.1.1 and 8.8.8.8 to the isolated secondary network.
+      - --dns01-recursive-nameservers=9.9.9.9:53,149.112.112.112:53
     podDisruptionBudget:
       enabled: true
       minAvailable: 1
