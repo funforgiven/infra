@@ -40,6 +40,31 @@ enrolled. The initial recipient is `@funforgiven:matrix.fahrican.com`; device
 Delivery waits for the recipient to join **Infra Alerts**. The supplied static WAN address, `31.223.15.252`,
 is recorded in the DNS inputs.
 
+## Live enrollment and validation
+
+On 2026-10-03, `funforgiven` joined **Infra Alerts** and confirmed that both
+synthetic firing and resolved alerts decrypted on session `J7NOIrKrBB`.
+The relay retains bot device `INFRA_ALERTS` on its existing PVC. The live
+Alertmanager configuration routes to Matrix and Telegram, with independent
+email for critical/error alerts. Both AWS availability and encrypted-delivery
+alarms are healthy with notifications enabled. The rollout is in `dual` phase;
+the observation start is recorded in `rollout.json`.
+
+The native `forge-macos` host received only the monitoring changes on its
+running infrastructure baseline `07deb4bcbf45516003e18e54b066130ab4d687d8`.
+The activated system is
+`/nix/store/pj7vvlws2ibp88rasiqd1w6qjiajvlr2-nixos-system-forge-macos-26.11.20260810.2fcb964`.
+Activation held the broker lock and verified the unchanged kernel, guest
+executable and golden manifest. A synthetic systemd failure succeeded through
+both transports; the Matrix event was confirmed delivered in the relay queue.
+
+Fresh production PostgreSQL dumps and relay snapshots passed an offline
+restore from private RAM copies: both databases, media, queue, original bot
+key and recovered Megolm canary were verified. Off-site Velero restore
+qualification remains pending while the shared backup location is unavailable.
+`qualified_at` stays unset. Complete that restore, mobile push and recipient
+recovery checks before Telegram retirement.
+
 ## Enrollment and activation
 
 Run from the repository root. Use `nix run path:.#…` while these files are
@@ -204,6 +229,9 @@ only on `/notify`; they cannot impersonate another producer or choose a room.
 Acknowledgement follows a committed SQLite write. Stable event transactions
 allow retry after an ambiguous response or restart. Delivered bodies are
 erased from the queue; pending alert bodies remain local until delivery.
+The Matrix Alertmanager values Secret has the
+[`reconcile.fluxcd.io/watch: Enabled` label](https://fluxcd.io/flux/components/helm/helmreleases/#reacting-immediately-to-configuration-dependencies),
+so enrollment and cutover changes trigger the owning Helm release immediately.
 
 Critical and error Alertmanager notifications also go directly to the external
 email address. A host uses SMTP when the relay cannot durably accept its alert.

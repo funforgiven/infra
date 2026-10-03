@@ -27,6 +27,7 @@ def main():
             environment = dict(
                 os.environ,
                 PGPASSWORD=(credentials / (name + "-password")).read_text(),
+                PGCONNECT_TIMEOUT="10",
             )
             subprocess.run(
                 [
