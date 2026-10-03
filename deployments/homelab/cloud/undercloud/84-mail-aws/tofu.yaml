@@ -27,7 +27,7 @@ spec:
     - name: enable_matrix_monitoring
       value: "true"
     - name: enable_matrix_delivery_alerts
-      value: "false"
+      value: "true"
   runnerPodTemplate:
     spec:
       envFrom:
