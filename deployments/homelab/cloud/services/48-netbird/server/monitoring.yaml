@@ -39,6 +39,7 @@ spec:
             severity: critical
           annotations:
             summary: NetBird relay or public TLS gateway is unavailable
+            description: The relay health endpoint could not complete its public WebSocket/TLS check. Use the independent MikroTik WireGuard profile for recovery.
         - alert: NetBirdStunWorkerUnavailable
           expr: kube_daemonset_status_number_unavailable{namespace="netbird",daemonset="netbird-stun"} > 0
           for: 5m
@@ -70,7 +71,7 @@ spec:
   interval: 60s
   scrapeTimeout: 15s
   jobName: netbird-relay
-  module: http_2xx
+  module: netbird_relay
   prober:
     url: blackbox-exporter.services-observability.svc.cluster.local:9115
   targets:
