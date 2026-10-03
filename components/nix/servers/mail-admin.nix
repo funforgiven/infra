@@ -70,7 +70,7 @@ _: {
           extraConfig = proxy origin;
         };
         # Rewrite only discovery documents. Mail bodies and JMAP data are intact.
-        "~ ^/(api/discover/|[.]well-known/(oauth|openid)|jmap/session$)" = {
+        "~ ^/(api/discover/|[.]well-known/(jmap|oauth|openid)|jmap/session$)" = {
           proxyPass = "http://127.0.0.1:8081";
           extraConfig = proxy origin + ''
             sub_filter_types application/json;
