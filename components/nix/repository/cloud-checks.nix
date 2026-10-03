@@ -55,6 +55,8 @@
               -s components/cloud/services/mail-aws/tests -p 'test_*.py'
             python -m unittest discover \
               -s components/cloud/services/netbird/tests -p 'test_*.py'
+            python -m unittest discover \
+              -s components/cloud/services/nodes/tests -p 'test_*.py'
 
             touch "$out"
           '';

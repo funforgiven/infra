@@ -4,3 +4,9 @@ resources:
   - persistent-targets.yaml
   - kube-prometheus-stack.yaml
   - blackbox-exporter.yaml
+  - node-policy.yaml
+configMapGenerator:
+  - name: services-node-policy
+    namespace: kube-system
+    files:
+      - ../../../../../components/cloud/services/nodes/apply_policy.py

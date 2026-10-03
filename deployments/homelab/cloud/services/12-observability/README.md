@@ -89,3 +89,43 @@ targets must also use `v1/Endpoints` while this workaround remains enabled.
 Helm retries failed installs and upgrades to tolerate the admission-webhook
 startup race. cert-manager owns the webhook certificate and CA injection; the
 chart's patch Jobs remain disabled.
+
+## Worker disk retention
+
+The `services-node-policy` DaemonSet installs a bounded disk policy on Linux
+workers, with control-plane nodes excluded. Kubelet image cleanup starts at
+70% filesystem usage and aims for 60%, leaving headroom before the existing
+85% image-filesystem eviction threshold. Kubelet owns cleanup of unused images;
+the policy does not delete containerd files or active images. More conservative
+existing thresholds are retained. See
+[Kubernetes image garbage collection](https://kubernetes.io/docs/concepts/architecture/garbage-collection/#container-image-lifecycle).
+
+Journald retains at most 512 MiB and seven days, with a 6 GiB free-space target.
+The existing rsyslog file list and reopen hook are preserved; logs rotate daily
+or above 64 MiB, checked by an hourly system timer, with four compressed
+archives. The initial activation rotates/compresses oversized logs and vacuums
+archived journals. This retention policy trades older local logs for space
+needed by running workloads.
+
+Initial activation is performed one worker at a time with the reviewed
+`components/cloud/services/nodes/apply_policy.py`, using the existing Multus
+host access to launch a temporary host systemd service. Direct interactive exec
+is cancelled when kubelet restarts and must not be used for this activation.
+Verify successful service completion, Ready, DiskPressure=False and the live kubelet thresholds
+before proceeding to the next worker. Only then publish the DaemonSet, whose
+initial containers see the already installed configuration and make no changes.
+The DaemonSet applies the same settings on replacement workers. A configuration
+change restarts kubelet; worker containers and their persistent volumes stay in
+place. No worker is drained or rebooted during this operation.
+
+The installer retains original configuration under
+`/var/lib/services-node-policy` with mode 0700 and restores previous settings if
+an activation command fails. It reads the host filesystem through a read-only
+mount, with writes limited to the two existing configuration files, journal and
+timer drop-in directories, local logs and policy/rotation state. Its init
+container has explicit chroot/file capabilities; the retained container runs
+without root, capabilities or host mounts. API token mounting is disabled and
+all pod networking is denied. The script rejects control planes and unexpected
+configuration before writing. Removal of the DaemonSet does not undo installed
+host configuration; restore the saved files and remove its two drop-ins before
+reloading systemd and restarting the affected services if rolling back.
