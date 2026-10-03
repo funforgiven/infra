@@ -63,7 +63,8 @@ resource "aws_lambda_function" "matrix_probe" {
   handler                        = "outside_check.handler"
   timeout                        = 45
   memory_size                    = 128
-  reserved_concurrent_executions = 2
+  # The enrolled account's quota cannot reserve a dedicated concurrency slice.
+  reserved_concurrent_executions = -1
   environment {
     variables = { HEARTBEAT_SECRET_ARN = aws_secretsmanager_secret.matrix_heartbeat[0].arn }
   }
