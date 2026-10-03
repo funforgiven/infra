@@ -1,0 +1,48 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: netbird-server
+  namespace: netbird
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: netbird-server
+  endpoints:
+    - port: metrics
+      interval: 30s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: netbird
+  namespace: netbird
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: netbird
+      rules:
+        - alert: NetBirdControlPlaneUnavailable
+          expr: kube_deployment_status_replicas_available{namespace="netbird",deployment="netbird-server"} < 1
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: NetBird coordination is unavailable
+            description: Use the independent MikroTik WireGuard profile for recovery.
+        - alert: NetBirdRoutingPeersUnavailable
+          expr: kube_deployment_status_replicas_available{namespace="netbird-routing",deployment="networkrouter-services"} < 1
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: NetBird service routing is unavailable
+        - alert: NetBirdDatabaseBackupStale
+          expr: time() - cnpg_pg_stat_archiver_last_archived_time{namespace="netbird"} > 3600
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: NetBird PostgreSQL WAL archive is stale

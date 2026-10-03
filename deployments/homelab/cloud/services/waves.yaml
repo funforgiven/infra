@@ -1,6 +1,111 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
+  name: services-netbird-controllers
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 15m
+  path: ./deployments/homelab/cloud/services/48-netbird/controllers
+  prune: true
+  sourceRef: {kind: GitRepository, name: flux-system}
+  dependsOn:
+    - name: services-platform-controllers
+    - name: services-observability
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: cloudnative-pg
+      namespace: cnpg-system
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: barman-cloud
+      namespace: cnpg-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: services-netbird-server
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./deployments/homelab/cloud/services/48-netbird/server
+  prune: true
+  sourceRef: {kind: GitRepository, name: flux-system}
+  decryption:
+    provider: sops
+    secretRef: {name: sops-age}
+  dependsOn:
+    - name: services-netbird-controllers
+    - name: services-platform-gateway
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: netbird-server
+      namespace: netbird
+    - apiVersion: postgresql.cnpg.io/v1
+      kind: Cluster
+      name: netbird-postgres
+      namespace: netbird
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: services-netbird-operator
+  namespace: flux-system
+spec:
+  # Enrollment closes default mesh access and installs the API credential first.
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  timeout: 15m
+  path: ./deployments/homelab/cloud/services/48-netbird/operator
+  prune: true
+  sourceRef: {kind: GitRepository, name: flux-system}
+  decryption:
+    provider: sops
+    secretRef: {name: sops-age}
+  dependsOn:
+    - name: services-netbird-server
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: netbird-operator
+      namespace: netbird-routing
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: services-netbird-access
+  namespace: flux-system
+spec:
+  # Unsuspend only after the policy controller has created the DNS zones/groups.
+  suspend: true
+  interval: 10m
+  retryInterval: 1m
+  timeout: 15m
+  path: ./deployments/homelab/cloud/services/48-netbird/access
+  prune: true
+  sourceRef: {kind: GitRepository, name: flux-system}
+  dependsOn:
+    - name: services-netbird-operator
+    - name: services-platform-gateway
+  healthChecks:
+    - apiVersion: netbird.io/v1alpha1
+      kind: NetworkRouter
+      name: services
+      namespace: netbird-routing
+    - apiVersion: netbird.io/v1alpha1
+      kind: NetworkResource
+      name: services
+      namespace: envoy-gateway-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
   name: services-matrix
   namespace: flux-system
 spec:

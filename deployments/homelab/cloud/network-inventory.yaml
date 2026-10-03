@@ -472,6 +472,12 @@ all:
               protocol: tcp
               destination_port: "22"
           routeros_port_forwards:
+            - comment: "infra: NetBird STUN"
+              in_interface_list: INFRA-WAN
+              protocol: udp
+              destination_port: "3478"
+              to_address: 10.21.40.129
+              to_port: "3478"
             - comment: "infra: Matrix public HTTPS"
               in_interface_list: INFRA-WAN
               protocol: tcp
@@ -503,6 +509,14 @@ all:
               to_address: 10.21.10.20
               to_port: "22000"
           routeros_nat_reflections:
+            - comment: "infra: NetBird STUN LAN reflection"
+              source_interface_list: INFRA-LAN
+              destination_address_type: local
+              excluded_destination_address_list: INFRA-LAN-NAT
+              protocol: udp
+              destination_port: "3478"
+              to_address: 10.21.40.129
+              to_port: "3478"
             - comment: "infra: Matrix public HTTPS LAN reflection"
               source_interface_list: INFRA-LAN
               destination_address_type: local

@@ -1,0 +1,49 @@
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: netbird-postgres-backup
+  namespace: netbird
+spec:
+  retentionPolicy: 30d
+  configuration:
+    destinationPath: s3://fahrican-cloud-recovery/services/kubernetes/netbird/postgresql/
+    endpointURL: https://s3.us-west-004.backblazeb2.com
+    s3Credentials:
+      accessKeyId:
+        name: netbird-backup
+        key: ACCESS_KEY_ID
+      secretAccessKey:
+        name: netbird-backup
+        key: ACCESS_SECRET_KEY
+      region:
+        name: netbird-backup
+        key: AWS_REGION
+    wal:
+      compression: gzip
+      encryption: AES256
+      maxParallel: 2
+    data:
+      compression: gzip
+      encryption: AES256
+      jobs: 2
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: netbird-postgres-daily
+  namespace: netbird
+spec:
+  schedule: "0 47 2 * * *"
+  backupOwnerReference: self
+  cluster:
+    name: netbird-postgres
+  immediate: true
+  method: plugin
+  online: true
+  onlineConfiguration:
+    waitForArchive: true
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io
+    parameters:
+      barmanObjectName: netbird-postgres-backup
+  target: prefer-standby

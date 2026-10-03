@@ -1,0 +1,74 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: netbird-public
+  namespace: netbird
+spec:
+  parentRefs:
+    - name: matrix-public
+      namespace: services-network
+      sectionName: https
+  hostnames: [netbird.fahrican.com]
+  rules:
+    - matches:
+        - path: {type: PathPrefix, value: /oauth2}
+        - path: {type: PathPrefix, value: /relay}
+        - path: {type: PathPrefix, value: /ws-proxy}
+        - path: {type: Exact, value: /api/instance}
+          method: GET
+      timeouts:
+        request: 0s
+        backendRequest: 0s
+      backendRefs:
+        - name: netbird-server
+          port: 8080
+    - matches:
+        - path: {type: PathPrefix, value: /management.ManagementService}
+        - path: {type: PathPrefix, value: /signalexchange.SignalExchange}
+      timeouts:
+        request: 0s
+        backendRequest: 0s
+      backendRefs:
+        - name: netbird-server
+          port: 8081
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: netbird-api
+  namespace: netbird
+spec:
+  parentRefs:
+    - name: services
+      namespace: services-network
+      sectionName: https
+  hostnames: [netbird-api.fahrican.com]
+  rules:
+    - matches:
+        - path: {type: PathPrefix, value: /api}
+      backendRefs:
+        - name: netbird-server
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: netbird-api
+  namespace: netbird
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: netbird-api
+  authorization:
+    defaultAction: Deny
+    rules:
+      - action: Allow
+        principal:
+          clientCIDRs:
+            - 10.21.10.20/32
+            - 10.21.91.0/24
+            # Undercloud OpenTofu runners leave through these hosts.
+            - 10.21.20.10/32
+            - 10.21.20.11/32
+            - 10.21.20.12/32

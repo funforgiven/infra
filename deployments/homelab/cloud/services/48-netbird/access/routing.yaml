@@ -1,0 +1,89 @@
+apiVersion: netbird.io/v1alpha1
+kind: NetworkRouter
+metadata:
+  name: services
+  namespace: netbird-routing
+spec:
+  dnsZoneRef:
+    name: vpn.fahrican.com
+  image: netbirdio/netbird:0.80.0@sha256:4976692ea44bb93871743d0b742b4a8f97f6425bfc458ca2d78e28fdb8bdf4ad
+  workloadOverride:
+    replicas: 3
+    podTemplate:
+      metadata:
+        labels:
+          access.fahrican.com/netbird-router: services
+      spec:
+        containers:
+          - name: netbird
+            securityContext:
+              privileged: false
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: [ALL]
+                add: [NET_ADMIN, NET_RAW, NET_BIND_SERVICE, SYS_RESOURCE]
+            env:
+              - name: NB_MANAGEMENT_URL
+                value: https://netbird.fahrican.com
+            resources:
+              requests: {cpu: 100m, memory: 128Mi}
+              limits: {memory: 512Mi}
+          - name: kube-egress-forwarder
+            resources:
+              requests: {cpu: 10m, memory: 32Mi}
+              limits: {memory: 128Mi}
+---
+apiVersion: netbird.io/v1alpha1
+kind: NetworkResource
+metadata:
+  name: services
+  namespace: envoy-gateway-system
+spec:
+  networkRouterRef:
+    name: services
+    namespace: netbird-routing
+  serviceRef:
+    name: netbird-services
+  groups:
+    - name: private-services
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: routing-peers
+  namespace: netbird-routing
+spec:
+  podSelector:
+    matchLabels:
+      access.fahrican.com/netbird-router: services
+  policyTypes: [Ingress, Egress]
+  ingress:
+    # WireGuard peer ports are negotiated by NetBird; all tunneled traffic is
+    # separately authenticated and authorized by the NetBird routing firewall.
+    - ports:
+        - protocol: UDP
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: kube-system}
+          podSelector:
+            matchLabels: {k8s-app: kube-dns}
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: envoy-gateway-system}
+          podSelector:
+            matchLabels:
+              gateway.envoyproxy.io/owning-gateway-name: netbird-services
+              gateway.envoyproxy.io/owning-gateway-namespace: services-network
+      ports:
+        - {protocol: TCP, port: 10443}
+    # Coordination/relay and the operator forwarder's Kubernetes API watch.
+    - ports:
+        - {protocol: TCP, port: 443}
+        - {protocol: TCP, port: 6443}
+    - ports:
+        - protocol: UDP

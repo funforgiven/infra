@@ -1,0 +1,100 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: netbird-services
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    accessLog:
+      settings:
+        - format:
+            type: JSON
+            json:
+              host: "%REQ(:AUTHORITY)%"
+              method: "%REQ(:METHOD)%"
+              status: "%RESPONSE_CODE%"
+          sinks:
+            - type: File
+              file: {path: /dev/stdout}
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 2
+        container:
+          resources:
+            requests: {cpu: 100m, memory: 128Mi}
+            limits: {memory: 512Mi}
+      envoyPDB:
+        minAvailable: 1
+      envoyService:
+        name: netbird-services
+        type: ClusterIP
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              clusterIP: 172.24.0.80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: netbird-services
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: netbird-services
+    namespace: envoy-gateway-system
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: netbird-services
+  namespace: services-network
+spec:
+  gatewayClassName: netbird-services
+  listeners:
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: services-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              gateway.fahrican.com/services: allowed
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: netbird-services-ingress
+  namespace: envoy-gateway-system
+spec:
+  podSelector:
+    matchLabels:
+      gateway.envoyproxy.io/owning-gateway-name: netbird-services
+      gateway.envoyproxy.io/owning-gateway-namespace: services-network
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: netbird-routing
+          podSelector:
+            matchLabels:
+              access.fahrican.com/netbird-router: services
+      ports:
+        # Envoy Gateway maps privileged listener ports by adding 10000.
+        - {protocol: TCP, port: 10443}
+    - from:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: services-observability}
+      ports:
+        - {protocol: TCP, port: 19001}

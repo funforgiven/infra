@@ -69,6 +69,7 @@ spec:
   - matrix-auth.fahrican.com
   - chat.fahrican.com
   - auth.cloud.fahrican.com
+  - netbird.fahrican.com
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
