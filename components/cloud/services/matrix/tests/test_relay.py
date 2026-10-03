@@ -71,6 +71,31 @@ class QueueTests(unittest.TestCase):
 
 
 class EncryptionTests(unittest.TestCase):
+    def test_invited_recipient_must_join_before_delivery_is_healthy(self):
+        client = MagicMock(user_id="@bot:local", device_id="BOT")
+        client.rooms = {
+            "!room:local": MagicMock(encrypted=True, users={"@bot:local": object()})
+        }
+        with self.assertRaisesRegex(ValueError, "has not joined"):
+            check_room(client, "!room:local", ["@bot:local", "@owner:local"], {})
+        client.verify_device.assert_not_called()
+
+    def test_additional_unapproved_device_pauses_delivery(self):
+        client = MagicMock(user_id="@bot:local", device_id="BOT")
+        client.rooms = {
+            "!room:local": MagicMock(encrypted=True, users={"@owner:local": object()})
+        }
+        approved = MagicMock(id="PHONE", ed25519="approved")
+        new_device = MagicMock(id="LAPTOP", ed25519="new")
+        client.device_store.active_user_devices.return_value = [approved, new_device]
+        with self.assertRaisesRegex(ValueError, "unapproved device"):
+            check_room(
+                client,
+                "!room:local",
+                ["@owner:local"],
+                {"@owner:local": {"PHONE": "approved"}},
+            )
+
     def test_plaintext_room_and_unapproved_devices_fail_closed(self):
         client = MagicMock()
         room = MagicMock(encrypted=False, users={"@owner:local": object()})
