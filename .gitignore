@@ -20,6 +20,7 @@
 /secrets/*.hash
 /secrets/*.key
 /secrets/*.pem
+/secrets/mail-aws-vpn.conf
 __pycache__/
 before-infra-*.rsc
 secrets/home-assistant-token.local

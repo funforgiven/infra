@@ -26,6 +26,8 @@ import urllib.request
 from urllib.parse import quote, urlsplit
 
 HOST = "mail.fahrican.com"
+PANEL_HOST = "mail-admin-aws.fahrican.com"
+PANEL_PORT = 8443
 DOMAIN = "fahrican.com"
 CANARY = "mail-canary@fahrican.com"
 STATE = Path("/var/lib/mail-operations")
@@ -259,7 +261,8 @@ def queue_health(messages, now=None):
 def health():
     values = {"ServiceHealthy": 0, "InboundAgeSeconds": age("canary.json"),
               "BackupAgeSeconds": age("backup.json"), "RestoreAgeSeconds": age("restore.json"),
-              "RootFreeBytes": shutil.disk_usage(STATE).free}
+              "RootFreeBytes": shutil.disk_usage(STATE).free,
+              "AdminPanelHealthy": 0, "AdminCertificateSecondsRemaining": 0}
     try:
         run(["systemctl", "is-active", "--quiet", "stalwart.service"])
         with socket.create_connection((HOST, 443), timeout=15) as raw:
@@ -282,6 +285,20 @@ def health():
                 raise OperationError("SMTP greeting failed")
         count, oldest = queue_health(objects("QueuedMessage", "id,createdAt,flags,recipients"))
         values.update(QueueMessages=count, OldestQueuedSeconds=oldest, ServiceHealthy=1)
+        run(["systemctl", "is-active", "--quiet", "wg-quick-wg-mail-admin.service"])
+        with socket.create_connection((PANEL_HOST, PANEL_PORT), timeout=15) as raw:
+            with ssl.create_default_context().wrap_socket(raw, server_hostname=PANEL_HOST) as connection:
+                values["AdminCertificateSecondsRemaining"] = ssl.cert_time_to_seconds(
+                    connection.getpeercert()["notAfter"]) - time.time()
+        origin = f"https://{PANEL_HOST}:{PANEL_PORT}"
+        for path in ("/admin/", "/account/"):
+            with urllib.request.urlopen(origin + path, timeout=15) as response:
+                if response.status != 200 or response.url != origin + path:
+                    raise OperationError("Independent mail panel unavailable")
+        with urllib.request.urlopen(origin + "/jmap/session", timeout=15) as response:
+            if json.load(response).get("apiUrl") != origin + "/jmap/":
+                raise OperationError("Independent panel discovery has the wrong origin")
+        values["AdminPanelHealthy"] = 1
     finally:
         metrics(values)
 

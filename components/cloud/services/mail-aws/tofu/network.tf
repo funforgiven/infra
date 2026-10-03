@@ -75,6 +75,14 @@ resource "aws_security_group" "mail" {
     }
   }
 
+  ingress {
+    description = "Independent WireGuard access to private mail panels"
+    from_port   = 51820
+    to_port     = 51820
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     description = "Package, AWS API, ACME, DNS, and outbound relay access"
     from_port   = 0

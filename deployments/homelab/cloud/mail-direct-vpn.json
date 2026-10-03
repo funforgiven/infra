@@ -1,0 +1,11 @@
+{
+  "address": "10.21.92.1/24",
+  "serverAddress": "10.21.92.1",
+  "clientAddress": "10.21.92.2/32",
+  "endpoint": "18.195.240.25:51820",
+  "listenPort": 51820,
+  "httpsPort": 8443,
+  "hostname": "mail-admin-aws.fahrican.com",
+  "publicKey": "4ebQCP0vp21j4vHH3Z951q6VjOPRBeYOsWQ9V7Ddv18=",
+  "clientPublicKey": "IPwslXBhWx6dBrb6rj5nc4oTO69qI8l4uoHV9zkAYy8="
+}

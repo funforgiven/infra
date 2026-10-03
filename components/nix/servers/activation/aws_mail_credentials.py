@@ -585,6 +585,36 @@ class AwsMailCredentials:
             values[key] = value
         self._publish("fahrican/stalwart/backup", json.dumps(values))
 
+    def publish_vpn(self) -> None:
+        result = subprocess.run(
+            ["sops", "--decrypt", "--output-type", "json",
+             str(self.repository_root / "secrets/mail-vpn.yaml")],
+            capture_output=True, text=True, check=False,
+        )
+        if result.returncode:
+            raise AwsMailCredentialError("Cannot decrypt mail VPN credentials")
+        try:
+            values = json.loads(result.stdout)
+            keys = ("private_key", "preshared_key", "direct_private_key", "direct_preshared_key")
+            if set(values) != set(keys) or any(
+                not isinstance(values[key], str)
+                or not re.fullmatch(r"[A-Za-z0-9+/]{43}=", values[key])
+                for key in keys
+            ):
+                raise ValueError
+        except (KeyError, ValueError, TypeError):
+            raise AwsMailCredentialError("Invalid mail VPN credential document") from None
+        token = self.store.read(
+            Path("deployments/homelab/cloud/undercloud/38-service-api-foundation/acme/cloudflare-token.sops.yaml"),
+            "api-token",
+        )
+        if not token:
+            raise AwsMailCredentialError("Cloudflare DNS credential is not enrolled")
+        values["dns_api_token"] = token
+        # The client private key is in a separate SOPS document and is never
+        # published to the server. DNS validation runs entirely within AWS.
+        self._publish("fahrican/stalwart/vpn", json.dumps(values))
+
     def _publish(self, secret_id: str, value: str) -> None:
         auth = {
             key: self.store.read(
@@ -626,7 +656,7 @@ class AwsMailCredentials:
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("provisioning", "resend", "backup"))
+    parser.add_argument("action", choices=("provisioning", "resend", "backup", "vpn"))
     parser.add_argument("--repository-root", type=Path, default=Path.cwd())
     return parser.parse_args()
 
@@ -644,6 +674,9 @@ def main() -> int:
         elif arguments.action == "backup":
             credentials.publish_backup()
             message = "AWS mail backup credential published without displaying it."
+        elif arguments.action == "vpn":
+            credentials.publish_vpn()
+            message = "AWS mail VPN and DNS credentials published without displaying them."
         else:
             credentials.publish_resend()
             message = "AWS mail Resend credential published without displaying it."

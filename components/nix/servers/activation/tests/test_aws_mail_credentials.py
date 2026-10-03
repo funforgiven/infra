@@ -1,5 +1,6 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
+import json
 import os
 import subprocess
 import unittest
@@ -94,6 +95,25 @@ class AwsMailCredentialsTest(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
+
+    @patch.object(AwsMailCredentials, "_publish")
+    @patch("aws_mail_credentials.subprocess.run")
+    def test_vpn_publication_excludes_client_private_credentials(self, run, publish):
+        keys = ("private_key", "preshared_key", "direct_private_key", "direct_preshared_key")
+        values = dict.fromkeys(keys, "a" * 43 + "=")
+        run.return_value = subprocess.CompletedProcess([], 0, json.dumps(values), "")
+        token_file = Path("deployments/homelab/cloud/undercloud/38-service-api-foundation/acme/cloudflare-token.sops.yaml")
+        self.store.values[(token_file, "api-token")] = "test-dns-token"
+        self.credentials.publish_vpn()
+        secret_id, payload = publish.call_args.args
+        self.assertEqual(secret_id, "fahrican/stalwart/vpn")
+        self.assertEqual(json.loads(payload), {**values, "dns_api_token": "test-dns-token"})
+        values["client_private_key"] = "a" * 43 + "="
+        run.return_value = subprocess.CompletedProcess([], 0, json.dumps(values), "")
+        publish.reset_mock()
+        with self.assertRaises(AwsMailCredentialError):
+            self.credentials.publish_vpn()
+        publish.assert_not_called()
 
     @patch.object(AwsMailCredentials, "_revoke_bootstrap_key")
     @patch.object(AwsMailCredentials, "_reconcile_gitops_identity")
