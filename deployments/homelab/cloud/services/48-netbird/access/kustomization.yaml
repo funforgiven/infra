@@ -3,4 +3,5 @@ kind: Kustomization
 resources:
   - gateway.yaml
   - routing.yaml
+  - calico.generated.yaml
   - routes.generated.yaml
