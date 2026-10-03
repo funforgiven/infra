@@ -82,8 +82,8 @@ metadata:
   name: services-netbird-access
   namespace: flux-system
 spec:
-  # Unsuspend only after the policy controller has created the DNS zones/groups.
-  suspend: true
+  # The policy controller has created the DNS zones and explicit HTTPS policy.
+  suspend: false
   interval: 10m
   retryInterval: 1m
   timeout: 15m
