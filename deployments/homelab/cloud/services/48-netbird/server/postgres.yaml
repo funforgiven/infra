@@ -1,0 +1,66 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: netbird-postgres
+  namespace: netbird
+spec:
+  instances: 3
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.4-standard-trixie@sha256:f0cc49632b5cc1e51f65ba03658c89bd31d64ea2672b14843a808a8d281417e1
+  primaryUpdateStrategy: unsupervised
+  bootstrap:
+    initdb:
+      database: netbird
+      owner: netbird
+      secret:
+        name: netbird-runtime
+  storage:
+    storageClass: rbd1
+    size: 10Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+  affinity:
+    enablePodAntiAffinity: true
+    podAntiAffinityType: required
+    topologyKey: kubernetes.io/hostname
+  postgresql:
+    synchronous:
+      method: any
+      number: 1
+      dataDurability: required
+      failoverQuorum: true
+    parameters:
+      max_connections: "100"
+  monitoring:
+    enablePodMonitor: true
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      enabled: true
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: netbird-postgres-backup
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: netbird-events
+  namespace: netbird
+spec:
+  name: netbird_events
+  owner: netbird
+  cluster:
+    name: netbird-postgres
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: netbird-auth
+  namespace: netbird
+spec:
+  name: netbird_auth
+  owner: netbird
+  cluster:
+    name: netbird-postgres

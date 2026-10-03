@@ -1,0 +1,58 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: netbird-operator
+  namespace: netbird-routing
+spec:
+  interval: 24h
+  url: https://github.com/netbirdio/kubernetes-operator.git
+  ref:
+    commit: 41d995671f55d790a4f4e1c37da8c9e41a36abee
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: netbird-operator
+  namespace: netbird-routing
+spec:
+  interval: 30m
+  timeout: 10m
+  releaseName: netbird-operator
+  chart:
+    spec:
+      chart: ./charts/netbird-operator
+      interval: 24h
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: netbird-operator
+  driftDetection:
+    mode: enabled
+  install:
+    crds: Create
+    remediation: {retries: 3}
+  upgrade:
+    crds: CreateReplace
+    remediation: {retries: 3}
+  values:
+    managementURL: http://netbird-server.netbird.svc:8080
+    routingClientImage: netbirdio/netbird:0.80.0@sha256:4976692ea44bb93871743d0b742b4a8f97f6425bfc458ca2d78e28fdb8bdf4ad
+    cluster:
+      name: homelab-services
+    clusterSecretsPermissions:
+      allowAllSecrets: false
+    ingress:
+      enabled: false
+      allowAutomaticPolicyCreation: false
+    gatewayAPI:
+      enabled: false
+    netbirdAPI:
+      keyFromSecret:
+        name: netbird-operator-token
+        key: NB_API_KEY
+    operator:
+      image:
+        tag: v0.8.0@sha256:ae2c26cfc54762723c50cb7df1178452807fa265c1acddec1debf83503fabe59
+      resources:
+        requests: {cpu: 50m, memory: 128Mi}
+        limits: {memory: 384Mi}
