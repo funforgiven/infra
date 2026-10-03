@@ -17,7 +17,8 @@ _: {
       proxyConfig = pkgs.runCommand "matrix-proxy-config" { } ''
         mkdir -p "$out/etc"
         substitute ${source}/nginx.conf "$out/etc/matrix-nginx.conf" \
-          --subst-var-by elementRoot ${pkgs.element-web}
+          --subst-var-by elementRoot ${pkgs.element-web} \
+          --subst-var-by mimeTypes ${pkgs.nginx}/conf/mime.types
       '';
       root = pkgs.runCommand "matrix-container-root" { } ''
         mkdir -p "$out/etc" "$out/tmp" "$out/var/lib/matrix"

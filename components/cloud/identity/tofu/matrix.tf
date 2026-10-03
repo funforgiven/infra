@@ -26,7 +26,7 @@ resource "zitadel_application_oidc" "matrix" {
   project_id                  = zitadel_project.matrix.id
   name                        = "Matrix Authentication Service"
   redirect_uris               = ["https://matrix-auth.fahrican.com/upstream/callback/01HFVBY12TMNTYTBV8W921M5FA"]
-  post_logout_redirect_uris   = ["https://chat.fahrican.com/"]
+  post_logout_redirect_uris   = ["https://element.fahrican.com/"]
   response_types              = ["OIDC_RESPONSE_TYPE_CODE"]
   grant_types                 = ["OIDC_GRANT_TYPE_AUTHORIZATION_CODE", "OIDC_GRANT_TYPE_REFRESH_TOKEN"]
   app_type                    = "OIDC_APP_TYPE_WEB"

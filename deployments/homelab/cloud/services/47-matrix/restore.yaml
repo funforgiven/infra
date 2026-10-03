@@ -60,7 +60,7 @@ data:
             "containers": [
               {
                 "name": "restore-sleeper",
-                "image": "git.fahrican.com/forge-runner/matrix-runtime:1.0.0@sha256:e2ffcf80e22d306b0fa2868fa40d661e6f7409a9eb8915d355c41a1f612085bd",
+                "image": "git.fahrican.com/forge-runner/matrix-runtime:1.0.0@sha256:9a2085fccc6c24252b545f0a1899542cf315d02c91d78171d389594753e8ddcc",
                 "command": [
                   "sleep",
                   "infinity"
@@ -166,7 +166,7 @@ data:
             "containers": [
               {
                 "name": "restore-sleeper",
-                "image": "git.fahrican.com/forge-runner/matrix-runtime:1.0.0@sha256:e2ffcf80e22d306b0fa2868fa40d661e6f7409a9eb8915d355c41a1f612085bd",
+                "image": "git.fahrican.com/forge-runner/matrix-runtime:1.0.0@sha256:9a2085fccc6c24252b545f0a1899542cf315d02c91d78171d389594753e8ddcc",
                 "command": [
                   "sleep",
                   "infinity"
@@ -272,7 +272,7 @@ data:
             "containers": [
               {
                 "name": "restore-sleeper",
-                "image": "git.fahrican.com/forge-runner/matrix-runtime:1.0.0@sha256:e2ffcf80e22d306b0fa2868fa40d661e6f7409a9eb8915d355c41a1f612085bd",
+                "image": "git.fahrican.com/forge-runner/matrix-runtime:1.0.0@sha256:9a2085fccc6c24252b545f0a1899542cf315d02c91d78171d389594753e8ddcc",
                 "command": [
                   "sleep",
                   "infinity"

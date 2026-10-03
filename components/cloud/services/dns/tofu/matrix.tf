@@ -11,7 +11,7 @@ variable "matrix_wan_ipv4_address" {
 
 resource "cloudflare_dns_record" "matrix_public" {
   for_each = var.matrix_wan_ipv4_address == "" ? toset([]) : toset([
-    "matrix.fahrican.com", "matrix-auth.fahrican.com", "chat.fahrican.com", "auth.cloud.fahrican.com",
+    "matrix.fahrican.com", "matrix-auth.fahrican.com", "element.fahrican.com", "chat.fahrican.com", "auth.cloud.fahrican.com",
   ])
   zone_id = data.cloudflare_zone.fahrican.zone_id
   name    = each.value

@@ -11,9 +11,12 @@ infrastructure access.
 | --- | --- |
 | `https://matrix.fahrican.com` | Public client API; federation, signing-key and Synapse admin routes rejected |
 | `https://matrix-auth.fahrican.com` | Public MAS login and OAuth endpoints; admin resource is not enabled |
-| `https://chat.fahrican.com` | Public Element Web, fixed to this homeserver |
+| `https://element.fahrican.com` | Public Element Web, fixed to this homeserver |
 | `https://auth.cloud.fahrican.com` | Public discovery, OIDC, login UI and assets; management APIs and console stay private |
 | `https://matrix-alerts.fahrican.com/notify` | LAN/WireGuard only; scoped bearer authentication per producer |
+
+`element.fahrican.com` is the canonical client address. The earlier
+`chat.fahrican.com` address redirects to it.
 
 The dedicated public Envoy VIP is `10.21.40.128`. RouterOS forwards only WAN
 TCP 443 to it and supplies narrow LAN reflection. The existing private gateway

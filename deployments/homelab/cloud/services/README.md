@@ -37,7 +37,7 @@ each at its own provider VIP. No game management surface is exposed.
 | Home Assistant | Services cluster | `https://home.fahrican.com`; native local account and MFA |
 | Wallos | Services cluster | `https://wallos.fahrican.com`; LAN/WireGuard only, with ZITADEL OIDC |
 | Forgejo and Actions | Services cluster | `https://git.fahrican.com`, Git SSH port `2222`; private LAN/WireGuard and native ZITADEL OIDC |
-| Matrix, MAS and Element | Services cluster | Public HTTPS at `matrix.fahrican.com`, `matrix-auth.fahrican.com` and `chat.fahrican.com`; ZITADEL Matrix membership, local accounts, federation disabled; staged enrollment |
+| Matrix, MAS and Element | Services cluster | Public HTTPS at `matrix.fahrican.com`, `matrix-auth.fahrican.com` and `element.fahrican.com`; ZITADEL Matrix membership, local accounts, federation disabled; staged enrollment |
 | Stalwart mail | AWS appliance | Native mail accounts; public mail protocols and web administration |
 | Prometheus and Alertmanager | Services cluster | Administrative monitoring; staged Telegram/Matrix dual delivery, then encrypted Matrix with independent email |
 | Velero | Services cluster | Filesystem backups to the service-specific Backblaze prefix |
