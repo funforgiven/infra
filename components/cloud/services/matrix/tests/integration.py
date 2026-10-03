@@ -74,7 +74,13 @@ async def qualify_relay(directory, bot, owner, token, room, decrypted, proxy_por
         "trusted_devices": {
             owner.user_id: {owner.device_id: owner.olm.account.identity_keys["ed25519"]}
         },
-        "producers": {"test": {"paths": ["/notify"], "token": "synthetic-intake"}},
+        "producers": {
+            "test": {"paths": ["/notify"], "token": "synthetic-intake"},
+            "alertmanager": {
+                "paths": ["/alertmanager"],
+                "token": "synthetic-alertmanager",
+            },
+        },
         "heartbeat": {
             "url": f"http://127.0.0.1:{heartbeat_port}/heartbeat",
             "token": "synthetic-heartbeat",
@@ -144,6 +150,38 @@ async def qualify_relay(directory, bot, owner, token, room, decrypted, proxy_por
                     for message in decrypted
                 )
                 == 1
+            )
+            alert = {
+                "fingerprint": "changing-metric",
+                "status": "resolved",
+                "startsAt": "2026-10-03T20:00:00Z",
+                "endsAt": "2026-10-03T20:05:00Z",
+                "labels": {"alertname": "ChangingMetric", "severity": "warning"},
+                "annotations": {},
+            }
+            for value in (1, 2, 2):
+                alert["annotations"] = {"summary": f"Changing metric value: {value}"}
+                async with session.post(
+                    f"http://127.0.0.1:{intake_port}/alertmanager",
+                    json={"alerts": [alert]},
+                    headers={"Authorization": "Bearer synthetic-alertmanager"},
+                ) as response:
+                    assert response.status == 202
+            for _ in range(30):
+                await owner.sync(timeout=500)
+                if all(
+                    any(f"Changing metric value: {value}" in body for body in decrypted)
+                    for value in (1, 2)
+                ):
+                    break
+                await asyncio.sleep(0.1)
+            for value in (1, 2):
+                assert (
+                    sum(f"Changing metric value: {value}" in body for body in decrypted)
+                    == 1
+                )
+            print(
+                "PASS: changing Alertmanager annotations decrypt as distinct updates and exact retries deduplicate"
             )
             await asyncio.wait_for(heartbeat_seen.wait(), timeout=15)
             async with session.post(
@@ -229,6 +267,26 @@ async def qualify(directory, pg_port, synapse_port, mas_port, proxy_port):
                 "MAS compatibility token format changed: " + template[-1500:]
             )
         user_tokens[username] = match.group()
+        # MAS provisions a compatibility session asynchronously. Wait before
+        # Synapse introspects it, since inactive results are cached by Synapse.
+        async with ClientSession() as session:
+            async with session.get(
+                f"http://127.0.0.1:{mas_port}/.well-known/openid-configuration"
+            ) as response:
+                discovery = await response.json()
+            for attempt in range(300):
+                async with session.post(
+                    discovery["introspection_endpoint"],
+                    data={"token": match.group(), "token_type_hint": "access_token"},
+                    headers={"Authorization": "Bearer synthetic-shared-secret"},
+                ) as response:
+                    if response.status == 200 and (await response.json()).get("active"):
+                        break
+                await asyncio.sleep(0.2)
+            else:
+                raise RuntimeError(
+                    "Synthetic MAS compatibility session did not activate"
+                )
         state = directory / username
         state.mkdir()
         client = AsyncClient(
@@ -482,7 +540,8 @@ def qualify_postgres_bootstrap(directory, source):
                 stderr=log,
             )
         try:
-            for _ in range(100):
+            deadline = time.monotonic() + 60
+            while time.monotonic() < deadline:
                 ready = True
                 for index, name in enumerate(("synapse", "mas"), 2):
                     result = subprocess.run(

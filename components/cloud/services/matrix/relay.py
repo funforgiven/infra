@@ -151,7 +151,11 @@ def messages(payload, producer, path):
                 + annotations.get("description", "")
             )
             text += "\n" + json.dumps(labels, sort_keys=True)
-            result.append((event_id, text[:16000]))
+            text = text[:16000]
+            # Metric values in annotations can change for the same alert. Keep
+            # exact retries stable while giving changed content a new transaction.
+            event_id += ":" + hashlib.sha256(text.encode()).hexdigest()
+            result.append((event_id, text))
         return result
     if payload.get("producer_id") != producer:
         raise ValueError("producer mismatch")
