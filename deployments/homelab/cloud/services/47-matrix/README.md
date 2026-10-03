@@ -18,10 +18,13 @@ infrastructure access.
 The dedicated public Envoy VIP is `10.21.40.128`. RouterOS forwards only WAN
 TCP 443 to it and supplies narrow LAN reflection. The existing private gateway
 at `10.21.40.122` serves host alert intake. Public DNS uses the homelab's static
-IPv4 with Cloudflare proxying disabled. Private `cloud.fahrican.com` resolution
+IPv4 with Cloudflare proxying disabled. Services cert-manager performs DNS-01
+checks through public resolvers so the private `cloud.fahrican.com` zone cannot
+hide ACME challenge records; this follows the
+[cert-manager split DNS guidance](https://cert-manager.io/docs/configuration/acme/dns01/#setting-nameservers-for-dns01-self-check). Private `cloud.fahrican.com` resolution
 continues to reach the undercloud gateway, including private ZITADEL management.
 
-The Matrix wave is initially suspended. Generated signing keys, database
+The Matrix wave is enabled after identity and runtime enrollment. Generated signing keys, database
 passwords and MAS secrets are encrypted in `runtime.sops.yaml`, and the scoped
 email key is encrypted in `email.sops.yaml`. The tested runtime is published and
 pinned by digest in `kustomization.yaml`. OIDC and bot enrollment are still
