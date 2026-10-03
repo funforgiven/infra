@@ -53,10 +53,14 @@ The rollout is in `dual` phase. The observation start in `rollout.json` stays
 unset until encrypted delivery to every intended recipient session is verified.
 
 Element on the phone displayed the decrypted native-host test alert. The new
-phone session `NOyFoqzTm3` still needs its public Ed25519 key compared with the
-phone and explicitly approved. Delivery and its independent heartbeat pause
-while that session is unapproved; alert intake stays durable and Telegram stays
-active. The phone's push registration failed during the brief rollout outage;
+phone session `NOyFoqzTm3` was approved on 2026-10-04 by verifying the complete
+signature chain from the pinned browser key: browser → master identity key →
+self-signing key → phone key, plus the phone's own signature. This follows
+[Matrix cross-signing verification](https://spec.matrix.org/v1.16/client-server-api/#cross-signing).
+The relay still uses an explicit pin for that exact device; future devices need
+approval. A new or changed device pauses delivery and its independent heartbeat;
+alert intake stays durable and Telegram stays active. The phone's push
+registration failed during the brief rollout outage;
 no pusher was registered at the subsequent check. The public registration route
 and restricted `matrix.org` proxy are reachable. Retry notification setup and
 verify a background notification after approving the phone.
