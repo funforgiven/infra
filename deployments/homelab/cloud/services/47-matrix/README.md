@@ -45,6 +45,11 @@ untracked; normal `nix run .#…` works once they are committed. Commands captur
 credentials in memory and write SOPS ciphertext. Never print decrypted runtime
 documents, issue compatibility tokens interactively, or put tokens in arguments.
 
+Enrollment commands also update `runtime-rollouts.yaml` so Flux restarts MAS or
+the relay when its configuration changes. Commit that file with the encrypted
+runtime Secret. The pod annotation contains only a digest of the public SOPS
+ciphertext; it does not expose a credential or a credential hash.
+
 Cluster access is generated on demand; this workstation intentionally has no
 persistent services kubeconfig. `matrix-access undercloud` reads the control-plane
 admin config over pinned SSH and keeps it in a Linux memory file.
