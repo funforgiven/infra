@@ -32,6 +32,13 @@ spec:
           annotations:
             summary: NetBird coordination is unavailable
             description: Use the independent MikroTik WireGuard profile for recovery.
+        - alert: NetBirdRelayUnavailable
+          expr: probe_success{job="netbird-relay"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: NetBird relay or public TLS gateway is unavailable
         - alert: NetBirdRoutingPeersUnavailable
           expr: kube_deployment_status_replicas_available{namespace="netbird-routing",deployment="networkrouter-services"} < 1
           for: 5m
@@ -46,3 +53,20 @@ spec:
             severity: warning
           annotations:
             summary: NetBird PostgreSQL WAL archive is stale
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: netbird-relay
+  namespace: netbird
+spec:
+  interval: 60s
+  scrapeTimeout: 15s
+  jobName: netbird-relay
+  module: http_2xx
+  prober:
+    url: blackbox-exporter.services-observability.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+        - http://netbird-server.netbird.svc:9000/health

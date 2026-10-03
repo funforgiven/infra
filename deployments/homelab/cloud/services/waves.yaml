@@ -57,8 +57,8 @@ metadata:
   name: services-netbird-operator
   namespace: flux-system
 spec:
-  # Enrollment closes default mesh access and installs the API credential first.
-  suspend: true
+  # The default mesh policy is disabled and the API credential is enrolled.
+  suspend: false
   interval: 10m
   retryInterval: 1m
   timeout: 15m
