@@ -4,6 +4,12 @@ variable "enable_matrix_monitoring" {
   description = "Enable independent Matrix checks after public endpoint enrollment"
 }
 
+variable "enable_matrix_delivery_alerts" {
+  type        = bool
+  default     = false
+  description = "Enable delivery alarm notifications after recipient enrollment and a successful encrypted canary"
+}
+
 data "archive_file" "matrix_probe" {
   count       = var.enable_matrix_monitoring ? 1 : 0
   type        = "zip"
@@ -136,6 +142,7 @@ resource "aws_cloudwatch_metric_alarm" "matrix_delivery" {
   threshold           = 1
   comparison_operator = "LessThanThreshold"
   treat_missing_data  = "breaching"
+  actions_enabled     = var.enable_matrix_delivery_alerts
   alarm_actions       = [aws_sns_topic.mail_alerts.arn]
   ok_actions          = [aws_sns_topic.mail_alerts.arn]
 }

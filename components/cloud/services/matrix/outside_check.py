@@ -30,6 +30,7 @@ def handler(_event, _context):
         return {"statusCode": 202, "body": ""}
     healthy = 1
     checks = {
+        "https://element.fahrican.com/config.json": "default_server_config",
         "https://matrix.fahrican.com/_matrix/client/versions": "versions",
         "https://matrix-auth.fahrican.com/.well-known/openid-configuration": "issuer",
         "https://auth.cloud.fahrican.com/.well-known/openid-configuration": "issuer",
