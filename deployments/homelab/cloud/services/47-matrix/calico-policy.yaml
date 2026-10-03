@@ -1,0 +1,182 @@
+# Magnum installs an egress Allow at order 20. Enforce Matrix restrictions
+# first, with explicit terminal denial; Kubernetes NetworkPolicy alone is bypassed.
+apiVersion: crd.projectcalico.org/v1
+kind: GlobalNetworkPolicy
+metadata:
+  name: matrix-egress-enforcement
+spec:
+  order: 15
+  namespaceSelector: kubernetes.io/metadata.name == 'matrix'
+  types:
+  - Egress
+  egress:
+  - action: Allow
+    protocol: UDP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'kube-system'
+      selector: k8s-app == 'kube-dns'
+      ports:
+      - 53
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'kube-system'
+      selector: k8s-app == 'kube-dns'
+      ports:
+      - 53
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'matrix'
+      selector: app.kubernetes.io/name == 'matrix-synapse'
+      ports:
+      - 8008
+    source:
+      selector: app.kubernetes.io/name == 'matrix-client'
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'matrix'
+      selector: app.kubernetes.io/name == 'matrix-mas'
+      ports:
+      - 8080
+    source:
+      selector: app.kubernetes.io/name == 'matrix-client'
+  - action: Allow
+    protocol: TCP
+    destination:
+      nets:
+      - 10.21.20.131/32
+      ports:
+      - 443
+    source:
+      selector: app.kubernetes.io/name == 'matrix-client'
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'matrix'
+      selector: app.kubernetes.io/name == 'matrix-postgres'
+      ports:
+      - 5432
+    source:
+      selector: app.kubernetes.io/name == 'matrix-synapse'
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'matrix'
+      selector: app.kubernetes.io/name == 'matrix-mas'
+      ports:
+      - 8080
+    source:
+      selector: app.kubernetes.io/name == 'matrix-synapse'
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'matrix'
+      selector: app.kubernetes.io/name == 'matrix-egress'
+      ports:
+      - 3128
+    source:
+      selector: app.kubernetes.io/name == 'matrix-synapse'
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'matrix'
+      selector: app.kubernetes.io/name == 'matrix-postgres'
+      ports:
+      - 5432
+    source:
+      selector: app.kubernetes.io/name == 'matrix-mas'
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'matrix'
+      selector: app.kubernetes.io/name == 'matrix-synapse'
+      ports:
+      - 8008
+    source:
+      selector: app.kubernetes.io/name == 'matrix-mas'
+  - action: Allow
+    protocol: TCP
+    destination:
+      nets:
+      - 10.21.20.131/32
+      ports:
+      - 443
+    source:
+      selector: app.kubernetes.io/name == 'matrix-mas'
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'matrix'
+      selector: app.kubernetes.io/name == 'matrix-postgres'
+      ports:
+      - 5432
+    source:
+      selector: app.kubernetes.io/name == 'matrix-postgres'
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'matrix'
+      selector: app.kubernetes.io/name == 'matrix-client'
+      ports:
+      - 8080
+    source:
+      selector: app.kubernetes.io/name == 'matrix-relay'
+  - action: Allow
+    protocol: TCP
+    destination:
+      nets:
+      - 0.0.0.0/0
+      notNets:
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.0.0/16
+      - 127.0.0.0/8
+      - 169.254.0.0/16
+      - 100.64.0.0/10
+      ports:
+      - 443
+    source:
+      selector: app.kubernetes.io/name == 'matrix-relay'
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'matrix'
+      selector: app.kubernetes.io/name == 'matrix-postgres'
+      ports:
+      - 5432
+    source:
+      selector: app.kubernetes.io/name == 'matrix-backup'
+  - action: Allow
+    protocol: TCP
+    destination:
+      nets:
+      - 0.0.0.0/0
+      notNets:
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.0.0/16
+      - 127.0.0.0/8
+      - 169.254.0.0/16
+      - 100.64.0.0/10
+      ports:
+      - 443
+    source:
+      selector: app.kubernetes.io/name == 'matrix-egress'
+  - action: Deny
+---
+apiVersion: crd.projectcalico.org/v1
+kind: GlobalNetworkPolicy
+metadata:
+  name: matrix-restore-isolation
+spec:
+  order: 15
+  namespaceSelector: kubernetes.io/metadata.name == 'matrix-restore'
+  types:
+  - Ingress
+  - Egress
+  ingress:
+  - action: Deny
+  egress:
+  - action: Deny

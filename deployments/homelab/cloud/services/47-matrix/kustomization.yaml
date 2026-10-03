@@ -8,6 +8,7 @@ resources:
 - gateway.yaml
 - routes.yaml
 - network-policy.yaml
+- calico-policy.yaml
 - monitoring.yaml
 - runtime.sops.yaml
 - email.sops.yaml

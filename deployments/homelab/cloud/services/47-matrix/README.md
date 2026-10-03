@@ -145,6 +145,16 @@ read identity/DNS/AWS controller outputs; Matrix workloads run in `services-v1`.
    `INFRA_ALERTS` and its crypto store on the `matrix-relay` PVC. Do not enroll a
    second bot with the same device against a fresh store.
 
+The services workers have DHCP host routes for `1.1.1.1` and `8.8.8.8`
+through an isolated secondary network. Certificate validation uses reachable
+public resolvers `9.9.9.9` and `149.112.112.112`.
+
+Magnum's Calico addon installs a global outbound allow at order 20. Matrix's
+Calico policies run at order 15, allow only the documented workload paths and
+end with explicit denial. The isolated restore namespace also has an early
+inbound and outbound denial. Keep the Calico and Kubernetes allowlists in sync.
+[Calico documents ordered evaluation and terminal Allow/Deny actions](https://docs.tigera.io/calico/latest/reference/resources/globalnetworkpolicy).
+
 ## Alert migration
 
 Start dual delivery only after Matrix works on all intended devices. Enroll
