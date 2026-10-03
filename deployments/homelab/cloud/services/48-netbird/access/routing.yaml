@@ -5,8 +5,8 @@ metadata:
   namespace: netbird-routing
 spec:
   dnsZoneRef:
-    # Operator 0.8.0 resolves Zone.Name (the display name), not Zone.Domain.
-    name: Kubernetes service resources
+    # Operator 0.8.0 requires Zone.Name and Zone.Domain to match.
+    name: vpn.fahrican.com
   image: netbirdio/netbird:0.80.0@sha256:4976692ea44bb93871743d0b742b4a8f97f6425bfc458ca2d78e28fdb8bdf4ad
   workloadOverride:
     replicas: 3
@@ -27,6 +27,11 @@ spec:
             env:
               - name: NB_MANAGEMENT_URL
                 value: https://netbird.fahrican.com
+              # 0.80.0's container entrypoint must set config before enrollment.
+              - name: NB_DISABLE_UPDATE_SETTINGS
+                value: "false"
+              - name: XDG_CONFIG_HOME
+                value: /var/lib/netbird/config
             resources:
               requests: {cpu: 100m, memory: 128Mi}
               limits: {memory: 512Mi}

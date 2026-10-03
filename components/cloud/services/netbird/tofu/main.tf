@@ -106,7 +106,8 @@ resource "netbird_policy" "services" {
 }
 
 resource "netbird_dns_zone" "operator" {
-  name                 = "Kubernetes service resources"
+  # Operator 0.8.0 uses the name both for lookup and as the DNS suffix.
+  name                 = "vpn.fahrican.com"
   domain               = "vpn.fahrican.com"
   enabled              = true
   enable_search_domain = false
