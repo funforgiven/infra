@@ -247,7 +247,14 @@ async def qualify(directory, pg_port, synapse_port, mas_port, proxy_port):
         for client in clients:
             response = await client.sync(full_state=True)
             if not isinstance(response, SyncResponse):
-                raise RuntimeError("MAS compatibility session rejected by Synapse")
+                raise RuntimeError(
+                    "MAS compatibility session rejected by Synapse: "
+                    + type(response).__name__
+                    + " "
+                    + str(getattr(response, "status_code", ""))
+                    + " "
+                    + str(getattr(response, "message", ""))
+                )
             await client.keys_upload()
         created = await bot.room_create(
             name="Disposable encrypted qualification",
@@ -748,6 +755,13 @@ def main():
             )
             config = config.replace("@elementRoot@", str(directory)).replace(
                 "/run/matrix/element.json", str(directory / "element.json")
+            )
+            config = config.replace(
+                "@mimeTypes@",
+                str(
+                    Path(shutil.which("nginx")).resolve().parent.parent
+                    / "conf/mime.types"
+                ),
             )
             config = config.replace(
                 "/etc/ssl/certs/ca-bundle.crt", os.environ["SSL_CERT_FILE"]
