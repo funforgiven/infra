@@ -117,6 +117,10 @@ The `mail-operations` command and corresponding systemd services provide:
 
 All four checks also run shortly after boot. Missing success records and missing
 CloudWatch samples alert; a failed command never advances the success timestamp.
+Queue age excludes Stalwart's intentional initial delay for automatic reports
+that have never been attempted. An overdue scheduled report is measured from its
+earliest recipient delivery time; failed retries and ordinary mail retain their
+full age. All queued reports still contribute to the queue-size alarm.
 The canary has a separate 100 MiB account and deletes only its verified messages.
 It uses 48 messages per day from the Resend allowance. Failed or junk delivery is
 an alarm condition. The homelab blackbox probe separately checks JMAP discovery,
