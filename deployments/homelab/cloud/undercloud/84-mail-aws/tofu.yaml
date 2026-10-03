@@ -25,6 +25,8 @@ spec:
     - name: enable_restore_qualification
       value: "false"
     - name: enable_matrix_monitoring
+      value: "true"
+    - name: enable_matrix_delivery_alerts
       value: "false"
   runnerPodTemplate:
     spec:
