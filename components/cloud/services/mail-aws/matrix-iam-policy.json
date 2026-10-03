@@ -25,6 +25,7 @@
         "lambda:CreateFunction",
         "lambda:GetFunction",
         "lambda:GetFunctionConfiguration",
+        "lambda:ListVersionsByFunction",
         "lambda:UpdateFunctionCode",
         "lambda:UpdateFunctionConfiguration",
         "lambda:DeleteFunction",
