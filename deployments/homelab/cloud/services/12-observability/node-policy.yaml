@@ -1,0 +1,150 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: services-node-policy
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: services-node-policy
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: services-node-policy
+    spec:
+      # Installing host configuration requires host process visibility. The
+      # init container has only the capabilities needed for chroot and logs.
+      hostPID: true
+      automountServiceAccountToken: false
+      priorityClassName: system-node-critical
+      nodeSelector:
+        kubernetes.io/os: linux
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/master
+                operator: DoesNotExist
+      initContainers:
+      - name: install-policy
+        image: python:3.14.0-alpine3.22@sha256:8373231e1e906ddfb457748bfc032c4c06ada8c759b7b62d9c73ec2a3c56e710
+        command: [python3, /policy/apply_policy.py]
+        env:
+        - name: PYTHONDONTWRITEBYTECODE
+          value: '1'
+        securityContext:
+          runAsUser: 0
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          seccompProfile:
+            type: RuntimeDefault
+          capabilities:
+            drop: [ALL]
+            add: [SYS_CHROOT, DAC_OVERRIDE, CHOWN, FOWNER, SETGID]
+        resources:
+          requests:
+            cpu: 20m
+            memory: 32Mi
+            ephemeral-storage: 16Mi
+          limits:
+            cpu: '1'
+            memory: 128Mi
+            ephemeral-storage: 32Mi
+        volumeMounts:
+        - name: policy
+          mountPath: /policy
+          readOnly: true
+        - name: host
+          mountPath: /host
+          readOnly: true
+          mountPropagation: HostToContainer
+        - name: kubelet-config
+          mountPath: /host/var/lib/kubelet/config.yaml
+        - name: rsyslog-config
+          mountPath: /host/etc/logrotate.d/rsyslog
+        - name: journal-config
+          mountPath: /host/etc/systemd/journald.conf.d
+        - name: timer-config
+          mountPath: /host/etc/systemd/system/logrotate.timer.d
+        - name: logs
+          mountPath: /host/var/log
+        - name: rotation-state
+          mountPath: /host/var/lib/logrotate
+        - name: policy-state
+          mountPath: /host/var/lib/services-node-policy
+      containers:
+      - name: retained-policy
+        image: python:3.14.0-alpine3.22@sha256:8373231e1e906ddfb457748bfc032c4c06ada8c759b7b62d9c73ec2a3c56e710
+        command: [python3, -c, 'import time; time.sleep(315360000)']
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 65534
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          seccompProfile:
+            type: RuntimeDefault
+          capabilities:
+            drop: [ALL]
+        resources:
+          requests:
+            cpu: 1m
+            memory: 12Mi
+            ephemeral-storage: 1Mi
+          limits:
+            cpu: 10m
+            memory: 32Mi
+            ephemeral-storage: 16Mi
+      volumes:
+      - name: policy
+        configMap:
+          name: services-node-policy
+      - name: host
+        hostPath:
+          path: /
+          type: Directory
+      - name: kubelet-config
+        hostPath:
+          path: /var/lib/kubelet/config.yaml
+          type: File
+      - name: rsyslog-config
+        hostPath:
+          path: /etc/logrotate.d/rsyslog
+          type: File
+      - name: journal-config
+        hostPath:
+          path: /etc/systemd/journald.conf.d
+          type: DirectoryOrCreate
+      - name: timer-config
+        hostPath:
+          path: /etc/systemd/system/logrotate.timer.d
+          type: DirectoryOrCreate
+      - name: logs
+        hostPath:
+          path: /var/log
+          type: Directory
+      - name: rotation-state
+        hostPath:
+          path: /var/lib/logrotate
+          type: Directory
+      - name: policy-state
+        hostPath:
+          path: /var/lib/services-node-policy
+          type: DirectoryOrCreate
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: services-node-policy
+  namespace: kube-system
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: services-node-policy
+  policyTypes: [Ingress, Egress]
