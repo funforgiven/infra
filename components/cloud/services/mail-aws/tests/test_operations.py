@@ -122,6 +122,42 @@ class MailOperationsTest(unittest.TestCase):
             {"createdAt": "1970-01-01T01:00:00Z"},
             {"createdAt": "1970-01-01T00:00:00Z"}], now=7200), (2, 7200))
 
+    def scheduled_report(self):
+        return {"createdAt": "1970-01-01T00:00:00Z", "flags": {"report": True},
+                "recipients": {"dmarc@example.com": {"status": {"@type": "Scheduled"},
+                               "retryCount": 0, "retryDue": "1970-01-01T02:00:00Z"}}}
+
+    def test_report_scheduled_delay_is_counted_but_not_a_delivery_stall(self):
+        self.assertEqual(ops.queue_health([self.scheduled_report()], now=5400), (1, 0))
+        self.assertEqual(ops.queue_health([self.scheduled_report()], now=7200), (1, 0))
+        self.assertEqual(ops.queue_health([self.scheduled_report()], now=10801), (1, 3601))
+
+    def test_report_uses_earliest_recipient_delivery_time(self):
+        message = self.scheduled_report()
+        message["recipients"]["second@example.com"] = {
+            "status": {"@type": "Scheduled"}, "retryCount": 0,
+            "retryDue": "1970-01-01T01:00:00Z"}
+        self.assertEqual(ops.queue_health([message], now=5400), (1, 1800))
+
+    def test_future_retry_does_not_hide_failed_report_or_ordinary_mail(self):
+        for change in ("ordinary", "failure", "retried", "missing-recipient"):
+            with self.subTest(change=change):
+                message = self.scheduled_report()
+                recipient = message["recipients"]["dmarc@example.com"]
+                if change == "ordinary":
+                    message["flags"] = {"authenticated": True}
+                elif change == "failure":
+                    recipient["status"] = {"@type": "TemporaryFailure"}
+                elif change == "retried":
+                    recipient["retryCount"] = 1
+                else:
+                    message["recipients"] = {}
+                self.assertEqual(ops.queue_health([message], now=5400), (1, 5400))
+
+    def test_scheduled_report_does_not_hide_other_stalled_mail(self):
+        self.assertEqual(ops.queue_health([
+            self.scheduled_report(), {"createdAt": "1970-01-01T00:00:00Z"}], now=5400), (2, 5400))
+
     def test_subprocess_failure_does_not_expose_secret_output(self):
         with patch.object(ops.subprocess, "run", return_value=subprocess.CompletedProcess(
                 [], 1, stdout="private mailbox", stderr="private password")):

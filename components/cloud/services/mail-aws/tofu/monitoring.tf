@@ -96,7 +96,7 @@ locals {
     }
     queue_age = {
       metric      = "OldestQueuedSeconds", comparison = "GreaterThanThreshold", threshold = 3600
-      description = "A mail delivery has remained queued for more than one hour"
+      description = "A mail delivery has waited more than one hour, excluding automatic reports' initial scheduled delay"
     }
     queue_size = {
       metric      = "QueueMessages", comparison = "GreaterThanThreshold", threshold = 100
