@@ -664,11 +664,22 @@ def activate():
     if not dns["data"]["matrix_wan_ipv4_address"]:
         raise ValueError("public DNS enrollment is incomplete")
     path = DEPLOYMENT.parent / "waves.yaml"
-    docs = list(yaml.safe_load_all(path.read_text()))
-    for doc in docs:
-        if doc["metadata"]["name"] == "services-matrix":
-            doc["spec"]["suspend"] = False
-    path.write_text(yaml.safe_dump_all(docs, sort_keys=False))
+    blocks = path.read_text().split("---\n")
+    for index, block in enumerate(blocks):
+        doc = yaml.safe_load(block)
+        if doc and doc["metadata"]["name"] == "services-matrix":
+            if doc["spec"]["suspend"]:
+                blocks[index], changed = re.subn(
+                    r"(?m)^([ \t]+suspend:[ \t]*)true([ \t]*(?:#[^\n]*)?)$",
+                    r"\g<1>false\2",
+                    block,
+                    count=1,
+                )
+                if changed != 1:
+                    raise ValueError("could not update the Matrix wave suspension")
+                path.write_text("---\n".join(blocks))
+            return
+    raise ValueError("Matrix wave is missing")
 
 
 def qualify(args):

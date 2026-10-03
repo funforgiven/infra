@@ -5,7 +5,7 @@ metadata:
   namespace: flux-system
 spec:
   # Enrollment must publish the image and import ZITADEL credentials first.
-  suspend: true
+  suspend: false
   interval: 10m
   retryInterval: 1m
   timeout: 20m
