@@ -42,6 +42,8 @@ own pod network namespaces. A short privileged init container sets these
 namespaced sysctls without host mounts or host namespaces. The running NetBird
 containers are unprivileged, with a read-only root filesystem and limited
 network capabilities. Readiness also checks that forwarding remains enabled.
+Replicas of the same revision require different workers; a new revision may
+overlap the old one during rolling updates.
 
 ## Access boundaries
 
@@ -149,6 +151,44 @@ first, using a different destination prefix for its own WAL archive. Inspect
 accounts, groups and the disabled default policy before switching the server
 to that database. Never point a restore qualification cluster's WAL writer at
 the production archive.
+
+Run the repeatable backup and isolated restore check from the repository root:
+
+```sh
+nix run .#matrix-access -- services python components/cloud/services/netbird/admin.py restore-check
+```
+
+It creates a fresh base backup, waits for its final WAL segment to be archived,
+and restores into a disposable namespace. It compares configuration counts,
+identity connector and signing-key state, checks the event schema, and verifies
+that the default mesh policy is disabled. It removes its namespace and volume
+afterwards. The restored cluster has no WAL writer or application ingress.
+Production PostgreSQL switches WAL at least every 60 seconds when active;
+successful archival still depends on connectivity to Backblaze.
+
+## Qualification on 2026-10-03
+
+- A normal Linux client enrolled, received the private DNS records and opened
+  HTTPS through direct local WireGuard connections. The isolated workstation
+  client also reached services through the self-hosted relay.
+- All nine service hosts matched their LAN behavior; the cache health endpoint
+  returned 200 and the mail panel retained its login redirect.
+- HTTPS was allowed while HTTP, SSH, router management, arbitrary cluster IPs
+  and another enrolled client were blocked. An ordinary cluster pod could not
+  connect directly to the private gateway. Wallos `/db/` remained denied.
+- Replacing the selected routing pod produced 20 successful consecutive HTTPS
+  probes through the remaining peers. This does not guarantee uninterrupted
+  long-lived connections during every failure.
+- Public coordination, the OAuth authorization redirect and external STUN were
+  checked from AWS. Public setup/admin API requests were denied. Actual owner
+  sign-in on a personal Linux/Android device remains the final user check.
+- Two independent restores from Backblaze passed without changing production.
+- The repository's 14 flake checks passed, including the access-boundary tests.
+
+The homelab's 40 GiB worker root disks have limited image/log headroom. One
+worker hit disk pressure during rollout; existing system-log rotation reclaimed
+space. NetBird monitors routing and STUN availability, but future capacity
+planning should include these worker root disks.
 
 Public SMTP and JMAP terminate in AWS and do not depend on this control plane.
 An outage can interrupt new VPN logins, reconnections and service-panel access.
