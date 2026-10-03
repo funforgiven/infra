@@ -99,6 +99,8 @@ read identity/DNS/AWS controller outputs; Matrix workloads run in `services-v1`.
    size limit. Set
    `enable_matrix_monitoring` to `"true"` in
    `undercloud/84-mail-aws/tofu.yaml`, commit, and wait for OpenTofu to converge.
+   Keep `enable_matrix_delivery_alerts` at `"false"` during recipient enrollment;
+   public availability alarms remain active while the encrypted relay is pending.
    Confirm the existing Gmail SNS subscription. Enroll the heartbeat afterward:
 
    ```sh
@@ -148,6 +150,11 @@ read identity/DNS/AWS controller outputs; Matrix workloads run in `services-v1`.
    `INFRA_ALERTS` and its crypto store on the `matrix-relay` PVC. Do not enroll a
    second bot with the same device against a fresh store.
 
+   After the enrolled relay successfully sends an encrypted canary and reports
+   its heartbeat, set `enable_matrix_delivery_alerts` to `"true"` in
+   `undercloud/84-mail-aws/tofu.yaml` and commit. Cutover qualification requires
+   both independent alarms to be healthy with notifications enabled.
+
 The services workers have DHCP host routes for `1.1.1.1` and `8.8.8.8`
 through an isolated secondary network. Certificate validation uses reachable
 public resolvers `9.9.9.9` and `149.112.112.112`.
@@ -185,7 +192,7 @@ erased from the queue; pending alert bodies remain local until delivery.
 
 Critical and error Alertmanager notifications also go directly to the external
 email address. A host uses SMTP when the relay cannot durably accept its alert.
-AWS checks the public Matrix, MAS and ZITADEL endpoints every minute and watches
+AWS checks the public Element, Matrix, MAS and ZITADEL endpoints every minute and watches
 for a heartbeat sent only after an encrypted canary succeeds. Missing delivery
 for five minutes or public failure for three minutes alarms through SNS. Push
 notifications use the allowed `matrix.org` gateway through Squid; no message

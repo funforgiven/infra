@@ -711,7 +711,9 @@ def qualify(args):
             "stalwart-matrix-delivery-stalled",
         ]
     )["MetricAlarms"]
-    if len(alarms) != 2 or any(alarm["StateValue"] != "OK" for alarm in alarms):
+    if len(alarms) != 2 or any(
+        alarm["StateValue"] != "OK" or not alarm["ActionsEnabled"] for alarm in alarms
+    ):
         raise ValueError("external availability and delivery checks are not healthy")
     jobs = json.loads(
         run(
