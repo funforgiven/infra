@@ -123,6 +123,13 @@ the observed Japanese exit before applying the new `/32`.
 
 ## Remote administration
 
+Native MikroTik WireGuard is the infrastructure recovery path. Keep its client
+configuration, direct management addresses and recovery credentials available
+without Kubernetes, ZITADEL or NetBird. Everyday private service access uses
+[NetBird](../cloud/services/48-netbird/README.md); adding a normal service client
+does not add a RouterOS WireGuard peer. The router only forwards NetBird's public
+STUN port (UDP 3478) and the existing public HTTPS gateway traffic.
+
 The CCR2004 terminates the split-tunnel `wg-admin` network at
 `10.21.91.1/24`, UDP port `51820`, MTU `1420`. It is not added to a trusted
 interface list and is not NATed toward the internet. Firewall rules allow only

@@ -4,6 +4,7 @@
 import argparse
 import base64
 import configparser
+import datetime
 import json
 import os
 import secrets
@@ -43,6 +44,35 @@ def secret(name, namespace, values, secret_type="Opaque"):
         "metadata": {"name": name, "namespace": namespace},
         "type": secret_type, "stringData": values,
     }
+
+
+def add_resource(kustomization, filename):
+    document = yaml.safe_load(kustomization.read_text())
+    if filename not in document["resources"]:
+        document["resources"].append(filename)
+        kustomization.write_text(yaml.safe_dump(document, sort_keys=False))
+
+
+def token_alerts(state):
+    rules = []
+    for name in ("tofu-netbird", "kubernetes-netbird"):
+        expiry = datetime.datetime.fromisoformat(state[name]["personal_access_token"]["expiration_date"])
+        rules.append({
+            "alert": "NetBirdAutomationCredentialExpiring",
+            "expr": f"vector({int(expiry.timestamp())}) - time() < 2592000",
+            "for": "1h", "labels": {"severity": "warning", "credential": name},
+            "annotations": {
+                "summary": "NetBird automation credential expires within 30 days",
+                "description": "Run netbird-admin rotate-credentials and reconcile the encrypted Git inputs.",
+            },
+        })
+    document = {
+        "apiVersion": "monitoring.coreos.com/v1", "kind": "PrometheusRule",
+        "metadata": {"name": "netbird-credentials", "namespace": "netbird", "labels": {"release": "kube-prometheus-stack"}},
+        "spec": {"groups": [{"name": "netbird-credentials", "rules": rules}]},
+    }
+    (DEPLOYMENT / "server/credentials-monitoring.yaml").write_text(yaml.safe_dump(document, sort_keys=False))
+    add_resource(DEPLOYMENT / "server/kustomization.yaml", "credentials-monitoring.yaml")
 
 
 def prepare():
@@ -112,6 +142,7 @@ def identity_credentials():
     if not all(values.values()):
         raise ValueError("ZITADEL enrollment is incomplete")
     encrypt(POLICY / "identity.sops.yaml", secret("netbird-identity", "tofu-system", values))
+    add_resource(POLICY / "kustomization.yaml", "identity.sops.yaml")
 
 
 def api(base, path, token=None, body=None, method=None):
@@ -151,6 +182,9 @@ def bootstrap(base):
         body["enabled"] = False
         for rule in body["rules"]:
             rule["enabled"] = False
+            # GET expands group objects; PUT accepts only their IDs.
+            for direction in ("sources", "destinations"):
+                rule[direction] = [group["id"] for group in rule[direction]]
         api(base, "/policies/" + default["id"], token, body, "PUT")
     state["default_policy_id"] = default["id"]
     users = api(base, "/users", token)
@@ -174,6 +208,9 @@ def bootstrap(base):
     encrypt(DEPLOYMENT / "operator/token.sops.yaml", secret("netbird-operator-token", "netbird-routing", {
         "NB_API_KEY": state["kubernetes-netbird"]["plain_token"],
     }))
+    add_resource(POLICY / "kustomization.yaml", "credentials.sops.yaml")
+    add_resource(DEPLOYMENT / "operator/kustomization.yaml", "token.sops.yaml")
+    token_alerts(state)
 
 
 def rotate_credentials():
@@ -203,6 +240,7 @@ def rotate_credentials():
         "netbird.fahrican.com/credential-generation": secrets.token_hex(8),
     }
     path.write_text(yaml.safe_dump_all(documents, sort_keys=False))
+    token_alerts(state)
 
 
 def close_bootstrap():

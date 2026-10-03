@@ -57,6 +57,10 @@ spec:
           env:
             - name: SSL_CERT_FILE
               value: /trust/ca.pem
+            # Disabling updates alone still downloads GeoLite on first boot.
+            # Service access has no geolocation policy or external database.
+            - name: NB_DISABLE_GEOLOCATION
+              value: "true"
             # Only reachable through a local port-forward during enrollment.
             - name: NB_SETUP_PAT_ENABLED
               value: "true"
@@ -71,17 +75,18 @@ spec:
             - name: metrics
               containerPort: 9090
           readinessProbe:
+            # The relay health endpoint checks through the public gateway and
+            # would depend on this pod already being a ready Service endpoint.
             httpGet:
-              path: /health
-              port: health
+              path: /api/instance
+              port: http
           livenessProbe:
-            httpGet:
-              path: /health
-              port: health
+            tcpSocket:
+              port: http
           startupProbe:
             httpGet:
-              path: /health
-              port: health
+              path: /api/instance
+              port: http
             failureThreshold: 60
             periodSeconds: 5
           resources:

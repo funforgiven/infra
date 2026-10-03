@@ -4,7 +4,7 @@ metadata:
   name: wave88-netbird-policy
   namespace: flux-system
 spec:
-  suspend: true
+  suspend: false
   interval: 10m
   retryInterval: 1m
   timeout: 15m
