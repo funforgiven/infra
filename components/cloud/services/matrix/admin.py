@@ -377,7 +377,7 @@ async def enroll_bot(args):
                 invite=invite,
                 is_direct=False,
                 preset=RoomPreset.private_chat,
-                creation_content={"m.federate": False},
+                federate=False,
                 initial_state=[
                     {
                         "type": "m.room.encryption",
