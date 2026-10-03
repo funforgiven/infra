@@ -1,12 +1,13 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - postgres.yaml
-  - backup.yaml
-  - workload.yaml
-  - routes.yaml
-  - network-policy.yaml
-  - calico.generated.yaml
-  - monitoring.yaml
-  - runtime.sops.yaml
-  - backup.sops.yaml
+- postgres.yaml
+- backup.yaml
+- workload.yaml
+- routes.yaml
+- network-policy.yaml
+- calico.generated.yaml
+- monitoring.yaml
+- runtime.sops.yaml
+- backup.sops.yaml
+- credentials-monitoring.yaml

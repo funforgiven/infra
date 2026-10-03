@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: netbird-identity
+    namespace: tofu-system
+type: Opaque
+stringData:
+    netbird_client_id: ENC[AES256_GCM,data:rmE1zbzUhDOyvdNcQZaCBhQ7,iv:PDWlvYhGBArw5WNP/Cz3MBLJdCw21czAu6pQ1tpyo38=,tag:5PucCvs/MubEMXwArF7pCQ==,type:str]
+    netbird_client_secret: ENC[AES256_GCM,data:2+qA+n9i6e4gcKscKJ1AOweZa5DaSL3qlsccQz5nmeJFJbQHfHO8f+yab3XcYp1rHaWKhG/RWO42bCDFjJTTbA==,iv:pwVezw/SMvHNUT+vPFwe7QxZlgIWOBNEOPJGDIDhekg=,tag:7AscwKneOzHT/Hlfp8rBzg==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBFMEpiT25HMFgvS0xzeEtG
+            RUsyZkt1Q3dEaHQzZUJVamZ3alQ1RG1ZeXowCkI1SHh5ZDMxZU5XZHdmT2wvWmhR
+            VEtFZC81T3ZsZldKQ29iSkVJZ3RMMm8KLS0tIGhMazJrL1NhQ1JvSW1xVE9ObWdp
+            cEU3RVIrTEt3bjYyOHBqQVNtMkV4bGsKf1kR29rXHoasW/tE2Wo41MV8kFw1z8ui
+            +sgYZhOwQNvNWiiSjh9wW6dCWP1rA1vJPGWnu5JSdWYb4ehsfChVFA==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSB6SmE1emFSTWQ2ZWtEaEIw
+            bldxZXU1bElrUzFFZXUwaEYxQTljMlNLbEdvCnFvazdESHV2WFpyM2FFMTVzcGxB
+            ZFhZVC9sOW1rbnhjdE5Zd1Y2bEc2KzgKLS0tIDlNbXRBR2tDT0loQUM1K1J3NDlJ
+            U29VQWprRjFESHFhazVIdnFGZWFnSkEKAfoqPahP7j9/YBhAxALOf3zUl0I2kyh1
+            18dxJWTp2mkvQ7fQd+juHoIHrP2aQl6poHecA7Hbe0rZ2I43JE0lpQ==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age19ep2ztjlquplkgts8kstufgcx9add4enwn2dzsy6s7euy2scvvksgwevv2
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-10-03T18:18:49Z"
+    mac: ENC[AES256_GCM,data:h7El4JSdXx0rJiSa6Q3n/OOJkZPuDVs3xwFmuQClg36mow5E+fRInhpboqKX8UoRQdnpmVog+NedsJs6eT6fI4vjHf8yC/+PEBo6HEzqCVscA9P9pZeTXCjwzZ8N8bgOYRgLIhaM1zlz3ag+IROrHUuHAgZlMKZpROXV3Wkx84A=,iv:ctXq2Ghv1fui3wvDFrFezAel/M8iIVzl7tA5dAsfG/w=,tag:eIN9Xpx1aTAXAZc69sicbQ==,type:str]
+    version: 3.13.3

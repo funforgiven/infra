@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: netbird-operator-token
+    namespace: netbird-routing
+type: Opaque
+stringData:
+    NB_API_KEY: ENC[AES256_GCM,data:U1S+AHzTxNPexXqC7fS4LabslLlccNDAUecKo0TJzwxQPj6+TWTssQ==,iv:4q92msH+YwZxYho7JRmKXnPK8qzvyerFaiHU9R54peg=,tag:yOm5BSw6+hhaq92E/v8t5Q==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBPMS90SVR4d3JNaDc2OGc1
+            T1dGV2xUWTBOeW1tSVRSVmJLaXRHWGxKRURFCjVWdklIWjh1cWJxU3pyZmloVkVE
+            Y05JVzBsQVVYbTIzRlBFRW1KNkRQaDQKLS0tIFYwT0h2K3FkbGFOcVJnNUUzSGlO
+            ZURPY3RJKzNnWXgzZkxSQTM4ZEVWRVEKR7TC3xm6Mvtfpi/wfM6yI2y+tIBPlgQo
+            oOTEeMMasmAYIDhYYjerO+KXUVwz5RJEdHC68LZtiwStotNYoGkeVg==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBsQzJlMG9vMng3cktScWp5
+            c3cvZ3RSL3puVytabUZSeWF3a25IY0VTeUNnCmpCam5RbkZlM1orMjFPcy9DTXpx
+            T0pYbDY4VDZKS3l2eTBJNEp6V1ZHaVUKLS0tICtZdmhtMktYWUtML0dzTkxPUWJ5
+            M2FlRjNBTDNoMWtpcGRVME0yNUs3V2cKYSMWludpjSA7kVH6xk2/HUNFtpXfBFlL
+            lfGYOaZrFNO851+vsuLjoWoKF2MSlZv+99O54HQUqZm+LQ/g3gdV+g==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1vfxeaxdj7jze5p5ytff0peyjm3rusn8naacfudklvzwknv4yk5wq3qqg3v
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-10-03T18:32:21Z"
+    mac: ENC[AES256_GCM,data:YWLsUj11kZtZaCsG2pDNqNI3aCrVNgimRa2irGyAeHME3YKPjvm1y84aC3OXsRtX6lPyA80ZWSIEaQ7CabMbQIaibBZPqNCr90VcnSNnWxxoEvuILr03FFWAF8tHTB/4gJsDFKE6a/lEP2rFsNwjCAU1b9QbF7rLdxlJG1x8Lw8=,iv:5EZvwN8bntXo9kSLPzMfTUwOlqITA0BvQd2rK9ELDsg=,tag:yqchBpkbCBneRqLradC35A==,type:str]
+    version: 3.13.3

@@ -15,7 +15,7 @@ metadata:
   name: netbird-policy
   namespace: tofu-system
 spec:
-  suspend: true
+  suspend: false
   interval: 10m
   approvePlan: auto
   path: ./components/cloud/services/netbird/tofu
