@@ -17,4 +17,4 @@ resources:
 images:
 - name: git.fahrican.com/forge-runner/matrix-runtime
   newName: git.fahrican.com/forge-runner/matrix-runtime
-  digest: sha256:cf468a71ab0584f1c1b67fdb1511bfa24be365fdc3d76bee87efb11893827f6b
+  digest: sha256:e2ffcf80e22d306b0fa2868fa40d661e6f7409a9eb8915d355c41a1f612085bd

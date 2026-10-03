@@ -10,6 +10,7 @@ import base64
 import json
 import os
 import re
+import shutil
 import socket
 import subprocess
 import sys
@@ -455,6 +456,25 @@ def main():
     with tempfile.TemporaryDirectory(prefix="matrix-integration-") as temporary:
         directory = Path(temporary)
         pg_port, synapse_port, mas_port, proxy_port = [port() for _ in range(4)]
+        # DockerTools exposes executables through /bin symlinks. PostgreSQL
+        # locates its share directory relative to argv[0], so its native bin
+        # directory must precede that symlink directory in the container PATH.
+        runtime_bin = directory / "bin"
+        runtime_bin.mkdir()
+        initdb = Path(shutil.which("initdb")).resolve()
+        (runtime_bin / "initdb").symlink_to(initdb)
+        container_environment = dict(
+            os.environ, PATH=f"{initdb.parent}:{runtime_bin}:{os.environ['PATH']}"
+        )
+        with tempfile.TemporaryDirectory(dir=directory) as probe:
+            qualified = subprocess.run(
+                ["initdb", "-D", probe + "/data", "--auth", "trust", "--locale", "C"],
+                env=container_environment,
+                capture_output=True,
+            )
+            if qualified.returncode:
+                raise RuntimeError("PostgreSQL container PATH qualification failed")
+        print("PASS: PostgreSQL initializes with the container executable layout")
         postgres_data = directory / "postgres"
         run(
             [
