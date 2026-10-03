@@ -6,7 +6,10 @@ import re
 import subprocess
 from pathlib import Path
 
-DATA = Path("/var/lib/matrix/postgres/pgdata")
+DATA = Path(os.environ.get("MATRIX_POSTGRES_DATA", "/var/lib/matrix/postgres/pgdata"))
+CREDENTIALS = Path(os.environ.get("MATRIX_SECRET_DIR", "/run/matrix"))
+SOCKET = os.environ.get("MATRIX_POSTGRES_SOCKET", "/tmp")
+PORT = os.environ.get("MATRIX_DB_PORT", "5432")
 
 
 def command(argv, data=None):
@@ -26,7 +29,7 @@ def main():
                 "--username",
                 "postgres",
                 "--pwfile",
-                "/run/matrix/postgres-password",
+                str(CREDENTIALS / "postgres-password"),
                 "--auth-host",
                 "scram-sha-256",
                 "--auth-local",
@@ -37,6 +40,16 @@ def main():
                 "C",
             ]
         )
+    # initdb permits only loopback TCP by default. Admit the two application
+    # roles from the services pod range with password authentication; PostgreSQL
+    # administration remains on the local socket.
+    hba = DATA / "pg_hba.conf"
+    content = hba.read_text()
+    for name in ("synapse", "mas"):
+        entry = f"host {name} {name} 172.16.0.0/12 scram-sha-256"
+        if entry not in content.splitlines():
+            content += "\n" + entry + "\n"
+    hba.write_text(content)
     command(
         [
             "pg_ctl",
@@ -45,14 +58,14 @@ def main():
             "-w",
             "start",
             "-l",
-            "/tmp/postgres-init.log",
+            str(Path(SOCKET) / "postgres-init.log"),
             "-o",
-            "-k /tmp -h 127.0.0.1",
+            f"-k {SOCKET} -h 127.0.0.1 -p {PORT}",
         ]
     )
     try:
         for name in ("synapse", "mas"):
-            password = Path("/run/matrix/" + name + "-password").read_text()
+            password = (CREDENTIALS / (name + "-password")).read_text()
             if not re.fullmatch(r"[a-f0-9]{64}", password):
                 raise ValueError("invalid database credential")
             roles = (
@@ -60,7 +73,9 @@ def main():
                     [
                         "psql",
                         "-h",
-                        "/tmp",
+                        SOCKET,
+                        "-p",
+                        PORT,
                         "-U",
                         "postgres",
                         "-Atc",
@@ -73,7 +88,17 @@ def main():
             operation = "ALTER" if name in roles else "CREATE"
             sql = f"{operation} ROLE {name} WITH LOGIN PASSWORD '{password}';\n"
             command(
-                ["psql", "-h", "/tmp", "-U", "postgres", "-v", "ON_ERROR_STOP=1"],
+                [
+                    "psql",
+                    "-h",
+                    SOCKET,
+                    "-p",
+                    PORT,
+                    "-U",
+                    "postgres",
+                    "-v",
+                    "ON_ERROR_STOP=1",
+                ],
                 sql.encode(),
             )
             databases = (
@@ -81,7 +106,9 @@ def main():
                     [
                         "psql",
                         "-h",
-                        "/tmp",
+                        SOCKET,
+                        "-p",
+                        PORT,
                         "-U",
                         "postgres",
                         "-Atc",
@@ -94,12 +121,25 @@ def main():
             if name not in databases:
                 sql = f"CREATE DATABASE {name} OWNER {name} ENCODING 'UTF8' LC_COLLATE 'C' LC_CTYPE 'C' TEMPLATE template0;\n"
                 command(
-                    ["psql", "-h", "/tmp", "-U", "postgres", "-v", "ON_ERROR_STOP=1"],
+                    [
+                        "psql",
+                        "-h",
+                        SOCKET,
+                        "-p",
+                        PORT,
+                        "-U",
+                        "postgres",
+                        "-v",
+                        "ON_ERROR_STOP=1",
+                    ],
                     sql.encode(),
                 )
     finally:
         command(["pg_ctl", "-D", str(DATA), "-w", "stop", "-m", "fast"])
-    os.execvp("postgres", ["postgres", "-D", str(DATA), "-h", "0.0.0.0", "-k", "/tmp"])
+    os.execvp(
+        "postgres",
+        ["postgres", "-D", str(DATA), "-h", "0.0.0.0", "-p", PORT, "-k", SOCKET],
+    )
 
 
 if __name__ == "__main__":

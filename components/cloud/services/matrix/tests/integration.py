@@ -450,11 +450,118 @@ async def qualify(directory, pg_port, synapse_port, mas_port, proxy_port):
             await client.close()
 
 
+def qualify_postgres_bootstrap(directory, source):
+    """Exercise the production bootstrap, authenticated roles and existing data."""
+    work = directory / "bootstrap"
+    work.mkdir()
+    credentials = work / "credentials"
+    credentials.mkdir()
+    for index, name in enumerate(("postgres", "synapse", "mas"), 1):
+        (credentials / (name + "-password")).write_text(str(index) * 64)
+    database_port = port()
+    environment = dict(
+        os.environ,
+        MATRIX_POSTGRES_DATA=str(work / "data"),
+        MATRIX_SECRET_DIR=str(credentials),
+        MATRIX_POSTGRES_SOCKET=str(work),
+        MATRIX_DB_PORT=str(database_port),
+    )
+    for restart in range(2):
+        with (work / "server.log").open("wb") as log:
+            process = subprocess.Popen(
+                [sys.executable, str(source / "postgres.py")],
+                env=environment,
+                stdout=log,
+                stderr=log,
+            )
+        try:
+            for _ in range(100):
+                ready = True
+                for index, name in enumerate(("synapse", "mas"), 2):
+                    result = subprocess.run(
+                        [
+                            "psql",
+                            "-h",
+                            "127.0.0.1",
+                            "-p",
+                            str(database_port),
+                            "-U",
+                            name,
+                            "-d",
+                            name,
+                            "-Atc",
+                            "SELECT 1",
+                        ],
+                        env=dict(os.environ, PGPASSWORD=str(index) * 64),
+                        capture_output=True,
+                    )
+                    ready = ready and result.returncode == 0
+                if ready:
+                    break
+                if process.poll() is not None:
+                    raise RuntimeError("Production PostgreSQL bootstrap exited")
+                time.sleep(0.1)
+            else:
+                raise RuntimeError("Production PostgreSQL roles are not usable")
+            connection = [
+                "psql",
+                "-h",
+                "127.0.0.1",
+                "-p",
+                str(database_port),
+                "-U",
+                "synapse",
+                "-d",
+                "synapse",
+                "-v",
+                "ON_ERROR_STOP=1",
+            ]
+            query = (
+                "CREATE TABLE retained(value integer); INSERT INTO retained VALUES(1);"
+                if restart == 0
+                else "SELECT value FROM retained;"
+            )
+            result = subprocess.run(
+                connection,
+                input=query.encode(),
+                env=dict(os.environ, PGPASSWORD="2" * 64),
+                capture_output=True,
+                check=True,
+            )
+            if restart and b"1" not in result.stdout:
+                raise RuntimeError("PostgreSQL restart lost application data")
+            hba = (work / "data/pg_hba.conf").read_text()
+            for name in ("synapse", "mas"):
+                if (
+                    hba.splitlines().count(
+                        f"host {name} {name} 172.16.0.0/12 scram-sha-256"
+                    )
+                    != 1
+                ):
+                    raise RuntimeError(
+                        "PostgreSQL pod authentication rules are invalid"
+                    )
+        finally:
+            subprocess.run(
+                ["pg_ctl", "-D", str(work / "data"), "-w", "stop", "-m", "fast"],
+                capture_output=True,
+            )
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+    print(
+        "PASS: production PostgreSQL bootstrap, authenticated roles and persistent restart"
+    )
+
+
 def main():
     source = Path(__file__).resolve().parents[1]
     processes = []
     with tempfile.TemporaryDirectory(prefix="matrix-integration-") as temporary:
         directory = Path(temporary)
+        qualify_postgres_bootstrap(directory, source)
         pg_port, synapse_port, mas_port, proxy_port = [port() for _ in range(4)]
         # DockerTools exposes executables through /bin symlinks. PostgreSQL
         # locates its share directory relative to argv[0], so its native bin
