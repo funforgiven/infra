@@ -37,6 +37,12 @@ The operator's DNS zone name must equal its domain because version 0.8.0 uses
 the name as the generated record suffix. The 0.80.0 client must also be allowed
 to set its initial configuration before enrollment.
 
+Routing peers enable IPv4 forwarding and loose reverse-path filtering in their
+own pod network namespaces. A short privileged init container sets these
+namespaced sysctls without host mounts or host namespaces. The running NetBird
+containers are unprivileged, with a read-only root filesystem and limited
+network capabilities. Readiness also checks that forwarding remains enabled.
+
 ## Access boundaries
 
 `netbird.fahrican.com` exposes only OAuth, management/signaling gRPC, relay,

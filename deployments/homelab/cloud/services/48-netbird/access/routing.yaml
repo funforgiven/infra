@@ -15,6 +15,26 @@ spec:
         labels:
           access.fahrican.com/netbird-router: services
       spec:
+        # These sysctls belong to the pod's network namespace. Kubernetes mounts
+        # /proc/sys read-only in ordinary containers, even with NET_ADMIN.
+        # Only this short init step is privileged; it has no host mounts/namespaces.
+        initContainers:
+          - name: network-sysctls
+            image: netbirdio/netbird:0.80.0@sha256:4976692ea44bb93871743d0b742b4a8f97f6425bfc458ca2d78e28fdb8bdf4ad
+            command:
+              - sh
+              - -ec
+              - |
+                sysctl -w net.ipv4.ip_forward=1
+                sysctl -w net.ipv4.conf.all.rp_filter=2
+                sysctl -w net.ipv4.conf.default.rp_filter=2
+                sysctl -w net.ipv4.conf.all.src_valid_mark=1
+            securityContext:
+              privileged: true
+              readOnlyRootFilesystem: true
+            resources:
+              requests: {cpu: 10m, memory: 16Mi}
+              limits: {memory: 64Mi}
         hostAliases:
           - ip: 10.21.40.128
             hostnames: [netbird.fahrican.com]
@@ -22,6 +42,12 @@ spec:
             hostnames: [netbird-stun.fahrican.com]
         containers:
           - name: netbird
+            readinessProbe:
+              exec:
+                command:
+                  - sh
+                  - -ec
+                  - test "$(cat /proc/sys/net/ipv4/ip_forward)" = 1 && netbird status --check ready
             securityContext:
               privileged: false
               allowPrivilegeEscalation: false
