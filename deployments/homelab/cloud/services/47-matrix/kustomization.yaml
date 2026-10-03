@@ -14,6 +14,8 @@ resources:
 - restore.yaml
 - registry.sops.yaml
 - registry-restore.sops.yaml
+- alerting.sops.yaml
+- alerting-credentials.sops.yaml
 patches:
 - path: runtime-rollouts.yaml
 images:
