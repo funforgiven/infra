@@ -46,6 +46,10 @@ spec:
       kind: Deployment
       name: netbird-server
       namespace: netbird
+    - apiVersion: apps/v1
+      kind: DaemonSet
+      name: netbird-stun
+      namespace: netbird
     - apiVersion: postgresql.cnpg.io/v1
       kind: Cluster
       name: netbird-postgres

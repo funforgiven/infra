@@ -43,6 +43,16 @@ spec:
       selector: access.fahrican.com/netbird-router == 'services'
     protocol: TCP
     destination:
+      namespaceSelector: kubernetes.io/metadata.name == 'envoy-gateway-system'
+      selector: gateway.envoyproxy.io/owning-gateway-name == 'matrix-public' && gateway.envoyproxy.io/owning-gateway-namespace
+        == 'services-network'
+      ports:
+      - 10443
+  - action: Allow
+    source:
+      selector: access.fahrican.com/netbird-router == 'services'
+    protocol: TCP
+    destination:
       ports:
       - 443
   - action: Allow

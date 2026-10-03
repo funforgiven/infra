@@ -17,3 +17,13 @@ resource "cloudflare_dns_record" "netbird_api" {
   proxied = false
   comment = "Private NetBird API for declarative administration"
 }
+
+resource "cloudflare_dns_record" "netbird_stun" {
+  zone_id = data.cloudflare_zone.fahrican.zone_id
+  name    = "netbird-stun.fahrican.com"
+  type    = "A"
+  content = var.matrix_wan_ipv4_address
+  ttl     = 300
+  proxied = false
+  comment = "Stateless homelab NetBird STUN workers"
+}

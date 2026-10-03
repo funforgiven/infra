@@ -5,7 +5,9 @@ metadata:
   namespace: netbird
 spec:
   podSelector: {}
-  policyTypes: [Ingress, Egress]
+  policyTypes:
+  - Ingress
+  - Egress
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -14,16 +16,21 @@ metadata:
   namespace: netbird
 spec:
   podSelector: {}
-  policyTypes: [Egress]
+  policyTypes:
+  - Egress
   egress:
-    - to:
-        - namespaceSelector:
-            matchLabels: {kubernetes.io/metadata.name: kube-system}
-          podSelector:
-            matchLabels: {k8s-app: kube-dns}
-      ports:
-        - {protocol: UDP, port: 53}
-        - {protocol: TCP, port: 53}
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -32,47 +39,63 @@ metadata:
   namespace: netbird
 spec:
   podSelector:
-    matchLabels: {app.kubernetes.io/name: netbird-server}
-  policyTypes: [Ingress, Egress]
+    matchLabels:
+      app.kubernetes.io/name: netbird-server
+  policyTypes:
+  - Ingress
+  - Egress
   ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels: {kubernetes.io/metadata.name: envoy-gateway-system}
-        - namespaceSelector:
-            matchLabels: {kubernetes.io/metadata.name: netbird-routing}
-          podSelector:
-            matchLabels: {app.kubernetes.io/component: operator}
-      ports:
-        - {protocol: TCP, port: 8080}
-    - ports:
-        - {protocol: UDP, port: 3478}
-    - from:
-        - namespaceSelector:
-            matchLabels: {kubernetes.io/metadata.name: services-observability}
-      ports:
-        - {protocol: TCP, port: 9090}
-        - {protocol: TCP, port: 9000}
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: envoy-gateway-system
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: netbird-routing
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/component: operator
+    ports:
+    - protocol: TCP
+      port: 8080
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: services-observability
+    ports:
+    - protocol: TCP
+      port: 9090
+    - protocol: TCP
+      port: 9000
   egress:
-    - to:
-        - podSelector:
-            matchLabels: {cnpg.io/cluster: netbird-postgres}
-      ports:
-        - {protocol: TCP, port: 5432}
-    - to:
-        - ipBlock: {cidr: 10.21.20.131/32}
-        - ipBlock: {cidr: 31.223.15.252/32}
-        - ipBlock: {cidr: 10.21.40.128/32}
-      ports:
-        - {protocol: TCP, port: 443}
-    - to:
-        - namespaceSelector:
-            matchLabels: {kubernetes.io/metadata.name: envoy-gateway-system}
-          podSelector:
-            matchLabels:
-              gateway.envoyproxy.io/owning-gateway-name: matrix-public
-              gateway.envoyproxy.io/owning-gateway-namespace: services-network
-      ports:
-        - {protocol: TCP, port: 10443}
+  - to:
+    - podSelector:
+        matchLabels:
+          cnpg.io/cluster: netbird-postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - ipBlock:
+        cidr: 10.21.20.131/32
+    - ipBlock:
+        cidr: 31.223.15.252/32
+    - ipBlock:
+        cidr: 10.21.40.128/32
+    ports:
+    - protocol: TCP
+      port: 443
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: envoy-gateway-system
+      podSelector:
+        matchLabels:
+          gateway.envoyproxy.io/owning-gateway-name: matrix-public
+          gateway.envoyproxy.io/owning-gateway-namespace: services-network
+    ports:
+    - protocol: TCP
+      port: 10443
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -81,34 +104,65 @@ metadata:
   namespace: netbird
 spec:
   podSelector:
-    matchLabels: {cnpg.io/cluster: netbird-postgres}
-  policyTypes: [Ingress, Egress]
+    matchLabels:
+      cnpg.io/cluster: netbird-postgres
+  policyTypes:
+  - Ingress
+  - Egress
   ingress:
-    - from:
-        - podSelector:
-            matchLabels: {app.kubernetes.io/name: netbird-server}
-        - podSelector:
-            matchLabels: {cnpg.io/cluster: netbird-postgres}
-      ports:
-        - {protocol: TCP, port: 5432}
-    - from:
-        - namespaceSelector:
-            matchLabels: {kubernetes.io/metadata.name: cnpg-system}
-      ports:
-        - {protocol: TCP, port: 8000}
-        - {protocol: TCP, port: 5432}
-    - from:
-        - namespaceSelector:
-            matchLabels: {kubernetes.io/metadata.name: services-observability}
-      ports:
-        - {protocol: TCP, port: 9187}
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: netbird-server
+    - podSelector:
+        matchLabels:
+          cnpg.io/cluster: netbird-postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: cnpg-system
+    ports:
+    - protocol: TCP
+      port: 8000
+    - protocol: TCP
+      port: 5432
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: services-observability
+    ports:
+    - protocol: TCP
+      port: 9187
   egress:
-    - to:
-        - podSelector:
-            matchLabels: {cnpg.io/cluster: netbird-postgres}
-      ports:
-        - {protocol: TCP, port: 5432}
-    # Kubernetes API and encrypted offsite WAL/base backups.
-    - ports:
-        - {protocol: TCP, port: 443}
-        - {protocol: TCP, port: 6443}
+  - to:
+    - podSelector:
+        matchLabels:
+          cnpg.io/cluster: netbird-postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  - ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 6443
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: stun
+  namespace: netbird
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: netbird-stun
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - ports:
+    - protocol: UDP
+      port: 3478

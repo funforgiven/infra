@@ -11,6 +11,7 @@ AWS mail backend tunnel are not migrated into NetBird.
 | --- | --- | --- |
 | ZITADEL project, service-user grant and OIDC client | Identity OpenTofu | Existing ZITADEL PostgreSQL |
 | NetBird combined server 0.80.0 | Flux | PostgreSQL; cryptographic keys in SOPS |
+| Coturn 4.18.0 STUN workers | Flux DaemonSet | None; STUN only, TURN disabled |
 | PostgreSQL 18, three instances | CloudNativePG | Three Cinder volumes, synchronous replica |
 | PostgreSQL recovery | Barman Cloud plugin | Continuous WAL and daily base backups in B2 |
 | Account settings, disabled default policy, IdP, groups, DNS and HTTPS policy | NetBird OpenTofu | NetBird PostgreSQL |
@@ -26,6 +27,15 @@ The operator owns membership of the `private-services` resource group; OpenTofu
 owns its identity. Neither controller also owns the other's network resources.
 The operator's experimental Gateway API integration and automatic policy
 creation are disabled.
+
+The OVN load balancer cannot use Kubernetes' HTTP readiness check for a UDP
+pool. STUN therefore runs on every worker, separately from the singleton
+controller, with source addresses preserved. `netbird-stun.fahrican.com`
+uses UDP 3478. Routing pods resolve the coordination and STUN names to their
+separate local gateway addresses; their connections stay within the homelab.
+The operator's DNS zone name must equal its domain because version 0.8.0 uses
+the name as the generated record suffix. The 0.80.0 client must also be allowed
+to set its initial configuration before enrollment.
 
 ## Access boundaries
 
@@ -90,7 +100,7 @@ kubeconfig and OpenStack credentials live only in memory.
 5. Use `kubectl -n netbird port-forward service/netbird-server 18080:8080` from
    the services access wrapper. Run `netbird-admin bootstrap` locally. It closes
    the default mesh policy and saves distinct automation tokens as ciphertext.
-6. Add the encrypted credential files to their Kustomizations and enable the
+6. The enrollment tool adds encrypted credential files to their Kustomizations. Enable the
    policy wave. After its plan converges, enable the operator and access waves.
 7. Verify client enrollment, permitted HTTPS, denied lateral/management access,
    private API denial from outside, and router recovery access. Run
@@ -102,6 +112,21 @@ Automation PATs expire after 365 days. Before expiry, run
 and operator rollout annotation, and verify reconciliation before revoking the
 old tokens. Device keys and addresses are managed by NetBird; they do not
 require individual RouterOS peer edits.
+
+## Connecting a personal device
+
+In the NetBird Linux or Android app, select the self-hosted management server
+`https://netbird.fahrican.com`, then sign in with the existing ZITADEL owner
+identity. On Linux the equivalent CLI command is:
+
+```sh
+netbird up --management-url https://netbird.fahrican.com
+```
+
+Use the existing service URLs: `https://mail-admin.fahrican.com`,
+`https://home.fahrican.com`, `https://music.fahrican.com`, and the other selected
+hosts above. NetBird supplies the private DNS and routes. Keep the native
+MikroTik WireGuard profile separately for infrastructure recovery.
 
 ## Recovery
 
