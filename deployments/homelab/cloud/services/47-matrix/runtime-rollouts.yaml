@@ -1,0 +1,10 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: matrix-relay
+  namespace: matrix
+spec:
+  template:
+    metadata:
+      annotations:
+        matrix.fahrican.com/runtime-config: 76863ac2f3b933becfa8123a150828335021bca0217840b15b485af42a5e9c93

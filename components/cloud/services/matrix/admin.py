@@ -4,6 +4,7 @@
 import argparse
 import asyncio
 import base64
+import hashlib
 import ipaddress
 import json
 import os
@@ -40,7 +41,35 @@ def load_secret(path):
     return yaml.safe_load(run(["sops", "decrypt", str(path)]))
 
 
-def save_secret(path, document):
+def update_runtime_rollout(name, ciphertext):
+    kinds = {"matrix-relay": "StatefulSet", "matrix-mas": "Deployment"}
+    patch_path = DEPLOYMENT / "runtime-rollouts.yaml"
+    patches = (
+        list(yaml.safe_load_all(patch_path.read_text())) if patch_path.exists() else []
+    )
+    patch = next((item for item in patches if item["metadata"]["name"] == name), None)
+    if patch is None:
+        patch = {
+            "apiVersion": "apps/v1",
+            "kind": kinds[name],
+            "metadata": {"name": name, "namespace": "matrix"},
+            "spec": {"template": {"metadata": {"annotations": {}}}},
+        }
+        patches.append(patch)
+    # This is a digest of the already-public ciphertext, never of a credential.
+    patch["spec"]["template"]["metadata"]["annotations"][
+        "matrix.fahrican.com/runtime-config"
+    ] = hashlib.sha256(ciphertext).hexdigest()
+    temporary = patch_path.with_suffix(".yaml.tmp")
+    temporary.write_text(yaml.safe_dump_all(patches, sort_keys=False))
+    temporary.replace(patch_path)
+
+
+def save_secret(path, document, *, rollout=None):
+    if rollout not in (None, "matrix-relay", "matrix-mas"):
+        raise ValueError("unsupported runtime workload")
+    if rollout is not None and path != DEPLOYMENT / "runtime.sops.yaml":
+        raise ValueError("runtime rollouts require the Matrix runtime Secret")
     ciphertext = run(
         [
             "sops",
@@ -59,6 +88,8 @@ def save_secret(path, document):
     temporary = path.with_suffix(path.suffix + ".tmp")
     temporary.write_bytes(ciphertext)
     temporary.replace(path)
+    if rollout is not None:
+        update_runtime_rollout(rollout, ciphertext)
 
 
 def secret(name, namespace, values):
@@ -261,7 +292,7 @@ def sync_identity(args):
         ]
     }
     document["stringData"]["mas.yaml"] = yaml.safe_dump(config)
-    save_secret(target, document)
+    save_secret(target, document, rollout="matrix-mas")
 
 
 async def enroll_bot(args):
@@ -327,7 +358,7 @@ async def enroll_bot(args):
         config["access_token"] = token.group()
         # Persist the credential before any room creation, so retries retain identity.
         document["stringData"]["relay.json"] = json.dumps(config)
-        save_secret(target, document)
+        save_secret(target, document, rollout="matrix-relay")
     client = AsyncClient(
         args.homeserver,
         config["user_id"],
@@ -360,7 +391,7 @@ async def enroll_bot(args):
             config[key] = response.room_id
             config["allowed_users"] = [config["user_id"], args.owner]
             document["stringData"]["relay.json"] = json.dumps(config)
-            save_secret(target, document)
+            save_secret(target, document, rollout="matrix-relay")
     finally:
         await client.close()
 
@@ -376,7 +407,7 @@ def approve_device(args):
         raise ValueError("fingerprint must be the device's 43-character Ed25519 key")
     relay["trusted_devices"].setdefault(args.user, {})[args.device] = fingerprint
     document["stringData"]["relay.json"] = json.dumps(relay)
-    save_secret(target, document)
+    save_secret(target, document, rollout="matrix-relay")
 
 
 def configure_alerting(args):
@@ -426,7 +457,7 @@ def configure_alerting(args):
             ),
         )
     document["stringData"]["relay.json"] = json.dumps(relay)
-    save_secret(target, document)
+    save_secret(target, document, rollout="matrix-relay")
     receiver = {
         "name": "infrastructure-matrix",
         "webhook_configs": [
@@ -644,7 +675,7 @@ def enroll_monitoring(args):
     aws_client("secretsmanager").put_secret_value(SecretId=arn, SecretString=token)
     relay["heartbeat"] = {"url": url + "heartbeat", "token": token}
     document["stringData"]["relay.json"] = json.dumps(relay)
-    save_secret(target, document)
+    save_secret(target, document, rollout="matrix-relay")
 
 
 def activate():

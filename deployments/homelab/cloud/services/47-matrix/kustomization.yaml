@@ -14,6 +14,8 @@ resources:
 - restore.yaml
 - registry.sops.yaml
 - registry-restore.sops.yaml
+patches:
+- path: runtime-rollouts.yaml
 images:
 - name: git.fahrican.com/forge-runner/matrix-runtime
   newName: git.fahrican.com/forge-runner/matrix-runtime
