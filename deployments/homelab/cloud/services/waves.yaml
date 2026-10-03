@@ -225,6 +225,10 @@ spec:
       kind: Deployment
       name: blackbox-exporter
       namespace: services-observability
+    - apiVersion: apps/v1
+      kind: DaemonSet
+      name: services-node-policy
+      namespace: kube-system
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization

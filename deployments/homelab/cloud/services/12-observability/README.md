@@ -129,3 +129,15 @@ all pod networking is denied. The script rejects control planes and unexpected
 configuration before writing. Removal of the DaemonSet does not undo installed
 host configuration; restore the saved files and remove its two drop-ins before
 reloading systemd and restarting the affected services if rolling back.
+
+On 2026-10-04, all three workers passed serial activation with live 70%/60%
+cleanup thresholds and DiskPressure=False. All three IoT networking pods
+recovered and both the IoT rollout and NetBird relay alerts resolved. The
+observation stack checks the node-policy DaemonSet's readiness through Flux.
+The CPU workers still had only about 7–8 GiB free on their 40 GiB root disks.
+Their active images cannot be garbage-collected, so bounded logs restore
+headroom without guaranteeing room for additional large workloads. These root
+disks are Nova image disks, with no attached Cinder boot volume to extend online.
+Larger roots require a managed worker resize or replacement; follow the
+[worker replacement procedure](../46-forge/WORKER_CAPACITY.md#replacing-the-original-workers)
+and preserve the existing CPU/RAM allocation and workload volumes.
