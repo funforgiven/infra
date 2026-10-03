@@ -183,6 +183,13 @@ spec:
   - action: Allow
     protocol: TCP
     source:
+      namespaceSelector: kubernetes.io/metadata.name == 'envoy-gateway-system'
+      selector: gateway.envoyproxy.io/owning-gateway-name == 'netbird-services' && gateway.envoyproxy.io/owning-gateway-namespace == 'services-network'
+    destination:
+      ports: [8080]
+  - action: Allow
+    protocol: TCP
+    source:
       namespaceSelector: kubernetes.io/metadata.name == 'forge-control'
       selector: app.kubernetes.io/name == 'forge-native-broker'
     destination:

@@ -15,6 +15,14 @@ spec:
         labels:
           access.fahrican.com/netbird-router: services
       spec:
+        topologySpreadConstraints:
+          - maxSkew: 1
+            topologyKey: kubernetes.io/hostname
+            whenUnsatisfiable: DoNotSchedule
+            nodeTaintsPolicy: Honor
+            labelSelector:
+              matchLabels:
+                access.fahrican.com/netbird-router: services
         # These sysctls belong to the pod's network namespace. Kubernetes mounts
         # /proc/sys read-only in ordinary containers, even with NET_ADMIN.
         # Only this short init step is privileged; it has no host mounts/namespaces.
