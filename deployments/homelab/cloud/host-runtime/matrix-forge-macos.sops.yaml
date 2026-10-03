@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: matrix-forge-macos
+    namespace: matrix
+    labels:
+        velero.io/exclude-from-backup: "true"
+type: Opaque
+stringData:
+    config.json: ENC[AES256_GCM,data:2lJNn0U7BMfxGU3/MO5Uno/Iv0IaDaVdFZfnYW2iSwLOZZUQ6MJgu3NrmeqXm4FUvM2r34VM3PF9L1lM2HWkG+9PSe9JzDWU4/iq61HIGyN9/7jKlqbvjc8ZUX139hpwN9ZE07po5AxiTJE1HHvhNe7VPOnbGosbtZhx53vmSlQlYiLOQ0nGcOp7p5y+nUmKhn6+cLho7oEKX0C9kpYAWzFTXMgEEH1H43wpHu6ySBuCqsk1kWLiBDUaBF9lUtTKB1BG1J9CnDoE2Dt4OsAIOUECLpK1xhobtvgQSyPpxZNTgNx69/P8o6gmyHZcIZRpue4Db1ICb3FvkXdUVd02hYDhNwTONlKtBGqmATx39pQW/xndonTfNu1m1z5D19dUNZGwbn2sDe3LS7JUsUh+6aooWb6UqhbtJfD0v7c6zkNjabn/KjIq+Oc=,iv:uQlZEM5WGM6DcUYgIExumtgKtW5yPa5Pwh3oE6nXF/g=,tag:mOOWqeTwDcuQiv7CZ87uWA==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBYc1RPYmY3N0RGOUFXYUtG
+            SzhuTW9yUDJWTXF5a0hiODlSQ0Z5S29yYUVVCk51aG5HNzBKamJHb2xod08xNWdm
+            Y0ZJRkpFaURNYURSRHVIYnpQU2FsbzQKLS0tIHcxeW9OdjVPZ2JTZmg2N2VyZDlj
+            dm1tVCtRMWFlcGx4NW1NSVd2eitMc2sKpuHnUHUN8RtgrCrVkLKxa8Fx5l4XSAQz
+            k95a8X6A3Evua3f+inaynqizLsQRSxvXVN6CixYffx2Bczr+J7wTvw==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-10-03T19:49:43Z"
+    mac: ENC[AES256_GCM,data:2oCJgcjLJ/d6KDM8ChrTWfZhMppeg4vaadEo/B6nnQVYYu7sap+Vn67ctAe1dr1P2ZVvt4poUSVLXneP8ArXK8G6XD6po8clk2iLoo1vo+BPEZ6v+W4hHNVtaSWV0pScC1L/Kk46tnQh24GTeuYzPpoJGcovHQfp9RAYGG0vW/8=,iv:31xKwG26l3CjUvWTGrlLaDz2wio08O6E0czLI2IbcWQ=,tag:OxdY/MFS9uIsh9Vs1Mph4g==,type:str]
+    version: 3.13.3

@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: matrix-alertmanager-values
+    namespace: services-observability
+    labels:
+        velero.io/exclude-from-backup: "true"
+type: Opaque
+stringData:
+    values.yaml: ENC[AES256_GCM,data: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,iv:TQUS69ckhaZD8LX1or0wz0oayMOqfcm5eK0eta62Xwo=,tag:lgRrB/jrfmj4+ElDCk34kw==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBVQ0tFb3NHa0tBQW84dllr
+            M3RWdUlycHJWWHVNMXpxYldid2xqL3BTSVFjCkJmdGU3Um9qNm11MFA5OUNsYkJ0
+            WUJxZTdjWUEyd3ZpNDNWbnlqZUtBQmMKLS0tIEtsS1p3NWJIaXl0cEFyZGpibXFO
+            aHNoYkZlaDZ1dVk1Z1J6amYzRE1mZW8KcIJen4hB+rwfOBDFssBwEs79Y8Ovt2cR
+            WvuIrLWFuEwCaKdbnzmGmgaLU4AgEKRxFEc6+hjyr8UiTI5G+RzjyQ==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSArL0l5YzFGcU9lS3dKMWtU
+            enROZHQvT3JoT0JPL3VZTGxTNEUvajJGTlhvClgyb3c1NUphNGgrSWQ5ZllZMmor
+            NkFndTJYOGtjTW4xYnVZem5zSUlkMlkKLS0tIEVRSWJxd2ZKaXAwSmFxOEI4dC9K
+            UFA1aFVXMEVQQkxSV2JzdXNaR091UGsKwI/kxOO2LIQapJXagzjryLQXIcxUUi+l
+            TzIf6APJcp1UMjhzlXlLROodIUOfq8IWTSbL1GJTinqNcsc/EhD24g==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1vfxeaxdj7jze5p5ytff0peyjm3rusn8naacfudklvzwknv4yk5wq3qqg3v
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-10-03T19:49:43Z"
+    mac: ENC[AES256_GCM,data:TrkAvMzzLmMI3DW5JCJ8V6DPXPaY88QMIcHZqvfk0bD58+raD3DPwvHaqlPHvVUBLwhcWhYHM6Y5akquO3KWsAsWLqKSyB5/eNSI5DMeO9uK/g4JavXnNpDdjwHEHs1zclKGnSBXCMU1JenCecqUkN5/TohOutIH7+lpx9hrNio=,iv:i3IirR5basS3UofHuZrWAlXHVHCSpWI8a3qTZMc5/o8=,tag:exL4Iqd5fH5hh5ynUpQ+UQ==,type:str]
+    version: 3.13.3
