@@ -97,6 +97,54 @@ class CutoverTests(unittest.TestCase):
                     decrypt.assert_not_called()
 
 
+class EnrollmentTests(unittest.IsolatedAsyncioTestCase):
+    async def test_alert_rooms_are_private_encrypted_and_non_federated(self):
+        from nio import AsyncClient, RoomCreateResponse, RoomPreset
+
+        relay = {
+            "user_id": "@infra-alerts:matrix.fahrican.com",
+            "device_id": "INFRA_ALERTS",
+            "access_token": "synthetic-token",
+            "room_id": "",
+            "canary_room_id": "",
+        }
+        document = {"stringData": {"relay.json": json.dumps(relay)}}
+        with (
+            patch("nio.AsyncClient", autospec=AsyncClient) as client_type,
+            patch.object(admin, "load_secret", return_value=document),
+            patch.object(admin, "save_secret"),
+        ):
+            client = client_type.return_value
+            client.room_create.side_effect = [
+                RoomCreateResponse("!alerts:local"),
+                RoomCreateResponse("!canary:local"),
+            ]
+            await admin.enroll_bot(
+                argparse.Namespace(
+                    owner="@owner:matrix.fahrican.com",
+                    homeserver="https://matrix.fahrican.com",
+                    services_kubeconfig="synthetic-config",
+                )
+            )
+            self.assertEqual(client.room_create.await_count, 2)
+            for call in client.room_create.await_args_list:
+                self.assertFalse(call.kwargs["federate"])
+                self.assertEqual(call.kwargs["preset"], RoomPreset.private_chat)
+                self.assertIn(
+                    {
+                        "type": "m.room.encryption",
+                        "state_key": "",
+                        "content": {"algorithm": "m.megolm.v1.aes-sha2"},
+                    },
+                    call.kwargs["initial_state"],
+                )
+            self.assertEqual(
+                client.room_create.await_args_list[0].kwargs["invite"],
+                ["@owner:matrix.fahrican.com"],
+            )
+            self.assertEqual(client.room_create.await_args_list[1].kwargs["invite"], [])
+
+
 class OutsideCheckTests(unittest.TestCase):
     def event(self, token, path="/heartbeat", method="POST"):
         return {
