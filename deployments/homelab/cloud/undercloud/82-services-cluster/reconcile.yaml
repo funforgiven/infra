@@ -166,8 +166,10 @@ data:
       LC_ALL=C grep -Eq "$pattern" "$path"
     }
 
-    require_file INFRA_TELEGRAM_BOT_TOKEN '^[0-9]+:[A-Za-z0-9_-]+$' 32 256
-    require_file INFRA_TELEGRAM_CHAT_ID '^-?[0-9]+$' 1 32
+    if [ -f /runtime-bootstrap/INFRA_TELEGRAM_BOT_TOKEN ]; then
+      require_file INFRA_TELEGRAM_BOT_TOKEN '^[0-9]+:[A-Za-z0-9_-]+$' 32 256
+      require_file INFRA_TELEGRAM_CHAT_ID '^-?[0-9]+$' 1 32
+    fi
     require_file B2_APPLICATION_KEY_ID '^[A-Za-z0-9]+$' 12 64
     require_file B2_APPLICATION_KEY '^[A-Za-z0-9/+_-]+={0,2}$' 20 128
     require_file ND_LASTFM_APIKEY '^[A-Za-z0-9_-]+$' 16 256
@@ -417,40 +419,48 @@ data:
       --dry-run=client -o yaml | "$kubectl" apply -f -
     "$kubectl" create namespace velero \
       --dry-run=client -o yaml | "$kubectl" apply -f -
-    "$kubectl" -n services-observability create secret generic infrastructure-telegram \
-      --from-file=bot-token=/runtime-bootstrap/INFRA_TELEGRAM_BOT_TOKEN \
-      --dry-run=client -o yaml | "$kubectl" apply -f -
-    infra_chat_id="$(cat /runtime-bootstrap/INFRA_TELEGRAM_CHAT_ID)"
-    {
-      printf '%s\n' \
-        'alertmanager:' \
-        '  config:' \
-        '    global:' \
-        '      resolve_timeout: 5m' \
-        '    route:' \
-        '      receiver: infrastructure-telegram' \
-        '      group_by: [alertname, namespace, severity]' \
-        '      group_wait: 30s' \
-        '      group_interval: 5m' \
-        '      repeat_interval: 6h' \
-        '      routes:' \
-        '        - receiver: "null"' \
-        '          matchers:' \
-        '            - alertname = "Watchdog"' \
-        '        - receiver: "null"' \
-        '          matchers:' \
-        '            - alertname = "InfoInhibitor"' \
-        '    receivers:' \
-        '      - name: "null"' \
-        '      - name: infrastructure-telegram' \
-        '        telegram_configs:' \
-        '          - bot_token_file: /etc/alertmanager/secrets/infrastructure-telegram/bot-token'
-      printf '            chat_id: %s\n' "$infra_chat_id"
-      printf '%s\n' \
-        '            send_resolved: true' \
-        '            parse_mode: HTML'
-    } > /tmp/alertmanager-values.yaml
-    unset infra_chat_id
+    if [ -f /runtime-bootstrap/INFRA_TELEGRAM_BOT_TOKEN ]; then
+      "$kubectl" -n services-observability create secret generic infrastructure-telegram \
+        --from-file=bot-token=/runtime-bootstrap/INFRA_TELEGRAM_BOT_TOKEN \
+        --dry-run=client -o yaml | "$kubectl" apply -f -
+      infra_chat_id="$(cat /runtime-bootstrap/INFRA_TELEGRAM_CHAT_ID)"
+      {
+        printf '%s\n' \
+          'alertmanager:' \
+          '  config:' \
+          '    global:' \
+          '      resolve_timeout: 5m' \
+          '    route:' \
+          '      receiver: infrastructure-telegram' \
+          '      group_by: [alertname, namespace, severity]' \
+          '      group_wait: 30s' \
+          '      group_interval: 5m' \
+          '      repeat_interval: 6h' \
+          '      routes:' \
+          '        - receiver: "null"' \
+          '          matchers:' \
+          '            - alertname = "Watchdog"' \
+          '        - receiver: "null"' \
+          '          matchers:' \
+          '            - alertname = "InfoInhibitor"' \
+          '    receivers:' \
+          '      - name: "null"' \
+          '      - name: infrastructure-telegram' \
+          '        telegram_configs:' \
+          '          - bot_token_file: /etc/alertmanager/secrets/infrastructure-telegram/bot-token'
+        printf '            chat_id: %s\n' "$infra_chat_id"
+        printf '%s\n' \
+          '            send_resolved: true' \
+          '            parse_mode: HTML'
+      } > /tmp/alertmanager-values.yaml
+      unset infra_chat_id
+    else
+      # Matrix's optional values overlay supplies delivery after its service wave.
+      # A null receiver lets monitoring bootstrap independently during a restore.
+      printf '%s\n' 'alertmanager:' '  config:' '    global:' \
+        '      resolve_timeout: 5m' '    route:' '      receiver: "null"' \
+        '    receivers:' '      - name: "null"' > /tmp/alertmanager-values.yaml
+    fi
     "$kubectl" -n services-observability create secret generic alertmanager-runtime-values \
       --from-file=values.yaml=/tmp/alertmanager-values.yaml \
       --dry-run=client -o yaml | "$kubectl" apply -f -

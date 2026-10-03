@@ -1,0 +1,830 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: matrix-postgres
+  namespace: matrix
+  labels:
+    app.kubernetes.io/name: matrix-postgres
+spec:
+  selector:
+    app.kubernetes.io/name: matrix-postgres
+  ports:
+  - name: postgres
+    port: 5432
+    targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: matrix-postgres
+  namespace: matrix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: matrix-postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: matrix-postgres
+        app.kubernetes.io/part-of: matrix
+      annotations:
+        backup.velero.io/backup-volumes-excludes: data
+        backup.velero.io/backup-volumes: dumps
+        pre.hook.backup.velero.io/container: dumps
+        pre.hook.backup.velero.io/command: '["python", "/scripts/backup.py"]'
+        pre.hook.backup.velero.io/on-error: Fail
+        pre.hook.backup.velero.io/timeout: 10m
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+      - name: matrix-registry
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: DoesNotExist
+      containers:
+      - name: postgres
+        image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0
+        command:
+        - python
+        - /scripts/postgres.py
+        ports:
+        - name: postgres
+          containerPort: 5432
+        securityContext: &id001
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            memory: 2Gi
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+          readOnly: false
+        - name: runtime
+          mountPath: /run/matrix
+          readOnly: true
+        - name: scripts
+          mountPath: /scripts
+          readOnly: true
+        - name: data
+          mountPath: /var/lib/matrix/postgres
+          readOnly: false
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+          periodSeconds: 10
+        startupProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+          failureThreshold: 60
+          periodSeconds: 10
+      - name: dumps
+        image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0
+        command:
+        - bash
+        - -c
+        - while true; do sleep 3600; done
+        ports: []
+        securityContext: *id001
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 2Gi
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+          readOnly: false
+        - name: runtime
+          mountPath: /run/matrix
+          readOnly: true
+        - name: scripts
+          mountPath: /scripts
+          readOnly: true
+        - name: dumps
+          mountPath: /var/lib/matrix/dumps
+          readOnly: false
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: runtime
+        secret:
+          secretName: matrix-runtime
+          items:
+          - key: postgres-password
+            path: postgres-password
+          - key: synapse-password
+            path: synapse-password
+          - key: mas-password
+            path: mas-password
+          defaultMode: 416
+      - name: scripts
+        configMap:
+          name: matrix-scripts
+      - name: data
+        persistentVolumeClaim:
+          claimName: matrix-postgres
+      - name: dumps
+        persistentVolumeClaim:
+          claimName: matrix-dumps
+  serviceName: matrix-postgres
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: matrix-synapse
+  namespace: matrix
+  labels:
+    app.kubernetes.io/name: matrix-synapse
+spec:
+  selector:
+    app.kubernetes.io/name: matrix-synapse
+  ports:
+  - name: http
+    port: 8008
+    targetPort: http
+  - name: metrics
+    port: 9000
+    targetPort: metrics
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: matrix-synapse
+  namespace: matrix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: matrix-synapse
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: matrix-synapse
+        app.kubernetes.io/part-of: matrix
+      annotations:
+        backup.velero.io/backup-volumes: media
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+      - name: matrix-registry
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: DoesNotExist
+      containers:
+      - name: synapse
+        image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0
+        command:
+        - synapse_homeserver
+        - --config-path
+        - /run/matrix/synapse.yaml
+        ports:
+        - name: http
+          containerPort: 8008
+        - name: metrics
+          containerPort: 9000
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            memory: 2Gi
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+          readOnly: false
+        - name: runtime
+          mountPath: /run/matrix
+          readOnly: true
+        - name: scripts
+          mountPath: /scripts
+          readOnly: true
+        - name: media
+          mountPath: /var/lib/matrix/media
+          readOnly: false
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+          failureThreshold: 60
+          periodSeconds: 10
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: runtime
+        secret:
+          secretName: matrix-runtime
+          items:
+          - key: synapse.yaml
+            path: synapse.yaml
+          - key: signing.key
+            path: signing.key
+          defaultMode: 416
+      - name: scripts
+        configMap:
+          name: matrix-scripts
+      - name: media
+        persistentVolumeClaim:
+          claimName: matrix-media
+  serviceName: matrix-synapse
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: matrix-mas
+  namespace: matrix
+  labels:
+    app.kubernetes.io/name: matrix-mas
+spec:
+  selector:
+    app.kubernetes.io/name: matrix-mas
+  ports:
+  - name: http
+    port: 8080
+    targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: matrix-mas
+  namespace: matrix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: matrix-mas
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: matrix-mas
+        app.kubernetes.io/part-of: matrix
+      annotations: {}
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+      - name: matrix-registry
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: DoesNotExist
+      containers:
+      - name: mas
+        image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0
+        command:
+        - mas-cli
+        - server
+        - --config
+        - /run/matrix/mas.yaml
+        ports:
+        - name: http
+          containerPort: 8080
+        - name: health
+          containerPort: 8081
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 2Gi
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+          readOnly: false
+        - name: runtime
+          mountPath: /run/matrix
+          readOnly: true
+        - name: scripts
+          mountPath: /scripts
+          readOnly: true
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: health
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: health
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        startupProbe:
+          httpGet:
+            path: /health
+            port: health
+          failureThreshold: 60
+          periodSeconds: 10
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: runtime
+        secret:
+          secretName: matrix-runtime
+          items:
+          - key: mas.yaml
+            path: mas.yaml
+          defaultMode: 416
+      - name: scripts
+        configMap:
+          name: matrix-scripts
+  strategy:
+    type: Recreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: matrix-client
+  namespace: matrix
+  labels:
+    app.kubernetes.io/name: matrix-client
+spec:
+  selector:
+    app.kubernetes.io/name: matrix-client
+  ports:
+  - name: http
+    port: 8080
+    targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: matrix-client
+  namespace: matrix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: matrix-client
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: matrix-client
+        app.kubernetes.io/part-of: matrix
+      annotations: {}
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+      - name: matrix-registry
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: DoesNotExist
+      containers:
+      - name: proxy
+        image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0
+        command:
+        - nginx
+        - -c
+        - /etc/matrix-nginx.conf
+        - -g
+        - daemon off;
+        ports:
+        - name: http
+          containerPort: 8080
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 2Gi
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+          readOnly: false
+        - name: element
+          mountPath: /run/matrix
+          readOnly: true
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+          failureThreshold: 60
+          periodSeconds: 10
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: element
+        configMap:
+          name: matrix-element
+  strategy:
+    type: Recreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: matrix-relay
+  namespace: matrix
+  labels:
+    app.kubernetes.io/name: matrix-relay
+spec:
+  selector:
+    app.kubernetes.io/name: matrix-relay
+  ports:
+  - name: http
+    port: 8080
+    targetPort: http
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: matrix-relay
+  namespace: matrix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: matrix-relay
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: matrix-relay
+        app.kubernetes.io/part-of: matrix
+      annotations:
+        backup.velero.io/backup-volumes: state
+        pre.hook.backup.velero.io/container: relay
+        pre.hook.backup.velero.io/command: '["curl", "--fail", "--silent", "--request",
+          "POST", "http://127.0.0.1:8081/snapshot"]'
+        pre.hook.backup.velero.io/on-error: Fail
+        pre.hook.backup.velero.io/timeout: 2m
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+      - name: matrix-registry
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: DoesNotExist
+      containers:
+      - name: relay
+        image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0
+        command:
+        - python
+        - /scripts/relay.py
+        ports:
+        - name: http
+          containerPort: 8080
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 2Gi
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+          readOnly: false
+        - name: runtime
+          mountPath: /run/matrix
+          readOnly: true
+        - name: scripts
+          mountPath: /scripts
+          readOnly: true
+        - name: state
+          mountPath: /var/lib/matrix/relay
+          readOnly: false
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+          failureThreshold: 60
+          periodSeconds: 10
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: runtime
+        secret:
+          secretName: matrix-runtime
+          items:
+          - key: relay.json
+            path: relay.json
+          defaultMode: 416
+      - name: scripts
+        configMap:
+          name: matrix-scripts
+      - name: state
+        persistentVolumeClaim:
+          claimName: matrix-relay
+  serviceName: matrix-relay
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: matrix-egress
+  namespace: matrix
+  labels:
+    app.kubernetes.io/name: matrix-egress
+spec:
+  selector:
+    app.kubernetes.io/name: matrix-egress
+  ports:
+  - name: proxy
+    port: 3128
+    targetPort: proxy
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: matrix-egress
+  namespace: matrix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: matrix-egress
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: matrix-egress
+        app.kubernetes.io/part-of: matrix
+      annotations: {}
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+      - name: matrix-registry
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: DoesNotExist
+      containers:
+      - name: egress
+        image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0
+        command:
+        - squid
+        - -N
+        - -f
+        - /run/egress/squid.conf
+        ports:
+        - name: proxy
+          containerPort: 3128
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 2Gi
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+          readOnly: false
+        - name: egress
+          mountPath: /run/egress
+          readOnly: true
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: egress
+        configMap:
+          name: matrix-egress
+  strategy:
+    type: Recreate
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: matrix-database-backup
+  namespace: matrix
+spec:
+  schedule: 15 1 * * *
+  timeZone: Europe/Istanbul
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 900
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: matrix-backup
+            app.kubernetes.io/part-of: matrix
+          annotations: {}
+        spec:
+          automountServiceAccountToken: false
+          imagePullSecrets:
+          - name: matrix-registry
+          securityContext:
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile:
+              type: RuntimeDefault
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: DoesNotExist
+            podAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+              - topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: matrix-postgres
+          containers:
+          - name: backup
+            image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0
+            command:
+            - python
+            - /scripts/backup.py
+            ports: []
+            securityContext:
+              allowPrivilegeEscalation: false
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              capabilities:
+                drop:
+                - ALL
+              readOnlyRootFilesystem: true
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                memory: 2Gi
+            volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+              readOnly: false
+            - name: runtime
+              mountPath: /run/matrix
+              readOnly: true
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+            - name: dumps
+              mountPath: /var/lib/matrix/dumps
+              readOnly: false
+          volumes:
+          - name: tmp
+            emptyDir: {}
+          - name: runtime
+            secret:
+              secretName: matrix-runtime
+              items:
+              - key: synapse-password
+                path: synapse-password
+              - key: mas-password
+                path: mas-password
+              defaultMode: 416
+          - name: scripts
+            configMap:
+              name: matrix-scripts
+          - name: dumps
+            persistentVolumeClaim:
+              claimName: matrix-dumps
+          restartPolicy: OnFailure

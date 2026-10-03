@@ -17,6 +17,7 @@ spec:
       - games
       - home-automation
       - media
+      - matrix
       - services-databases
     snapshotVolumes: false
     defaultVolumesToFsBackup: true
@@ -40,6 +41,7 @@ spec:
       - games
       - home-automation
       - media
+      - matrix
       - services-databases
     snapshotVolumes: false
     defaultVolumesToFsBackup: true

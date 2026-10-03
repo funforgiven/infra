@@ -11,6 +11,7 @@ _: {
     {
       home.packages = [
         pkgs.discord
+        pkgs.element-desktop
         pkgs.ffmpegthumbnailer
         pkgs.telegram-desktop
         pkgs.kdePackages.ark

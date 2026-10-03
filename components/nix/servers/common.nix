@@ -99,6 +99,13 @@ in
     }:
     let
       alerting = config.servicesPlatform.alerting;
+      matrixNotifier = pkgs.writeShellApplication {
+        name = "notify-matrix-unit-failure";
+        runtimeInputs = [ pkgs.python3 ];
+        text = ''
+          exec python ${../../cloud/services/matrix/notify_host.py} /var/lib/monitoring-bootstrap/matrix.json "$1"
+        '';
+      };
       notifier = pkgs.writeShellApplication {
         name = "notify-telegram-unit-failure";
         runtimeInputs = [
@@ -137,10 +144,25 @@ in
       };
     in
     {
+      options.servicesPlatform.alerting.transport = lib.mkOption {
+        type = lib.types.enum [
+          "telegram"
+          "dual"
+          "matrix"
+        ];
+        default =
+          let
+            rollout = builtins.fromJSON (
+              builtins.readFile ../../../deployments/homelab/cloud/services/47-matrix/rollout.json
+            );
+          in
+          if rollout.phase == "prepared" then "telegram" else rollout.phase;
+        description = "Infrastructure notification transport selected by the qualified Matrix rollout.";
+      };
       options.servicesPlatform.alerting.units = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
-        description = "Critical systemd units that notify the infrastructure Telegram chat on failure.";
+        description = "Critical systemd units that notify infrastructure alert receivers on failure.";
       };
 
       config = {
@@ -155,6 +177,15 @@ in
         };
 
         systemd.services = {
+          "matrix-unit-failure@" = {
+            description = "Notify encrypted Matrix infrastructure alerts about %i";
+            unitConfig.ConditionPathExists = "/var/lib/monitoring-bootstrap/matrix.json";
+            serviceConfig = {
+              Type = "oneshot";
+              ExecStart = "${matrixNotifier}/bin/notify-matrix-unit-failure %i";
+              UMask = "0077";
+            };
+          };
           "telegram-unit-failure@" = {
             description = "Notify the infrastructure Telegram chat about %i";
             unitConfig.ConditionPathExists = [
@@ -169,7 +200,9 @@ in
           };
         }
         // lib.genAttrs alerting.units (_: {
-          unitConfig.OnFailure = [ "telegram-unit-failure@%n.service" ];
+          unitConfig.OnFailure =
+            lib.optional (alerting.transport != "matrix") "telegram-unit-failure@%n.service"
+            ++ lib.optional (alerting.transport != "telegram") "matrix-unit-failure@%n.service";
         });
 
         systemd.tmpfiles.rules = [

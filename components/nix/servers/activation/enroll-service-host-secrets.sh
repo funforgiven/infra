@@ -10,6 +10,7 @@ Install one SOPS-backed secret profile on a service host over SSH.
 
 Profiles:
   monitoring             Infrastructure Telegram alerts
+  matrix-monitoring:ID   Matrix producer ID with independent email fallback
   unifi-backup           UniFi Restic repository
   unifi-poller           UniFi local read-only monitoring account
   home-assistant-backup   Home Assistant Restic repository
@@ -102,6 +103,20 @@ enroll_monitoring() {
   unset bot_token chat_id
 }
 
+enroll_matrix_monitoring() {
+  local producer="${profile#matrix-monitoring:}"
+  local matrix_config
+  if [[ ! "$producer" =~ ^[a-z0-9-]+$ ]]; then
+    echo 'Invalid Matrix producer ID.' >&2
+    exit 64
+  fi
+  matrix_config="$(sops decrypt --extract '["stringData"]["config.json"]' \
+    "$repository_root/deployments/homelab/cloud/host-runtime/matrix-$producer.sops.yaml")"
+  prepare_directory /var/lib/monitoring-bootstrap
+  printf '%s' "$matrix_config" | install_stream /var/lib/monitoring-bootstrap/matrix.json
+  unset matrix_config
+}
+
 enroll_backup() {
   local prefix="$1"
   local password_key="$2"
@@ -129,6 +144,9 @@ enroll_backup() {
 }
 
 case "$profile" in
+  matrix-monitoring:*)
+    enroll_matrix_monitoring
+    ;;
   monitoring)
     enroll_monitoring
     ;;

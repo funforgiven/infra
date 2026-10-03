@@ -1,0 +1,94 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: matrix-public
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    accessLog:
+      settings:
+      - format:
+          type: JSON
+          json:
+            host: '%REQ(:AUTHORITY)%'
+            method: '%REQ(:METHOD)%'
+            status: '%RESPONSE_CODE%'
+        sinks:
+        - type: File
+          file:
+            path: /dev/stdout
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 2
+        container:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+      envoyService:
+        type: LoadBalancer
+        externalTrafficPolicy: Local
+        patch:
+          type: StrategicMerge
+          value:
+            metadata:
+              annotations:
+                loadbalancer.openstack.org/enable-health-monitor: 'true'
+            spec:
+              loadBalancerIP: 10.21.40.128
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: matrix-public
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: matrix-public
+    namespace: envoy-gateway-system
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: matrix-public
+  namespace: services-network
+spec:
+  secretName: matrix-public-tls
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt-cloudflare
+  dnsNames:
+  - matrix.fahrican.com
+  - matrix-auth.fahrican.com
+  - chat.fahrican.com
+  - auth.cloud.fahrican.com
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: matrix-public
+  namespace: services-network
+spec:
+  gatewayClassName: matrix-public
+  listeners:
+  - name: https
+    protocol: HTTPS
+    port: 443
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - kind: Secret
+        name: matrix-public-tls
+    allowedRoutes:
+      namespaces:
+        from: Selector
+        selector:
+          matchLabels:
+            gateway.fahrican.com/matrix: allowed

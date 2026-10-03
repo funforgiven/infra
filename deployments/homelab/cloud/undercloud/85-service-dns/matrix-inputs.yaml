@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: matrix-dns-inputs
+  namespace: cert-manager
+data:
+  matrix_wan_ipv4_address: 31.223.15.252

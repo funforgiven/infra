@@ -55,8 +55,15 @@ subnet. A successful Restic run updates a node-exporter textfile metric; the
 services cluster alerts if the exporter is unavailable or the last successful
 backup is older than 26 hours.
 
-Critical units also have a local `OnFailure` Telegram notifier. Its dedicated
-profile installs the infrastructure bot token and chat ID at:
+Critical units use the `servicesPlatform.alerting.transport` selected by the
+qualified Matrix rollout: Telegram initially, both transports during observation,
+then encrypted Matrix. The `matrix-monitoring:HOST_ID` enrollment profile installs
+a root-owned `/var/lib/monitoring-bootstrap/matrix.json` containing the host's
+scoped intake credential and independent TLS email fallback. The current native
+host monitors `quickemu-macos`. See the
+[Matrix runbook](../../../deployments/homelab/cloud/services/47-matrix/README.md).
+
+During Telegram and dual delivery, the monitoring profile supplies:
 
 - `/var/lib/monitoring-bootstrap/bot-token`
 - `/var/lib/monitoring-bootstrap/chat-id`

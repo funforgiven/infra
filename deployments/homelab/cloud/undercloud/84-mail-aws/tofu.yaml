@@ -24,6 +24,8 @@ spec:
       value: "true"
     - name: enable_restore_qualification
       value: "false"
+    - name: enable_matrix_monitoring
+      value: "false"
   runnerPodTemplate:
     spec:
       envFrom:
@@ -40,5 +42,7 @@ spec:
       - mailbox_secret_arn
       - resend_secret_arn
       - alert_topic_arn
+      - matrix_heartbeat_url
+      - matrix_heartbeat_secret_arn
   remediation:
     retries: 3

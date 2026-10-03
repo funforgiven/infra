@@ -1,0 +1,40 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: matrix-public
+  namespace: matrix
+spec:
+  parentRefs:
+  - name: matrix-public
+    namespace: services-network
+    sectionName: https
+  hostnames:
+  - matrix.fahrican.com
+  - matrix-auth.fahrican.com
+  - chat.fahrican.com
+  - auth.cloud.fahrican.com
+  rules:
+  - backendRefs:
+    - name: matrix-client
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: matrix-alerts
+  namespace: matrix
+spec:
+  parentRefs:
+  - name: services
+    namespace: services-network
+    sectionName: https
+  hostnames:
+  - matrix-alerts.fahrican.com
+  rules:
+  - matches:
+    - path:
+        type: Exact
+        value: /notify
+    backendRefs:
+    - name: matrix-relay
+      port: 8080

@@ -51,7 +51,7 @@
             patches = (old.patches or [ ]) ++ [ ../../cloud/services/forge/macos/qemu-applesmc-index.patch ];
             postBuild = (old.postBuild or "") + ''
               ${pkgs.python3}/bin/python3 ${../../cloud/services/forge/macos/test-applesmc.py} \
-                ./qemu-system-x86_64
+                ./build/qemu-system-x86_64
             '';
           });
       # Quickemu's SSH forward otherwise binds every interface. Patch the
@@ -82,6 +82,7 @@
       # Applied inside this dedicated nested hypervisor, never to the physical
       # compute hosts. macOS probes MSRs that KVM does not implement.
       boot.extraModprobeConfig = "options kvm ignore_msrs=1";
+      servicesPlatform.alerting.units = [ "quickemu-macos" ];
       # Whole-memory access sampling adds overhead to this nested KVM host.
       # Keep the optional statistics monitor disabled across host reboots.
       boot.kernelParams = [ "damon_stat.enabled=0" ];
