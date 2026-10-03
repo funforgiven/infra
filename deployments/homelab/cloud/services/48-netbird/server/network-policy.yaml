@@ -51,6 +51,7 @@ spec:
             matchLabels: {kubernetes.io/metadata.name: services-observability}
       ports:
         - {protocol: TCP, port: 9090}
+        - {protocol: TCP, port: 9000}
   egress:
     - to:
         - podSelector:
@@ -60,8 +61,18 @@ spec:
     - to:
         - ipBlock: {cidr: 10.21.20.131/32}
         - ipBlock: {cidr: 31.223.15.252/32}
+        - ipBlock: {cidr: 10.21.40.128/32}
       ports:
         - {protocol: TCP, port: 443}
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: envoy-gateway-system}
+          podSelector:
+            matchLabels:
+              gateway.envoyproxy.io/owning-gateway-name: matrix-public
+              gateway.envoyproxy.io/owning-gateway-namespace: services-network
+      ports:
+        - {protocol: TCP, port: 10443}
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
