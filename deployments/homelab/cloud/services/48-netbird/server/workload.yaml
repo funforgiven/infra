@@ -16,6 +16,7 @@ spec:
         app.kubernetes.io/name: netbird-server
       annotations:
         netbird.fahrican.com/auth-mode: sso
+        netbird.fahrican.com/stun: worker-daemonset
     spec:
       automountServiceAccountToken: false
       hostAliases:
@@ -71,9 +72,6 @@ spec:
         ports:
         - name: http
           containerPort: 8080
-        - name: stun
-          containerPort: 3478
-          protocol: UDP
         - name: health
           containerPort: 9000
         - name: metrics
@@ -171,7 +169,7 @@ spec:
   externalTrafficPolicy: Local
   loadBalancerIP: 10.21.40.129
   selector:
-    app.kubernetes.io/name: netbird-server
+    app.kubernetes.io/name: netbird-stun
   ports:
   - name: stun
     port: 3478

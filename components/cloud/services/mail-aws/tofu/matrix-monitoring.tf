@@ -53,16 +53,16 @@ resource "aws_iam_role_policy" "matrix_probe" {
 }
 
 resource "aws_lambda_function" "matrix_probe" {
-  count                          = var.enable_matrix_monitoring ? 1 : 0
-  function_name                  = "stalwart-matrix-probe"
-  role                           = aws_iam_role.matrix_probe[0].arn
-  filename                       = data.archive_file.matrix_probe[0].output_path
-  source_code_hash               = data.archive_file.matrix_probe[0].output_base64sha256
-  runtime                        = "python3.13"
-  architectures                  = ["arm64"]
-  handler                        = "outside_check.handler"
-  timeout                        = 45
-  memory_size                    = 128
+  count            = var.enable_matrix_monitoring ? 1 : 0
+  function_name    = "stalwart-matrix-probe"
+  role             = aws_iam_role.matrix_probe[0].arn
+  filename         = data.archive_file.matrix_probe[0].output_path
+  source_code_hash = data.archive_file.matrix_probe[0].output_base64sha256
+  runtime          = "python3.13"
+  architectures    = ["arm64"]
+  handler          = "outside_check.handler"
+  timeout          = 45
+  memory_size      = 128
   # The enrolled account's quota cannot reserve a dedicated concurrency slice.
   reserved_concurrent_executions = -1
   environment {

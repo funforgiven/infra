@@ -90,7 +90,7 @@ def prepare():
     config = {"server": {
         "listenAddress": ":8080",
         "exposedAddress": "https://netbird.fahrican.com:443",
-        "stunPorts": [3478], "metricsPort": 9090,
+        "stuns": [{"uri": "stun:netbird-stun.fahrican.com:3478"}], "metricsPort": 9090,
         "healthcheckAddress": ":9000", "logLevel": "info", "logFile": "console",
         "dataDir": "/var/lib/netbird",
         "authSecret": secrets.token_urlsafe(48),
