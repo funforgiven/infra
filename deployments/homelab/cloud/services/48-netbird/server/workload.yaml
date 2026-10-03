@@ -4,8 +4,6 @@ metadata:
   name: netbird-server
   namespace: netbird
 spec:
-  # The community control plane is a singleton; PostgreSQL provides durable
-  # state and automatic database failover. Do not scale this deployment.
   replicas: 1
   strategy:
     type: Recreate
@@ -16,12 +14,14 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: netbird-server
+      annotations:
+        netbird.fahrican.com/auth-mode: sso
     spec:
       automountServiceAccountToken: false
-      # Reach the shared gateway locally without a WAN hairpin from Kubernetes.
       hostAliases:
-        - ip: 10.21.40.128
-          hostnames: [netbird.fahrican.com]
+      - ip: 10.21.40.128
+        hostnames:
+        - netbird.fahrican.com
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
@@ -30,110 +30,109 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       initContainers:
-        - name: trust-bundle
-          image: python:3.14.0-alpine3.22@sha256:8373231e1e906ddfb457748bfc032c4c06ada8c759b7b62d9c73ec2a3c56e710
-          command:
-            - python3
-            - -c
-            - |
-              from pathlib import Path
-              Path('/trust/ca.pem').write_bytes(
-                  Path('/etc/ssl/certs/ca-certificates.crt').read_bytes()
-                  + b'\n' + Path('/etc/postgres-ca/ca.crt').read_bytes())
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop: [ALL]
-          resources:
-            requests: {cpu: 10m, memory: 16Mi}
-            limits: {memory: 64Mi}
-          volumeMounts:
-            - name: postgres-ca
-              mountPath: /etc/postgres-ca
-              readOnly: true
-            - name: trust
-              mountPath: /trust
-      containers:
-        - name: server
-          image: netbirdio/netbird-server:0.80.0@sha256:05b3d8d6d056e5062a2965d4d6e5d6d83f09f2bf9133947a8e5972e0e0e7a261
-          args: [--config, /etc/netbird/config.yaml]
-          env:
-            - name: SSL_CERT_FILE
-              value: /trust/ca.pem
-            # Disabling updates alone still downloads GeoLite on first boot.
-            # Service access has no geolocation policy or external database.
-            - name: NB_DISABLE_GEOLOCATION
-              value: "true"
-            # Only reachable through a local port-forward during enrollment.
-            - name: NB_SETUP_PAT_ENABLED
-              value: "true"
-          ports:
-            - name: http
-              containerPort: 8080
-            - name: stun
-              containerPort: 3478
-              protocol: UDP
-            - name: health
-              containerPort: 9000
-            - name: metrics
-              containerPort: 9090
-          readinessProbe:
-            # The relay health endpoint checks through the public gateway and
-            # would depend on this pod already being a ready Service endpoint.
-            httpGet:
-              path: /api/instance
-              port: http
-          livenessProbe:
-            tcpSocket:
-              port: http
-          startupProbe:
-            httpGet:
-              path: /api/instance
-              port: http
-            failureThreshold: 60
-            periodSeconds: 5
-          resources:
-            requests:
-              cpu: 100m
-              memory: 256Mi
-            limits:
-              memory: 1Gi
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop: [ALL]
-          volumeMounts:
-            - name: config
-              mountPath: /etc/netbird
-              readOnly: true
-            - name: postgres-ca
-              mountPath: /etc/postgres-ca
-              readOnly: true
-            - name: data
-              mountPath: /var/lib/netbird
-            - name: tmp
-              mountPath: /tmp
-            - name: trust
-              mountPath: /trust
-              readOnly: true
-      volumes:
-        - name: config
-          secret:
-            secretName: netbird-runtime
-            items:
-              - key: config.yaml
-                path: config.yaml
+      - name: trust-bundle
+        image: python:3.14.0-alpine3.22@sha256:8373231e1e906ddfb457748bfc032c4c06ada8c759b7b62d9c73ec2a3c56e710
+        command:
+        - python3
+        - -c
+        - "from pathlib import Path\nPath('/trust/ca.pem').write_bytes(\n    Path('/etc/ssl/certs/ca-certificates.crt').read_bytes()\n\
+          \    + b'\\n' + Path('/etc/postgres-ca/ca.crt').read_bytes())\n"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            memory: 64Mi
+        volumeMounts:
         - name: postgres-ca
-          secret:
-            secretName: netbird-postgres-ca
-        - name: data
-          emptyDir: {}
-        - name: tmp
-          emptyDir: {}
+          mountPath: /etc/postgres-ca
+          readOnly: true
         - name: trust
-          emptyDir: {}
+          mountPath: /trust
+      containers:
+      - name: server
+        image: netbirdio/netbird-server:0.80.0@sha256:05b3d8d6d056e5062a2965d4d6e5d6d83f09f2bf9133947a8e5972e0e0e7a261
+        args:
+        - --config
+        - /etc/netbird/config.yaml
+        env:
+        - name: SSL_CERT_FILE
+          value: /trust/ca.pem
+        - name: NB_DISABLE_GEOLOCATION
+          value: 'true'
+        - name: NB_SETUP_PAT_ENABLED
+          value: 'false'
+        ports:
+        - name: http
+          containerPort: 8080
+        - name: stun
+          containerPort: 3478
+          protocol: UDP
+        - name: health
+          containerPort: 9000
+        - name: metrics
+          containerPort: 9090
+        readinessProbe:
+          httpGet:
+            path: /api/instance
+            port: http
+        livenessProbe:
+          tcpSocket:
+            port: http
+        startupProbe:
+          httpGet:
+            path: /api/instance
+            port: http
+          failureThreshold: 60
+          periodSeconds: 5
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 1Gi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: config
+          mountPath: /etc/netbird
+          readOnly: true
+        - name: postgres-ca
+          mountPath: /etc/postgres-ca
+          readOnly: true
+        - name: data
+          mountPath: /var/lib/netbird
+        - name: tmp
+          mountPath: /tmp
+        - name: trust
+          mountPath: /trust
+          readOnly: true
+      volumes:
+      - name: config
+        secret:
+          secretName: netbird-runtime
+          items:
+          - key: config.yaml
+            path: config.yaml
+      - name: postgres-ca
+        secret:
+          secretName: netbird-postgres-ca
+      - name: data
+        emptyDir: {}
+      - name: tmp
+        emptyDir: {}
+      - name: trust
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -146,19 +145,19 @@ spec:
   selector:
     app.kubernetes.io/name: netbird-server
   ports:
-    - name: http
-      port: 8080
-      targetPort: http
-    - name: grpc
-      port: 8081
-      targetPort: http
-      appProtocol: kubernetes.io/h2c
-    - name: metrics
-      port: 9090
-      targetPort: metrics
-    - name: health
-      port: 9000
-      targetPort: health
+  - name: http
+    port: 8080
+    targetPort: http
+  - name: grpc
+    port: 8081
+    targetPort: http
+    appProtocol: kubernetes.io/h2c
+  - name: metrics
+    port: 9090
+    targetPort: metrics
+  - name: health
+    port: 9000
+    targetPort: health
 ---
 apiVersion: v1
 kind: Service
@@ -166,7 +165,7 @@ metadata:
   name: netbird-stun
   namespace: netbird
   annotations:
-    loadbalancer.openstack.org/enable-health-monitor: "true"
+    loadbalancer.openstack.org/enable-health-monitor: 'true'
 spec:
   type: LoadBalancer
   externalTrafficPolicy: Local
@@ -174,7 +173,7 @@ spec:
   selector:
     app.kubernetes.io/name: netbird-server
   ports:
-    - name: stun
-      port: 3478
-      targetPort: stun
-      protocol: UDP
+  - name: stun
+    port: 3478
+    targetPort: stun
+    protocol: UDP
