@@ -18,6 +18,10 @@ spec:
         app.kubernetes.io/name: netbird-server
     spec:
       automountServiceAccountToken: false
+      # Reach the shared gateway locally without a WAN hairpin from Kubernetes.
+      hostAliases:
+        - ip: 10.21.40.128
+          hostnames: [netbird.fahrican.com]
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
@@ -152,6 +156,9 @@ spec:
     - name: metrics
       port: 9090
       targetPort: metrics
+    - name: health
+      port: 9000
+      targetPort: health
 ---
 apiVersion: v1
 kind: Service
