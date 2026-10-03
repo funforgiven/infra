@@ -51,8 +51,13 @@ synthetic firing and resolved notifications were durably accepted by the relay.
 After the phone pin deployed, both notifications were delivered and the queue
 was empty. Both AWS availability and encrypted-delivery alarms are healthy with
 notifications enabled.
-The rollout is in `dual` phase. The observation start in `rollout.json` stays
-unset until encrypted delivery to every intended recipient session is verified.
+The rollout is in `dual` phase. The observation start in `rollout.json` was
+recorded on 2026-10-04 after both recipient device pins deployed and live
+encrypted firing, resolved and changing-annotation delivery tests passed.
+The annotation test accepted original content, changed content and an exact
+retry, delivered two encrypted updates and left the queue empty. Nineteen
+regression tests, cloud configuration checks, formatting, secret scans and the
+disposable encrypted integration/recovery test passed.
 
 Element on the phone displayed the decrypted native-host test alert. The new
 phone session `NOyFoqzTm3` was approved on 2026-10-04 by verifying the complete
