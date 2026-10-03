@@ -7,6 +7,10 @@ remote media downloads, public registration, guests, and URL previews are
 disabled. A separate ZITADEL project admits Matrix members without granting
 infrastructure access.
 
+The initial Matrix membership grants admit `funforgiven` and the existing
+breakglass account. Additional friends need the `matrix-member` role in this
+project before they can finish SSO login.
+
 | Endpoint | Access |
 | --- | --- |
 | `https://matrix.fahrican.com` | Public client API; federation, signing-key and Synapse admin routes rejected |
