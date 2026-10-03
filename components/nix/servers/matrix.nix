@@ -50,7 +50,7 @@ _: {
         config = {
           User = "1000:1000";
           Env = [
-            "PATH=/bin"
+            "PATH=${pkgs.postgresql_17}/bin:/bin"
             "HOME=/var/lib/matrix"
             "PYTHONDONTWRITEBYTECODE=1"
             "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
