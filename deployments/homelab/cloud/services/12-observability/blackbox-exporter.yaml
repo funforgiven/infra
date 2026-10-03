@@ -17,6 +17,18 @@ data:
         timeout: 10s
         tcp:
           preferred_ip_protocol: ip4
+      netbird_relay:
+        prober: http
+        timeout: 15s
+        http:
+          preferred_ip_protocol: ip4
+          # NetBird 0.80.0's combined server registers its relay WebSocket
+          # handler without standalone listeners. /health therefore returns
+          # 503/listeners:null even when its public WSS/TLS check succeeds.
+          valid_status_codes: [200, 503]
+          fail_if_body_not_matches_regexp:
+            - '"certificate_valid"\s*:\s*true'
+            - '"status"\s*:\s*"healthy"|"listeners"\s*:\s*null'
       mail_jmap:
         prober: http
         timeout: 10s

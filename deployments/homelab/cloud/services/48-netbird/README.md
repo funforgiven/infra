@@ -200,3 +200,18 @@ planning should include these worker root disks.
 Public SMTP and JMAP terminate in AWS and do not depend on this control plane.
 An outage can interrupt new VPN logins, reconnections and service-panel access.
 The native MikroTik tunnel is the supported recovery route.
+
+## Relay health monitoring
+
+The relay probe uses the `netbird_relay` Blackbox Exporter module. In the pinned
+NetBird 0.80.0 combined server, `/health` reports HTTP 503 with `listeners:null`
+because the relay uses the shared HTTP server instead of standalone listeners.
+The same endpoint still checks the public relay WebSocket connection and TLS.
+The probe requires `certificate_valid:true` and accepts either a healthy status
+or the known empty listener registration. A failed public connection, invalid
+certificate, malformed response, other HTTP error or unreachable health endpoint
+still fails the probe. Recheck this workaround when upgrading NetBird.
+
+The upstream implementation is in
+[`relay/healthcheck/healthcheck.go`](https://github.com/netbirdio/netbird/blob/v0.80.0/relay/healthcheck/healthcheck.go)
+and [`relay/healthcheck/ws.go`](https://github.com/netbirdio/netbird/blob/v0.80.0/relay/healthcheck/ws.go).

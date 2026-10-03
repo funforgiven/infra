@@ -70,10 +70,10 @@ alert intake stays durable and Telegram stays active. The phone's push
 registration failed during the brief rollout outage;
 notification troubleshooting subsequently passed and the phone registered an
 enabled HTTP pusher at `https://matrix.org/_matrix/push/v1/notify`. The public
-registration route and restricted `matrix.org` proxy are reachable. Verify a
-background notification while the phone is locked. A fresh encrypted mobile
-test was delivered and Synapse recorded a successful push-gateway response;
-recipient confirmation of the background notification remains pending.
+registration route and restricted `matrix.org` proxy are reachable. A fresh
+encrypted mobile test was delivered while Element was in the background and
+the phone was locked. Synapse recorded a successful push-gateway response, and
+the recipient confirmed the background notification on 2026-10-04.
 
 The native `forge-macos` host received only the monitoring changes on its
 running infrastructure baseline `07deb4bcbf45516003e18e54b066130ab4d687d8`.
@@ -87,7 +87,7 @@ Fresh production PostgreSQL dumps and relay snapshots passed an offline
 restore from private RAM copies: both databases, media, queue, original bot
 key and recovered Megolm canary were verified. Off-site Velero restore
 qualification remains pending while the shared backup location is unavailable.
-`qualified_at` stays unset. Complete that restore, mobile push and recipient
+`qualified_at` stays unset. Complete that restore and recipient
 recovery checks before Telegram retirement.
 
 ## Enrollment and activation
