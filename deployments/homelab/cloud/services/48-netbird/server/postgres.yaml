@@ -34,6 +34,7 @@ spec:
       failoverQuorum: true
     parameters:
       max_connections: "100"
+      archive_timeout: "60s"
   monitoring:
     enablePodMonitor: true
   plugins:

@@ -15,6 +15,16 @@ spec:
         labels:
           access.fahrican.com/netbird-router: services
       spec:
+        # Keep replicas of one revision on separate workers while allowing a
+        # replacement revision to overlap during the operator's rolling update.
+        affinity:
+          podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              - topologyKey: kubernetes.io/hostname
+                matchLabelKeys: [pod-template-hash]
+                labelSelector:
+                  matchLabels:
+                    access.fahrican.com/netbird-router: services
         topologySpreadConstraints:
           - maxSkew: 1
             topologyKey: kubernetes.io/hostname

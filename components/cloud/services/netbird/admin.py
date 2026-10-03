@@ -13,6 +13,7 @@ import urllib.request
 from pathlib import Path
 
 import yaml
+from restore_check import restore_check
 
 DEPLOYMENT = Path("deployments/homelab/cloud/services/48-netbird")
 POLICY = Path("deployments/homelab/cloud/undercloud/88-netbird-policy")
@@ -264,7 +265,7 @@ def close_bootstrap():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("prepare", "backup-credentials", "identity-credentials", "bootstrap", "close-bootstrap", "rotate-credentials"))
+    parser.add_argument("command", choices=("prepare", "backup-credentials", "identity-credentials", "bootstrap", "close-bootstrap", "rotate-credentials", "restore-check"))
     args = parser.parse_args()
     if not Path(".sops.yaml").exists():
         raise ValueError("run from the repository root")
@@ -274,6 +275,7 @@ def main():
         "bootstrap": lambda: bootstrap("http://127.0.0.1:18080"),
         "close-bootstrap": close_bootstrap,
         "rotate-credentials": rotate_credentials,
+        "restore-check": restore_check,
     }
     actions[args.command]()
     print(f"NetBird {args.command} complete; credentials were not printed.")
@@ -284,4 +286,4 @@ if __name__ == "__main__":
     try:
         main()
     except Exception:  # noqa: BLE001 - errors from providers may contain credentials
-        raise SystemExit("NetBird enrollment failed; secret diagnostics suppressed. Check prerequisites and rerun.") from None
+        raise SystemExit("NetBird operation failed; secret diagnostics suppressed. Check prerequisites and rerun.") from None
