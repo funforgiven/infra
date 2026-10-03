@@ -92,6 +92,8 @@ spec:
           exec:
             command:
             - pg_isready
+            - -h
+            - 127.0.0.1
             - -U
             - postgres
           periodSeconds: 10
@@ -99,6 +101,8 @@ spec:
           exec:
             command:
             - pg_isready
+            - -h
+            - 127.0.0.1
             - -U
             - postgres
           failureThreshold: 60
