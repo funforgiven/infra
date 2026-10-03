@@ -238,8 +238,21 @@ def secret(name):
 
 def queue_health(messages, now=None):
     now = time.time() if now is None else now
-    timestamps = [dt.datetime.fromisoformat(m["createdAt"].replace("Z", "+00:00")).timestamp()
-                  for m in messages]
+    timestamps = []
+    for message in messages:
+        created = dt.datetime.fromisoformat(message["createdAt"].replace("Z", "+00:00")).timestamp()
+        recipients = message.get("recipients", {}).values()
+        # Stalwart staggers automatic reports by up to three hours. Measure an
+        # unattempted report from its first scheduled delivery, not creation.
+        # Never discount a failed attempt just because its next retry is later.
+        if (message.get("flags", {}).get("report") and recipients
+                and all(recipient.get("status", {}).get("@type") == "Scheduled"
+                        and recipient.get("retryCount") == 0 and recipient.get("retryDue")
+                        for recipient in recipients)):
+            created = max(created, min(
+                dt.datetime.fromisoformat(recipient["retryDue"].replace("Z", "+00:00")).timestamp()
+                for recipient in recipients))
+        timestamps.append(created)
     return len(messages), max([0, *(now - value for value in timestamps)])
 
 
@@ -267,7 +280,7 @@ def health():
             smtp.starttls(context=ssl.create_default_context())
             if smtp.ehlo(HOST)[0] != 250:
                 raise OperationError("SMTP greeting failed")
-        count, oldest = queue_health(objects("QueuedMessage", "id,createdAt"))
+        count, oldest = queue_health(objects("QueuedMessage", "id,createdAt,flags,recipients"))
         values.update(QueueMessages=count, OldestQueuedSeconds=oldest, ServiceHealthy=1)
     finally:
         metrics(values)
