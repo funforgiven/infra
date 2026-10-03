@@ -34,8 +34,10 @@ continues to reach the undercloud gateway, including private ZITADEL management.
 The Matrix wave is enabled after identity and runtime enrollment. Generated signing keys, database
 passwords and MAS secrets are encrypted in `runtime.sops.yaml`, and the scoped
 email key is encrypted in `email.sops.yaml`. The tested runtime is published and
-pinned by digest in `kustomization.yaml`. OIDC and bot enrollment are still
-required before alert delivery. The supplied static WAN address, `31.223.15.252`,
+pinned by digest in `kustomization.yaml`. OIDC and the non-admin alert bot are
+enrolled. The initial recipient is `@funforgiven:matrix.fahrican.com`; device
+`J7NOIrKrBB` is pinned after comparing its public Ed25519 key with the homeserver.
+Delivery waits for the recipient to join **Infra Alerts**. The supplied static WAN address, `31.223.15.252`,
 is recorded in the DNS inputs.
 
 ## Enrollment and activation
@@ -153,8 +155,12 @@ read identity/DNS/AWS controller outputs; Matrix workloads run in `services-v1`.
      --device DEVICE_ID --fingerprint 'ED25519 FINGERPRINT FROM ELEMENT'
    ```
 
-   Fingerprints are public device keys. Spaces in Element's displayed key are
-   accepted. A new or changed device pauses delivery until explicitly approved;
+   Fingerprints are public device keys. In Element Web, open avatar → All Settings
+   → Encryption → Advanced, then copy **Session ID** and **Session key**. The
+   Session key is the public device fingerprint; never use a recovery key or
+   access token. Spaces in Element's displayed key are accepted. Every intended
+   recipient must join the room. A new or changed device pauses delivery and the
+   independent heartbeat until explicitly approved;
    the relay never falls back to plaintext. The bot retains device
    `INFRA_ALERTS` and its crypto store on the `matrix-relay` PVC. Do not enroll a
    second bot with the same device against a fresh store.

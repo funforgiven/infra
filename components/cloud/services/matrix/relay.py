@@ -186,6 +186,8 @@ def check_room(client, room_id, allowed_users, pins):
         raise ValueError("destination is not a synced encrypted room")
     if set(room.users) - set(allowed_users):
         raise ValueError("unexpected room member")
+    if set(allowed_users) - set(room.users):
+        raise ValueError("intended recipient has not joined")
     for user_id in room.users:
         devices = list(client.device_store.active_user_devices(user_id))
         if user_id != client.user_id and not devices:
@@ -300,15 +302,18 @@ async def serve(config_file, state):
                     if client.should_query_keys:
                         if not isinstance(await client.keys_query(), KeysQueryResponse):
                             raise ValueError("device refresh failed")
+                    # Delivery health includes the intended recipients even when
+                    # the queue is empty. An absent member or unapproved device
+                    # must stop both alert delivery and the independent heartbeat.
+                    check_room(
+                        client,
+                        settings["room_id"],
+                        settings["allowed_users"],
+                        settings["trusted_devices"],
+                    )
                     pending = queue.pending()
                     if pending:
                         room = settings["room_id"]
-                        check_room(
-                            client,
-                            room,
-                            settings["allowed_users"],
-                            settings["trusted_devices"],
-                        )
                         response = await client.room_send(
                             room,
                             "m.room.message",
