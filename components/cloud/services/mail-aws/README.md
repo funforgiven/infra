@@ -161,8 +161,8 @@ Never run an unreviewed import or `--prune` against the live account.
 ## Security and migration boundary
 
 Clients use JMAP over HTTPS for both reading and sending. IMAP and SMTP client
-submission listeners are disabled; both firewalls permit only inbound SMTP
-(port 25) and HTTPS (port 443). Incoming server-to-server SMTP supports STARTTLS
+submission listeners are disabled; both firewalls permit public inbound SMTP
+(port 25), HTTPS (port 443), and the independent WireGuard VPN (UDP 51820). Incoming server-to-server SMTP supports STARTTLS
 and does not advertise AUTH. Outbound Resend delivery still uses implicit TLS
 on port 465 with certificate validation. The owner mailbox receives `postmaster`, `abuse`, `dmarc`, and `tls-reports` aliases. MTA-STS uses
 `enforce` with a seven-day policy lifetime; DNS also advertises SMTP TLS reports.
@@ -223,8 +223,10 @@ Gmail inbox with its attachment.
 | JMAP discovery / session | `https://mail.fahrican.com/.well-known/jmap` |
 | JMAP API | `https://mail.fahrican.com/jmap/` (use the discovered `apiUrl`) |
 | Sending | JMAP `EmailSubmission/set` over HTTPS |
-| Account web interface (VPN) | `https://mail-admin.fahrican.com/account` |
-| Administration (VPN) | `https://mail-admin.fahrican.com/admin` |
+| Account web interface (home LAN or MikroTik VPN) | `https://mail-admin.fahrican.com/account/` |
+| Administration (home LAN or MikroTik VPN) | `https://mail-admin.fahrican.com/admin/` |
+| Account web interface (independent AWS VPN) | `https://mail-admin-aws.fahrican.com:8443/account/` |
+| Administration (independent AWS VPN) | `https://mail-admin-aws.fahrican.com:8443/admin/` |
 
 Clients discover upload, download, and push URLs from the authenticated JMAP
 session. They need no IMAP or SMTP client settings. Use the mailbox credential
@@ -236,24 +238,57 @@ Manager containers; do not place them in Git, tickets, or command arguments.
 
 ## Private administration
 
-Connect the existing `wg-admin` VPN before opening the administration or account
-interface. `mail-admin.fahrican.com` resolves to the existing private services
-Gateway, `10.21.40.122`; its Envoy authorization policy permits only
-`10.21.91.0/24`. Existing split-tunnel client routes already cover this address.
-Even the trusted LAN is denied when it is not using the VPN. Public JMAP and
-SMTP continue to use `mail.fahrican.com` without the VPN.
+Both the administration and account interfaces have two private entry points.
+At home, use the trusted LAN (`10.21.10.0/24`) directly. Away from home, the
+existing MikroTik `wg-admin` VPN (`10.21.91.0/24`) reaches the same homelab
+reverse proxy at `mail-admin.fahrican.com` (`10.21.40.122`). Other VLANs and
+services workloads are denied. Existing split-tunnel routes already cover it.
+This entry point depends on the homelab gateway and its tunnel to AWS.
+Public JMAP and SMTP use `mail.fahrican.com` independently of either private route.
 
 The Gateway terminates HTTPS using its DNS-validated certificate and reaches the
 mail instance through WireGuard. The mail backend peer is `10.21.91.3/32` and
 accepts only the services router's `10.21.40.154/32` source on port 8080. That
 port is bound to the tunnel address and permitted only on the tunnel interface;
-AWS still admits only public TCP 25 and 443. Router rules forbid this backend
+AWS admits public TCP 25 and 443 plus UDP 51820 for the separate recovery VPN.
+Router rules forbid this backend
 peer from initiating connections to either the router or other homelab services.
 The WAN endpoint, peer public keys, and backend source address are declared in
 `deployments/homelab/cloud/mail-admin-vpn.json`; update both deployment and
 RouterOS inventory if those network assignments change.
 
-The private proxy reaches Stalwart on loopback port 8081. Only discovery responses
+The independent `wg-mail-admin` server runs on the AWS NixOS host and listens
+at the retained Elastic IP, `18.195.240.25:51820`. Its own keypair and preshared
+key are separate from the MikroTik tunnel. The client routes only `10.21.92.1/32`
+through it and uses public DNS resolvers. It does not use the homelab network,
+proxy, DNS, or WireGuard endpoint. The AWS panel hostname resolves publicly to
+that private address; nginx serves HTTPS only at `10.21.92.1:8443`, and neither
+firewall exposes that TCP port publicly. Port 8443 avoids the existing public
+Stalwart HTTPS listener. No forwarding or general Internet gateway is enabled.
+
+Import the local mode-0600, Git-ignored `secrets/mail-aws-vpn.conf` into your
+WireGuard client and activate it when the independent route is needed. The
+profile is backed up as `secrets/mail-vpn-client.yaml` under SOPS, separately
+from server credentials; the client private key is never installed on AWS.
+Recover the profile without printing it:
+
+```sh
+umask 077
+sops --decrypt --extract '["config"]' secrets/mail-vpn-client.yaml > secrets/mail-aws-vpn.conf
+```
+
+The two VPNs use different private subnets and can coexist. Each device should
+have its own keypair, preshared key, and unique /32 peer address; do not share
+one client identity between simultaneously connected devices.
+
+AWS issues and renews its panel certificate directly with Cloudflare DNS-01,
+using the existing zone DNS credential. ACME account and certificate state
+is saved in the encrypted, versioned mail S3 bucket under
+`infra/mail-admin-acme-state.json` and restored before ACME starts on a new
+root volume. Certificate renewal and recovery do not require the homelab.
+The nginx service can keep running and reload with either tunnel absent.
+
+Both private proxies reach Stalwart on loopback port 8081. Only discovery responses
 have their public origin rewritten for the private UI; JMAP data responses and
 mail content are forwarded unchanged. Public `/admin`, `/account`, and management `/api`
 paths return 404. The `/api/auth` and `/api/discover` login helpers remain public
@@ -266,19 +301,25 @@ administrator credential must receive the same restriction before use; run
 `systemctl start mail-reconcile` locally after such changes. Public mail users
 keep their normal JMAP access.
 
-Local maintenance uses `http://127.0.0.1:8081` and remains available if the VPN is
-down. AWS Systems Manager is the recovery path for the host. Tunnel private and
-preshared keys are stored in `secrets/mail-vpn.yaml` under SOPS and in the dedicated
-`fahrican/stalwart/vpn` AWS secret, outside Terraform state. To republish the
-credential after restoring its secret container, use the scoped mail provisioning
-environment and stream `sops --decrypt --output-type json secrets/mail-vpn.yaml`
-into `aws --region eu-central-1 secretsmanager put-secret-value --secret-id
-fahrican/stalwart/vpn --secret-string file:///dev/stdin`; discard the returned
-version metadata. The router receives only the preshared key through its sops-nix
-runtime file. Restart `wg-quick-wg-mail` after an intentional key rotation.
+Local maintenance uses `http://127.0.0.1:8081`. AWS Systems Manager remains
+the host recovery path. Server tunnel keys are in `secrets/mail-vpn.yaml` under
+SOPS and in the dedicated `fahrican/stalwart/vpn` AWS secret, outside Terraform
+state. The same AWS secret carries the DNS validation token, sourced from the
+existing encrypted Cloudflare credential. Republish them with:
 
-Independent homelab probes check every minute that the public admin and schema
-paths return 404 and that the private panel returns 403 without a VPN source.
-An access restriction failure raises an alert after five minutes. Replacement
-instances must serve public JMAP and MTA-STS and reject the public panel before
-the retained mail address can move to them.
+```sh
+nix run .#aws-mail-credentials -- vpn
+```
+
+The router receives only its tunnel's preshared key through its sops-nix runtime
+file. After intentionally rotating a tunnel key, restart its corresponding
+`wg-quick-wg-mail` or `wg-quick-wg-mail-admin` service and update the client.
+
+Independent homelab probes check every minute that public admin and schema
+paths return 404 and that the homelab panel returns 403 to services workloads
+outside the trusted LAN and VPN. An access restriction failure alerts after
+five minutes. AWS health checks separately verify the direct panel's VPN
+interface, both pages, TLS validity, and private discovery origin; CloudWatch
+alerts on panel failure or certificate expiry without relying on the homelab.
+Replacement instances must serve public JMAP and MTA-STS and reject the public
+panel before the retained mail address can move to them.

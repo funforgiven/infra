@@ -94,6 +94,14 @@ locals {
       metric      = "CertificateSecondsRemaining", comparison = "LessThanThreshold", threshold = 1814400
       description = "Mail TLS certificate expires within 21 days"
     }
+    admin_panel = {
+      metric      = "AdminPanelHealthy", comparison = "LessThanThreshold", threshold = 1
+      description = "Independent AWS VPN panel, TLS, or private discovery is unhealthy"
+    }
+    admin_certificate = {
+      metric      = "AdminCertificateSecondsRemaining", comparison = "LessThanThreshold", threshold = 1814400
+      description = "Independent AWS panel TLS certificate expires within 21 days"
+    }
     queue_age = {
       metric      = "OldestQueuedSeconds", comparison = "GreaterThanThreshold", threshold = 3600
       description = "A mail delivery has waited more than one hour, excluding automatic reports' initial scheduled delay"
