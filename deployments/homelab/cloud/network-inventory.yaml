@@ -541,6 +541,19 @@ all:
               destination_port: "2456-2457"
               to_address: 10.21.40.124
               to_port: "2456-2457"
+          # Only the services cluster may reflect these public endpoints back
+          # onto its provider subnet. Do not add vlan40 to INFRA-LAN.
+          routeros_service_reflections:
+            - comment: "infra: NetBird services HTTPS reflection"
+              source_address: 10.21.40.154/32
+              protocol: tcp
+              port: "443"
+              destination: 10.21.40.128
+            - comment: "infra: NetBird services STUN reflection"
+              source_address: 10.21.40.154/32
+              protocol: udp
+              port: "3478"
+              destination: 10.21.40.129
           routeros_source_port_pins:
             - comment: "infra: Factorio Space Age egress port"
               source_interface: vlan40-external
