@@ -109,6 +109,9 @@ spec:
           periodSeconds: 10
       - name: dumps
         image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0
+        env:
+        - name: MATRIX_DB_HOST
+          value: 127.0.0.1
         command:
         - bash
         - -c
