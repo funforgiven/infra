@@ -156,6 +156,7 @@ spec:
         image:
           sha: 9e082985f56f4c8c9f724e18f2288c6708f472e56a5286b8863d080434ea065d
         secrets:
+          - matrix-alerting
           - infrastructure-telegram
         persistentVolumeClaimRetentionPolicy:
           whenDeleted: Retain

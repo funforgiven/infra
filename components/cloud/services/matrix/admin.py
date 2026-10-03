@@ -92,14 +92,17 @@ def save_secret(path, document, *, rollout=None):
         update_runtime_rollout(rollout, ciphertext)
 
 
-def secret(name, namespace, values):
+def secret(name, namespace, values, *, watch=False):
+    labels = {"velero.io/exclude-from-backup": "true"}
+    if watch:
+        labels["reconcile.fluxcd.io/watch"] = "Enabled"
     return {
         "apiVersion": "v1",
         "kind": "Secret",
         "metadata": {
             "name": name,
             "namespace": namespace,
-            "labels": {"velero.io/exclude-from-backup": "true"},
+            "labels": labels,
         },
         "type": "Opaque",
         "stringData": values,
@@ -410,6 +413,32 @@ def approve_device(args):
     save_secret(target, document, rollout="matrix-relay")
 
 
+def configure_alertmanager_mounts(phase):
+    if phase not in ("dual", "matrix"):
+        raise ValueError("invalid alerting phase")
+    path = DEPLOYMENT.parent / "12-observability/kube-prometheus-stack.yaml"
+    text = path.read_text()
+    pattern = r"(?m)^        secrets:\n(?:          - [^\n]+\n)+"
+    matches = list(re.finditer(pattern, text))
+    if len(matches) != 1:
+        raise ValueError("expected one inline Alertmanager credential mount list")
+    existing = yaml.safe_load(matches[0].group())["secrets"]
+    names = ["matrix-alerting"]
+    if phase == "dual":
+        names.append("infrastructure-telegram")
+    names.extend(
+        name
+        for name in existing
+        if name not in ("matrix-alerting", "infrastructure-telegram")
+    )
+    # Inline Helm values take precedence over valuesFrom, including its arrays.
+    # Keep this list aligned with the selected encrypted alert values.
+    replacement = "        secrets:\n" + "".join(
+        "          - " + name + "\n" for name in names
+    )
+    path.write_text(text[: matches[0].start()] + replacement + text[matches[0].end() :])
+
+
 def configure_alerting(args):
     rollout_file = DEPLOYMENT / "rollout.json"
     rollout = json.loads(rollout_file.read_text())
@@ -553,6 +582,7 @@ def configure_alerting(args):
                     }
                 )
             },
+            watch=True,
         ),
     )
     save_secret(
@@ -572,6 +602,7 @@ def configure_alerting(args):
         if resource not in k["resources"]:
             k["resources"].append(resource)
     kustomization.write_text(yaml.safe_dump(k, sort_keys=False))
+    configure_alertmanager_mounts(args.phase)
     rollout["phase"] = args.phase
     if args.phase == "dual" and not rollout.get("dual_started_at"):
         rollout["dual_started_at"] = time.time()
@@ -812,12 +843,7 @@ def retire_telegram():
     bots = yaml.safe_load(bots_path.read_text())
     bots["bots"].pop("infrastructure", None)
     bots_path.write_text(yaml.safe_dump(bots, sort_keys=False))
-    chart_path = DEPLOYMENT.parent / "12-observability/kube-prometheus-stack.yaml"
-    charts = list(yaml.safe_load_all(chart_path.read_text()))
-    for chart in charts:
-        if chart["kind"] == "HelmRelease":
-            chart["spec"]["values"]["alertmanager"]["alertmanagerSpec"]["secrets"] = []
-    chart_path.write_text(yaml.safe_dump_all(charts, sort_keys=False))
+    configure_alertmanager_mounts("matrix")
     print(
         "Retired infrastructure Telegram credentials. Revoke the bot token with BotFather and remove host token files after host rollout."
     )
