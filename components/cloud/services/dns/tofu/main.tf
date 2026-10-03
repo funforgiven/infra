@@ -96,6 +96,16 @@ resource "cloudflare_dns_record" "mail_hosts" {
   comment = "Git-managed Stalwart mail edge"
 }
 
+resource "cloudflare_dns_record" "mail_direct_vpn" {
+  zone_id = data.cloudflare_zone.fahrican.zone_id
+  name    = "mail-admin-aws.fahrican.com"
+  type    = "A"
+  content = "10.21.92.1"
+  ttl     = 300
+  proxied = false
+  comment = "Private mail panels through the independent AWS WireGuard VPN"
+}
+
 resource "cloudflare_dns_record" "mail_exchange" {
   zone_id  = data.cloudflare_zone.fahrican.zone_id
   name     = "fahrican.com"
