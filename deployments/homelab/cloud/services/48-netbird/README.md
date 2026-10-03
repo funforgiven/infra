@@ -56,8 +56,14 @@ checks, and fails closed when a new authorization condition needs review. Run:
 
 ```sh
 python components/cloud/services/netbird/render_routes.py
+python components/cloud/services/netbird/render_network.py
 python -m unittest discover -s components/cloud/services/netbird/tests -v
 ```
+
+Magnum installs a global Calico egress Allow at order 20. The generated Calico
+policies enforce the same NetBird egress allowlists at order 15 and end in Deny.
+The ingress NetworkPolicies remain enforced normally. Regenerate the Calico
+files whenever their Kubernetes NetworkPolicy sources change.
 
 NetBird uses individual DNS zones for the selected service hostnames. Public
 mail/JMAP, SMTP, the rest of `fahrican.com`, and normal LAN DNS are unaffected.

@@ -65,5 +65,19 @@ class RouteBoundaryTests(unittest.TestCase):
                     self.assertFalse(matched, path)
 
 
+class NetworkBoundaryTests(unittest.TestCase):
+    def test_generated_calico_enforces_before_the_global_allow(self):
+        spec = importlib.util.spec_from_file_location("netbird_network", SOURCE.with_name("render_network.py"))
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module.render(check=True)
+        for directory in ("server", "access"):
+            policy = yaml.safe_load((module.DEPLOYMENT / directory / "calico.generated.yaml").read_text())
+            self.assertLess(policy["spec"]["order"], 20)
+            self.assertEqual(policy["spec"]["egress"][-1], {"action": "Deny"})
+            self.assertEqual(policy["spec"]["types"], ["Egress"])
+            self.assertIn("netbird", policy["spec"]["namespaceSelector"])
+
+
 if __name__ == "__main__":
     unittest.main()

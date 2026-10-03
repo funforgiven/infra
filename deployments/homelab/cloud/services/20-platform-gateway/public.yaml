@@ -1,8 +1,11 @@
+# Retained while ownership moves from the Matrix wave to the platform wave.
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: matrix-public
   namespace: envoy-gateway-system
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   telemetry:
     accessLog:
@@ -45,6 +48,8 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: matrix-public
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
   parametersRef:
@@ -58,6 +63,8 @@ kind: Certificate
 metadata:
   name: matrix-public
   namespace: services-network
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   secretName: matrix-public-tls
   issuerRef:
@@ -76,6 +83,8 @@ kind: Gateway
 metadata:
   name: matrix-public
   namespace: services-network
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   gatewayClassName: matrix-public
   listeners:

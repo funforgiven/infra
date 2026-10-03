@@ -6,6 +6,7 @@ resources:
   - workload.yaml
   - routes.yaml
   - network-policy.yaml
+  - calico.generated.yaml
   - monitoring.yaml
   - runtime.sops.yaml
   - backup.sops.yaml
