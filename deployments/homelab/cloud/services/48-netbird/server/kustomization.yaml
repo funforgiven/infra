@@ -4,6 +4,7 @@ resources:
 - postgres.yaml
 - backup.yaml
 - workload.yaml
+- stun.yaml
 - routes.yaml
 - network-policy.yaml
 - calico.generated.yaml

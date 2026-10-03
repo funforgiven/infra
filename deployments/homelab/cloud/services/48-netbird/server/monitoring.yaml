@@ -39,6 +39,13 @@ spec:
             severity: critical
           annotations:
             summary: NetBird relay or public TLS gateway is unavailable
+        - alert: NetBirdStunWorkerUnavailable
+          expr: kube_daemonset_status_number_unavailable{namespace="netbird",daemonset="netbird-stun"} > 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: A NetBird STUN worker is unavailable
         - alert: NetBirdRoutingPeersUnavailable
           expr: kube_deployment_status_replicas_available{namespace="netbird-routing",deployment="networkrouter-services"} < 1
           for: 5m
