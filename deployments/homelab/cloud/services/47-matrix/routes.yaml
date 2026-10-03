@@ -11,6 +11,7 @@ spec:
   hostnames:
   - matrix.fahrican.com
   - matrix-auth.fahrican.com
+  - element.fahrican.com
   - chat.fahrican.com
   - auth.cloud.fahrican.com
   rules:

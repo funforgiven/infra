@@ -7,28 +7,28 @@ metadata:
         velero.io/exclude-from-backup: "true"
 type: kubernetes.io/dockerconfigjson
 stringData:
-    .dockerconfigjson: ENC[AES256_GCM,data:zFLKA1418DU9h6/sfj8uljsMeBevYVn2ooTeVugf20yFSCAwIxBn9C7wdqKcfkMEzv2xOWgwVLTiQeGD0vjbxLpg1ct10+Sz1bE98yNqCiAmaSTwuEQ1OWlKhxG0b7sjD/AjoIVcgwzSHKzuhSmRtcW/afR58lFNJbnMHZxn8jLiDXtmkxlZ4F8jg1c76zoQy3VQ55U=,iv:juiFPekS2y/YKu4zAmDxouTMe12FKIloCrcROJPF2Wg=,tag:Yyuod7GEQMp/BcbBWXyvbg==,type:str]
+    .dockerconfigjson: ENC[AES256_GCM,data:vFEfuMrEgZxRHFJFxDZWjSvcdCWCuO10UMuHX1SiEXZcRkCkfuQusPDq0a/IoxMyEmZ75R+XMXU9MG6TmIJOBJMBO7ZG10DizBibcbBE5YcDnn681YqqFVk+D6GPXS/+wHAyhCminSE44XWNBSSBXxzgLHQTf2vJlwufThyedO8SSv7GYLS60MAVNk9h7/1V4EGp63I=,iv:MrgTJ/Nb7f4V4jMcMpNUmKKaKlE6lvJyL6FkrNszisc=,tag:RCR8BpyKkj0Mlgg5B88tIg==,type:str]
 sops:
     age:
         - enc: |
             -----BEGIN AGE ENCRYPTED FILE-----
-            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBIWjdPTHdxNkRCZ2thYVF4
-            eWQ5aFQ4VlJzMmNlck5XVEV5anBqMThoWmcwCjI4S3d2M2dUR3FidjNJdk55OXFD
-            Y2Z3S0x0L3U1OExUcVVVVVk1Sys4anMKLS0tIEp5STg3RkdCNjA0SHRoZzBSL01H
-            dUJmakNjQm5uV3pyWEhBQTlyTCt6dFkKLITeeOZgGB++WWyr74yBdGXZO8OhoLXo
-            GpKc1hvzBnlbZxuJRtmCtQhyafSwgInh5mrI8ih/CUwQG7zSX0xsBA==
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBteW10dk5WV2FsS2JXeUlF
+            Z20yMmxmcklwZ2cwT0VTcDQwN2NHYUZOUlhVCmptN1NpcmdPc0VWZUJhWm16T2ZJ
+            UWZhbllyWFNlNkkyeEo5TWRZUjJQN1UKLS0tIGo3aVJ2UmhmWTl6ZGpqMTV1UEkx
+            bjhhRTMwZ2prQkNJQnFzR25DbjBoLzAKjb0V2+KaPfPBWCLzU+2k1IIPu1xofHdM
+            Qr5k/y4Y278JPZJfgPbt+r1HvMmpLyiZkCLB3YUULXDjL4udLUOzdA==
             -----END AGE ENCRYPTED FILE-----
           recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
         - enc: |
             -----BEGIN AGE ENCRYPTED FILE-----
-            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBqTk5za3IycDRYL1NTVjQv
-            SVgrZHNoWGw3cXhtWEhzMUs4OGtTdnoyUEVVCmlBQ0J1czNUb1pFUGtYTTIyOUhF
-            amNLeVVBZWQ3SXE4WHZSZVYyWVBzeVEKLS0tIEU2KzBvcWZPcWxPRjdrSWJqeE9Y
-            NFNsc2FFZVBqNkhJRW9sc3hRV2JaKzAKhoM/xeRtGXW8zKnszOOvVgujwaLs1e34
-            gkZa4Fc0LtOWNSYvHKur5JX8Sn5Q8uAp4LZQUtBjtGJZY8QdjdC/kQ==
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBLeVpMeWdlRmlRYi9MMkRS
+            aVlpNncvTkVISy8wRUxkc3dJWUt5NjRjSHlBClZPdW5DV25McTYyNDNLczROeGZQ
+            bm9UQzJyYnNSeThZK2ZNSjVsZExyZDQKLS0tIG1JZTZHdTFqb3BFRXlaTXZKZnhS
+            U1d4S21JWmhmSkJwYkZqY2EzZmVPOVEKM0cXWp22H8K0JPT3BFF3pUJhJ9s7W85O
+            AsLy+VApoqxbxPVbILMUa6meM+0DiPwRP1NCU2U37idwCeTkUnbj9A==
             -----END AGE ENCRYPTED FILE-----
           recipient: age1vfxeaxdj7jze5p5ytff0peyjm3rusn8naacfudklvzwknv4yk5wq3qqg3v
     encrypted_regex: ^(data|stringData)$
-    lastmodified: "2026-10-03T17:38:23Z"
-    mac: ENC[AES256_GCM,data:X2B/wJifcS14AY8aqPO6hGftz3fdivIthrTwnOB2/j0j0prcsq7EtVpkX1yaJwgzFBdw+Ch+DQ+09f0qDiCxL0hs68w5vpoGhNS9cGl2TVgHflKOKTFmK27Z0H5G5OInY//mzi4ROLi9ei5peBIBlr5v3J4EDqWKSObqc3PExfU=,iv:88NXoC6UyG49KeW7xN4CG75quegk40pqFlk49UbQtjQ=,tag:kKNVsrkS75PE7dJ6Ge2opg==,type:str]
+    lastmodified: "2026-10-03T18:18:41Z"
+    mac: ENC[AES256_GCM,data:sfEpkf+RlPbpxvCP871Z839J0FSwIxWEAKhiHPdQbtHI64jP3c802jguntuBT+Ufjd/0sRMZnI9AE9ZgXmqcssFtN0jJn0f3+0natt6FC61tuw5/aGGHod8UBqo+bdrgbPgWnG7xSLU8/XtBFnXCJOpMQKIjR0hKd2NQihH8ooE=,iv:N6uHAQ5k4xOfUZWYx5N0cRwd+qyaFjTKDIGdF0xwt4Y=,tag:t4ZVPmwZCVBsELGA5JwmXw==,type:str]
     version: 3.13.3
