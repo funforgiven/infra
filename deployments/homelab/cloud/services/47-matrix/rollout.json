@@ -1,5 +1,5 @@
 {
-  "phase": "prepared",
-  "dual_started_at": null,
+  "phase": "dual",
+  "dual_started_at": 1791056983.942315,
   "qualified_at": null
 }

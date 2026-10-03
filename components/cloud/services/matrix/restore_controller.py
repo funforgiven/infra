@@ -47,7 +47,7 @@ def main():
     )
     now = datetime.datetime.now(datetime.timezone.utc)
     candidates = []
-    for backup in get("velero", "backups")["items"]:
+    for backup in get("velero", "backups.velero.io")["items"]:
         if (
             backup["metadata"].get("labels", {}).get("velero.io/schedule-name")
             != "services-daily"
@@ -132,7 +132,11 @@ def main():
     )
     deadline = time.monotonic() + 4800
     while time.monotonic() < deadline:
-        state = get("velero", "restore", restore_name).get("status", {}).get("phase")
+        state = (
+            get("velero", "restores.velero.io", restore_name)
+            .get("status", {})
+            .get("phase")
+        )
         if state == "Completed":
             break
         if state in ("Failed", "PartiallyFailed", "FailedValidation"):
