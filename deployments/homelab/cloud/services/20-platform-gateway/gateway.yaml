@@ -88,6 +88,7 @@ spec:
     - git.fahrican.com
     - cache.fahrican.com
     - mail-admin.fahrican.com
+    - matrix-alerts.fahrican.com
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway

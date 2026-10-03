@@ -35,6 +35,7 @@ in
       "/secrets/*.hash"
       "/secrets/*.key"
       "/secrets/*.pem"
+      "secrets/home-assistant-token.local"
     ];
 
     perSystem.files.file.".gitignore".text = lib.concatLines cfg;

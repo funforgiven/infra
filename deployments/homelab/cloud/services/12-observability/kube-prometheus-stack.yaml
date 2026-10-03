@@ -25,6 +25,10 @@ spec:
     - kind: Secret
       name: alertmanager-runtime-values
       valuesKey: values.yaml
+    - kind: Secret
+      name: matrix-alertmanager-values
+      valuesKey: values.yaml
+      optional: true
   driftDetection:
     mode: enabled
     ignore:

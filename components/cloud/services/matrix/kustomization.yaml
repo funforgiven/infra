@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+configMapGenerator:
+  - name: matrix-scripts
+    namespace: matrix
+    files:
+      - relay.py
+      - postgres.py
+      - backup.py
+      - restore.py
+  - name: matrix-restore-controller
+    namespace: backup-qualification
+    files:
+      - restore_controller.py
+      - restore.py

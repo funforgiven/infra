@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: matrix-element
+  namespace: matrix
+data:
+  element.json: '{"default_server_config":{"m.homeserver":{"base_url":"https://matrix.fahrican.com","server_name":"matrix.fahrican.com"}},"disable_custom_urls":true,"disable_guests":true,"default_federate":false,"default_theme":"dark","brand":"Fahrican","room_directory":{"servers":[]},"integrations_ui_url":"","integrations_rest_url":"","integrations_widgets_urls":[],"setting_defaults":{"UIFeature.urlPreviews":false}}'
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: matrix-egress
+  namespace: matrix
+data:
+  squid.conf: |
+    http_port 3128
+    pid_filename /tmp/squid.pid
+    cache_log /dev/stderr
+    access_log none
+    cache_store_log none
+    cache deny all
+    acl tls port 443
+    acl connect method CONNECT
+    acl push dstdomain matrix.org
+    acl private dst 0.0.0.0/8 10.0.0.0/8 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10
+    http_access deny private
+    http_access allow connect tls push
+    http_access deny all

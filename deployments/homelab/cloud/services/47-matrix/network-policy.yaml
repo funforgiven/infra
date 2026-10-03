@@ -1,0 +1,326 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: matrix-default-deny
+  namespace: matrix
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: matrix-dns
+  namespace: matrix
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: matrix-client
+  namespace: matrix
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: matrix-client
+  policyTypes:
+  - Ingress
+  - Egress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-synapse
+    ports:
+    - protocol: TCP
+      port: 8008
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-mas
+    ports:
+    - protocol: TCP
+      port: 8080
+  - to:
+    - ipBlock:
+        cidr: 10.21.20.131/32
+    ports:
+    - protocol: TCP
+      port: 443
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: envoy-gateway-system
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-relay
+    ports:
+    - protocol: TCP
+      port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: matrix-synapse
+  namespace: matrix
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: matrix-synapse
+  policyTypes:
+  - Ingress
+  - Egress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-mas
+    ports:
+    - protocol: TCP
+      port: 8080
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-egress
+    ports:
+    - protocol: TCP
+      port: 3128
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-client
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-mas
+    ports:
+    - protocol: TCP
+      port: 8008
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: matrix-mas
+  namespace: matrix
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: matrix-mas
+  policyTypes:
+  - Ingress
+  - Egress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-synapse
+    ports:
+    - protocol: TCP
+      port: 8008
+  - to:
+    - ipBlock:
+        cidr: 10.21.20.131/32
+    ports:
+    - protocol: TCP
+      port: 443
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-client
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-synapse
+    ports:
+    - protocol: TCP
+      port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: matrix-postgres
+  namespace: matrix
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: matrix-postgres
+  policyTypes:
+  - Ingress
+  - Egress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-synapse
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-mas
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-backup
+    ports:
+    - protocol: TCP
+      port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: matrix-relay
+  namespace: matrix
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: matrix-relay
+  policyTypes:
+  - Ingress
+  - Egress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-client
+    ports:
+    - protocol: TCP
+      port: 8080
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 10.0.0.0/8
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+        - 127.0.0.0/8
+        - 169.254.0.0/16
+        - 100.64.0.0/10
+    ports:
+    - protocol: TCP
+      port: 443
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: envoy-gateway-system
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: services-observability
+    ports:
+    - protocol: TCP
+      port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: matrix-backup
+  namespace: matrix
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: matrix-backup
+  policyTypes:
+  - Ingress
+  - Egress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  ingress: []
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: matrix-egress
+  namespace: matrix
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: matrix-egress
+  policyTypes:
+  - Ingress
+  - Egress
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 10.0.0.0/8
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+        - 127.0.0.0/8
+        - 169.254.0.0/16
+        - 100.64.0.0/10
+    ports:
+    - protocol: TCP
+      port: 443
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-synapse
+    ports:
+    - protocol: TCP
+      port: 3128
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: matrix-synapse-metrics
+  namespace: matrix
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: matrix-synapse
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: services-observability
+    ports:
+    - protocol: TCP
+      port: 9000

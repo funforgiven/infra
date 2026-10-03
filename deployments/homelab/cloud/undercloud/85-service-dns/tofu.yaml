@@ -29,6 +29,10 @@ spec:
     kind: GitRepository
     name: service-dns-tofu-source
   varsFrom:
+    - kind: ConfigMap
+      name: matrix-dns-inputs
+      varsKeys:
+        - matrix_wan_ipv4_address
     - kind: Secret
       name: service-dns-inputs
       varsKeys:

@@ -3,6 +3,12 @@ document: homelab-cloud-resend-sending-keys
 lastReviewed: "2026-09-05"
 
 keys:
+  matrix:
+    name: fahrican-matrix-alerts
+    permission: sending_access
+    domain: fahrican.com
+    administrationCredential: RESEND_ADMIN_API_KEY
+    outputCredential: MATRIX_RESEND_API_KEY
   forgejo:
     name: fahrican-forgejo-smtp
     permission: sending_access

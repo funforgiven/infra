@@ -1,0 +1,88 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: matrix-relay
+  namespace: matrix
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: matrix-relay
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: matrix-synapse
+  namespace: matrix
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: matrix-synapse
+  endpoints:
+  - port: metrics
+    path: /_synapse/metrics
+    interval: 30s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: matrix
+  namespace: matrix
+spec:
+  groups:
+  - name: matrix
+    rules:
+    - alert: MatrixRelayDeliveryStalled
+      expr: matrix_relay_oldest_seconds > 300
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: Matrix alert delivery is stalled
+        description: Queued alerts have waited longer than five minutes.
+    - alert: MatrixRelayUnavailable
+      expr: up{namespace="matrix",service="matrix-relay"} == 0
+      for: 3m
+      labels:
+        severity: critical
+      annotations:
+        summary: Matrix alert relay is unavailable
+    - alert: MatrixStorageCapacity
+      expr: kubelet_volume_stats_available_bytes{namespace="matrix"} / kubelet_volume_stats_capacity_bytes{namespace="matrix"}
+        < 0.2
+      for: 15m
+      labels:
+        severity: warning
+      annotations:
+        summary: Matrix persistent storage has less than 20% free
+    - alert: MatrixDatabaseBackupStale
+      expr: time() - (kube_cronjob_status_last_successful_time{namespace="matrix",cronjob="matrix-database-backup"} or kube_cronjob_created{namespace="matrix",cronjob="matrix-database-backup"}) > 93600
+      for: 1h
+      labels:
+        severity: critical
+      annotations:
+        summary: Matrix has no successful scheduled database dump within 26 hours
+    - alert: MatrixRestoreQualificationFailed
+      expr: kube_job_status_failed{namespace="backup-qualification",job_name=~"matrix-restore-qualification.*"} > 0
+      for: 15m
+      labels:
+        severity: critical
+      annotations:
+        summary: Isolated Matrix restore qualification failed
+    - alert: MatrixRestoreQualificationStale
+      expr: time() - (kube_cronjob_status_last_successful_time{namespace="backup-qualification",cronjob="matrix-restore-qualification"} or kube_cronjob_created{namespace="backup-qualification",cronjob="matrix-restore-qualification"}) > 3456000
+      for: 1h
+      labels:
+        severity: critical
+      annotations:
+        summary: Matrix restore qualification has not succeeded within 40 days
+    - alert: MatrixCertificateExpiring
+      expr: certmanager_certificate_expiration_timestamp_seconds{namespace="services-network",name="matrix-public"} - time() < 604800
+      for: 1h
+      labels:
+        severity: critical
+      annotations:
+        summary: Public Matrix certificate expires within seven days

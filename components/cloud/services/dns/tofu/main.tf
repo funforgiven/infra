@@ -49,6 +49,7 @@ locals {
     "git",
     "home",
     "mail-admin",
+    "matrix-alerts",
     "music",
     "upload",
     "unifi",

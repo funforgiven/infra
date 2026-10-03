@@ -1,7 +1,7 @@
 # Backup and restore
 
 Velero backs up the services cluster with Kopia filesystem backups. The policy
-covers the `backup-qualification`, `finance`, `forge`, `games`, `home-automation`, `media`, and
+covers the `backup-qualification`, `finance`, `forge`, `games`, `home-automation`, `matrix`, `media`, and
 `services-databases` namespaces. Volume snapshots are not used.
 
 ## Schedules
@@ -38,6 +38,17 @@ state, resumes them, and validates file hashes and SQLite integrity. The monthly
 isolated namespace and executes only the offline verifier. It cannot start
 Home Assistant, MQTT, Zigbee or Matter. See the [automation runbook](../25-home-automation/README.md)
 for the separate Thread dataset and activation requirements.
+
+Matrix excludes its live PostgreSQL directory and creates logical dumps of
+Synapse and MAS at 01:15 Istanbul and in a fail-on-error Velero pre-backup hook.
+The relay hook snapshots its SQLite queue and crypto store, recording the bot
+device identity and an encrypted recovery canary. Velero copies these recovery
+sources and local media. A separate monthly `matrix-restore-qualification`
+controller restores only Matrix PVCs and inert pods into the deny-all
+`matrix-restore` namespace, restores both databases into disposable PostgreSQL,
+checks queue integrity, and decrypts the canary with its recovered session.
+See the [Matrix runbook](../47-matrix/README.md) for on-demand qualification,
+SOPS recovery requirements and the coordinated live recovery sequence.
 
 ## Run and inspect a backup
 
