@@ -142,6 +142,13 @@ Keep the native MikroTik WireGuard configuration and direct management addresses
 on the administrator device. Infrastructure SSH and PiKVM must remain usable
 without Kubernetes DNS, ZITADEL, NetBird or a private application gateway.
 The router and home internet must still be reachable for remote recovery.
+Keep the MikroTik recovery interface and administrator peer enabled; disconnect
+the client tunnel when it is not needed. Disabling the router-side peer would
+require another working access path to re-enable emergency access. One recovery
+profile is sufficient when used on one device at a time. Keep an encrypted copy
+available independently of the homelab; simultaneous clients should have their
+own peers. The existing administrator peer is labelled `parmigiano`, but the
+label alone does not identify the physical device holding its private key.
 
 NetBird database recovery uses the Barman archive at
 `s3://fahrican-cloud-recovery/services/kubernetes/netbird/postgresql/` with the
@@ -179,10 +186,9 @@ successful archival still depends on connectivity to Backblaze.
 - Replacing the selected routing pod produced 20 successful consecutive HTTPS
   probes through the remaining peers. This does not guarantee uninterrupted
   long-lived connections during every failure.
-- Public coordination and external STUN were checked from AWS. The OAuth
-  authorization flow reached ZITADEL login. Public setup/admin API requests
-  were denied. Actual owner
-  sign-in on a personal Linux/Android device remains the final user check.
+- Public coordination and external STUN were checked from AWS. Public setup/admin
+  API requests were denied. After declaring the everyday owner's ZITADEL project
+  grant, the owner confirmed a successful NetBird connection on their Android phone.
 - Two restores from separate Backblaze backups passed without changing production.
 - The repository's 14 flake checks passed, including the access-boundary tests.
 
