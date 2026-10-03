@@ -98,6 +98,10 @@ spec:
     - name: services-netbird-operator
     - name: services-platform-gateway
   healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: networkrouter-services
+      namespace: netbird-routing
     - apiVersion: netbird.io/v1alpha1
       kind: NetworkRouter
       name: services
