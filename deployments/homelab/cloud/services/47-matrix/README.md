@@ -46,9 +46,20 @@ On 2026-10-03, `funforgiven` joined **Infra Alerts** and confirmed that both
 synthetic firing and resolved alerts decrypted on session `J7NOIrKrBB`.
 The relay retains bot device `INFRA_ALERTS` on its existing PVC. The live
 Alertmanager configuration routes to Matrix and Telegram, with independent
-email for critical/error alerts. Both AWS availability and encrypted-delivery
-alarms are healthy with notifications enabled. The rollout is in `dual` phase;
-the observation start is recorded in `rollout.json`.
+email for critical/error alerts. Its Matrix credential mount was verified and
+synthetic firing and resolved notifications were durably accepted by the relay.
+Both AWS availability and encrypted-delivery alarms have notifications enabled.
+The rollout is in `dual` phase. The observation start in `rollout.json` stays
+unset until encrypted delivery to every intended recipient session is verified.
+
+Element on the phone displayed the decrypted native-host test alert. The new
+phone session `NOyFoqzTm3` still needs its public Ed25519 key compared with the
+phone and explicitly approved. Delivery and its independent heartbeat pause
+while that session is unapproved; alert intake stays durable and Telegram stays
+active. The phone's push registration failed during the brief rollout outage;
+no pusher was registered at the subsequent check. The public registration route
+and restricted `matrix.org` proxy are reachable. Retry notification setup and
+verify a background notification after approving the phone.
 
 The native `forge-macos` host received only the monitoring changes on its
 running infrastructure baseline `07deb4bcbf45516003e18e54b066130ab4d687d8`.
