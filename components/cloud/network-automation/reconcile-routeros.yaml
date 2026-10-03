@@ -1128,6 +1128,10 @@
         - nat-reflections
         - wan-port-forwards
 
+    - name: Reconcile scoped service reflections
+      ansible.builtin.import_tasks: tasks/reconcile-service-reflections.yaml
+      tags: [never, apply, service-reflections]
+
     - name: Prove the external provider network
       community.routeros.command:
         commands:

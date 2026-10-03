@@ -14,9 +14,6 @@ spec:
         labels:
           access.fahrican.com/netbird-router: services
       spec:
-        hostAliases:
-          - ip: 10.21.40.128
-            hostnames: [netbird.fahrican.com]
         containers:
           - name: netbird
             securityContext:

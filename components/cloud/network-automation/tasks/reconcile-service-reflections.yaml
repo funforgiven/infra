@@ -1,0 +1,77 @@
+---
+- name: Validate service reflection boundaries
+  ansible.builtin.assert:
+    that:
+      - "item.comment is match('^infra: [A-Za-z0-9 :.-]+$')"
+      - item.source_address == '10.21.40.154/32'
+      - (item.protocol, item.port, item.destination) in [('tcp', '443', '10.21.40.128'), ('udp', '3478', '10.21.40.129')]
+      - routeros_provider_network.interface == 'vlan40-external'
+    fail_msg: Service reflection must stay within the selected public endpoints.
+  loop: "{{ routeros_service_reflections }}"
+
+- name: Reconcile service reflection destination and return NAT
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/ip firewall nat find where comment="{{ item.comment }}"];
+        :if ([:len $row] > 1) do={ :error "duplicate service reflection" };
+        :if ([:len $row] = 0) do={
+        /ip firewall nat add action=dst-nat chain=dstnat disabled=no
+        comment="{{ item.comment }}"
+        in-interface={{ routeros_provider_network.interface }}
+        src-address={{ item.source_address }} dst-address-type=local
+        dst-address-list=!{{ routeros_provider_network.nat_address_list }}
+        protocol={{ item.protocol }} dst-port={{ item.port }}
+        to-addresses={{ item.destination }} to-ports={{ item.port }}
+        } else={ /ip firewall nat set $row action=dst-nat chain=dstnat disabled=no
+        in-interface={{ routeros_provider_network.interface }}
+        src-address={{ item.source_address }} dst-address-type=local
+        dst-address-list=!{{ routeros_provider_network.nat_address_list }}
+        protocol={{ item.protocol }} dst-port={{ item.port }}
+        to-addresses={{ item.destination }} to-ports={{ item.port }} };
+        :set row [/ip firewall nat find where comment="{{ item.comment }} return"];
+        :if ([:len $row] > 1) do={ :error "duplicate service reflection return" };
+        :if ([:len $row] = 0) do={
+        /ip firewall nat add action=masquerade chain=srcnat disabled=no
+        comment="{{ item.comment }} return" connection-nat-state=dstnat
+        src-address={{ item.source_address }} dst-address={{ item.destination }}
+        out-interface={{ routeros_provider_network.interface }}
+        protocol={{ item.protocol }} dst-port={{ item.port }}
+        } else={ /ip firewall nat set $row action=masquerade chain=srcnat disabled=no
+        connection-nat-state=dstnat src-address={{ item.source_address }}
+        dst-address={{ item.destination }}
+        out-interface={{ routeros_provider_network.interface }}
+        protocol={{ item.protocol }} dst-port={{ item.port }} }
+  loop: "{{ routeros_service_reflections }}"
+  loop_control:
+    label: "{{ item.comment }}"
+
+- name: Reconcile service reflection forwarding
+  community.routeros.command:
+    commands:
+      - >-
+        :local drop [/ip firewall filter find where
+        chain="{{ routeros_provider_network.forward_chain }}" and
+        comment="{{ routeros_provider_network.final_drop_comment }}"];
+        :if ([:len $drop] != 1) do={ :error "service reflection final drop missing" };
+        :local row [/ip firewall filter find where comment="{{ item.comment }}"];
+        :if ([:len $row] > 1) do={ :error "duplicate service reflection filter" };
+        :if ([:len $row] = 0) do={
+        /ip firewall filter add action=accept disabled=no
+        chain={{ routeros_provider_network.forward_chain }}
+        comment="{{ item.comment }}" connection-nat-state=dstnat
+        in-interface={{ routeros_provider_network.interface }}
+        out-interface={{ routeros_provider_network.interface }}
+        src-address={{ item.source_address }} dst-address={{ item.destination }}
+        protocol={{ item.protocol }} dst-port={{ item.port }} place-before=$drop
+        } else={ /ip firewall filter set $row action=accept disabled=no
+        chain={{ routeros_provider_network.forward_chain }} connection-nat-state=dstnat
+        in-interface={{ routeros_provider_network.interface }}
+        out-interface={{ routeros_provider_network.interface }}
+        src-address={{ item.source_address }} dst-address={{ item.destination }}
+        protocol={{ item.protocol }} dst-port={{ item.port }} };
+        :set row [/ip firewall filter find where comment="{{ item.comment }}"];
+        /ip firewall filter move $row destination=$drop
+  loop: "{{ routeros_service_reflections }}"
+  loop_control:
+    label: "{{ item.comment }}"
