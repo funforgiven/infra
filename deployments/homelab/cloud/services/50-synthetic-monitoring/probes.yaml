@@ -59,7 +59,7 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: Probe
 metadata:
-  name: mail-private-admin-denied-without-vpn
+  name: mail-private-admin-denied-from-services
   namespace: services-observability
 spec:
   interval: 60s

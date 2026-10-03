@@ -269,7 +269,7 @@ class NetworkInventoryTests(unittest.TestCase):
             self.playbook,
         )
 
-    def test_mail_backend_peer_is_isolated_and_gateway_is_vpn_only(self) -> None:
+    def test_mail_backend_peer_is_isolated_and_gateway_allows_trusted_lan_and_vpn(self) -> None:
         vpn = json.loads((ROOT / "deployments/homelab/cloud/mail-admin-vpn.json").read_text())
         peers = self.router["routeros_wireguard"]["peers"]
         peer = next(peer for peer in peers if peer["name"] == "mail-aws")
@@ -284,7 +284,7 @@ class NetworkInventoryTests(unittest.TestCase):
         resources = list(yaml.safe_load_all((ROOT / "deployments/homelab/cloud/services/20-platform-gateway/mail-admin.yaml").read_text()))
         policy = next(obj for obj in resources if obj["kind"] == "SecurityPolicy")["spec"]["authorization"]
         self.assertEqual(policy["defaultAction"], "Deny")
-        self.assertEqual(policy["rules"], [{"action": "Allow", "principal": {"clientCIDRs": ["10.21.91.0/24"]}}])
+        self.assertEqual(policy["rules"], [{"action": "Allow", "principal": {"clientCIDRs": ["10.21.10.0/24", "10.21.91.0/24"]}}])
         endpoint = next(obj for obj in resources if obj["kind"] == "EndpointSlice")
         self.assertEqual(endpoint["endpoints"][0]["addresses"], [vpn["backendAddress"]])
         wireguard_tasks = (ROOT / "components/cloud/network-automation/tasks/reconcile-routeros-wireguard.yaml").read_text()

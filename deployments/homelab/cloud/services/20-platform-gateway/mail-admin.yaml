@@ -60,4 +60,5 @@ spec:
       - action: Allow
         principal:
           clientCIDRs:
+            - 10.21.10.0/24
             - 10.21.91.0/24
