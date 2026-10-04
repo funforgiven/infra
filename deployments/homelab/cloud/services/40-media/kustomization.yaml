@@ -24,6 +24,7 @@ configMapGenerator:
       - import.sh=import.sh
       - verify-lastgenre-offline.py=verify-lastgenre-offline.py
       - normalize-provider-ids.py=normalize-provider-ids.py
+      - quarantine-live.py=quarantine-live.py
   - name: navidrome-bootstrap
     namespace: media
     files:
