@@ -23,6 +23,7 @@ configMapGenerator:
       - config.yaml=beets-config.yaml
       - import.sh=import.sh
       - verify-lastgenre-offline.py=verify-lastgenre-offline.py
+      - normalize-provider-ids.py=normalize-provider-ids.py
   - name: navidrome-bootstrap
     namespace: media
     files:

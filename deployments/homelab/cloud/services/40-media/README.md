@@ -25,6 +25,9 @@ and edition disambiguation are retained, and rejected copies remain in
 quarantine instead of being discarded by a release-group rule.
 MusicBrainz genres and linked service IDs are imported when available, and
 barcode and track count help constrain metadata searches.
+Deezer-only matches retain their provider IDs; numeric identifiers are removed
+from MusicBrainz UUID fields rather than presented as unverified MusicBrainz
+matches. The provider IDs are also written explicitly into FLAC tags.
 Missing embedded artwork is filled from the album cover; existing embedded
 pictures are preserved, and the external cover is kept for Navidrome.
 It calculates track and album ReplayGain metadata without re-encoding audio.
