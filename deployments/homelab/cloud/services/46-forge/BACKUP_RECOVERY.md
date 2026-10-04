@@ -116,3 +116,72 @@ reduction in bucket usage. The new automatic archive had not yet reached the
 next scheduled offsite backup, so it is not a second offsite-restore proof.
 The earlier completed Backblaze restore remains the qualification for the
 online archive format.
+
+## Thin storage cleanup — 2026-10-04
+
+Deleting archives had reduced filesystem usage without returning discarded
+blocks to Ceph. The backup PVC held 41.15 GiB of live files while its RBD image
+still allocated 702.17 GiB. The data PVC held 1.51 GiB while allocating
+15.74 GiB. The cache allocated 285.70 GiB and contained 232 completed archives
+totalling 237.95 GiB, all unused for more than 22 days. There were no active
+cache leases or queued/running Forgejo Actions jobs at the cleanup preflight.
+
+The cache already expired archives after seven unused days or 30 days from
+creation, but maintenance ran only during uploads. The gateway now runs its
+existing reader-safe pruning at startup and hourly, and its aggregate quota is
+64 GiB with 16 GiB free-space headroom. Its normal expiry removed all 232 stale
+archives; filesystem usage fell to about 5 MiB. The next builds need to recreate
+their caches. Repository data, Actions artifacts and recovery sources are
+separate from the cache.
+
+Ubuntu's weekly trim service used the first nonempty file in
+`/etc/fstab:/proc/self/mountinfo`, which skipped dynamic CSI mounts. All three
+services workers now use `fstrim --all --verbose --quiet-unsupported` on the
+existing weekly schedule. The policy update reloaded systemd without restarting
+kubelet or application pods. Scoped initial trims verified the live PVC/PV
+binding, Cinder volume identity, owning pod and mounted filesystem device before
+returning unused blocks from the backup, data and cache filesystems. Their PVC
+sizes remain unchanged; provisioned capacity is distinct from allocated storage.
+
+Three released September 6 restore-test PVs still had `Retain` reclaim policy
+after their scratch claims disappeared. The `forge-restore` namespace had no
+pods or PVCs, and their Cinder volumes were available with no attachments.
+Conditional JSON Patch checked each PV's UID, resource version, Released phase,
+scratch StorageClass, claim reference and Cinder volume handle before changing
+its reclaim policy to `Delete`. CSI removed the PVs and backing volumes:
+
+- `42642d30-9d85-4c91-adf9-50588f7f3f65`
+- `14268aff-8aee-4137-bf5d-5f39014f772e`
+- `5924d53e-2b57-4d8a-98c3-dc9008bfa404`
+
+After all three trims completed, the directly measured RBD allocations were:
+
+| Forgejo storage | Before (GiB) | After (GiB) |
+| --- | ---: | ---: |
+| Live recovery archive/native-image volume | 702.17 | 43.07 |
+| Build cache volume | 285.70 | 0.92 |
+| Repository/application volume | 15.74 | 3.20 |
+| Three abandoned restore copies combined | 44.97 | Removed |
+
+At 02:19 UTC, Ceph reported `HEALTH_OK` and 1,791,625,392,128 raw bytes used
+out of 12,242,440,175,616 bytes total. The pre-cleanup reading was
+5,017,692,176,384 raw bytes used. This is about 3.23 TB of reclaimed physical
+space, reducing utilization from 41.0% to 14.6%. These pool-wide readings include
+replication and concurrent changes by other workloads; the table records only
+the identified Forgejo images. Do not multiply filesystem usage or provisioned
+PVC sizes to claim the measured physical reduction.
+
+The successful full restore `forge-qualification-20261001030014`, from
+`services-daily-20261001023003`, remains the offsite qualification. It completed
+on October 1 at 03:52:51 UTC with no errors; its Restore and Job evidence were
+preserved. Cleanup verified the SHA-256 of the current local archive
+`forgejo-20261004T001303Z-fd6e83bc.tar`, the native Windows/macOS manifest hashes
+and file sizes, and SQLite's quick integrity check. Forgejo's original pod UID
+remained unchanged. All services nodes were Ready without disk pressure, both
+worker policy/network DaemonSets were 3/3 Ready, Matrix services were Ready,
+the encrypted alert queue was empty and no actionable alerts were firing.
+
+Shared Backblaze/Kopia objects and retention were untouched. Native images,
+current recovery archives and protected RBD parents used by live VM clones were
+preserved. This cleanup measures local Ceph allocation, not a reduction in
+offsite bucket usage or provisioned PVC capacity.
