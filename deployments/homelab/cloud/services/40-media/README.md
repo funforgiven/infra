@@ -19,9 +19,10 @@ only files accepted by Beets.
 
 Beets prefers MusicBrainz metadata with Deezer as an additional metadata source,
 writes canonical tags and artwork, and moves accepted tracks to the
-artist/album/track library. Duplicate checks use the artist, album title and
-specific MusicBrainz release ID, preserving distinct editions within a release
-group. Release titles and edition disambiguation are retained.
+artist/album/track library. Duplicate checks use the artist and album title;
+different versions sharing those names need explicit review. Release titles
+and edition disambiguation are retained, and rejected copies remain in
+quarantine instead of being discarded by a release-group rule.
 MusicBrainz genres and linked service IDs are imported when available, and
 barcode and track count help constrain metadata searches.
 Missing embedded artwork is filled from the album cover; existing embedded
