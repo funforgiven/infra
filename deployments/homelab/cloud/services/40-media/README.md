@@ -1,30 +1,47 @@
-# Purchased music workflow
+# Music library workflow
 
 SFTPGo is a temporary upload inbox, Beets owns the library, and Navidrome serves
 only files accepted by Beets.
 
 ## Add music
 
-1. Purchase and download the album manually. Store and payment credentials stay
-   in the password manager and are never provided to a workload.
+1. Download the album on the workstation. Streamrip can use the local Deezer
+   account configuration; keep provider and payment credentials outside this
+   repository and never provide them to a workload. Keep full albums together.
 2. Sign in to <https://upload.fahrican.com/web/client> with ZITADEL and upload
    the album as received. The upload account has no local password or other file
    transfer access.
-3. SFTPGo writes uploads atomically. Beets waits until the complete inbox has
+3. SFTPGo writes files atomically. Beets waits until the complete inbox has
    been unchanged for two minutes, then imports confident MusicBrainz matches
    without prompting.
 4. Listen at <https://music.fahrican.com> or through an OpenSubsonic client such
    as Symfonium.
 
-Beets uses the MusicBrainz release-group ID as album identity, writes canonical
-tags and artwork, and moves accepted tracks to the artist/album/track library.
+Beets prefers MusicBrainz metadata with Deezer as an additional metadata source,
+writes canonical tags and artwork, and moves accepted tracks to the
+artist/album/track library. Duplicate checks use the artist, album title and
+specific MusicBrainz release ID, preserving distinct editions within a release
+group. Release titles and edition disambiguation are retained.
+MusicBrainz genres and linked service IDs are imported when available, and
+barcode and track count help constrain metadata searches.
+Missing embedded artwork is filled from the album cover; existing embedded
+pictures are preserved, and the external cover is kept for Navidrome.
 It calculates track and album ReplayGain metadata without re-encoding audio.
 Navidrome mounts that library read-only and scans once per minute.
 
 Rejected, duplicate, unsupported, and unmatched files move to a timestamped
 directory under `quarantine`. Quarantine is not visible to SFTPGo or Navidrome
-and is retained for 24 hours. Manually named review directories are kept. A
-failed Beets run leaves the inbox for the next attempt.
+and is retained until reviewed. Inspect and resolve quarantine explicitly; no
+scheduled job deletes unmatched music or uncertain duplicates. A failed Beets
+run leaves the inbox for the next attempt.
+
+For a large batch, prepare complete album directories in a staging directory
+outside `inbox`, then rename them into `inbox` after validation. The two-minute
+quiet period cannot guarantee completeness if an upload pauses for longer.
+Refreshing an existing album is a reviewed operation: preserve its audio when
+decoded PCM matches, merge missing source metadata, and compare artwork before
+replacing it. The automatic inbox never overwrites an existing release merely
+because another copy arrives.
 
 Use Picard for an album that needs a manual MusicBrainz choice, then upload the
 corrected files again. There is no automatic release watcher or purchasing bot.
