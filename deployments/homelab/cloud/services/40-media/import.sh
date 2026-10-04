@@ -63,6 +63,8 @@ fi
 
 if find "$inbox" -type f -print -quit | grep -q .; then
   "$beet" import "$inbox"
+  /lsiopy/bin/python /opt/beets/normalize-provider-ids.py \
+    --library "$state/library.db" --directory "$library"
 fi
 
 # Successful imports have already moved their audio into the library. Preserve
