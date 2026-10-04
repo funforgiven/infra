@@ -73,6 +73,8 @@ spec:
           mountPath: /host/etc/systemd/journald.conf.d
         - name: timer-config
           mountPath: /host/etc/systemd/system/logrotate.timer.d
+        - name: trim-config
+          mountPath: /host/etc/systemd/system/fstrim.service.d
         - name: logs
           mountPath: /host/var/log
         - name: rotation-state
@@ -124,6 +126,10 @@ spec:
       - name: timer-config
         hostPath:
           path: /etc/systemd/system/logrotate.timer.d
+          type: DirectoryOrCreate
+      - name: trim-config
+        hostPath:
+          path: /etc/systemd/system/fstrim.service.d
           type: DirectoryOrCreate
       - name: logs
         hostPath:
