@@ -27,10 +27,11 @@ import:
   quiet_fallback: skip
   autotag: yes
   duplicate_keys:
-    # A release group can contain expanded editions and different recordings.
-    # Names also distinguish source-tagged albums with no MusicBrainz ID.
-    album: albumartist album mb_albumid
-    item: artist title mb_trackid
+    # Beets 2.13.1 does not map chosen AlbumInfo IDs to mb_* fields when
+    # checking duplicates. Its native name keys work for tagged and as-is
+    # imports; retain rejected copies for any edition/quality review.
+    album: albumartist album
+    item: artist title
   duplicate_action: skip
   log: /state/import.log
 
@@ -50,11 +51,16 @@ embedart:
   remove_art_file: no
 
 musicbrainz:
+  # A metadata-provider change is expected when enriching source-tagged files.
+  data_source_mismatch_penalty: 0.0
   genres: yes
   extra_tags: [barcode, tracks]
   external_ids:
     deezer: yes
     spotify: yes
+
+deezer:
+  data_source_mismatch_penalty: 0.0
 
 chroma:
   auto: yes
