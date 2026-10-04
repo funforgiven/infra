@@ -65,6 +65,9 @@ if find "$inbox" -type f -print -quit | grep -q .; then
   "$beet" import "$inbox"
   /lsiopy/bin/python /opt/beets/normalize-provider-ids.py \
     --library "$state/library.db" --directory "$library"
+  /lsiopy/bin/python /opt/beets/quarantine-live.py \
+    --library "$state/library.db" --directory "$library" \
+    --quarantine "$quarantine" --standard-vocals-artist Ado
 fi
 
 # Successful imports have already moved their audio into the library. Preserve

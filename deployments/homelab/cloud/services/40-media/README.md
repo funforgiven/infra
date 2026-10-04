@@ -33,6 +33,16 @@ pictures are preserved, and the external cover is kept for Navidrome.
 It calculates track and album ReplayGain metadata without re-encoding audio.
 Navidrome mounts that library read-only and scans once per minute.
 
+The listening library is studio-only. After import, recordings explicitly
+identified as live by MusicBrainz release types or concert-version markers in
+album/track titles move out of the catalog and into retained quarantine. This
+also handles live bonus tracks within an otherwise studio release. A studio
+song title merely containing the word "live" does not trigger this rule.
+Ado's intake also keeps standard vocal versions: explicitly marked remixes,
+piano versions, instrumentals, a cappella, speed variants, and stripped versions
+go to quarantine. Other artists' studio bonus tracks retain their release's
+track list.
+
 Rejected, duplicate, unsupported, and unmatched files move to a timestamped
 directory under `quarantine`. Quarantine is not visible to SFTPGo or Navidrome
 and is retained until reviewed. Inspect and resolve quarantine explicitly; no
