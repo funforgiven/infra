@@ -255,5 +255,42 @@ class GatewayTests(unittest.TestCase):
             self.store.prune(6)
         self.assertFalse(self.store.archive(identity).exists()); self.assertEqual(outside.read_text(), "preserve")
 
+    def test_idle_maintenance_expires_archives_without_new_uploads(self):
+        identity = self.complete()
+        outside = self.root / "unrelated"; outside.write_text("preserve")
+        with self.store.lock:
+            self.store.db.execute("UPDATE entries SET used=? WHERE id=?", (int(time.time()) - 8 * 86400, identity))
+            self.store.db.commit()
+        stop = threading.Event()
+        with patch.object(stop, "wait", return_value=True):
+            self.store.maintain(stop)
+        self.assertFalse(self.store.archive(identity).exists())
+        self.assertEqual(outside.read_text(), "preserve")
+        self.assertEqual(self.store.db.execute("SELECT COUNT(*) FROM entries").fetchone()[0], 0)
+
+    def test_idle_maintenance_keeps_readers_and_recovers_after_failure(self):
+        identity = self.complete()
+        with self.store.lock:
+            self.store.db.execute("UPDATE entries SET used=? WHERE id=?", (int(time.time()) - 8 * 86400, identity))
+            self.store.db.commit()
+            self.store.reading[identity] = 1
+        stop = threading.Event()
+        with patch.object(stop, "wait", return_value=True):
+            self.store.maintain(stop)
+        self.assertTrue(self.store.archive(identity).exists())
+        del self.store.reading[identity]
+        prune = self.store.prune
+        attempts = 0
+        def fail_once():
+            nonlocal attempts
+            attempts += 1
+            if attempts == 1:
+                raise sqlite3.OperationalError("injected")
+            prune()
+        with patch.object(self.store, "prune", side_effect=fail_once), patch.object(stop, "wait", side_effect=[False, True]):
+            self.store.maintain(stop)
+        self.assertEqual(attempts, 2)
+        self.assertFalse(self.store.archive(identity).exists())
+
 
 if __name__ == "__main__": unittest.main(verbosity=2)

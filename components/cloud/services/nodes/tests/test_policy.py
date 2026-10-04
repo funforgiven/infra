@@ -76,6 +76,31 @@ class WorkerPolicyTests(unittest.TestCase):
             self.assertEqual(ROTATION, (root / policy.RSYSLOG).read_text())
             self.assertFalse((root / policy.JOURNAL).exists())
             self.assertFalse((root / policy.TIMER).exists())
+            self.assertFalse((root / policy.TRIM).exists())
+
+    def test_trim_includes_dynamic_mounts_without_restarting_kubelet(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            desired = {
+                policy.KUBELET: policy.kubelet_policy(CONFIG),
+                policy.RSYSLOG: policy.rsyslog_policy(ROTATION),
+                policy.JOURNAL: policy.JOURNAL_CONFIG,
+                policy.TIMER: policy.TIMER_CONFIG,
+            }
+            for path, content in desired.items():
+                policy.write(root / path, content)
+            with patch.object(policy.subprocess, "run") as run:
+                run.return_value.returncode = 0
+                policy.apply(root)
+                commands = [call.args[0] for call in run.call_args_list]
+                self.assertIn(("/usr/bin/systemctl", "daemon-reload"), commands)
+                self.assertFalse(any("restart" in command for command in commands))
+            self.assertEqual(policy.TRIM_CONFIG, (root / policy.TRIM).read_text())
+            self.assertIn("fstrim --all", policy.TRIM_CONFIG)
+            self.assertNotIn("--listed-in", policy.TRIM_CONFIG)
+            with patch.object(policy.subprocess, "run") as run:
+                policy.apply(root)
+                run.assert_not_called()
 
     def test_control_planes_are_rejected_without_changes(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -275,6 +275,18 @@ class Store:
             require(row[3] == 1, 404)
         return row
 
+    def maintain(self, stop, interval=3600):
+        # Prune at startup and while idle too, under the same lock that protects
+        # readers and uploads. Cache failure keeps normal quota checks active.
+        while not stop.is_set():
+            try:
+                with self.lock:
+                    self.prune()
+            except (Refused, OSError, sqlite3.Error):
+                print("Cache maintenance deferred; upload quotas remain enforced", flush=True)
+            if stop.wait(interval):
+                return
+
 
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
@@ -522,6 +534,8 @@ def main():
     args = parser.parse_args()
     os.umask(0o077)
     store = Store(json.loads(args.config.read_text()))
+    maintenance_stop = threading.Event()
+    threading.Thread(target=store.maintain, args=(maintenance_stop,), daemon=True).start()
     servers = []
     for port, control in ((8080, False), (8082, True)):
         server = Server(("0.0.0.0", port), store, control)

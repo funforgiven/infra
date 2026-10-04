@@ -107,6 +107,14 @@ archives. The initial activation rotates/compresses oversized logs and vacuums
 archived journals. This retention policy trades older local logs for space
 needed by running workloads.
 
+The existing weekly `fstrim.timer` includes all mounted filesystems that support
+discard. Ubuntu's default `--listed-in /etc/fstab:/proc/self/mountinfo` stops at
+the nonempty fstab and misses dynamically mounted Cinder volumes. The worker
+policy overrides only the service command with `fstrim --all --verbose
+--quiet-unsupported`; the weekly schedule stays in place. Trim returns unused
+filesystem blocks to thin storage without deleting live files. A trim-only
+policy change reloads systemd without restarting kubelet or workload pods.
+
 Initial activation is performed one worker at a time with the reviewed
 `components/cloud/services/nodes/apply_policy.py`, using the existing Multus
 host access to launch a temporary host systemd service. Direct interactive exec
@@ -122,12 +130,12 @@ The installer retains original configuration under
 `/var/lib/services-node-policy` with mode 0700 and restores previous settings if
 an activation command fails. It reads the host filesystem through a read-only
 mount, with writes limited to the two existing configuration files, journal and
-timer drop-in directories, local logs and policy/rotation state. Its init
+timer and trim-service drop-in directories, local logs and policy/rotation state. Its init
 container has explicit chroot/file capabilities; the retained container runs
 without root, capabilities or host mounts. API token mounting is disabled and
 all pod networking is denied. The script rejects control planes and unexpected
 configuration before writing. Removal of the DaemonSet does not undo installed
-host configuration; restore the saved files and remove its two drop-ins before
+host configuration; restore the saved files and remove its three retention drop-ins before
 reloading systemd and restarting the affected services if rolling back.
 
 On 2026-10-04, all three workers passed serial activation with live 70%/60%

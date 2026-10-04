@@ -141,6 +141,16 @@ accurate. Neither native guest receives the cloud credential or enrollment PAT.
 
 ## Backup and recovery
 
+Compiler cache archives have a 64 GiB aggregate budget, with 16 GiB filesystem
+headroom for uploads. The gateway evicts by least recent use and expires
+archives unused for seven days or created more than 30 days ago. Maintenance
+runs at startup and hourly even when no new uploads arrive. Active downloads
+and recently accessed archives are protected by the gateway's existing lock
+and reader tracking. Eviction causes a cold build; repository data, Actions
+artifacts and native recovery images are stored separately. The 320 GiB cache
+PVC stays provisioned; its thin storage allocation is reclaimed through the
+worker's weekly trim policy rather than shrinking the filesystem in place.
+
 `forge-snapshot-backup` runs every six hours. The existing Cinder CSI driver
 captures a point-in-time snapshot of the single volume containing SQLite, Git,
 LFS, packages, identity configuration, Actions logs and artifacts. A disposable

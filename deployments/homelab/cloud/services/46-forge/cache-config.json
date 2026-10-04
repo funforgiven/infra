@@ -30,6 +30,6 @@
       ]
     }
   },
-  "quota_bytes": 257698037760,
+  "quota_bytes": 68719476736,
   "minimum_free_bytes": 17179869184
 }
