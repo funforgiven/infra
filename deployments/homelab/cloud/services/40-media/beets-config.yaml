@@ -5,8 +5,11 @@ create_backup_before_migrations: yes
 
 plugins:
   - musicbrainz
+  - deezer
   - chroma
   - fetchart
+  - embedart
+  - mbsync
   - replaygain
   - lastgenre
   - badfiles
@@ -24,12 +27,11 @@ import:
   quiet_fallback: skip
   autotag: yes
   duplicate_keys:
-    album: mb_releasegroupid
-    item: artist title
+    # A release group can contain expanded editions and different recordings.
+    # Names also distinguish source-tagged albums with no MusicBrainz ID.
+    album: albumartist album mb_albumid
+    item: artist title mb_trackid
   duplicate_action: skip
-  set_fields:
-    album: "$release_group_title"
-    albumdisambig: ""
   log: /state/import.log
 
 paths:
@@ -40,6 +42,19 @@ paths:
 fetchart:
   auto: yes
   cautious: yes
+
+embedart:
+  auto: yes
+  # Fill missing pictures without replacing a source's better embedded cover.
+  ifempty: yes
+  remove_art_file: no
+
+musicbrainz:
+  genres: yes
+  extra_tags: [barcode, tracks]
+  external_ids:
+    deezer: yes
+    spotify: yes
 
 chroma:
   auto: yes
