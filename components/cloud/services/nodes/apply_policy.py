@@ -13,6 +13,7 @@ KUBELET = "var/lib/kubelet/config.yaml"
 RSYSLOG = "etc/logrotate.d/rsyslog"
 JOURNAL = "etc/systemd/journald.conf.d/90-services-retention.conf"
 TIMER = "etc/systemd/system/logrotate.timer.d/90-services-retention.conf"
+TRIM = "etc/systemd/system/fstrim.service.d/90-services-volumes.conf"
 STATE = "var/lib/services-node-policy"
 JOURNAL_CONFIG = """[Journal]
 SystemMaxUse=512M
@@ -25,6 +26,10 @@ OnCalendar=
 OnCalendar=hourly
 RandomizedDelaySec=5m
 Persistent=true
+"""
+TRIM_CONFIG = """[Service]
+ExecStart=
+ExecStart=/sbin/fstrim --all --verbose --quiet-unsupported
 """
 
 
@@ -141,7 +146,7 @@ def apply(root, dry_run=False):
         raise ValueError("Worker policy must not run on a control plane")
     original = {
         name: (root / name).read_text() if (root / name).exists() else None
-        for name in (KUBELET, RSYSLOG, JOURNAL, TIMER)
+        for name in (KUBELET, RSYSLOG, JOURNAL, TIMER, TRIM)
     }
     if original[KUBELET] is None or original[RSYSLOG] is None:
         raise ValueError("Expected Magnum worker configuration is missing")
@@ -150,6 +155,7 @@ def apply(root, dry_run=False):
         RSYSLOG: rsyslog_policy(original[RSYSLOG]),
         JOURNAL: JOURNAL_CONFIG,
         TIMER: TIMER_CONFIG,
+        TRIM: TRIM_CONFIG,
     }
     changed = [name for name, value in planned.items() if original[name] != value]
     print("Worker policy changes:", ", ".join(changed) or "none", flush=True)
@@ -181,8 +187,9 @@ def apply(root, dry_run=False):
         for name in changed:
             write(root / name, planned[name])
         host("/usr/sbin/logrotate", "--debug", "/etc/logrotate.conf")
-        if TIMER in changed:
+        if TIMER in changed or TRIM in changed:
             host("/usr/bin/systemctl", "daemon-reload")
+        if TIMER in changed:
             host("/usr/bin/systemctl", "restart", "logrotate.timer")
         if JOURNAL in changed:
             host("/usr/bin/systemctl", "restart", "systemd-journald.service")
