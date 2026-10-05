@@ -99,8 +99,10 @@ kubeconfig and OpenStack credentials live only in memory.
    keys and a local bootstrap credential, preserving existing keys on rerun.
 2. Through the services access wrapper, run `netbird-admin backup-credentials`.
    It reuses the existing service-cluster B2 writer only inside its existing
-   `services/kubernetes/` prefix. NetBird uses the separate `netbird/postgresql/`
-   child prefix; it does not use AWS mail credentials.
+   `services/kubernetes/` prefix. NetBird uses the auxiliary
+   `plugins/netbird/postgresql/` child prefix accepted by Velero's storage layout;
+   an arbitrary top-level child makes Velero reject the entire backup location.
+   It does not use AWS mail credentials.
 3. Reconcile the identity application, controllers, database and server. Verify
    PostgreSQL and the first Barman backup before enrolling devices.
 4. Through undercloud access, run `netbird-admin identity-credentials` to save
@@ -151,7 +153,7 @@ own peers. The existing administrator peer is labelled `parmigiano`, but the
 label alone does not identify the physical device holding its private key.
 
 NetBird database recovery uses the Barman archive at
-`s3://fahrican-cloud-recovery/services/kubernetes/netbird/postgresql/` with the
+`s3://fahrican-cloud-recovery/services/kubernetes/plugins/netbird/postgresql/` with the
 SOPS-encrypted database password, store encryption key, cookie key and relay
 secret from this repository. Restore to an isolated CloudNativePG cluster
 first, using a different destination prefix for its own WAL archive. Inspect
