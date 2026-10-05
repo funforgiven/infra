@@ -6,7 +6,10 @@ metadata:
 spec:
   retentionPolicy: 30d
   configuration:
-    destinationPath: s3://fahrican-cloud-recovery/services/kubernetes/netbird/postgresql/
+    # Velero validates every top-level child of its storage prefix. Keep this
+    # auxiliary archive in its supported plugins directory, outside backups
+    # and kopia, while retaining the existing prefix-scoped B2 credential.
+    destinationPath: s3://fahrican-cloud-recovery/services/kubernetes/plugins/netbird/postgresql/
     endpointURL: https://s3.us-west-004.backblazeb2.com
     s3Credentials:
       accessKeyId:
