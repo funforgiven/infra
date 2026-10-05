@@ -192,17 +192,29 @@ def check_room(client, room_id, allowed_users, pins):
         raise ValueError("unexpected room member")
     if set(allowed_users) - set(room.users):
         raise ValueError("intended recipient has not joined")
+    excluded = 0
     for user_id in room.users:
         devices = list(client.device_store.active_user_devices(user_id))
         if user_id != client.user_id and not devices:
             raise ValueError("recipient has no queried devices")
+        approved = 0
         for device in devices:
             if user_id == client.user_id and device.id == client.device_id:
                 continue
             fingerprint = pins.get(user_id, {}).get(device.id)
             if fingerprint != device.ed25519:
-                raise ValueError("unapproved device")
-            client.verify_device(device)
+                # nio's blacklist excludes this device from room-key sharing.
+                # Ignoring verification would share keys with the new device.
+                client.blacklist_device(device)
+                excluded += 1
+            else:
+                # Verification also replaces a previous local blacklist and
+                # rotates the outbound session when approval changes.
+                client.verify_device(device)
+                approved += 1
+        if user_id != client.user_id and not approved:
+            raise ValueError("recipient has no approved devices")
+    return excluded
 
 
 async def serve(config_file, state):
@@ -212,6 +224,7 @@ async def serve(config_file, state):
     client = None
     failures = 0
     last_delivery = 0
+    unapproved_devices = 0
     stopping = asyncio.Event()
     state_lock = asyncio.Lock()
 
@@ -245,6 +258,7 @@ async def serve(config_file, state):
         count, age = queue.stats()
         text = f"matrix_relay_queue_depth {count}\nmatrix_relay_oldest_seconds {age}\n"
         text += f"matrix_relay_delivery_failures_total {failures}\nmatrix_relay_last_delivery_seconds {last_delivery}\n"
+        text += f"matrix_relay_unapproved_devices {unapproved_devices}\n"
         return web.Response(text=text, content_type="text/plain")
 
     async def backup(_request):
@@ -256,7 +270,7 @@ async def serve(config_file, state):
         return web.Response(text="ok")
 
     async def deliver():
-        nonlocal client, failures, last_delivery
+        nonlocal client, failures, last_delivery, unapproved_devices
         heartbeat_at = 0
         while not stopping.is_set():
             try:
@@ -306,10 +320,10 @@ async def serve(config_file, state):
                     if client.should_query_keys:
                         if not isinstance(await client.keys_query(), KeysQueryResponse):
                             raise ValueError("device refresh failed")
-                    # Delivery health includes the intended recipients even when
-                    # the queue is empty. An absent member or unapproved device
-                    # must stop both alert delivery and the independent heartbeat.
-                    check_room(
+                    # Every intended recipient needs an approved active device.
+                    # Additional unapproved devices receive no room keys and
+                    # do not interrupt delivery to existing approved devices.
+                    unapproved_devices = check_room(
                         client,
                         settings["room_id"],
                         settings["allowed_users"],
