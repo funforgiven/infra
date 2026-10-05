@@ -7,4 +7,4 @@ spec:
   template:
     metadata:
       annotations:
-        matrix.fahrican.com/runtime-config: e73edb02b73e69c3b0889207192952af674bf5e3d020acaaaad041223f0cc49c
+        matrix.fahrican.com/runtime-config: 3c08792b5ee8da2f0092c5efd75a5bbbe2ac6bb6b860b6a5a3dd8a24a87410c0
