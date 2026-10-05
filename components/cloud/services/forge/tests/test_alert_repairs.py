@@ -111,6 +111,49 @@ class MetricsTests(unittest.TestCase):
 
 
 class AlertTests(unittest.TestCase):
+    def test_undercloud_recovered_history_and_terminal_failures(self):
+        document = yaml.safe_load((ROOT / 'deployments/homelab/cloud/undercloud/35-observability/job-health.yaml').read_text())
+        groups = document['spec']['groups']
+        scheduled = next(r for g in groups for r in g['rules']
+                         if r.get('alert') == 'KubeJobFailed' and 'unrecovered_failure' in r['expr'])
+        standalone = next(r for g in groups for r in g['rules']
+                          if r.get('alert') == 'KubeJobFailed' and 'job_name' in r['expr'])
+        tests = []
+        for success, suspended, terminal, owned in ((200, False, True, True),
+                (50, False, True, True), (None, False, True, True),
+                (None, True, True, True), (None, False, False, True),
+                (None, False, True, False)):
+            labels = 'namespace="openstack",job_name="reconcile-old"'
+            cj = 'namespace="openstack",cronjob="reconcile"'
+            series = [
+                {'series': f'kube_job_status_start_time{{{labels}}}', 'values': '100+0x20'},
+                {'series': f'kube_job_status_failed{{{labels}}}', 'values': '1+0x20'},
+                {'series': f'kube_job_failed{{{labels},condition="true"}}', 'values': f'{int(terminal)}+0x20'},
+                {'series': f'kube_cronjob_spec_suspend{{{cj}}}', 'values': f'{int(suspended)}+0x20'},
+            ]
+            if owned:
+                series.append({'series': f'kube_job_owner{{{labels},owner_kind="CronJob",owner_name="reconcile"}}', 'values': '1+0x20'})
+            if success is not None:
+                series.append({'series': f'kube_cronjob_status_last_successful_time{{{cj}}}', 'values': f'{success}+0x20'})
+            expected = []
+            if terminal and (not owned or (not suspended and (success is None or success < 100))):
+                rule = scheduled if owned else standalone
+                expected = [{'exp_labels': {'namespace': 'openstack',
+                    ('cronjob' if owned else 'job_name'): ('reconcile' if owned else 'reconcile-old'),
+                    'severity': 'warning'}, 'exp_annotations': {
+                        **rule['annotations'], 'description': (
+                            'CronJob openstack/reconcile has no successful completion since its latest failed run.'
+                            if owned else 'Job openstack/reconcile-old failed to complete. Inspect its logs before removing it.')}}]
+            tests.append({'interval': '1m', 'input_series': series,
+                'alert_rule_test': [{'eval_time': '16m', 'alertname': 'KubeJobFailed', 'exp_alerts': expected}]})
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)
+            (path / 'rules.yml').write_text(yaml.safe_dump({'groups': groups}))
+            (path / 'tests.yml').write_text(yaml.safe_dump({'rule_files': ['rules.yml'], 'evaluation_interval': '1m', 'tests': tests}))
+            result = subprocess.run([shutil.which('promtool') or 'promtool', 'test', 'rules', 'tests.yml'],
+                cwd=path, capture_output=True, text=True, timeout=60)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_recovered_jobs_and_duplicate_notifications(self):
         groups = []
         for filename in ('12-observability/persistent-targets.yaml', '24-unifi/monitoring.yaml',

@@ -1,0 +1,50 @@
+# Retained failed CronJob history resolves after a newer successful run.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: job-health
+  namespace: observability
+spec:
+  groups:
+    - name: undercloud-job-health
+      rules:
+        - record: undercloud_cronjob_last_failed_start_timestamp_seconds
+          expr: |-
+            max by (namespace, cronjob) (
+              label_replace(
+                (kube_job_status_start_time
+                 and on (namespace, job_name) (kube_job_failed{condition="true"} == 1))
+                * on (namespace, job_name) group_left (owner_name)
+                max by (namespace, job_name, owner_name) (kube_job_owner{owner_kind="CronJob"}),
+                "cronjob", "$1", "owner_name", "(.+)"
+              )
+            )
+        - record: undercloud_cronjob_unrecovered_failure
+          expr: |-
+            (
+              (undercloud_cronjob_last_failed_start_timestamp_seconds
+               > on (namespace, cronjob)
+               max by (namespace, cronjob) (kube_cronjob_status_last_successful_time))
+              or
+              (undercloud_cronjob_last_failed_start_timestamp_seconds
+               unless on (namespace, cronjob)
+               max by (namespace, cronjob) (kube_cronjob_status_last_successful_time))
+            ) and on (namespace, cronjob) (max by (namespace, cronjob) (kube_cronjob_spec_suspend) == 0)
+        - alert: KubeJobFailed
+          expr: undercloud_cronjob_unrecovered_failure
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: Scheduled job has not recovered.
+            description: CronJob {{ $labels.namespace }}/{{ $labels.cronjob }} has no successful completion since its latest failed run.
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+        - alert: KubeJobFailed
+          expr: max by (namespace, job_name) (kube_job_failed{condition="true"} == 1) unless on (namespace, job_name) kube_job_owner{owner_kind="CronJob"}
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: Job failed to complete.
+            description: Job {{ $labels.namespace }}/{{ $labels.job_name }} failed to complete. Inspect its logs before removing it.
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed

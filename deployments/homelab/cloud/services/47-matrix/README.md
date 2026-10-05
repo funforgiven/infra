@@ -209,9 +209,10 @@ read identity/DNS/AWS controller outputs; Matrix workloads run in `services-v1`.
    → Encryption → Advanced, then copy **Session ID** and **Session key**. The
    Session key is the public device fingerprint; never use a recovery key or
    access token. Spaces in Element's displayed key are accepted. Every intended
-   recipient must join the room. A new or changed device pauses delivery and the
-   independent heartbeat until explicitly approved;
-   the relay never falls back to plaintext. The bot retains device
+   recipient must join the room and retain at least one approved active device.
+   New or changed devices receive no encryption keys until explicitly approved;
+   alerts and the independent heartbeat continue through existing approved
+   devices. The relay never falls back to plaintext. The bot retains device
    `INFRA_ALERTS` and its crypto store on the `matrix-relay` PVC. Do not enroll a
    second bot with the same device against a fresh store.
 

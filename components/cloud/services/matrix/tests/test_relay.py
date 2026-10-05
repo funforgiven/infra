@@ -112,7 +112,7 @@ class EncryptionTests(unittest.TestCase):
             check_room(client, "!room:local", ["@bot:local", "@owner:local"], {})
         client.verify_device.assert_not_called()
 
-    def test_additional_unapproved_device_pauses_delivery(self):
+    def test_additional_unapproved_device_is_excluded_without_stalling_delivery(self):
         client = MagicMock(user_id="@bot:local", device_id="BOT")
         client.rooms = {
             "!room:local": MagicMock(encrypted=True, users={"@owner:local": object()})
@@ -120,13 +120,77 @@ class EncryptionTests(unittest.TestCase):
         approved = MagicMock(id="PHONE", ed25519="approved")
         new_device = MagicMock(id="LAPTOP", ed25519="new")
         client.device_store.active_user_devices.return_value = [approved, new_device]
-        with self.assertRaisesRegex(ValueError, "unapproved device"):
-            check_room(
-                client,
-                "!room:local",
-                ["@owner:local"],
-                {"@owner:local": {"PHONE": "approved"}},
-            )
+        self.assertEqual(check_room(
+            client,
+            "!room:local",
+            ["@owner:local"],
+            {"@owner:local": {"PHONE": "approved"}},
+        ), 1)
+        client.verify_device.assert_called_once_with(approved)
+        client.blacklist_device.assert_called_once_with(new_device)
+
+    def test_changed_fingerprint_is_excluded_and_last_approved_device_is_required(self):
+        client = MagicMock(user_id="@bot:local", device_id="BOT")
+        client.rooms = {
+            "!room:local": MagicMock(encrypted=True, users={"@owner:local": object()})
+        }
+        device = MagicMock(id="PHONE", ed25519="changed")
+        client.device_store.active_user_devices.return_value = [device]
+        with self.assertRaisesRegex(ValueError, "no approved devices"):
+            check_room(client, "!room:local", ["@owner:local"],
+                       {"@owner:local": {"PHONE": "original"}})
+        client.blacklist_device.assert_called_once_with(device)
+        client.verify_device.assert_not_called()
+
+    def test_approval_of_excluded_device_restores_key_sharing(self):
+        from nio import AsyncClient, AsyncClientConfig, MatrixRoom
+        from nio.crypto import OlmDevice
+
+        with tempfile.TemporaryDirectory() as directory:
+            client = AsyncClient("https://example.invalid", "@bot:local",
+                                 device_id="BOT", store_path=directory,
+                                 config=AsyncClientConfig(encryption_enabled=True))
+            client.restore_login("@bot:local", "BOT", "synthetic-token")
+            room = MatrixRoom("!room:local", "@bot:local", encrypted=True)
+            room.add_member("@owner:local", "Owner", None)
+            client.rooms[room.room_id] = room
+            device = OlmDevice("@owner:local", "PHONE",
+                               {"ed25519": "fingerprint", "curve25519": "curve"})
+            client.olm.device_store.add(device)
+            client.blacklist_device(device)
+            self.assertTrue(client.olm.is_device_blacklisted(device))
+            check_room(client, room.room_id, ["@owner:local"],
+                       {"@owner:local": {"PHONE": "fingerprint"}})
+            self.assertTrue(client.olm.is_device_verified(device))
+            self.assertFalse(client.olm.is_device_blacklisted(device))
+
+    def test_encryption_keys_are_shared_only_with_pinned_devices(self):
+        from nio import AsyncClient, AsyncClientConfig, MatrixRoom
+        from nio.crypto import OlmAccount, OlmDevice, OutboundSession
+
+        with tempfile.TemporaryDirectory() as directory:
+            client = AsyncClient("https://example.invalid", "@bot:local",
+                                 device_id="BOT", store_path=directory,
+                                 config=AsyncClientConfig(encryption_enabled=True))
+            client.restore_login("@bot:local", "BOT", "synthetic-token")
+            room = MatrixRoom("!room:local", "@bot:local", encrypted=True)
+            room.add_member("@owner:local", "Owner", None)
+            client.rooms[room.room_id] = room
+            devices = {}
+            for name in ("PHONE", "NEW_LAPTOP"):
+                account = OlmAccount()
+                account.generate_one_time_keys(1)
+                device = OlmDevice("@owner:local", name, account.identity_keys)
+                devices[name] = device
+                client.olm.device_store.add(device)
+                key = next(iter(account.one_time_keys['curve25519'].values()))
+                session = OutboundSession(client.olm.account, device.curve25519, key)
+                client.olm.session_store.add(device.curve25519, session)
+            self.assertEqual(check_room(client, room.room_id, ["@owner:local"],
+                {"@owner:local": {"PHONE": devices['PHONE'].ed25519}}), 1)
+            recipients, encrypted = client.olm.share_group_session(room.room_id, ["@owner:local"])
+            self.assertEqual(recipients, {("@owner:local", "PHONE")})
+            self.assertEqual(set(encrypted['messages']['@owner:local']), {"PHONE"})
 
     def test_plaintext_room_and_unapproved_devices_fail_closed(self):
         client = MagicMock()
