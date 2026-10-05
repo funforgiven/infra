@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import "."
 import "bar" as Bar
+import "camera" as Camera
 import "dock" as Dock
 import "idle" as Idle
 import "launcher" as Launcher
@@ -23,6 +24,50 @@ ShellRoot {
     readonly property var audioActions: Services.AudioActions
     readonly property var launcherController: Launcher.Launcher
     readonly property var polkitOverlay: Polkit.PolkitOverlay
+
+    IpcHandler {
+        target: "camera"
+
+        function open(): void {
+            if (!camera.opened && Quickshell.screens.length > 0)
+                camera.toggleAt(null, Quickshell.screens[0], 56);
+        }
+
+        function close(): void {
+            if (camera.opened)
+                camera.dismiss();
+        }
+
+        function isVisible(): bool {
+            return camera.visible;
+        }
+
+        function selectSection(index: int): void {
+            if (index >= 0 && index < camera.sections.length)
+                camera.section = index;
+        }
+
+        function layout(): string {
+            return JSON.stringify({
+                screen: camera.selectedScreen ? camera.selectedScreen.name : "",
+                panel: camera.panelRect,
+                section: camera.section
+            });
+        }
+
+        function snapshot(): string {
+            return JSON.stringify({
+                state: Services.CameraService.state,
+                error: Services.CameraService.error,
+                busy: Services.CameraService.busy
+            });
+        }
+
+        function command(json: string): void {
+            var request = JSON.parse(json);
+            Services.CameraService.request(request.action, request);
+        }
+    }
 
     IpcHandler {
         target: "diagnostics"
@@ -119,12 +164,17 @@ ShellRoot {
 
     Bar.Bar {
         onMixerRequested: (anchorItem, screen, topInset) => mixer.toggleAt(anchorItem, screen, topInset)
+        onCameraRequested: (anchorItem, screen, topInset) => camera.toggleAt(anchorItem, screen, topInset)
     }
 
     Dock.Dock {}
 
     Mixer.MixerPopup {
         id: mixer
+    }
+
+    Camera.CameraPopup {
+        id: camera
     }
 
     Idle.AmoledOverlay {
