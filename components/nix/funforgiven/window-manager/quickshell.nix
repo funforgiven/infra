@@ -227,6 +227,7 @@ in
             readonly property string dockOutput: ${qmlString primaryOutput.connector}
             readonly property string dockMode: "always-visible"
             readonly property string audioController: ${qmlString (lib.getExe' audioControllerPackage "funforgiven-audioctl")}
+            readonly property string cameraController: ${qmlString (lib.getExe config.dendritic.cameraControllerPackage)}
             readonly property string appLauncher: ${qmlString (lib.getExe' pkgs.uwsm "uwsm-app")}
             readonly property string uwsm: ${qmlString (lib.getExe pkgs.uwsm)}
             readonly property string systemctl: ${qmlString (lib.getExe' pkgs.systemd "systemctl")}
