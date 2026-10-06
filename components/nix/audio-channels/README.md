@@ -166,6 +166,29 @@ selected. For verification, play one channel at a time and check that only its
 assigned fader controls it, including mute, then verify the routes after a
 WirePlumber restart and USB reconnect.
 
+## Duo USB control connection
+
+The `rodecaster-duo` module enables Linux's `HID_QUIRK_ALWAYS_POLL` for
+`19f7:0079` (Expanded mode with stereo capture). On firmware 1.7.6, physical
+buttons stopped responding after a USB HID control client read the device state,
+changed pad colors, and closed its connection. Holding a passive HID reader open
+restored the buttons; restarting the Duo restored operation without that reader.
+The setting keeps the HID input endpoint polled after the last client closes.
+
+The boot parameter `usbhid.quirks=0x19f7:0x0079:0x00000400` takes effect after a
+PC reboot. A live NixOS switch or restarting only the Duo does not load it.
+Before opening a USB control session, confirm the flag in `/proc/cmdline` and
+`/sys/module/usbhid/parameters/quirks`.
+
+For regression checks, read the Duo's state once, close the client, and test bank
+arrows, pads, and mute buttons over several minutes with no background HID reader
+running. Repeat this physical-button check after pad edits; successful setting
+readback alone does not verify normal button operation. Other USB product IDs
+are not covered by this targeted setting.
+
+See the [Linux HID close handler](https://github.com/torvalds/linux/blob/master/drivers/hid/usbhid/hid-core.c)
+and [HID quirk definitions](https://github.com/torvalds/linux/blob/master/include/linux/hid.h).
+
 ## Duo MIDI routing pads
 
 The desktop service `funforgiven-audio-midi` routes the focused Niri
