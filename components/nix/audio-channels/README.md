@@ -123,9 +123,24 @@ capture), and `19f7:0095` (20-channel capture). The UCM package retains all othe
 distribution profiles and is selected only for the WirePlumber service.
 
 Select **RØDECaster Duo Chat Capture** as the input in a communications app.
-Configure the Duo's USB 1 Chat output mix/mix-minus to send the desired
-microphones without returning the caller's audio to them. Main Capture is the
-stereo main mix or full multitrack stream, depending on USB 1 Output settings.
+For calls, the intended feed is **Mic 1 + SMART pads only**. On the Duo, open
+**Settings → Outputs → Routing → USB 1 Chat** and select **Custom**. Include
+Mic 1 and SMART pads, linked to their channel faders, and exclude every other
+source—including System/USB 1, Game, Music, the Chat return, USB 2, Bluetooth,
+and unused inputs. This lets you hear computer audio without sending it to callers.
+
+**Mix-minus does not isolate the microphone.** It sends the main mix with only
+that output's own return removed, so other computer channels still reach callers.
+Use the source exclusion controls in Custom routing; lowering a PC fader is not
+a persistent exclusion. See RØDE's
+[mix-minus explanation](https://help.rode.com/hc/en-us/articles/8977666542351-Understanding-Mix-minus-on-R%C3%98DECaster-Series)
+and [custom routing guide](https://help.rode.com/hc/en-us/articles/9011992585743-Why-Custom-Routing-in-Submixes-is-Essential-for-R%C3%98DECaster-Pro-II-and-R%C3%98DECaster-Duo).
+
+To check the call feed, speak, play an audio SMART pad, and play audio through
+System, Game, and Music separately. Chat Capture should contain only your voice
+and the audio pad. MIDI control pads do not themselves produce audio.
+Main Capture is the stereo main mix or full multitrack stream, depending on
+USB 1 Output settings.
 
 The channel map is grounded in the
 [Duo ALSA profile proposal](https://github.com/alsa-project/alsa-ucm-conf/pull/742)
