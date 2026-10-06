@@ -29,7 +29,7 @@ _: {
           package = pkgs.codex;
 
           settings = {
-            model = "gpt-6-astra";
+            model = "gpt-6.1-sol";
             personality = "pragmatic";
 
             approval_policy = "on-request";
