@@ -45,6 +45,11 @@ in
       '';
     in
     {
+      # Keep the Duo's HID input polled after a USB control client closes.
+      # Firmware 1.7.6 stalled physical buttons until a reader reopened it.
+      # HID_QUIRK_ALWAYS_POLL; scoped to the observed expanded stereo USB ID.
+      boot.kernelParams = [ "usbhid.quirks=0x19f7:0x0079:0x00000400" ];
+
       system.build.rodecaster-duo-ucm = ucm;
       systemd.user.services.wireplumber.environment.ALSA_CONFIG_UCM2 = "${ucm}/share/alsa/ucm2";
 
