@@ -10,6 +10,7 @@ Scope {
     id: root
 
     signal mixerRequested(var anchorItem, var screen, real topInset)
+    signal cameraRequested(var anchorItem, var screen, real topInset)
 
     Variants {
         model: Quickshell.screens
@@ -95,6 +96,14 @@ Scope {
                         onRequested: {
                             root.mixerRequested(mixerButton, barWindow.screen, barWindow.height);
                         }
+                    }
+
+                    CameraButton {
+                        id: cameraButton
+
+                        height: parent.height
+                        width: implicitWidth
+                        onRequested: root.cameraRequested(cameraButton, barWindow.screen, barWindow.height)
                     }
 
                     Clock {

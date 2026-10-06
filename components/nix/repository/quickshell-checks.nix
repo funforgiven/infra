@@ -223,6 +223,21 @@
                 exit 1
               fi
 
+              qs ipc --pid "$qs_pid" call launcher open >/dev/null
+              qs ipc --pid "$qs_pid" call camera open >/dev/null
+              camera_state="$(qs ipc --pid "$qs_pid" call camera isVisible)"
+              launcher_state="$(qs ipc --pid "$qs_pid" call launcher isVisible)"
+              if [[ "$camera_state" != true ]] || [[ "$launcher_state" != false ]]; then
+                echo "Camera popup did not take ownership; camera=$camera_state launcher=$launcher_state" >&2
+                exit 1
+              fi
+              qs ipc --pid "$qs_pid" call camera snapshot >/dev/null
+              qs ipc --pid "$qs_pid" call camera close >/dev/null
+              if [[ "$(qs ipc --pid "$qs_pid" call camera isVisible)" != false ]]; then
+                echo "Camera popup failed to close through IPC" >&2
+                exit 1
+              fi
+
               if ! kill -0 "$qs_pid" 2>/dev/null; then
                 cat "$TMPDIR/quickshell.log" >&2
                 exit 1

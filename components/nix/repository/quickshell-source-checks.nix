@@ -34,6 +34,16 @@
     in
     {
       checks = lib.mkIf (system == hostModel.system) {
+        obsbot-controller =
+          pkgs.runCommandLocal "obsbot-controller-tests"
+            {
+              nativeBuildInputs = [ pkgs.python3 ];
+            }
+            ''
+              export PYTHONDONTWRITEBYTECODE=1
+              python -m unittest discover -s ${../obsbot} -v
+              touch "$out"
+            '';
         desk-presence-reader =
           pkgs.runCommandLocal "desk-presence-reader-tests"
             {

@@ -2,7 +2,7 @@
 
 This directory contains the repository-owned Niri shell: per-output bars,
 workspace and window controls, tray menus, a dock and launcher, the audio mixer,
-session actions, and the black idle overlay.
+the OBSBOT camera popup, session actions, and the black idle overlay.
 
 Quickshell runs as a UWSM graphical-session service. Application launches go
 through `uwsm-app`, and Niri remains the source of workspace, window, focus, and
@@ -14,6 +14,9 @@ without an output selector, gain slider, or mute button; use the Duo's faders
 and mute buttons for channel control. Application controls and the microphone
 panel remain available. The bar opens audio routing without displaying a
 software volume percentage as the hardware level.
+
+The camera button opens [Tiny 3 controls](../../../obsbot/README.md). Camera
+image settings and framing presets persist in the user's state directory.
 
 ## Automated checks
 

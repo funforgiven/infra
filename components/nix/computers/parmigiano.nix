@@ -28,6 +28,7 @@ let
     "audio"
     "audio-channels"
     "rodecaster-duo"
+    "obsbot-tiny3"
     "fonts"
     "funforgiven-input"
     "session-env"

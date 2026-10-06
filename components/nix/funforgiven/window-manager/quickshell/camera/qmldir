@@ -1,0 +1,6 @@
+module FunforgivenShell.Camera
+CameraPopup 1.0 CameraPopup.qml
+CameraControl 1.0 CameraControl.qml
+CameraAction 1.0 CameraAction.qml
+CameraToggle 1.0 CameraToggle.qml
+CameraGroup 1.0 CameraGroup.qml
