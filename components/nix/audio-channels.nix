@@ -274,7 +274,9 @@ in
           "linking.allow-moving-streams" = true;
           "node.stream.restore-target" = true;
           "node.stream.restore-props" = true;
-          "node.restore-default-targets" = false;
+          # Quickshell's microphone picker sets the configured default source.
+          # This setting must stay enabled to save that choice across restarts.
+          "node.restore-default-targets" = true;
         };
 
         allowedNormalizationMatchProperties = [

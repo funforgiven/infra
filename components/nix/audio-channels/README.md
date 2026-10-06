@@ -10,6 +10,8 @@ logical sink; WirePlumber routes each channel bridge to one physical output.
 - New playback starts on System unless an application has saved routing state.
 - Application routing and each channel's physical output survive a complete
   PipeWire/WirePlumber restart.
+- The default microphone selected in Quickshell is saved by WirePlumber and
+  restored after restarting or reconnecting the device.
 - Channel gain and mute apply to the bridge. Individual application streams
   remain independently controllable.
 - A saved physical output is matched by stable node identity. If it disappears,
@@ -23,6 +25,14 @@ logical sink; WirePlumber routes each channel bridge to one physical output.
 WirePlumber owns routing persistence and bridge normalization. The command-line
 helper requests a change and confirms it against the live graph; it does not keep
 a second state database.
+
+Keep `node.restore-default-targets` enabled: it controls saving both default
+playback and capture devices. Disabling it makes microphone selections temporary,
+even though the picker changes the active input successfully. The saved default
+playback device should be the logical **System** channel; physical output choices
+belong to each channel's output selector. When enabling persistence on an existing
+setup, save System as the playback default and reselect the desired microphone
+so old device preferences are replaced.
 
 ## Commands
 
