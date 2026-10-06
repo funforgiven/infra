@@ -24,6 +24,7 @@ _: {
         pkgs.pavucontrol
         pkgs.qbittorrent
         pkgs.r2modman
+        pkgs.streamrip
         pkgs.ungoogled-chromium
         pkgs.unrar
       ];
