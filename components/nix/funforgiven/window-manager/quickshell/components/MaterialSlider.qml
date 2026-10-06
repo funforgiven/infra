@@ -16,6 +16,8 @@ Item {
     property color accent: Shell.Theme.systemAccent
     property color trackColor: Shell.Theme.outline
     property string accessibleName: "Value"
+    property string accessibleValueText: Math.round(presentedValue * 100) + "%"
+    property bool wheelEnabled: true
     property real dragValue: value
 
     readonly property real clampedValue: clamp(value)
@@ -62,7 +64,7 @@ Item {
     activeFocusOnTab: enabled
 
     Accessible.name: accessibleName
-    Accessible.description: Math.round(presentedValue * 100) + "%"
+    Accessible.description: accessibleValueText
     Accessible.role: Accessible.Slider
     Accessible.onIncreaseAction: request(presentedValue + stepSize)
     Accessible.onDecreaseAction: request(presentedValue - stepSize)
@@ -207,6 +209,10 @@ Item {
         }
 
         onWheel: event => {
+            if (!root.wheelEnabled) {
+                event.accepted = false;
+                return;
+            }
             var delta = event.angleDelta.y !== 0 ? event.angleDelta.y : event.angleDelta.x;
             if (delta === 0)
                 delta = event.pixelDelta.y !== 0 ? event.pixelDelta.y : event.pixelDelta.x;
