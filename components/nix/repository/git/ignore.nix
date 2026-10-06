@@ -35,6 +35,7 @@ in
       "/secrets/*.hash"
       "/secrets/*.key"
       "/secrets/*.pem"
+      "/secrets/mail-aws-vpn.conf"
       "secrets/home-assistant-token.local"
     ];
 
