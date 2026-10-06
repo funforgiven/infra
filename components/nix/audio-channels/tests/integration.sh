@@ -15,6 +15,7 @@ readonly native_app="funforgiven.test.native"
 readonly pulse_app="funforgiven.test.pulse"
 readonly fake_device_name="funforgiven.test.device"
 readonly fake_output_prefix="funforgiven.test.output"
+readonly fake_input_prefix="funforgiven.test.input"
 readonly -a channel_ids=(system game voice music)
 
 export HOME="$work/home"
@@ -188,6 +189,27 @@ default_is_system() {
       | .name
     ] == ["funforgiven.audio.channel.system"]
   ' "$graph" >/dev/null
+}
+
+default_input_is() {
+  local name=$1
+  dump_graph || return 1
+  jq -e --arg name "$name" '
+    [
+      .[]
+      | select(.type == "PipeWire:Interface:Metadata" and .props["metadata.name"] == "default")
+      | .metadata[]?
+      | select(.subject == 0 and .key == "default.audio.source")
+      | .value
+      | if type == "string" then fromjson? else . end
+      | .name
+    ] == [$name]
+  ' "$graph" >/dev/null
+}
+
+default_input_saved() {
+  grep -Fxq "default.configured.audio.source=$1" \
+    "$XDG_STATE_HOME/wireplumber/default-nodes"
 }
 
 load_node_ref() {
@@ -618,6 +640,17 @@ start_fixture() {
   create_output a
   create_output b
   create_output disabled device.disabled 1000
+  create_input a 1000
+  create_input b 100
+}
+
+create_input() {
+  local suffix=$1
+  local priority=$2
+  local name="$fake_input_prefix.$suffix"
+  printf 'create-node adapter { factory.name = "api.alsa.pcm.source" api.alsa.path = "null" api.alsa.disable-mmap = true api.alsa.disable-batch = true node.name = "%s" node.description = "Test Input %s" media.class = "Audio/Source" device.id = %s priority.session = %s object.linger = true audio.format = "S16LE" audio.rate = 48000 audio.channels = 2 audio.position = [ FL FR ] }\n' \
+    "$name" "$suffix" "$device_id" "$priority" >&3
+  wait_for "$name" node_present "$name"
 }
 
 create_output() {
@@ -798,6 +831,26 @@ for channel in "${channel_ids[@]}"; do
 done
 run_graph_contract
 
+# Quickshell sets default.configured.audio.source through PipeWire. A lower
+# priority selection must be saved and restored, even when node IDs change.
+wait_for "initial highest-priority microphone" default_input_is "$fake_input_prefix.a"
+load_node_ref "$fake_input_prefix.b"
+wpctl set-default "$ref_id"
+wait_for "selected microphone" default_input_is "$fake_input_prefix.b"
+wait_for "saved microphone preference" default_input_saved "$fake_input_prefix.b"
+restart_wireplumber
+wait_for "microphone after WirePlumber restart" default_input_is "$fake_input_prefix.b"
+load_node_ref "$fake_input_prefix.b"
+previous_input_serial=$ref_serial
+printf 'destroy %s\n' "$ref_id" >&3
+wait_for "selected microphone removal" node_absent "$fake_input_prefix.b"
+wait_for "temporary microphone fallback" default_input_is "$fake_input_prefix.a"
+create_input b 100
+load_node_ref "$fake_input_prefix.b"
+[[ $ref_serial != "$previous_input_serial" ]] || fail "recreated microphone reused its old identity"
+wait_for "preferred microphone reconnect" default_input_is "$fake_input_prefix.b"
+wait_for "System default after microphone changes" default_is_system
+
 wait_for "WirePlumber channel state" state_file_present
 load_node_ref funforgiven.audio.channel.system.output
 durable_bridge_id=$ref_id
@@ -897,6 +950,7 @@ transaction_metadata_absent \
   || fail "bridge teardown left late or orphaned transaction metadata"
 stop_stack
 start_stack
+wait_for "microphone after full audio stack restart" default_input_is "$fake_input_prefix.b"
 wait_for "System recovery after armed bridge teardown" \
   bridge_target_is system "$fake_output_prefix.a"
 load_node_ref funforgiven.audio.channel.system.output
