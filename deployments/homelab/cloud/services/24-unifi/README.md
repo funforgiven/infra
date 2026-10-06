@@ -25,9 +25,12 @@ as an official standalone Kubernetes container.
 | Private browser access | `https://unifi.fahrican.com` through Envoy `10.21.40.122` |
 | Controller VM | `192.168.80.12`, routed floating address `10.21.40.127` |
 | AP inform endpoint | `http://10.21.40.127:8080/inform` |
+| Native inform DNS | Local `unifi` A record resolves to `10.21.40.127`; new AP uses `http://unifi:8080/inform` |
 | AP STUN | `10.21.40.127:3478/udp` |
 | U7 Pro Max | `74:F9:2C:3C:99:F7`, DHCP reservation `10.21.90.6` |
 | Physical attachment | SG3210XHP-M2 port 6, `infra-ap-trunk` |
+| Second U7 Pro Max | `U7 Pro Max 2`, `A4:F8:FF:8E:53:5C`, DHCP reservation `10.21.90.7`; adopted |
+| Second AP attachment | CCR2004 `ether5` through a UniFi 30 W PoE+ adapter; 1 Gb/s full duplex verified after cable replacement |
 | Temporary Ethernet limit | Port 6 at 1 Gb/s full duplex; 2.5 Gb/s fails reachability on the current cable/switch path, including after AP firmware 8.7.11 |
 | AP management | Untagged at the AP, switch PVID/native VLAN 90 |
 | Trusted WLAN | `Rooftrollen`, tagged VLAN 10, 5/6 GHz, WPA3 with required PMF and MLO |
@@ -39,11 +42,48 @@ Do not copy the EAP MAC or enable a general DHCP pool. The unplugged EAP retains
 its old static `10.21.90.4` for rollback. Do not set a VLAN 90 management override
 on the U7: its management traffic is untagged on this switch port.
 
+The second AP uses the same VLAN contract directly on CCR2004 `ether5`:
+PVID/native VLAN 90 and tagged VLANs 10/50. Connect `ether5` to the adapter's
+LAN/Data In socket and its PoE Out socket to the AP. Its static reservation
+receives DHCP option 43 (`01040a15287f`), pointing to the existing inform
+endpoint without an initial manual `set-inform`. Adoption completed for MAC
+`A4:F8:FF:8E:53:5C`, and the controller assigned `http://unifi:8080/inform`.
+The exact router DNS record supports that address across restarts. Both WLAN
+mappings, firmware 8.7.11 and the 20/80/160 MHz radio widths passed read-back.
+Its channels are 6 on 2.4 GHz, 100 on 5 GHz and 37 on 6 GHz; these do not overlap
+the first AP's final observed channels 1/36/85 at the same widths. Channel 100 is DFS
+and waits for its radar check at startup. A real 6-GHz trusted client received
+a VLAN-10 address. Final read-back after the cable replacement also showed
+trusted clients on the 5/6-GHz radios and IoT clients on 2.4 GHz, with VLAN-10
+and VLAN-50 addresses respectively. Room coverage still needs a physical
+client check. Wireless meshing remains disabled.
+
+The second AP initially negotiated 1 Gb/s full duplex on its factory firmware.
+After updating to 8.7.11, both the router and AP reported 100 Mb/s full duplex.
+At that point the CCR advertised gigabit; its link partner advertised only
+10/100 Mb/s.
+Port renegotiation, a software restart and an owner-completed full power cycle
+of the standalone PoE adapter did not restore gigabit. The 2026-10-05 firmware
+comparisons with 8.6.11 and 8.0.49 also did not sustain gigabit. Native logs show
+short-lived 1-Gb/s links followed by physical link loss and downshift. EEE is
+already disabled. A gigabit-only negotiation test did not hold a link either.
+The owner subsequently replaced the second AP's cable. On the restored 8.7.11
+release, the AP then reported 1 Gb/s full duplex, zero CRC errors and zero-loss
+gateway and internet probes. A five-minute test delivered all 150 full-size
+gateway probes, with zero CRC errors and no link drops. The earlier firmware
+comparisons alone did not fix the link. Both APs were restored to 8.7.11 after
+the comparisons; automatic firmware updates remain enabled.
+
 The switch's physical speed/duplex settings are preserved by the Omada
 reconciler. The owner accepted keeping the recorded 1 Gb/s workaround for now.
-The installed cable is Cat6; its category supports 2.5 Gb/s. The current evidence
-does not distinguish cable condition, AP PHY and switch interoperability.
-Revisit automatic speed only in a separate, bounded diagnostic session.
+The installed cable is Cat6; its category supports 2.5 Gb/s. The original AP's
+8.6.11 comparison, STP-edge test and fixed-2.5-Gb/s/flow-control test also failed;
+its logs show repeated physical 2.5-Gb/s link drops. Every test restored the
+1-Gb/s workaround and original port profile. The owner subsequently requested
+that investigation of this AP stop; its 1-Gb/s setting remains in place.
+The evidence still does not isolate cable condition, AP PHY and switch
+interoperability. The detailed test record
+and primary-source research are in [migration-validation.md](migration-validation.md).
 
 `../../unifi-network.yaml` records the native enrollment settings and secret
 references; it is a documented desired-state input, not an automatic UniFi API
@@ -103,12 +143,14 @@ on loopback `11443`; certificate verification is disabled only for that loopback
 hop. Neutron admits origin TLS and metrics only from the private services
 subnet; native setup on `11443` and SSH are limited to the workstation and VPN.
 These private services-network sources are trusted for origin access and must
-still authenticate to UniFi. AP inform/STUN ingress is limited to `10.21.90.6/32`.
+still authenticate to UniFi. AP inform/STUN ingress is declared separately for
+`10.21.90.6/32` and `10.21.90.7/32`; deployment of the second pair must be
+verified before adoption.
 
 SSH and the native `11443` UI provide private recovery access independent of
 Kubernetes. The existing WireGuard route for `10.21.40.0/24` already includes
 the VM. Declared RouterOS rules permit those specific recovery ports and AP
-SSH at `.6`; the Omada HTTPS VPN rule now targets only the switch at `.5`.
+SSH at `.6` and `.7`; the Omada HTTPS VPN rule now targets only the switch at `.5`.
 No UDP discovery broadcast is routed: use explicit layer-3 adoption.
 
 ## Bootstrap and adoption

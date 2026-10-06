@@ -28,6 +28,7 @@ its compact desired-state file and reconciler.
 | CCR2004 | `ether8` | direct rescue, `192.168.88.1/24` |
 | CCR2004 | `ether2` | prepared replacement for the SG3210XHP-M2 port 1 trunk |
 | CCR2004 | `ether3/4` | HOUSEMATE access, untagged VLAN 70 |
+| CCR2004 | `ether5` | second U7 Pro Max `A4:F8:FF:8E:53:5C` through a UniFi 30 W PoE+ adapter; untagged management VLAN 90, tagged WLAN VLANs 10/50; reserved `10.21.90.7` |
 | CCR2004 | `ether15` | current SG3210XHP-M2 port 1 routed trunk; retained during migration |
 | CCR2004 | `ether16` | existing legacy hybrid connection; retained until recabled |
 | CRS510 | `sfp28-1` | SG3210XHP-M2 port 9 routed uplink |
@@ -185,9 +186,14 @@ ansible-playbook reconcile-routeros.yaml --limit core_router --tags apply
 Use `--limit core_router --tags mullvad` to select only the destination-scoped
 Mullvad objects while retaining the standard read-only CCR preflight.
 Use `--limit core_router --tags lan-ports` to reconcile the CCR bridge VLANs,
-the current/replacement Omada trunks, and the housemate network and access
+the current/replacement Omada trunks, direct AP ports, and the housemate network and access
 ports after the read-only preflight. This tag enables writes; omit it for
 inspection only.
+Use `--limit core_router --tags ap-ports` to reconcile the bridge VLAN table
+and direct UniFi AP ports without changing the Omada trunks or housemate
+services. AP ports use PVID 90, admit tagged and untagged frames, and carry only
+management VLAN 90 and WLAN VLANs 10/50. The preflight refuses another owner's
+bridge port or an already-connected, unassigned Ethernet port.
 Use `--limit core_router --tags lan-peers` to reconcile the four Steam client-VLAN
 forward rules after preflight. This tag enables writes and verifies both rule
 contents and placement before the final forward drop.
@@ -195,8 +201,15 @@ Use `--limit core_router --tags wan-port-forwards` to reconcile only the
 declared Factorio/Valheim WAN/reflection and Syncthing destination-NAT rows after the
 usual preflight.
 Use `--limit core_router --tags static-leases` to reconcile only declared DHCP
-reservations after the normal preflight. An extra-vars file can select the
+options and reservations after the normal preflight. An extra-vars file can select the
 exact `routeros_static_leases` rows. VLAN 90 stays static-only.
+The second AP's reservation alone receives `infra-unifi-inform`, DHCP option
+43 with value `0x01040a15287f`, directing factory-default UniFi adoption to
+`10.21.40.127:8080`. Other management leases retain their existing options.
+Use `--limit core_router --tags unifi-dns` to reconcile the exact local A record
+`unifi -> 10.21.40.127`. Native adoption assigns `http://unifi:8080/inform`;
+the router's existing LAN DNS service resolves that name after provisioning.
+The preflight rejects a conflicting record owned by another service.
 Use `--limit core_router --tags private-access` to reconcile and verify routed
 access rules while retaining the read-only preflight. An `--extra-vars` file
 containing `routeros_access_rules` can select the exact inventory rows for a

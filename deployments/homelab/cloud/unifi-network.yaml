@@ -7,6 +7,7 @@ controller:
   hostname: unifi.fahrican.com
   managementAddress: 10.21.40.127
   informUrl: http://10.21.40.127:8080/inform
+  informDnsName: unifi
   remoteAccess: false
   automaticUpdates: true
   wirelessMeshing: false
@@ -24,13 +25,16 @@ accessPoints:
     address: 10.21.90.6
     switch: SG3210XHP-M2
     switchPort: 6
-    # User-approved temporary setting: both tested AP firmware versions lose
-    # connectivity at 2.5 Gb/s on the current cable/switch combination.
+    # Temporary workaround: factory firmware, 8.7.11 and the later 8.6.11
+    # comparison fail sustained 2.5 Gb/s on this Ethernet path.
     # Omada's reconciler preserves physical speed/duplex settings; it owns
-    # the VLAN profile. Retest auto speed after isolating the cable/PHY issue.
+    # the VLAN profile. See the 2026-10-05 PHY investigation in
+    # services/24-unifi/migration-validation.md.
     ethernetLink:
       speedMbps: 1000
+      expectedSpeedMbps: 2500
       duplex: full
+      verificationStatus: deferred-by-owner
     managementVlan: 90
     # Untagged AP management frames are assigned VLAN 90 by the switch PVID.
     managementVlanOverride: false
@@ -46,6 +50,38 @@ accessPoints:
     # Spectrum Analyzer in AirView selects a visualization, not a persistent
     # setting that needs enabling on the AP. Channel AI is separate.
     spectralAnalysis: dedicated-radio-active
+  - name: u7-pro-max-2
+    controllerName: U7 Pro Max 2
+    model: U7 Pro Max
+    mac: A4:F8:FF:8E:53:5C
+    address: 10.21.90.7
+    router: CCR2004
+    routerPort: ether5
+    power: UniFi 30W PoE+ adapter
+    ethernetLink:
+      # Firmware/negotiation tests alone did not sustain gigabit. After the
+      # owner replaced this AP's cable, 8.7.11 held 1 Gb/s through five minutes
+      # of full-size probes, with zero loss, zero CRC errors and no link drops.
+      speedMbps: 1000
+      expectedSpeedMbps: 1000
+      duplex: full
+      verificationStatus: verified-after-cable-replacement
+    managementVlan: 90
+    managementVlanOverride: false
+    addressMode: dhcp-reservation
+    firmwareVersion: 8.7.11.19419
+    informUrl: http://unifi:8080/inform
+    enrollmentStatus: connected
+    radios:
+      - band: 2.4GHz
+        channel: 6
+        channelWidthMHz: 20
+      - band: 5GHz
+        channel: 100
+        channelWidthMHz: 80
+      - band: 6GHz
+        channel: 37
+        channelWidthMHz: 160
 wireless:
   country: Turkey
   ssids:

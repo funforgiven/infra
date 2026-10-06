@@ -28,6 +28,8 @@ locals {
     ap_metrics   = { protocol = "tcp", port = 9130, cidr = "192.168.80.0/24" }
     inform       = { protocol = "tcp", port = 8080, cidr = "10.21.90.6/32" }
     stun         = { protocol = "udp", port = 3478, cidr = "10.21.90.6/32" }
+    inform_ap2   = { protocol = "tcp", port = 8080, cidr = "10.21.90.7/32" }
+    stun_ap2     = { protocol = "udp", port = 3478, cidr = "10.21.90.7/32" }
   }
   scripts = ["bootstrap.sh", "backup.sh", "renew-tls.sh", "health.sh"]
   cloud_config = {
