@@ -1,0 +1,60 @@
+---
+- name: Validate the declared DHCP options
+  ansible.builtin.assert:
+    that:
+      - item.name is match('^[A-Za-z0-9-]+$')
+      - item.code | int > 0
+      - item.code | int < 255
+      - item.value is match('^0x([0-9a-f]{2})+$')
+      - item.force is boolean
+  loop: "{{ routeros_dhcp_options }}"
+  tags: [always, inventory-contract]
+
+- name: Refuse conflicting DHCP options
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/ip dhcp-server option find where name="{{ item.name }}"];
+        :if ([:len $row] > 1) do={ :error "duplicate DHCP option" };
+        :if ([:len $row] = 1) do={ :if ([/ip dhcp-server option get $row code]
+        != {{ item.code }} or [/ip dhcp-server option get $row value] !=
+        "{{ item.value }}" or [/ip dhcp-server option get $row force] !=
+        {{ item.force | ternary('true', 'false') }}) do={ :error
+        "DHCP option already has another value" } }; :put ("__infra_" .
+        "dhcp_ok__")
+    wait_for:
+      - result[0] contains "__infra_dhcp_ok__"
+    retries: 1
+  loop: "{{ routeros_dhcp_options }}"
+  changed_when: false
+  tags: [always]
+
+- name: Reconcile declared DHCP options before static leases
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/ip dhcp-server option find where name="{{ item.name }}"];
+        :if ([:len $row] = 0) do={ /ip dhcp-server option add
+        name="{{ item.name }}" code={{ item.code }} value="{{ item.value }}"
+        force={{ item.force | ternary('yes', 'no') }} }; :put ("__infra_" .
+        "dhcp_ok__")
+    wait_for:
+      - result[0] contains "__infra_dhcp_ok__"
+    retries: 1
+  loop: "{{ routeros_dhcp_options }}"
+  tags: [never, apply, static-leases]
+
+- name: Prove declared DHCP option values
+  community.routeros.command:
+    commands:
+      - >-
+        :if ([:len [/ip dhcp-server option find where name="{{ item.name }}"
+        and code={{ item.code }} and value="{{ item.value }}" and
+        force={{ item.force | ternary('yes', 'no') }}]] != 1) do={ :error
+        "incorrect DHCP option" }; :put ("__infra_" . "dhcp_ok__")
+    wait_for:
+      - result[0] contains "__infra_dhcp_ok__"
+    retries: 1
+  loop: "{{ routeros_dhcp_options }}"
+  changed_when: false
+  tags: [never, apply, static-leases]

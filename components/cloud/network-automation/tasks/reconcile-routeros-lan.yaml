@@ -15,6 +15,13 @@
       - >-
         routeros_lan.trunk_ports | intersect(routeros_housemate.ports) | length
         == 0
+      - routeros_lan.ap_ports | unique | length == routeros_lan.ap_ports | length
+      - >-
+        routeros_lan.ap_ports |
+        intersect(routeros_lan.trunk_ports + routeros_housemate.ports +
+        ['ether1', 'ether8', 'ether16']) | length == 0
+      - routeros_lan.ap_management_vlan == 90
+      - routeros_lan.ap_tagged_vlans | sort == [10, 50]
       - >-
         (routeros_lan.trunk_ports + routeros_housemate.ports) |
         intersect(['ether1', 'ether8']) | length == 0
@@ -33,7 +40,7 @@
         routeros_housemate.vlan_id) | map(attribute='tagged') | first ==
         [routeros_lan.bridge]
     fail_msg: >-
-      The CCR trunk, housemate, WAN, and rescue ports must remain distinct.
+      The CCR trunk, AP, housemate, WAN, and rescue ports must remain distinct.
   tags: [always, inventory-contract]
 
 - name: Validate each CCR bridge VLAN membership
@@ -47,6 +54,18 @@
         item.id == routeros_housemate.vlan_id or routeros_lan.trunk_ports |
         difference( item.untagged if item.id == 1 else item.tagged) | length ==
         0
+      - >-
+        item.id != routeros_lan.ap_management_vlan or
+        routeros_lan.ap_ports | difference(item.untagged) | length == 0
+      - >-
+        item.id not in routeros_lan.ap_tagged_vlans or
+        routeros_lan.ap_ports | difference(item.tagged) | length == 0
+      - >-
+        item.id in routeros_lan.ap_tagged_vlans or
+        item.tagged | intersect(routeros_lan.ap_ports) | length == 0
+      - >-
+        item.id == routeros_lan.ap_management_vlan or
+        item.untagged | intersect(routeros_lan.ap_ports) | length == 0
   loop: "{{ routeros_lan.bridge_vlans }}"
   loop_control:
     label: "VLAN {{ item.id }}"
@@ -67,7 +86,25 @@
     wait_for:
       - result[0] contains "__infra_lan_ok__"
     retries: 1
-  loop: "{{ routeros_lan.trunk_ports + routeros_housemate.ports }}"
+  loop: "{{ routeros_lan.trunk_ports + routeros_housemate.ports + routeros_lan.ap_ports }}"
+  changed_when: false
+  tags: [always]
+
+- name: Refuse an AP port already owned by another connection
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/interface bridge port find where interface="{{ item }}"];
+        :if ([:len $row] = 1) do={ :if ([/interface bridge port get $row comment]
+        != "infra: UniFi AP hybrid trunk") do={ :error
+        "AP port already has another owner" } } else={ :if ([/interface
+        ethernet get [find where name="{{ item }}"] running] = true) do={
+        :error "new AP port is already connected" } }; :put ("__infra_" .
+        "lan_ok__")
+    wait_for:
+      - result[0] contains "__infra_lan_ok__"
+    retries: 1
+  loop: "{{ routeros_lan.ap_ports }}"
   changed_when: false
   tags: [always]
 
@@ -275,7 +312,24 @@
   loop: "{{ routeros_lan.bridge_vlans }}"
   loop_control:
     label: "VLAN {{ item.id }}"
-  tags: [never, apply, lan-ports]
+  tags: [never, apply, lan-ports, ap-ports]
+
+- name: Reconcile the direct UniFi AP ports
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/interface bridge port find where interface="{{ item }}"];
+        :if ([:len $row] = 0) do={ :set row [/interface bridge port add
+        bridge="{{ routeros_lan.bridge }}" interface="{{ item }}" disabled=yes]
+        }; /interface bridge port set $row comment="infra: UniFi AP hybrid trunk"
+        disabled=no hw=no edge=yes pvid={{ routeros_lan.ap_management_vlan }}
+        frame-types=admit-all ingress-filtering=yes; :put ("__infra_" .
+        "lan_ok__")
+    wait_for:
+      - result[0] contains "__infra_lan_ok__"
+    retries: 1
+  loop: "{{ routeros_lan.ap_ports }}"
+  tags: [never, apply, lan-ports, ap-ports]
 
 - name: Reconcile the current and replacement Omada trunks
   community.routeros.command:
@@ -330,7 +384,24 @@
   loop_control:
     label: "VLAN {{ item.id }}"
   changed_when: false
-  tags: [never, apply, lan-ports]
+  tags: [never, apply, lan-ports, ap-ports]
+
+- name: Prove the direct UniFi AP ports
+  community.routeros.command:
+    commands:
+      - >-
+        :if ([:len [/interface bridge port find where
+        bridge="{{ routeros_lan.bridge }}" and interface="{{ item }}" and
+        comment="infra: UniFi AP hybrid trunk" and disabled=no and
+        pvid={{ routeros_lan.ap_management_vlan }} and frame-types=admit-all and
+        ingress-filtering=yes and edge=yes and hw=no]] != 1) do={ :error
+        "incorrect UniFi AP trunk" }; :put ("__infra_" . "lan_ok__")
+    wait_for:
+      - result[0] contains "__infra_lan_ok__"
+    retries: 1
+  loop: "{{ routeros_lan.ap_ports }}"
+  changed_when: false
+  tags: [never, apply, lan-ports, ap-ports]
 
 - name: Prove the current and replacement Omada trunks
   community.routeros.command:

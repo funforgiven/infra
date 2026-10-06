@@ -105,12 +105,16 @@ all:
             bridge: bridge-lan
             # Move the Omada uplink from ether15 to ether2 when ready.
             trunk_ports: [ether2, ether15]
+            # Direct AP attachment through a UniFi 30 W PoE+ injector.
+            ap_ports: [ether5]
+            ap_management_vlan: 90
+            ap_tagged_vlans: [10, 50]
             bridge_vlans:
               - id: 1
                 tagged: []
                 untagged: [bridge-lan, ether2, ether15, ether16]
               - id: 10
-                tagged: [bridge-lan, ether2, ether15, ether16]
+                tagged: [bridge-lan, ether2, ether15, ether16, ether5]
                 untagged: []
               - id: 20
                 tagged: [bridge-lan, ether2, ether15, ether16]
@@ -119,14 +123,14 @@ all:
                 tagged: [bridge-lan, ether2, ether15]
                 untagged: []
               - id: 50
-                tagged: [bridge-lan, ether2, ether15, ether16]
+                tagged: [bridge-lan, ether2, ether15, ether16, ether5]
                 untagged: []
               - id: 60
                 tagged: [bridge-lan, ether2, ether15, ether16]
                 untagged: []
               - id: 90
                 tagged: [bridge-lan, ether2, ether15, ether16]
-                untagged: []
+                untagged: [ether5]
               - id: 70
                 tagged: [bridge-lan]
                 untagged: [ether3, ether4]
@@ -177,12 +181,23 @@ all:
             gateway: 10.21.90.1
             dns_server: 10.21.90.1
             lease_time: 1d
+          routeros_dhcp_options:
+            # UniFi option 43: suboption 1, four-byte IP 10.21.40.127.
+            - name: infra-unifi-inform
+              code: 43
+              value: "0x01040a15287f"
+              force: true
           routeros_private_dns_forward:
             name: cloud.fahrican.com
             type: FWD
             forward_to: 10.21.20.129
             match_subdomain: true
             comment: "infra: private cloud split DNS"
+          routeros_unifi_dns:
+            name: unifi
+            address: 10.21.40.127
+            ttl: 1h
+            comment: "infra: UniFi inform DNS"
           routeros_wireguard:
             name: wg-admin
             address: 10.21.91.1/24
@@ -471,6 +486,13 @@ all:
               destination: 10.21.90.6
               protocol: tcp
               destination_port: "22"
+            - comment: "infra: WireGuard UniFi AP 2 SSH"
+              chain: infra-forward
+              final_drop_comment: "infra: forward final drop"
+              source_interface: wg-admin
+              destination: 10.21.90.7
+              protocol: tcp
+              destination_port: "22"
           routeros_port_forwards:
             - comment: "infra: NetBird STUN"
               in_interface_list: INFRA-WAN
@@ -577,3 +599,8 @@ all:
               mac_address: 74:F9:2C:3C:99:F7
               address: 10.21.90.6
               server: dhcp-management
+            - comment: "infra: UniFi U7 Pro Max 2"
+              mac_address: A4:F8:FF:8E:53:5C
+              address: 10.21.90.7
+              server: dhcp-management
+              dhcp_option: infra-unifi-inform

@@ -121,6 +121,54 @@ class NetworkInventoryTests(unittest.TestCase):
         self.assertNotIn("Reconcile the external provider network\t", selected)
         self.assertNotIn("Reconcile Git-owned WAN port forwards\t", selected)
 
+    def test_direct_ap_port_carries_only_management_and_wlan_vlans(self) -> None:
+        lan = self.router["routeros_lan"]
+        self.assertEqual(["ether5"], lan["ap_ports"])
+        reserved = {"ether1", "ether8", "ether16", *lan["trunk_ports"],
+                    *self.router["routeros_housemate"]["ports"]}
+        self.assertFalse(reserved & set(lan["ap_ports"]))
+        for row in lan["bridge_vlans"]:
+            for port in lan["ap_ports"]:
+                self.assertEqual(row["id"] in lan["ap_tagged_vlans"],
+                                 port in row["tagged"])
+                self.assertEqual(row["id"] == lan["ap_management_vlan"],
+                                 port in row["untagged"])
+
+    def test_ap_port_tag_does_not_change_housemate_or_wan_services(self) -> None:
+        selected = subprocess.run(
+            ["ansible-playbook", "--list-tasks", "--limit", "core_router",
+             "--tags", "ap-ports", "reconcile-routeros.yaml"],
+            cwd=PLAYBOOK.parent, check=True, capture_output=True, text=True,
+        ).stdout
+        self.assertLess(selected.index("Refuse an AP port already owned"),
+                        selected.index("Reconcile the CCR bridge VLAN table"))
+        self.assertLess(selected.index("Reconcile the CCR bridge VLAN table"),
+                        selected.index("Reconcile the direct UniFi AP ports"))
+        self.assertIn("Prove the direct UniFi AP ports", selected)
+        for mutation in (
+            "Reconcile housemate routing and DHCP before enabling access ports",
+            "Reconcile the current and replacement Omada trunks",
+            "Reconcile the housemate access ports",
+            "Reconcile Git-owned WAN port forwards",
+            "Reconcile Git-owned static DHCP leases",
+        ):
+            self.assertNotIn(mutation + "\t", selected)
+
+    def test_second_ap_has_static_lease_and_its_own_controller_discovery(self) -> None:
+        leases = self.router["routeros_static_leases"]
+        ap = next(row for row in leases if row["mac_address"] == "A4:F8:FF:8E:53:5C")
+        self.assertEqual("10.21.90.7", ap["address"])
+        self.assertEqual("dhcp-management", ap["server"])
+        option = next(row for row in self.router["routeros_dhcp_options"]
+                      if row["name"] == ap["dhcp_option"])
+        self.assertEqual(43, option["code"])
+        encoded = bytes.fromhex(option["value"][2:])
+        self.assertEqual(bytes([1, 4, 10, 21, 40, 127]), encoded)
+        self.assertTrue(option["force"])
+        existing = next(row for row in leases if row["address"] == "10.21.90.6")
+        self.assertEqual("74:F9:2C:3C:99:F7", existing["mac_address"])
+        self.assertNotIn("dhcp_option", existing)
+
     def test_client_vlan_access_is_mutual_and_confined_to_the_two_subnets(self) -> None:
         rules = self.router["routeros_lan_peer_rules"]
         self.assertEqual(4, len(rules))
@@ -208,6 +256,33 @@ class NetworkInventoryTests(unittest.TestCase):
             values = [lease[field] for lease in leases]
             self.assertEqual(len(values), len(set(values)))
         self.assertIn('loop: "{{ routeros_static_leases }}"', self.playbook)
+
+    def test_unifi_dns_tag_is_scoped_and_all_conditions_are_strings(self) -> None:
+        record = self.router["routeros_unifi_dns"]
+        self.assertEqual("unifi", record["name"])
+        self.assertEqual("10.21.40.127", record["address"])
+        task_path = PLAYBOOK.parent / "tasks/reconcile-routeros-unifi-dns.yaml"
+        tasks = yaml.safe_load(task_path.read_text())
+        for task in tasks:
+            for condition in task.get("ansible.builtin.assert", {}).get("that", []):
+                self.assertIsInstance(condition, str)
+            command = task.get("community.routeros.command")
+            if command:
+                self.assertEqual(1, command["retries"])
+                self.assertIn("__infra_unifi_dns_ok__", command["wait_for"][0])
+        selected = subprocess.run(
+            ["ansible-playbook", "--list-tasks", "--limit", "core_router",
+             "--tags", "unifi-dns", "reconcile-routeros.yaml"],
+            cwd=PLAYBOOK.parent, check=True, capture_output=True, text=True,
+        ).stdout
+        self.assertLess(selected.index("Refuse a conflicting UniFi inform DNS record"),
+                        selected.index("Reconcile the UniFi inform DNS record\t"))
+        self.assertIn("Prove the UniFi inform DNS record and resolution", selected)
+        for mutation in (
+            "Reconcile the CCR bridge VLAN table", "Reconcile the direct UniFi AP ports",
+            "Reconcile Git-owned static DHCP leases", "Reconcile Git-owned WAN port forwards",
+        ):
+            self.assertNotIn(mutation + "\t", selected)
 
     def test_private_split_dns_is_one_exact_data_driven_forwarder(self) -> None:
         self.assertEqual(

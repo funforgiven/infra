@@ -1,0 +1,75 @@
+---
+- name: Validate the UniFi inform DNS record
+  ansible.builtin.assert:
+    that:
+      - routeros_unifi_dns.name == 'unifi'
+      - routeros_unifi_dns.address == '10.21.40.127'
+      - routeros_unifi_dns.ttl == '1h'
+      - >-
+        routeros_unifi_dns.comment == 'infra: UniFi inform DNS'
+  tags: [always, inventory-contract]
+
+- name: Refuse a conflicting UniFi inform DNS record
+  community.routeros.command:
+    commands:
+      - >-
+        :if ([/ip dns get allow-remote-requests] != true) do={ :error
+        "UniFi DNS requires the existing LAN DNS service" };
+        :local row [/ip dns static find where name="{{ routeros_unifi_dns.name }}"];
+        :if ([:len $row] > 1) do={ :error "duplicate UniFi DNS name" };
+        :if ([:len $row] = 1) do={ :if ([/ip dns static get $row comment] !=
+        "{{ routeros_unifi_dns.comment }}") do={ :error
+        "UniFi DNS name already has another owner" } };
+        :if ([:len [/ip dns static find where
+        comment="{{ routeros_unifi_dns.comment }}"]] > [:len $row]) do={ :error
+        "UniFi DNS comment already names another record" };
+        :put ("__infra_" . "unifi_dns_ok__")
+    wait_for:
+      - result[0] contains "__infra_unifi_dns_ok__"
+    retries: 1
+  changed_when: false
+  tags: [always]
+
+- name: Reconcile the UniFi inform DNS record
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/ip dns static find where name="{{ routeros_unifi_dns.name }}"];
+        :if ([:len $row] = 0) do={ :set row [/ip dns static add
+        name="{{ routeros_unifi_dns.name }}" type=A
+        address="{{ routeros_unifi_dns.address }}"
+        comment="{{ routeros_unifi_dns.comment }}"] };
+        /ip dns static set $row disabled=no type=A
+        name="{{ routeros_unifi_dns.name }}"
+        address="{{ routeros_unifi_dns.address }}"
+        ttl={{ routeros_unifi_dns.ttl }} match-subdomain=no;
+        :put ("__infra_" . "unifi_dns_ok__")
+    wait_for:
+      - result[0] contains "__infra_unifi_dns_ok__"
+    retries: 1
+  tags: [never, apply, unifi-dns]
+
+- name: Prove the UniFi inform DNS record and resolution
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/ip dns static find where
+        name="{{ routeros_unifi_dns.name }}"];
+        :if ([:len $row] != 1) do={ :error "UniFi inform DNS record missing" };
+        :if ([/ip dns static get $row type] != "A" or
+        [/ip dns static get $row disabled] != false or
+        [:tostr [/ip dns static get $row address]] !=
+        "{{ routeros_unifi_dns.address }}" or
+        [/ip dns static get $row match-subdomain] = true or
+        [/ip dns static get $row comment] !=
+        "{{ routeros_unifi_dns.comment }}") do={ :error
+        "incorrect UniFi inform DNS record" };
+        :if ([:tostr [:resolve "{{ routeros_unifi_dns.name }}"]] !=
+        "{{ routeros_unifi_dns.address }}") do={ :error
+        "UniFi inform DNS did not resolve to the controller" };
+        :put ("__infra_" . "unifi_dns_ok__")
+    wait_for:
+      - result[0] contains "__infra_unifi_dns_ok__"
+    retries: 1
+  changed_when: false
+  tags: [never, apply, unifi-dns]

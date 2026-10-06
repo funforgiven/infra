@@ -59,5 +59,12 @@
       "unifi"
     ],
     "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICrlJDuYUEWtPlgYY8XSDZb9EYfBcWAnS7IRf6tYJ+fX"
+  },
+  "u7-pro-max-2": {
+    "hostNames": [
+      "10.21.90.7",
+      "u7-pro-max-2"
+    ],
+    "publicKey": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCtlC7GpvXRT3/bfJhkwYxGIy5BHcNC9Tg2vllpAHG3sR1eh9rIg18oWvYvZKetV2WzimZx35LwXKTRytN+GOBE+2eu5LbSfys2uxiti7UgvHpMPH1RVDfK75ssp0AeYvQZeipgDqhNUvW1RmhHAMzhAZnD6I0geI3kVY13i7haFcnLUvzG/cumaiY7I4XzUSZMJ3fL1emMUlz3Xdu+bYT5kEZULO9azBMSKNzLTdmO8V0QO2mKAdjhTf9lkjtycD1krqhBClIVphNAgzBVwxZLXoukNBCL6xFMk3rgsN1MRL7grDPm9x1G1F3uVIljtXGtRQVtov/rTyic93kkTBXh"
   }
 }

@@ -788,6 +788,9 @@
     - name: Reconcile the CCR2004 LAN ports and housemate network
       ansible.builtin.import_tasks: tasks/reconcile-routeros-lan.yaml
 
+    - name: Reconcile the UniFi inform DNS record
+      ansible.builtin.import_tasks: tasks/reconcile-routeros-unifi-dns.yaml
+
     - name: Reconcile Steam access between the trusted and housemate networks
       ansible.builtin.import_tasks: tasks/reconcile-routeros-lan-peers.yaml
 
@@ -1241,6 +1244,9 @@
         - never
         - apply
 
+    - name: Reconcile DHCP options for static AP enrollment
+      ansible.builtin.import_tasks: tasks/reconcile-routeros-dhcp-options.yaml
+
     - name: Require every declared DHCP server after reconciliation
       community.routeros.command:
         commands:
@@ -1269,13 +1275,22 @@
             address={{ static_lease.address }}
             comment="{{ static_lease.comment }}" disabled=no
             mac-address={{ static_lease.mac_address }}
-            server={{ static_lease.server }} } else={
+            server={{ static_lease.server }}
+            {% if static_lease.dhcp_option is defined %}
+            dhcp-option="{{ static_lease.dhcp_option }}"
+            {% endif %} } else={
             :if ([:len $lease] != 1) do={
             :error "duplicate Git-owned static lease" };
             /ip dhcp-server lease set $lease
             address={{ static_lease.address }} disabled=no
             mac-address={{ static_lease.mac_address }}
-            server={{ static_lease.server }} }
+            server={{ static_lease.server }}
+            {% if static_lease.dhcp_option is defined %}
+            dhcp-option="{{ static_lease.dhcp_option }}"
+            {% endif %} }; :put ("__infra_" . "lease_ok__")
+        wait_for:
+          - result[0] contains "__infra_lease_ok__"
+        retries: 1
       loop: "{{ routeros_static_leases }}"
       loop_control:
         label: "{{ static_lease.comment }}"
@@ -1293,8 +1308,15 @@
             comment="{{ static_lease.comment }}" and
             address={{ static_lease.address }} and disabled=no and
             mac-address={{ static_lease.mac_address }} and
-            server={{ static_lease.server }}]] != 1) do={
-            :error "invalid Git-owned static lease" }
+            server={{ static_lease.server }}
+            {% if static_lease.dhcp_option is defined %}
+            and dhcp-option="{{ static_lease.dhcp_option }}"
+            {% endif %}]] != 1) do={
+            :error "invalid Git-owned static lease" }; :put ("__infra_" .
+            "lease_ok__")
+        wait_for:
+          - result[0] contains "__infra_lease_ok__"
+        retries: 1
       loop: "{{ routeros_static_leases }}"
       loop_control:
         label: "{{ static_lease.comment }}"

@@ -251,3 +251,176 @@ The B2 enrollment additionally passed `cloud-configuration` and
 `services-activation-contract`, including the lifecycle-response normalization
 regressions. The deployed backup unit now provisions a root-only Restic cache
 directory, removing the systemd environment's missing-home cache warning.
+
+## Second AP preparation — 2026-10-05
+
+The owner supplied Ethernet MAC `A4:F8:FF:8E:53:5C` for a second U7 Pro Max
+connected directly to the CCR2004 through a UniFi 30 W PoE+ adapter.
+
+- Live inspection found `ether5` disconnected and absent from all bridges.
+  It now belongs to `bridge-lan`, with PVID 90, tagged VLANs 10/50, ingress
+  filtering enabled, and edge mode enabled. Other VLAN memberships were
+  preserved and all inventory-defined memberships passed read-back checks.
+- The static-only management DHCP server now reserves `10.21.90.7` for this
+  MAC. Only this lease receives `infra-unifi-inform`, forced DHCP option 43
+  with raw value `01040a15287f`, pointing to `10.21.40.127:8080`.
+- The existing routed inform/STUN rules already permit management-VLAN APs.
+  A separate administration-VPN SSH rule was added for `.7`.
+- The controller's Neutron security group now admits inform TCP 8080 and STUN
+  UDP 3478 from `.7/32`. Existing rules were retained and both new rules were
+  read back. `imports-ap2.tf` records their IDs for the next GitOps apply so
+  OpenTofu imports the pre-staged rules instead of creating duplicates.
+- UniFi OS and nginx were active, with inform/STUN sockets listening. The
+  original AP was Connected at `.6`, and both existing WLANs were enabled
+  and assigned to the All APs group.
+- The router apply completed without failures. All 46 network automation tests,
+  Ansible syntax validation, YAML validation and OpenTofu formatting passed.
+
+The second AP was not connected during this verification: `ether5` reported
+`no-link`, and its reservation was `waiting`, last seen `never`. Adoption,
+radio widths/channel selection, negotiated link speed and real-client VLAN
+and coverage checks remain pending physical connection.
+
+## Second AP adoption — 2026-10-05
+
+After the owner connected and powered the AP, DHCP option 43 discovered the
+expected MAC `A4:F8:FF:8E:53:5C` at `10.21.90.7`. Layer-3 adoption completed,
+and the controller name is now **U7 Pro Max 2**.
+
+- Both devices are adopted in the native All APs group. The new AP inherited
+  `Rooftrollen` on third-party VLAN 10 with 5/6 GHz, WPA3, required PMF and MLO;
+  `Rooftrollen_IoT` references third-party VLAN 50 on 2.4 GHz with WPA2-AES.
+  The existing WLAN configuration and first AP's radio settings were retained.
+- The new AP's factory firmware `7.0.48.15574` was updated to `8.7.11.19419`,
+  matching the first AP. The initial controller upgrade requests did not start
+  an update. The explicit official U7PROMAX firmware URL completed the update;
+  its size `65191739` and SHA-256
+  `f55f221433b4fe3eace4438cf93e5ab313138928a26c2d6cf0ffaf10f653fb4d` matched
+  the artifact recorded for the original AP.
+- Native adoption assigned `http://unifi:8080/inform`. The router now owns the
+  exact local A record `unifi -> 10.21.40.127`, TTL one hour, with subdomain
+  matching disabled. Its scoped `unifi-dns` apply and resolution proof passed.
+  The new AP reconnected using that inform URL after both the firmware update
+  and a subsequent software restart.
+- Radio read-back showed 2.4 GHz channel 6 at 20 MHz, 5 GHz channel 100 at
+  80 MHz, and 6 GHz channel 37 at 160 MHz. All three radios reached RUN and the
+  three expected WLAN interfaces were up. These channel blocks are separate
+  from the original AP's observed channels 11/40/85 at the same widths. The
+  5-GHz radio performs a DFS radar check after startup before transmitting.
+- A real trusted client associated on the new AP's 5-GHz and later 6-GHz radio,
+  with address `10.21.10.103` and reported VLAN 10. Client byte counters
+  increased. This proves trusted client forwarding; no new room coverage,
+  throughput, MLO negotiation or real IoT-client test was performed remotely.
+- The new AP initially negotiated **1 Gb/s full duplex**. After the firmware
+  restart, both RouterOS and UniFi reported **100 Mb/s full duplex**. RouterOS
+  retained automatic negotiation and advertised gigabit; the link partner
+  advertised only 10/100 Mb/s. Restarting negotiation on only `ether5` and
+  one software restart of only this AP did not restore gigabit. The owner
+  subsequently completed a full PoE-adapter power cycle; its fresh uptime and
+  continued 100-Mb/s link were verified. The later investigation below tests
+  firmware and PHY behavior without assuming that the cable is the cause.
+- The original AP remained Connected, firmware 8.7.11, with its existing
+  1-Gb/s full-duplex uplink throughout the second AP's configuration.
+- All **47** network automation tests and Ansible syntax validation passed.
+  YAML validation passed with line-length warnings; OpenTofu formatting and
+  `git diff --check` passed. Monitoring's existing AP discovery and site-wide
+  disconnection alert cover both devices without a per-MAC rule change.
+
+## Ethernet investigation on both APs — 2026-10-05
+
+The owner reopened the original AP's 2.5-Gb/s issue together with the new AP's
+100-Mb/s downshift. SSH diagnostics used the original AP's pinned RSA key. The
+new AP's RSA key matched the fingerprint enrolled in the authenticated HTTPS
+controller (`SHA256:aiVjs1/rTF7FtF1rNV8P3BaFicmQk3SfNNfkFukPyOU`); that public
+key is now recorded in `deployments/homelab/ssh-host-keys.json`.
+
+- Both APs are board revision 6, with the `nss-dp` Ethernet driver and external
+  QCA8081 PHY (`0x004dd101`, PHY address 20). Both report automatic negotiation
+  and support/advertise 1 and 2.5 Gb/s. EEE is already disabled on both APs and
+  on the original AP's Omada profile. Disabling EEE therefore cannot explain
+  or fix this observed configuration.
+- On 8.7.11, the new AP's native `ethtool -S eth0` identifies the controller's
+  776 receive errors as `rx_crc_err`, rather than generic software drops.
+  Router-side FCS counters are zero. CRC errors do not identify which element
+  of the Ethernet path is faulty.
+- The exact official U7PROMAX 8.6.11 release was verified against Ubiquiti's
+  firmware catalog before installing it on each AP, one at a time. Its SHA-256
+  is `bde9ddea1628b2813fd2c7514c27e5245014ef5005cf04e01734e5d5a63b5def` and
+  size is 64833923 bytes. WLAN/VLAN/radio configuration survived both updates.
+- The new AP initially linked at 1 Gb/s on 8.6.11, with zero CRC errors. After
+  about two minutes its kernel recorded repeated 1-Gb/s links followed by
+  physical link loss, then a 100-Mb/s link. The transient gigabit connection is
+  not a successful fix. At the stable 100-Mb/s rate, 20 gateway probes passed
+  with zero loss.
+- On 8.6.11 the original AP still failed an automatic 2.5-Gb/s test. A port-6
+  STP-edge test and a fixed-2.5-Gb/s/full-duplex test with flow control also
+  failed. Native logs show repeated `PHY Link up speed: 2500` followed by link
+  loss. The switch's blocking transitions accompany these physical link
+  changes; an edge-port setting did not resolve them. Each test restored
+  port 6 to 1 Gb/s full duplex and restored the original profile, then verified
+  SSH and zero-loss gateway probes.
+- Gigabit-only advertisement on CCR2004 `ether5`, with negotiation still
+  enabled, did not produce a sustained link. Reapplying gigabit-only
+  advertisement in the new AP's native driver also produced short-lived
+  gigabit links and subsequent downshift. Both sides' original settings were
+  restored. The AP driver does not support `ethtool -r` or the PHY downshift
+  tunable; its master/slave setter requires an unavailable netlink interface.
+- A final new-AP comparison with official U7PROMAX 8.0.49 also yielded a
+  100-Mb/s link. Its image matched catalog SHA-256
+  `a503d36a83b4cf7a48927ca603b3106fcdb90b622f720175002f7f6b71047985` and size
+  45200745 bytes. Twenty gateway probes and five internet probes passed with
+  zero loss at 100 Mb/s. Firmware differences therefore have not produced a
+  sustained higher-speed link on this Ethernet path.
+
+Primary-source research supports investigating firmware/PHY interoperability,
+but does not establish the cause of this installation:
+
+- [Ubiquiti's 8.7.11 release](https://community.ui.com/releases/42b6f9d9-3dba-4cda-bde1-b8157edc1299)
+  includes an Ethernet negotiation improvement for fixed-speed switch ports.
+  [First-hand U7 Pro Max reports](https://community.ui.com/questions/af53b148-b666-4239-a2e0-6a2ec989a1f2?parentReplyIds=61225d15-f72a-473a-9bb1-824c16228f85&replyId=f9802ef4-eeb9-4083-b5a9-bf5e4c8e1fde)
+  also describe 2.5-Gb/s failures and recovery at 1 Gb/s, with mixed results on
+  firmware changes. Reports about U7 Pro XG/XGS are different hardware and
+  cannot establish a Pro Max defect.
+- [MikroTik's Ethernet documentation](https://help.mikrotik.com/docs/spaces/ROS/pages/8323191/Ethernet)
+  requires auto-negotiation for gigabit/NBASE-T copper. Tests restricted the
+  advertised rate rather than disabling negotiation.
+- [TP-Link's hardware-v3.0 firmware 3.0.29 release notes](https://static.tp-link.com/upload/firmware/2026/202608/20260814/SG3210XHP-M2(UN)_v3.0_3.0.29%20Build%2020260804.pdf)
+  apply to this SG3210XHP-M2 hardware, unlike the separate v3.20 firmware. The
+  listed fix is Layer-3 forwarding throughput; it does not promise an AP PHY
+  negotiation fix. The switch remains on 3.0.0 Build 20230725 Rel.71176.
+
+The owner subsequently replaced the second AP's cable and requested that work
+on the original AP's 2.5-Gb/s issue stop. Its working 1-Gb/s port setting and
+original profile remain in place; further physical isolation is deferred by
+the owner. Firmware restoration is cleanup of the temporary diagnostic
+downgrade, without further link experiments.
+
+Final read-back after that cable replacement:
+
+- Both APs are Connected on the original/current official 8.7.11.19419 release,
+  with all three radios RUN. The first AP's temporary 8.6.11 downgrade was
+  restored through the controller's cached-firmware upgrade. Port 6 remains
+  1 Gb/s full duplex with the original `infra-ap-trunk` profile. Native CRC and
+  drop counters are zero, and all 20 gateway probes passed. Its existing auto
+  channel settings selected 1/36/85 on final read-back, at 20/80/160 MHz; no
+  manual radio changes were made during cleanup.
+- The second AP is **1 Gb/s full duplex** on both RouterOS and native AP
+  read-back. Its native uptime advanced from 130.68 to 428.73 seconds during
+  150 gateway probes with 1472-byte ICMP payloads, spaced two seconds apart.
+  All 150 arrived, with zero loss. CRC, overflow and drop counters stayed zero;
+  `carrier_changes` stayed at 1, representing only the initial link-up. Native
+  logs contain a single 1-Gb/s link-up, with no subsequent physical drop.
+  Earlier post-replacement gateway and internet probes also had zero loss.
+- CCR2004 `ether5` retains its original automatic negotiation and advertised
+  10/100/1000 modes. Its receive/transmit FCS counters remain zero, and its
+  historical `rx-error-events=2` did not increase. Both AP DHCP reservations
+  are bound to their enrolled MAC addresses.
+- The new AP's channels/widths remain 6/20, 100/80 and 37/160. WLAN security,
+  VLAN mappings, site country and the all-APs group passed read-back. Trusted
+  clients were observed on its 5/6-GHz radios with VLAN-10 addresses, and IoT
+  clients on 2.4 GHz with VLAN-50 addresses. This verifies association and
+  addressing, without claiming measured room coverage or client throughput.
+- The controller's automatic firmware updates remain enabled. The original
+  AP's 2.5-Gb/s issue is deferred by the owner. The second AP's higher-speed
+  link is verified after the cable replacement; this short observation does
+  not establish long-term reliability or isolate a specific cable contact.
