@@ -307,7 +307,7 @@ spec:
             - --upstream=http://127.0.0.1:4533
             - --http-address=0.0.0.0:4180
             - --email-domain=*
-            - --scope=openid profile email
+            - --scope=openid profile email offline_access
             - --pass-user-headers=true
             - --set-xauthrequest=true
             - --reverse-proxy=true
@@ -315,7 +315,7 @@ spec:
             - --cookie-secure=true
             - --cookie-samesite=lax
             - --cookie-refresh=1h
-            - --cookie-expire=12h
+            - --cookie-expire=720h
             - --skip-provider-button=true
           env:
             - name: OAUTH2_PROXY_CLIENT_ID
