@@ -108,8 +108,10 @@ kubeconfig and OpenStack credentials live only in memory.
 4. Through undercloud access, run `netbird-admin identity-credentials` to save
    the two new ZITADEL outputs to the encrypted policy input.
 5. Use `kubectl -n netbird port-forward service/netbird-server 18080:8080` from
-   the services access wrapper. Run `netbird-admin bootstrap` locally. It closes
-   the default mesh policy and saves distinct automation tokens as ciphertext.
+   the services access wrapper. In another terminal, run
+   `nix run .#matrix-access -- services nix run .#netbird-admin -- bootstrap`.
+   It binds the bootstrap account to `netbird.selfhosted` before enabling SSO,
+   closes the default mesh policy and saves distinct automation tokens as ciphertext.
 6. The enrollment tool adds encrypted credential files to their Kustomizations. Enable the
    policy wave. After its plan converges, enable the operator and access waves.
 7. Verify client enrollment, permitted HTTPS, denied lateral/management access,
@@ -122,6 +124,9 @@ Automation PATs expire after 365 days. Before expiry, run
 and operator rollout annotation, and verify reconciliation before revoking the
 old tokens. Device keys and addresses are managed by NetBird; they do not
 require individual RouterOS peer edits.
+
+Personal SSO peers have no periodic login or inactivity expiry. A signed-in
+device remains enrolled until explicitly removed or its access is revoked.
 
 ## Connecting a personal device
 

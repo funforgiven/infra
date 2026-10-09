@@ -62,6 +62,10 @@ corrected files again. There is no automatic release watcher or purchasing bot.
 
 ## Accounts and scrobbling
 
+Navidrome and AudioMuse browser sessions use ZITADEL refresh tokens and
+30-day cookies, refreshed on use. ZITADEL password and MFA checks also remain
+valid for 30 days. Existing sessions need one new login to receive refresh tokens.
+
 Create the first Navidrome administrator through its one-time setup page.
 Last.fm and ListenBrainz authorization is performed separately by each
 Navidrome user. Provider tokens remain in Navidrome state and its encrypted

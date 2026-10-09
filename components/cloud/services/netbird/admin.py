@@ -7,6 +7,7 @@ import configparser
 import datetime
 import json
 import os
+import re
 import secrets
 import subprocess
 import urllib.request
@@ -160,6 +161,38 @@ def api(base, path, token=None, body=None, method=None):
         return json.loads(data) if data else None
 
 
+def bind_bootstrap_account(account_id):
+    """Bind /setup's domain-less account before the first external SSO login."""
+    if not re.fullmatch(r"[a-z0-9]{20}", account_id):
+        raise ValueError("unexpected NetBird account identifier")
+    cluster = json.loads(run([
+        "kubectl", "-n", "netbird", "get", "cluster", "netbird-postgres", "-o", "json",
+    ]))
+    # Combined server 0.80.0 groups SSO users under DefaultSelfHostedDomain,
+    # but /setup creates an account without that domain. A PAT cannot fill it.
+    # Refuse to bind if SSO has already created a second account.
+    query = f"""
+BEGIN;
+LOCK TABLE accounts IN SHARE ROW EXCLUSIVE MODE;
+DO $bind$
+BEGIN
+  IF (SELECT count(*) FROM accounts) <> 1 OR NOT EXISTS (
+    SELECT 1 FROM accounts WHERE id = '{account_id}'
+      AND (domain = '' OR domain = 'netbird.selfhosted')
+  ) THEN
+    RAISE EXCEPTION 'Expected the sole bootstrap account; repair split accounts first';
+  END IF;
+  UPDATE accounts SET domain = 'netbird.selfhosted', domain_category = 'private',
+    is_domain_primary_account = true WHERE id = '{account_id}';
+END $bind$;
+COMMIT;
+"""
+    run([
+        "kubectl", "-n", "netbird", "exec", "-i", cluster["status"]["currentPrimary"],
+        "-c", "postgres", "--", "psql", "-v", "ON_ERROR_STOP=1", "-d", "netbird",
+    ], query.encode())
+
+
 def bootstrap(base):
     # Loopback only. The unauthenticated setup endpoint is never published.
     if base != "http://127.0.0.1:18080":
@@ -176,6 +209,10 @@ def bootstrap(base):
         # Persist the only returned copy before any further network mutation.
         encrypt(BOOTSTRAP, state)
     token = state["token"]
+    accounts = api(base, "/accounts", token)
+    if len(accounts) != 1:
+        raise ValueError("bootstrap must own exactly one account")
+    bind_bootstrap_account(accounts[0]["id"])
     policies = api(base, "/policies", token)
     default = next(policy for policy in policies if policy["name"] == "Default")
     if default["enabled"]:
@@ -245,6 +282,14 @@ def rotate_credentials():
 
 
 def close_bootstrap():
+    state = decrypt(BOOTSTRAP)
+    users = api("https://netbird-api.fahrican.com", "/users", state["tofu-netbird"]["plain_token"])
+    if not any(
+        not user["is_service_user"] and user["id"] != state["owner_id"]
+        and not user.get("is_blocked", False) and not user.get("pending_approval", False)
+        for user in users
+    ):
+        raise ValueError("verify an approved SSO user in the bootstrap account before closing local login")
     path = DEPLOYMENT / "server/runtime.sops.yaml"
     document = decrypt(path)
     config = yaml.safe_load(document["stringData"]["config.yaml"])

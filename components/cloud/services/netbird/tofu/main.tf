@@ -61,9 +61,9 @@ resource "netbird_policy" "default" {
 resource "netbird_account_settings" "homelab" {
   network_range                      = "100.104.0.0/16"
   dns_domain                         = "peers.vpn.fahrican.com"
-  peer_login_expiration_enabled      = true
+  peer_login_expiration_enabled      = false
   peer_login_expiration              = 2592000
-  peer_inactivity_expiration_enabled = true
+  peer_inactivity_expiration_enabled = false
   peer_inactivity_expiration         = 604800
   regular_users_view_blocked         = true
   groups_propagation_enabled         = true
