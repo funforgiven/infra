@@ -286,6 +286,7 @@ def close_bootstrap():
     users = api("https://netbird-api.fahrican.com", "/users", state["tofu-netbird"]["plain_token"])
     if not any(
         not user["is_service_user"] and user["id"] != state["owner_id"]
+        and user.get("idp_id") and user["idp_id"] != "local"
         and not user.get("is_blocked", False) and not user.get("pending_approval", False)
         for user in users
     ):

@@ -20,7 +20,8 @@ class BootstrapTests(unittest.TestCase):
 
     def test_local_owner_and_automation_are_not_sso_qualification(self):
         users = [
-            {"id": "bootstrap", "is_service_user": False},
+            {"id": "bootstrap", "is_service_user": False, "idp_id": "local"},
+            {"id": "another-local-user", "is_service_user": False, "idp_id": "local"},
             {"id": "automation", "is_service_user": True},
         ]
         self.assert_closure_rejected(users)
@@ -29,7 +30,7 @@ class BootstrapTests(unittest.TestCase):
         for state in ({"is_blocked": True}, {"pending_approval": True}):
             with self.subTest(state=state):
                 self.assert_closure_rejected([
-                    {"id": "sso", "is_service_user": False, **state},
+                    {"id": "sso", "is_service_user": False, "idp_id": "zitadel-test", **state},
                 ])
 
     def assert_closure_rejected(self, users):
