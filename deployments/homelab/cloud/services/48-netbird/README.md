@@ -145,6 +145,30 @@ MikroTik WireGuard profile separately for infrastructure recovery.
 
 ## Recovery
 
+### Account association
+
+On 2026-10-09, the bootstrap account held the routing peers and all private
+service configuration, while the first ZITADEL login had created a separate
+account with a 24-hour peer expiry. The bootstrap account's empty domain did
+not match the combined server's `netbird.selfhosted` SSO domain.
+
+Before repair, `netbird-before-account-repair-20261009` completed in the Barman
+archive and its final WAL segment was confirmed archived. A guarded transaction,
+first verified with rollback, moved the SSO identity and Android peer into the
+configured account, retained the peer's key, allocated its IP within
+`100.104.0.0/16`, and removed the empty account's default policy and group.
+The original account now owns the private `netbird.selfhosted` domain. The
+combined controller was stopped during the transaction and restarted afterwards.
+The disabled default mesh policy, HTTPS-only service policy, ten DNS zones and
+three routing peers were preserved.
+
+Bootstrap now binds that domain before enabling SSO and refuses to proceed if
+multiple accounts exist. Closing local login also requires an approved external
+SSO user in the configured account. Changing the expiry period alone cannot
+repair an account split.
+
+### Infrastructure access
+
 Keep the native MikroTik WireGuard configuration and direct management addresses
 on the administrator device. Infrastructure SSH and PiKVM must remain usable
 without Kubernetes DNS, ZITADEL, NetBird or a private application gateway.
