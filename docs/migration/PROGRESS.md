@@ -282,3 +282,35 @@ The reviewed installer is now stored on PiKVM. Its stored 1,738,014,720 bytes
 matched the published SHA-256 again through the authorized SSH login. Virtual
 media remains detached with the previous selection unchanged. Pecorino's exact
 locked NixOS system closure also built successfully on the workstation.
+
+
+## Cold guest archives and restartable transfers, 12 October 2026
+
+The 21:15 UTC Backblaze checkpoint has 244 artifacts and verified final recovery
+evidence for 28 of 50 source claims. Its exact version was downloaded,
+authenticated and checked against all artifact hashes; the signed target Git
+bundle passed native verification. The UniFi source disk and exact prepared
+NoCloud two-NIC boot qualification are included. The private ledger continues
+to require the remaining claim exports, cloud retirement archives and physical
+recovery metadata before installation.
+
+All three CAPI management guests shut down cleanly after their final held
+configuration package was independently restored. That package contains 70
+Secrets/ConfigMaps and 49 controller/CAPI objects. Their root RBD images are
+being exported from owned cold snapshots; no source root has been deleted.
+Four of eight retained source cloud images have independent Backblaze/native
+QCOW2 conversion, integrity and full-byte comparison proofs. Owner-approved
+Windows/macOS retirement remains separate from retained image recovery.
+
+A network interruption aborted the large Forge backup-history upload. The
+private transfer helper now records exact owned multipart IDs, per-part hashes
+and confirmed ETags, and downloads exact versions in restartable ranges.
+Interruption tests passed for multipart reuse, download retries, authenticated
+recovery and changed-source refusal. The interrupted immutable archives resumed;
+they are not counted as verified until native filesystem recovery passes.
+
+Locked target system builds now pass for pecorino, taleggio and asiago. Prepared
+installation files preserve each pinned source SSH host identity; the host age
+key independently decrypts the target host secrets. Those private bootstrap
+files are excluded from public Git and plaintext checkpoint artifacts. No
+physical host activation, installer boot or disk reformat has occurred.
