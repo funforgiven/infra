@@ -10,6 +10,7 @@ stringData:
     hostname: unifi
     manage_etc_hosts: true
     ssh_pwauth: false
+    ssh_deletekeys: false
     disable_root: true
     users:
     - name: ubuntu
