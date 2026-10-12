@@ -31,10 +31,12 @@ export needed images or cache them on the workstation before its outage.
 
 Test PiKVM's HDMI/USB, keyboard layout, host identity and virtual-media boot on
 each motherboard. Keep its power and access independent of the retiring cluster.
-No ATX means the owner handles powered-off/frozen hosts. Record an official
-NixOS installer ISO URL/version/SHA-256 and verify the actual downloaded bytes;
-mount that reviewed image through PiKVM. The installer and target system are
-separate artifacts: the target comes from the locked migration flake.
+No ATX means the owner handles powered-off/frozen hosts. The reviewed migration
+installer is built from the target flake's locked Nixpkgs revision, with Linux
+6.18.55 and the required storage/network tools. Record its build inputs, complete
+ISO SHA-256 and native isolated boot qualification; verify the staged PiKVM bytes
+before mounting it. Preserve the downloaded official ISO as a separate fallback.
+The live installer and the installed target system remain separate artifacts.
 
 Run a representative cold export/test restore, native PostgreSQL recovery,
 UniFi offline preparation and transfer-image qualification before scheduling.
@@ -119,13 +121,15 @@ physical NICs, link/FEC, host identity and a reachable SSH address. Source
 inspection confirmed two Intel ice members per host, fixed 25 Gb/s full-duplex
 with autonegotiation off and active RS FEC; the CRS510 uses matching fixed
 25G-baseCR/fec91 settings. The target applies these PHY settings before networkd
-enslaves the members. Match permanent MAC/PCI identities when configuring the
-installer and verify both members negotiate 25 Gb/s with RS FEC. Install the
-operator public key from `secrets/github-ssh-key.pub` into the live installer's
-root authorized keys using the console. Disable installer password SSH after
-key access works. Record its temporary SSH host fingerprint separately from
-the preserved final host identity. Keep PiKVM on that port while virtual media
-is needed.
+enslaves the members. The guarded installer matches the board, permanent NIC
+MAC/PCI identities and both SATA serials/sizes before bringing up networking.
+It disables automatic RAID assembly and LVM activation, and protects all selected
+SATA blocks read-only. An unknown or already activated disk layout stops this
+bootstrap. Its root SSH enrollment contains only the public operator key from
+`secrets/github-ssh-key.pub`; password login is disabled. Verify both physical
+members negotiate 25 Gb/s with RS FEC. Read the temporary SSH host fingerprint
+through PiKVM and pin it separately from the preserved final host identity.
+Keep PiKVM on that port while virtual media is needed.
 
 Inspect live `lsblk -b -o NAME,PATH,SIZE,MODEL,SERIAL,WWN,TYPE`, `readlink -f` for
 each inventoried by-path connector, `wipefs -n` and `mdadm --examine`. Match
