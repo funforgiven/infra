@@ -66,17 +66,26 @@ class RouteBoundaryTests(unittest.TestCase):
 
 
 class NetworkBoundaryTests(unittest.TestCase):
-    def test_generated_calico_enforces_before_the_global_allow(self):
-        spec = importlib.util.spec_from_file_location("netbird_network", SOURCE.with_name("render_network.py"))
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        module.render(check=True)
-        for directory in ("server", "access"):
-            policy = yaml.safe_load((module.DEPLOYMENT / directory / "calico.generated.yaml").read_text())
-            self.assertLess(policy["spec"]["order"], 20)
-            self.assertEqual(policy["spec"]["egress"][-1], {"action": "Deny"})
-            self.assertEqual(policy["spec"]["types"], ["Egress"])
-            self.assertIn("netbird", policy["spec"]["namespaceSelector"])
+    def test_server_and_router_default_deny_and_identity_gateway_access(self):
+        policies = policies_from("server/network-policy.yaml")
+        self.assertTrue(any(d["spec"].get("podSelector") == {} and
+                            "Egress" in d["spec"]["policyTypes"] and
+                            not d["spec"].get("egress") for d in policies))
+        router = next(d for d in policies_from("access/routing.yaml") if d["metadata"]["name"] == "routing-peers")
+        self.assertEqual(router["spec"]["podSelector"]["matchLabels"], {"access.fahrican.com/netbird-router": "services"})
+        self.assertIn("Egress", router["spec"]["policyTypes"])
+        self.assertFalse(any(rule == {} for rule in router["spec"]["egress"]))
+        server = next(d for d in policies_from("server/network-policy.yaml") if d["metadata"]["name"] == "server")
+        gateway = [rule for rule in server["spec"]["egress"] if any(
+            peer.get("podSelector", {}).get("matchLabels", {}).get("gateway.envoyproxy.io/owning-gateway-name") == "management"
+            for peer in rule.get("to", []))]
+        self.assertEqual(len(gateway), 1)
+        self.assertEqual(gateway[0]["ports"], [{"protocol": "TCP", "port": 10443}])
+
+
+def policies_from(relative):
+    path = routes.SERVICES / "apps/netbird" / relative
+    return [d for d in yaml.safe_load_all(path.read_text()) if d and d["kind"] == "NetworkPolicy"]
 
 
 if __name__ == "__main__":

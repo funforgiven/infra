@@ -177,39 +177,35 @@ spec:
             configMap:
               name: forge-snapshot-tools
 ---
-apiVersion: projectcalico.org/v3
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: forge-snapshot-backup
   namespace: forge
 spec:
-  order: 15
-  selector: app.kubernetes.io/name == 'forge-snapshot-backup'
-  types:
-  - Ingress
-  - Egress
-  ingress:
-  - action: Deny
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: forge-snapshot-backup
+  ingressDeny:
+  - {}
   egress:
-  - action: Allow
-    destination:
-      services:
-        name: kubernetes
-        namespace: default
-  - action: Deny
+  - toEntities:
+    - kube-apiserver
+    toPorts:
+    - ports:
+      - port: '6443'
+        protocol: TCP
 ---
-apiVersion: projectcalico.org/v3
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: forge-snapshot-export
   namespace: forge
 spec:
-  order: 15
-  selector: app.kubernetes.io/name == 'forge-snapshot-export'
-  types:
-  - Ingress
-  - Egress
-  ingress:
-  - action: Deny
-  egress:
-  - action: Deny
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: forge-snapshot-export
+  ingressDeny:
+  - {}
+  egressDeny:
+  - {}

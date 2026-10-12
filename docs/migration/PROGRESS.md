@@ -7,14 +7,15 @@ Branch: `codex/nixos-kubernetes-migration`, based on `8d5f130`.
 The preparation did not change main's tracked files. The current execution
 audit has created and removed isolated restore copies and has written new
 encrypted recovery objects to Backblaze. It has made no production deployment,
-provider apply, server installation, PiKVM operation or disk change. Read-only
+provider apply, server installation or disk reformat. PiKVM console identity and
+keyboard control have been qualified without boot-media or power changes; Beets
+writers are paused for an independent cold-volume backup pilot. Read-only
 inspection captured hardware, Kubernetes/cloud volumes, addresses, certificate
 fingerprints, provider states, runtime credentials and SSH host identities;
 private recovery values are kept encrypted or in owner-private scratch space.
 
 Implemented: three NixOS/K3s servers with mirrored-SATA disko, networking,
-SSH/SOPS bootstrap and off-server etcd backups; Calico native v3 CRDs with its
-pinned Tigera Operator, MetalLB, Multus and direct Rook-Ceph RBD/CephFS; one
+SSH/SOPS bootstrap and off-server etcd backups; Cilium 1.20.2 with eBPF kube-proxy replacement, MetalLB, Multus and direct Rook-Ceph RBD/CephFS; one
 semantic Flux graph and a restore suspension overlay; retained apps and
 independent AWS mail/providers; supported UniFi KubeVirt guest; original OIDC
 identities, TLS/ACME/runtime keys and encrypted provider state archives;
@@ -35,9 +36,9 @@ execution gates, not completed preparation work.
 
 Validation: all five NixOS hosts and the three server disko selections evaluate;
 flake checking with `--no-build --all-systems` passes. The combined homelab Nix
-check builds successfully, including 273 retained network/service/recovery tests,
+check builds successfully, including 280 retained network/service/recovery tests,
 manifest checks, provider formatting, RouterOS syntax and shell checks. Full
-schema validation passes for 33 Kustomize entrypoints, 29 Flux stages and 443
+schema validation passes for 33 Kustomize entrypoints, 29 Flux stages and 464
 exact pinned Helm-rendered resources, with no failures or missing schemas.
 All four provider configurations passed offline init/validate; four encrypted
 state exports verified lineage, mode and overwrite protection. Credential
@@ -112,10 +113,11 @@ state is fallback evidence. Retain claim names, namespace mappings, numeric
 ownership, mount paths/subpaths, native database roles and stable application
 identities. Source Cinder/Manila bindings never become direct Ceph bindings.
 
-PiKVM ricotta is registered at 10.21.90.3. Its pinned SSH endpoint is reachable,
-but the existing automation key is not enrolled. An ignored, mode-0600 input
-file at `/home/funforgiven/dev/infra/secrets/pikvm-ricotta.key` awaits the owner's
-key. No console image, keyboard event, power action or installation has occurred.
+PiKVM ricotta at 10.21.90.3 is authenticated through pinned SSH and an encrypted
+SSH tunnel to the local API. It is the existing v2 unit, connected to pecorino;
+the console marker and source host identity agree. A harmless Shift key press
+and release verified USB keyboard control. No switch is present at this device;
+virtual installer-media boot and physical disk identity remain installation gates.
 
 Verified recovery evidence is recorded in the owner-private workstation folder
 `/tmp/homelab-migration-audit-20261012`. It includes exact B2 object versions and
@@ -154,14 +156,14 @@ Velero's helper. The prepared Matrix controller now requests both PV/PVC
 resource types and filesystem restore, and all three inert Pod replacements
 retain `tmp`. All 27 Matrix tests passed; all three corrected Pods passed
 Kubernetes server-side admission dry runs. Only audit-owned scratch resources
-were removed, with UID and PVC/PV ownership checks. Production writers remain
-running; no freeze has occurred.
+were removed, with UID and PVC/PV ownership checks. Other production writers remain running. Beets has a recorded writer freeze,
+including a parent services Flux suspension so reconciliation cannot reset it.
 
 The first host reinstall requires a working PiKVM session and identified host,
 quiesced data exports for all retained filesystem claims/history and UniFi,
 released/unclaimed-device dispositions, and final CNPG backup/WAL qualification.
 Application operation checks follow restoration into the target and gate
-release of each application. Beets state, Forge cache and monitoring
+release of each application. Forge cache and monitoring
 history need explicit exports outside the current scheduled backup coverage.
 Periodic AudioMuse dump-volume coverage also needs correction independently of
 the new verified native dump. Backblaze presence or a Completed Velero backup
@@ -178,3 +180,41 @@ and the backup location reports `Available` after a fresh validation.
 An unrelated tracked edit appeared in main during the audit and was preserved.
 Further source access uses the clean detached 8d5f130 checkout in the private
 audit folder so that source capture cannot accidentally incorporate that edit.
+
+## Cilium target revision, 12 October 2026
+
+The owner requested Cilium while the migration recovery audit was active. The
+prepared branch now pins Cilium 1.20.2, disables K3s kube-proxy, retains MetalLB
+for Local traffic policies and keeps Multus for secondary IoT/guest interfaces.
+Calico/Tigera manifests and duplicate Matrix/NetBird ordered policies are removed;
+Forge and backup isolation rules are translated to Cilium. Managed gateway
+backend selectors accompany retained VIP allowlists. Full offline schema validation passed for this revision: 33 entrypoints,
+29 Flux stages, 1,189 validation instances and 464 Helm resources, with no
+failures. Focused policy checks preserve API-only backup access, offline restore
+and export isolation, CI private-network denial and managed identity gateway
+routing. Physical Cilium datapath qualification remains required. No source
+CNI or physical host was changed.
+
+PiKVM ricotta was identified as the registered v2 unit, connected to pecorino.
+An SSH-tunneled API session and harmless Shift press/release verified keyboard
+control; an on-console host marker matched pecorino. Installer-media boot remains
+unqualified. NetBird's 12 October Backblaze base backup and required WAL have
+been independently downloaded and recovered with native PostgreSQL, followed by
+configuration-count, index/heap and page-checksum checks. This is an online
+recovery proof; final cutover exports and writer-stop receipts remain required.
+
+Beets' 5 GiB cold RBD snapshot was exported as raw/gzip, age encrypted and stored
+in Backblaze. The exact object version was downloaded, authenticated and hashed,
+then restored with libguestfs into a fresh ext4 filesystem. All 22 entries matched
+in data, UID/GID, mode and archived ACL/xattr metadata. Native SQLite integrity
+passed for the 353-item/56-album catalog. The new `media/beets-data` claim keeps
+its `/state` mount and UID/GID 1000. Its 353 relative catalog paths remain within the configured `/media/library` root;
+media-library bytes are a separate outstanding recovery gate. This is the first
+verified final cold claim export, not a complete migration backup. Its writer
+and parent Flux holds remain recorded in the private recovery ledger.
+
+The Cilium revision passed the combined Nix check with 280 tests, all-system
+flake evaluation, formatter, strict native/Helm schema checks and the evaluated
+K3s flags. The updated encrypted B2 checkpoint at 19:06 UTC downloaded and passed
+authenticated decryption plus every artifact hash; it includes the one verified
+final cold claim and keeps `cutoverReady: false`.

@@ -223,47 +223,42 @@ spec:
         - 10.21.91.0/24
         - 10.100.0.0/16
 ---
-apiVersion: projectcalico.org/v3
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: forge-cache
   namespace: forge-cache
 spec:
-  order: 16
-  selector: all()
-  types:
-  - Ingress
-  - Egress
+  endpointSelector: {}
   ingress:
-  - action: Allow
-    protocol: TCP
-    source:
-      namespaceSelector: kubernetes.io/metadata.name == 'envoy-gateway-system'
-      selector: gateway.envoyproxy.io/owning-gateway-name == 'services' && gateway.envoyproxy.io/owning-gateway-namespace
-        == 'services-network'
-    destination:
-      ports:
-      - 8080
-  - action: Allow
-    protocol: TCP
-    source:
-      namespaceSelector: kubernetes.io/metadata.name == 'envoy-gateway-system'
-      selector: gateway.envoyproxy.io/owning-gateway-name == 'netbird-services' &&
-        gateway.envoyproxy.io/owning-gateway-namespace == 'services-network'
-    destination:
-      ports:
-      - 8080
-  - action: Allow
-    protocol: TCP
-    source:
-      namespaceSelector: kubernetes.io/metadata.name == 'forge-control'
-      selector: app.kubernetes.io/name == 'forge-linux-launcher'
-    destination:
-      ports:
-      - 8082
-  - action: Deny
-  egress:
-  - action: Deny
+  - fromEndpoints:
+    - matchLabels:
+        gateway.envoyproxy.io/owning-gateway-name: services
+        gateway.envoyproxy.io/owning-gateway-namespace: services-network
+        k8s:io.kubernetes.pod.namespace: envoy-gateway-system
+    toPorts:
+    - ports:
+      - port: '8080'
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        gateway.envoyproxy.io/owning-gateway-name: netbird-services
+        gateway.envoyproxy.io/owning-gateway-namespace: services-network
+        k8s:io.kubernetes.pod.namespace: envoy-gateway-system
+    toPorts:
+    - ports:
+      - port: '8080'
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: forge-linux-launcher
+        k8s:io.kubernetes.pod.namespace: forge-control
+    toPorts:
+    - ports:
+      - port: '8082'
+        protocol: TCP
+  egressDeny:
+  - {}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule

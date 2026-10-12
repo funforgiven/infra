@@ -11,8 +11,6 @@ RBAC and resource changes are expressed through local Kustomize configuration.
 | `metallb/vendor/install.yaml` | [metallb-native.yaml](https://raw.githubusercontent.com/metallb/metallb/v0.16.1/config/manifests/metallb-native.yaml) | `bf25feebb7582ca7df845efd52ffbc2960d6cbf4cfc972f47fded9f788b67f0b` | `bf25feebb7582ca7df845efd52ffbc2960d6cbf4cfc972f47fded9f788b67f0b` |
 | `multus/vendor/multus.yaml` | [multus-daemonset-thick.yml](https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/v4.3.1/deployments/multus-daemonset-thick.yml) | `24fb29530b760d28126bba76bd91fac8fd74100b53d9fc65943c223e3a82be30` | `24fb29530b760d28126bba76bd91fac8fd74100b53d9fc65943c223e3a82be30` |
 | `kubevirt/vendor/operator.yaml` | [kubevirt-operator.yaml](https://github.com/kubevirt/kubevirt/releases/download/v1.9.0/kubevirt-operator.yaml) | `f11307caafc3c23ffedf9887d8beb5a4419e2694da242fa68f63d1ec820de2e0` | `f11307caafc3c23ffedf9887d8beb5a4419e2694da242fa68f63d1ec820de2e0` |
-| `calico/vendor/operator.yaml` | [tigera-operator.yaml](https://raw.githubusercontent.com/projectcalico/calico/v3.33.0/manifests/tigera-operator.yaml) | `aef423b36aef8cf86567f92bbe5eea4b4ca105a6fc7dbf43de599c6fa70388ba` | `aef423b36aef8cf86567f92bbe5eea4b4ca105a6fc7dbf43de599c6fa70388ba` |
-| `calico/vendor/native-v3.yaml` | [v3_projectcalico_org.yaml](https://raw.githubusercontent.com/projectcalico/calico/v3.33.0/manifests/v3_projectcalico_org.yaml) | `5306c2c6d9fd6762d804f9da51c049b8269c33498a364c5df0eed555aba026bd` | `5306c2c6d9fd6762d804f9da51c049b8269c33498a364c5df0eed555aba026bd` |
 | `kubevirt/kubevirt.yaml` | [kubevirt-cr.yaml](https://github.com/kubevirt/kubevirt/releases/download/v1.9.0/kubevirt-cr.yaml) | `43106136dbce3312bdbfdeae612aacafc6c12da518d233f90645b4685d84a2af` | `c47d09494887ac735dc95ba164a459b6408df855201ecc48c331adc9f9d4f22d` |
 
 MetalLB uses the official v0.16.1 native release manifest. Kustomize overrides
@@ -21,19 +19,20 @@ its image references with verified multi-platform image-index digests:
 - `quay.io/metallb/controller:v0.16.1@sha256:f51ab515de9ccd20dc3dccb093e48df8adddac019326c456f449e55ba91b6420`
 - `quay.io/metallb/speaker:v0.16.1@sha256:16561e96531e1852d5c229ad7fae6e994dcfa983ff7f4de6b6208b34a4e2ddbc`
 
-Multus v4.3.1-thick is also digest-pinned in its Kustomization. Native Calico v3
-CRDs and Tigera Operator are the matching Calico 3.33 release pair. Their CRD
-ownership and Kubernetes 1.36 admission-policy requirements are documented in
-[ARCHITECTURE.md](ARCHITECTURE.md). KubeVirt uses its versioned 1.9.0 API Swagger;
+Multus v4.3.1-thick is also digest-pinned in its Kustomization. Cilium 1.20.2
+uses the official OCI chart pinned by manifest digest and 22 matching upstream
+CRDs. Each CRD source URL and checksum is recorded in `vendors.json`. Cilium
+bootstrap and Flux use identical values; see [ARCHITECTURE.md](ARCHITECTURE.md). KubeVirt uses its versioned 1.9.0 API Swagger;
 the single UniFi guest uses a restored raw disk in a filesystem PVC.
 
-The twelve rendered chart archives and their dependencies are recorded in
+The thirteen rendered chart archives and their dependencies are recorded in
 `deployments/homelab/validation/sources.json`. OCI sources use manifest digests;
 Git sources use commits. The public chart cache contains source archives and
 derived offline charts, without decrypted values or rendered Secrets.
 
 | Helm release | Immutable reference | Chart archive SHA-256 |
 | --- | --- | --- |
+| `kube-system/cilium` | `sha256:a7c12d330dd96bfcda3bf057b24be8f36566c34868265f930f776dff6f42d838` | `b2afd87b7f75f875f92a14559f14f59b7babbb479d968e3fd625a20bf30ec20e` |
 | `identity/zitadel` | `b05bb603b2ffd0b3284a4b37bad613871bfed94a` | `40b605788f0edf39e987d8328314a697c1bb7449b5f113ae94df4d7f6e3f1c14` |
 | `netbird-routing/netbird-operator` | `41d995671f55d790a4f4e1c37da8c9e41a36abee` | `a7e1523a5ad37f6383afbb8b3edc2b63dacd16e21e25810f8f4d2a4d8388dbbe` |
 | `cert-manager/cert-manager` | `sha256:15c0b46d9006ce8eb9ff14d1bf54d1bbfcc587bb9e24cd9fe186fb8fec56af1f` | `c27101f3f3e2349fb4a9e704316105bf7b52ad73b8c8257d3498ef7f2f6a4adc` |

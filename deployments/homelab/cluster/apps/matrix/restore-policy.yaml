@@ -1,0 +1,11 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: matrix-restore-isolation
+  namespace: matrix-restore
+spec:
+  endpointSelector: {}
+  ingressDeny:
+  - {}
+  egressDeny:
+  - {}

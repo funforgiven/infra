@@ -233,11 +233,11 @@ The services workers have DHCP host routes for `1.1.1.1` and `8.8.8.8`
 through an isolated secondary network. Certificate validation uses reachable
 public resolvers `9.9.9.9` and `149.112.112.112`.
 
-Magnum's Calico addon installs a global outbound allow at order 20. Matrix's
-Calico policies run at order 15, allow only the documented workload paths and
-end with explicit denial. The isolated restore namespace also has an early
-inbound and outbound denial. Keep the Calico and Kubernetes allowlists in sync.
-[Calico documents ordered evaluation and terminal Allow/Deny actions](https://docs.tigera.io/calico/latest/reference/resources/globalnetworkpolicy).
+The original Magnum cluster uses ordered Calico rules to override its broad
+outbound allow. The fresh Cilium cluster has no such bypass and enforces the
+standard Kubernetes allowlists with default denial. Its restore namespace has
+explicit Cilium ingress/egress deny rules, which take precedence over allows.
+The source snapshot remains pinned to the original Calico configuration.
 
 ## Alert migration
 

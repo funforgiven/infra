@@ -1,96 +1,101 @@
-apiVersion: projectcalico.org/v3
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: forge
   namespace: forge
 spec:
-  order: 16
-  selector: all()
-  types:
-  - Ingress
-  - Egress
+  endpointSelector:
+    matchExpressions:
+    - key: app.kubernetes.io/name
+      operator: NotIn
+      values:
+      - forge-snapshot-backup
+      - forge-snapshot-export
   ingress:
-  - action: Allow
-    protocol: TCP
-    source:
-      namespaceSelector: kubernetes.io/metadata.name == 'forge-control'
-      selector: app.kubernetes.io/name == 'forge-native-broker'
-    destination:
-      ports:
-      - 8083
-  - action: Allow
-    protocol: TCP
-    source:
-      namespaceSelector: kubernetes.io/metadata.name == 'envoy-gateway-system'
-      selector: gateway.envoyproxy.io/owning-gateway-name == 'services' && gateway.envoyproxy.io/owning-gateway-namespace
-        == 'services-network'
-    destination:
-      ports:
-      - 3000
-      - 2222
-  - action: Allow
-    protocol: TCP
-    source:
-      namespaceSelector: kubernetes.io/metadata.name == 'envoy-gateway-system'
-      selector: gateway.envoyproxy.io/owning-gateway-name == 'netbird-services' && gateway.envoyproxy.io/owning-gateway-namespace
-        == 'services-network'
-    destination:
-      ports:
-      - 3000
-  - action: Allow
-    protocol: TCP
-    source:
-      namespaceSelector: kubernetes.io/metadata.name == 'services-observability'
-    destination:
-      ports:
-      - 3000
-      - 9900
-  - action: Deny
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: forge-native-broker
+        k8s:io.kubernetes.pod.namespace: forge-control
+    toPorts:
+    - ports:
+      - port: '8083'
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        gateway.envoyproxy.io/owning-gateway-name: services
+        gateway.envoyproxy.io/owning-gateway-namespace: services-network
+        k8s:io.kubernetes.pod.namespace: envoy-gateway-system
+    toPorts:
+    - ports:
+      - port: '3000'
+        protocol: TCP
+      - port: '2222'
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        gateway.envoyproxy.io/owning-gateway-name: netbird-services
+        gateway.envoyproxy.io/owning-gateway-namespace: services-network
+        k8s:io.kubernetes.pod.namespace: envoy-gateway-system
+    toPorts:
+    - ports:
+      - port: '3000'
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        k8s:io.kubernetes.pod.namespace: services-observability
+    toPorts:
+    - ports:
+      - port: '3000'
+        protocol: TCP
+      - port: '9900'
+        protocol: TCP
   egress:
-  - action: Allow
-    protocol: UDP
-    destination:
-      namespaceSelector: kubernetes.io/metadata.name == 'kube-system'
-      selector: k8s-app == 'kube-dns'
-      ports:
-      - 53
-  - action: Allow
-    protocol: TCP
-    destination:
-      namespaceSelector: kubernetes.io/metadata.name == 'kube-system'
-      selector: k8s-app == 'kube-dns'
-      ports:
-      - 53
-  - action: Allow
-    protocol: TCP
-    destination:
-      namespaceSelector: kubernetes.io/metadata.name == 'envoy-gateway-system'
-      selector: gateway.envoyproxy.io/owning-gateway-name == 'services' && gateway.envoyproxy.io/owning-gateway-namespace
-        == 'services-network'
-      ports:
-      - 10443
-      - 2222
-  - action: Allow
-    protocol: TCP
-    destination:
-      nets:
-      - 10.21.40.122/32
-      ports:
-      - 443
-      - 2222
-  - action: Allow
-    protocol: TCP
-    destination:
-      nets:
-      - 10.21.20.131/32
-      ports:
-      - 443
-  - action: Allow
-    protocol: TCP
-    destination:
-      nets:
-      - 0.0.0.0/0
-      notNets:
+  - toEndpoints:
+    - matchLabels:
+        k8s-app: kube-dns
+        k8s:io.kubernetes.pod.namespace: kube-system
+    toPorts:
+    - ports:
+      - port: '53'
+        protocol: UDP
+  - toEndpoints:
+    - matchLabels:
+        k8s-app: kube-dns
+        k8s:io.kubernetes.pod.namespace: kube-system
+    toPorts:
+    - ports:
+      - port: '53'
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        gateway.envoyproxy.io/owning-gateway-name: services
+        gateway.envoyproxy.io/owning-gateway-namespace: services-network
+        k8s:io.kubernetes.pod.namespace: envoy-gateway-system
+    toPorts:
+    - ports:
+      - port: '10443'
+        protocol: TCP
+      - port: '2222'
+        protocol: TCP
+  - toCIDRSet:
+    - cidr: 10.21.40.122/32
+      except: []
+    toPorts:
+    - ports:
+      - port: '443'
+        protocol: TCP
+      - port: '2222'
+        protocol: TCP
+  - toCIDRSet:
+    - cidr: 10.21.20.131/32
+      except: []
+    toPorts:
+    - ports:
+      - port: '443'
+        protocol: TCP
+  - toCIDRSet:
+    - cidr: 0.0.0.0/0
+      except:
       - 0.0.0.0/8
       - 10.0.0.0/8
       - 172.16.0.0/12
@@ -100,62 +105,82 @@ spec:
       - 100.64.0.0/10
       - 224.0.0.0/4
       - 240.0.0.0/4
-      ports:
-      - 443
-      - 587
-  - action: Deny
+    toPorts:
+    - ports:
+      - port: '443'
+        protocol: TCP
+      - port: '587'
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        gateway.envoyproxy.io/owning-gateway-name: services
+        gateway.envoyproxy.io/owning-gateway-namespace: services-network
+        k8s:io.kubernetes.pod.namespace: envoy-gateway-system
+    toPorts:
+    - ports:
+      - port: '10443'
+        protocol: TCP
+      - port: '2222'
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        gateway.envoyproxy.io/owning-gateway-name: management
+        gateway.envoyproxy.io/owning-gateway-namespace: network-services
+        k8s:io.kubernetes.pod.namespace: envoy-gateway-system
+    toPorts:
+    - ports:
+      - port: '10443'
+        protocol: TCP
 ---
-apiVersion: projectcalico.org/v3
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: ci-jobs
   namespace: forge-ci
 spec:
-  order: 16
-  selector: all()
-  types:
-  - Ingress
-  - Egress
-  ingress:
-  - action: Deny
+  endpointSelector: {}
+  ingressDeny:
+  - {}
   egress:
-  - action: Allow
-    protocol: UDP
-    destination:
-      namespaceSelector: kubernetes.io/metadata.name == 'kube-system'
-      selector: k8s-app == 'kube-dns'
-      ports:
-      - 53
-  - action: Allow
-    protocol: TCP
-    destination:
-      namespaceSelector: kubernetes.io/metadata.name == 'kube-system'
-      selector: k8s-app == 'kube-dns'
-      ports:
-      - 53
-  - action: Allow
-    protocol: TCP
-    destination:
-      namespaceSelector: kubernetes.io/metadata.name == 'envoy-gateway-system'
-      selector: gateway.envoyproxy.io/owning-gateway-name == 'services' && gateway.envoyproxy.io/owning-gateway-namespace
-        == 'services-network'
-      ports:
-      - 10443
-      - 2222
-  - action: Allow
-    protocol: TCP
-    destination:
-      nets:
-      - 10.21.40.122/32
-      ports:
-      - 443
-      - 2222
-  - action: Allow
-    protocol: TCP
-    destination:
-      nets:
-      - 0.0.0.0/0
-      notNets:
+  - toEndpoints:
+    - matchLabels:
+        k8s-app: kube-dns
+        k8s:io.kubernetes.pod.namespace: kube-system
+    toPorts:
+    - ports:
+      - port: '53'
+        protocol: UDP
+  - toEndpoints:
+    - matchLabels:
+        k8s-app: kube-dns
+        k8s:io.kubernetes.pod.namespace: kube-system
+    toPorts:
+    - ports:
+      - port: '53'
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        gateway.envoyproxy.io/owning-gateway-name: services
+        gateway.envoyproxy.io/owning-gateway-namespace: services-network
+        k8s:io.kubernetes.pod.namespace: envoy-gateway-system
+    toPorts:
+    - ports:
+      - port: '10443'
+        protocol: TCP
+      - port: '2222'
+        protocol: TCP
+  - toCIDRSet:
+    - cidr: 10.21.40.122/32
+      except: []
+    toPorts:
+    - ports:
+      - port: '443'
+        protocol: TCP
+      - port: '2222'
+        protocol: TCP
+  - toCIDRSet:
+    - cidr: 0.0.0.0/0
+      except:
       - 0.0.0.0/8
       - 10.0.0.0/8
       - 172.16.0.0/12
@@ -165,6 +190,18 @@ spec:
       - 100.64.0.0/10
       - 224.0.0.0/4
       - 240.0.0.0/4
-      ports:
-      - 443
-  - action: Deny
+    toPorts:
+    - ports:
+      - port: '443'
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        gateway.envoyproxy.io/owning-gateway-name: services
+        gateway.envoyproxy.io/owning-gateway-namespace: services-network
+        k8s:io.kubernetes.pod.namespace: envoy-gateway-system
+    toPorts:
+    - ports:
+      - port: '10443'
+        protocol: TCP
+      - port: '2222'
+        protocol: TCP

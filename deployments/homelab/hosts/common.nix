@@ -78,8 +78,10 @@ in
       enable = true;
       checkReversePath = false;
       trustedInterfaces = [
-        "cali+"
-        "vxlan.calico"
+        "lxc+"
+        "cilium_host"
+        "cilium_net"
+        "cilium_vxlan"
       ];
       interfaces = {
         "bond0.20" = {
@@ -89,10 +91,11 @@ in
             2380
             6443
             10250
+            4240
             7946
           ];
           allowedUDPPorts = [
-            4789
+            8472
             7946
           ];
         };
@@ -318,6 +321,7 @@ in
       "--cluster-dns=172.24.0.10"
       "--flannel-backend=none"
       "--disable-network-policy"
+      "--disable-kube-proxy"
       "--disable-helm-controller"
       "--kube-apiserver-arg=authentication-config=/etc/kubernetes/authentication.yaml"
       "--secrets-encryption"
