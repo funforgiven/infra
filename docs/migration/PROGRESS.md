@@ -1,14 +1,16 @@
-# Migration preparation status
+# Migration status
 
-Preparation complete; live migration remains a future separately authorized task.
+Preparation is complete. The owner has now requested a sequential live migration, conditional on verified recovery copies. The recovery audit has started; no physical host has been rebooted, reinstalled or reformatted.
 
 Worktree: `/home/funforgiven/dev/infra-nixos-kubernetes`.
 Branch: `codex/nixos-kubernetes-migration`, based on `8d5f130`.
-Main's tracked files remain unchanged. No live deployment, provider apply,
-server installation, PiKVM operation or disk operation has occurred. Read-only
+The preparation did not change main's tracked files. The current execution
+audit has created and removed isolated restore copies and has written new
+encrypted recovery objects to Backblaze. It has made no production deployment,
+provider apply, server installation, PiKVM operation or disk change. Read-only
 inspection captured hardware, Kubernetes/cloud volumes, addresses, certificate
 fingerprints, provider states, runtime credentials and SSH host identities;
-all private values are encrypted immediately.
+private recovery values are kept encrypted or in owner-private scratch space.
 
 Implemented: three NixOS/K3s servers with mirrored-SATA disko, networking,
 SSH/SOPS bootstrap and off-server etcd backups; Calico native v3 CRDs with its
@@ -77,7 +79,8 @@ all five host/four exported disko configurations evaluate; the combined Nix
 check built successfully with 273 tests. Full offline schema validation passed
 33 entrypoints, 29 Flux stages, 1,194 validation instances and 443 Helm resources,
 with zero failures/missing schemas. Working-tree and 851-commit history secret
-scans found no leaks. Main remains clean at 8d5f130. No live changes occurred.
+scans found no leaks. At that preparation checkpoint, main was clean at
+8d5f130 and no live changes had occurred.
 
 Repeatable source capture is implemented and qualified through the frozen source
 flake. It read 742 Secrets/ConfigMaps into ciphertext, the existing 56 claims/74
@@ -98,3 +101,80 @@ is committed locally for review; no push or merge occurred. See
 Hardware boot, mirrored-disk boot, network/USB behavior, independent backup
 completeness, actual byte exports/restores and PiKVM control remain future live
 execution qualifications. No live changes occurred.
+
+
+## Execution recovery audit — 2026-10-12
+
+The owner selected Backblaze for durable exports, with download and restore
+verification on the workstation. The primary recovery procedure builds fresh
+application storage and restores data/configuration into it; old cluster etcd
+state is fallback evidence. Retain claim names, namespace mappings, numeric
+ownership, mount paths/subpaths, native database roles and stable application
+identities. Source Cinder/Manila bindings never become direct Ceph bindings.
+
+PiKVM ricotta is registered at 10.21.90.3. Its pinned SSH endpoint is reachable,
+but the existing automation key is not enrolled. An ignored, mode-0600 input
+file at `/home/funforgiven/dev/infra/secrets/pikvm-ricotta.key` awaits the owner's
+key. No console image, keyboard event, power action or installation has occurred.
+
+Verified recovery evidence is recorded in the owner-private workstation folder
+`/tmp/homelab-migration-audit-20261012`. It includes exact B2 object versions and
+hashes, restored snapshot IDs and a per-source application recovery ledger.
+The ledger remains `cutoverReady: false`. The ledger and verification receipts
+are also preserved as an encrypted B2 checkpoint under
+`services/kubernetes/plugins/migration/20261012/`; its exact object version was
+downloaded, authenticated and checked against every artifact hash.
+
+- Undercloud and management encrypted etcd backups downloaded, authenticated,
+  and restored with native etcdutl; the OpenStack authoritative archive passed
+  its inner hashes and archive-read checks. This does not qualify a whole-cloud
+  restore or copy any application volume bytes.
+- Home Assistant and Thread recovery archives from today's Kopia backup
+  downloaded directly onto the workstation and passed their native offline
+  verifiers, including JSON/SQLite integrity and Thread dataset structure.
+- Both Matrix databases restored locally using PostgreSQL 17 from today's B2
+  dumps. Relay queue/media presence, bot identity and the encrypted crypto
+  recovery canary passed the existing offline verifier.
+- AudioMuse's dump PVC was absent from today's filesystem backup because only
+  a completed backup Job mounted it. A fresh online PostgreSQL 15 native dump
+  is now encrypted in B2, downloaded/decrypted and restored: 29 application
+  tables and expected role ownership passed. This is a verified online recovery
+  point, not the final quiesced cutover export.
+- Today's UniFi and AWS mail Restic payloads downloaded and passed restored-file
+  verification. The UniFi archive also passed archive readability checks; its
+  cold guest disk export and isolated guest boot remain pending.
+- A fresh source capture preserves 745 Secrets/ConfigMaps, 54 certificate/state
+  objects and current controller/volume/cloud inventories. The encrypted B2
+  package downloaded again, every artifact hash matched and all four inner
+  SOPS archives decrypted successfully. This remains a pre-cutover capture.
+
+The disposable in-cluster verification exposed failing OpenStack scratch volume
+attachments and a Matrix Pod modifier that dropped the `tmp` volume used by
+Velero's helper. The prepared Matrix controller now requests both PV/PVC
+resource types and filesystem restore, and all three inert Pod replacements
+retain `tmp`. All 27 Matrix tests passed; all three corrected Pods passed
+Kubernetes server-side admission dry runs. Only audit-owned scratch resources
+were removed, with UID and PVC/PV ownership checks. Production writers remain
+running; no freeze has occurred.
+
+The first host reinstall requires a working PiKVM session and identified host,
+quiesced data exports for all retained filesystem claims/history and UniFi,
+released/unclaimed-device dispositions, and final CNPG backup/WAL qualification.
+Application operation checks follow restoration into the target and gate
+release of each application. Beets state, Forge cache and monitoring
+history need explicit exports outside the current scheduled backup coverage.
+Periodic AudioMuse dump-volume coverage also needs correction independently of
+the new verified native dump. Backblaze presence or a Completed Velero backup
+does not establish complete PVC coverage.
+
+The full render/schema check after the Matrix fix passed: 33 entrypoints,
+29 Flux stages, 1,194 validation instances and 443 Helm resources, with zero
+failures. Auxiliary B2 exports were moved from an unsupported top-level
+`migration/` directory into Velero's supported `plugins/migration/` directory.
+Replacement versions were downloaded and verified before removing only the
+exact original versions written by this audit. The unsupported prefix is empty,
+and the backup location reports `Available` after a fresh validation.
+
+An unrelated tracked edit appeared in main during the audit and was preserved.
+Further source access uses the clean detached 8d5f130 checkout in the private
+audit folder so that source capture cannot accidentally incorporate that edit.
