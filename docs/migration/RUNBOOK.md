@@ -49,8 +49,10 @@ cloud provisioning/provider reconcilers, app CronJobs and runners; record their
 original states. Stop ingress and all external/application writers. Complete
 final native DB backups/WAL and their isolated restore checks, then stop each
 app and cold-export its files. Cleanly shut down UniFi and source guests before
-raw-device/root-image copies. Keep source Ceph/CSI/cloud APIs running until
-backend identification, transfers and verification finish.
+raw-device/root-image copies. Keep the source APIs needed by remaining exports running until backend
+identification, transfers and verification finish. Cloud APIs may retire after
+their authoritative metadata and native database backups qualify; the remaining
+RBD exports still require source Ceph and the physical Kubernetes API.
 
 Run `migration-source-capture` into a fresh independent private directory as
 documented in DATA-MIGRATION; check its complete manifest and review changes.
@@ -61,16 +63,33 @@ final source archive and export them into private local files. Source cloud-only
 states remain encrypted in the rollback package. Do not discard them by removing
 the old operator/controller.
 
-The SATA installation gate requires checked, independently readable exports for
-every retained source and all source recovery metadata, successful isolated
-native/app restores, available keys, and a recorded rollback package. Record
-that gate explicitly in the private execution ledger. A recently successful
-backup Job or existing six OSD disks is insufficient.
+The installer boot gate requires checked, independently readable exports for
+every required claim and guest/image disposition, successful isolated native/app
+restores, independent administration keys and a verified rollback package. All
+source-dependent export jobs must finish before pecorino leaves Ubuntu. This
+gate permits booting the installer to archive stopped source filesystems.
+
+The SATA formatting gate additionally requires that selected host's cold root,
+boot and both EFI partitions to have verified Backblaze/native recovery proofs,
+with partition/RAID/LVM metadata preserved, and its actual installer disk
+identities matched to the reviewed disko selection. Seal those proofs before
+formatting. Record both gates explicitly in the private execution ledger.
 
 ## 3. Release old address ownership and retire source writers
 
-Stop source VM/control planes, old API VIP keepalived and all cloud/LB ownership
-of the addresses that will be reclaimed. Neutron/OVN/Octavia can still answer ARP
+Stop source VM/control planes and all old API/cloud/LB ownership of addresses
+that will be reclaimed. Live inspection identified the API owner as kube-vip
+static Pods on all three Ubuntu hosts, using
+`/etc/kubernetes/manifests/kube-vip.yml`; no source keepalived service is present.
+These Pods also advertise source services. After the completed export gate,
+verify each captured manifest hash and preserve it outside the kubelet static
+manifest directory to hold its controller. Verify the processes have exited and
+`.20.128` is absent on all old hosts before target keepalived advertises it.
+
+Independent SSH/sudo and original-CA/client-certificate-validated API access at
+`.20.10–12:6443` are qualified without the VIP. Use a surviving old host directly
+for any remaining source administration after pecorino boots the installer; the
+frozen convenience wrapper depends on pecorino and `.20.128`. Neutron/OVN/Octavia can still answer ARP
 after application Pods stop: verify the actual owner and stop it. Keep the
 physical management/Ceph VLAN addressing and workstation administration path
 available. Verify no old owner remains before advertising each target VIP.
@@ -109,6 +128,20 @@ each inventoried by-path connector, `wipefs -n` and `mdadm --examine`. Match
 Only the two SATA members appear in disko; neither NVMe device is a disko
 target. Stop on any connector/serial/size mismatch. Evaluate the selected
 host's disko devices again from the reviewed flake before formatting.
+
+Before formatting, archive the now-stopped Ubuntu filesystems. Mark only the
+inventoried SATA devices and source filesystem block devices read-only; assemble
+existing RAID/LVM read-only without mounting source filesystems. Match the four
+captured filesystem UUIDs, types and sizes: root LV, boot RAID filesystem and
+both EFI partitions. Export each complete filesystem, preserve its partition
+and RAID/LVM identities, and store it encrypted in Backblaze. Download the exact
+versions, authenticate/decompress them into private standalone disk copies and
+check native QCOW2 integrity, all virtual bytes and filesystem readability.
+For the root, verify the preserved SSH host key, Kubernetes PKI/Rook paths and a
+native restoration of its cold etcd database. Seal the selected host's four
+proofs in the verified execution package. The original six Ceph NVMes remain
+outside both this archive operation and disko.
+
 
 Prepare an owner-only `extra-files` directory outside Git, containing:
 
