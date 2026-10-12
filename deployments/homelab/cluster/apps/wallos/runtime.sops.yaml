@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: wallos-runtime
+    namespace: finance
+type: Opaque
+stringData:
+    OIDC_CLIENT_ID: ENC[AES256_GCM,data:DoLGBBKkgVbS475zmS+1tI/0,iv:mX7T850BD4Ji5/t4YhvoZ4NQSROJ15kXdyMFPFdL+xg=,tag:k05WE+XlZaE5eutgKP9/4g==,type:str]
+    OIDC_CLIENT_SECRET: ENC[AES256_GCM,data:2HegapgV5pBavL7mnZE9xkVVkZj5uKyBSiQjI5+acXUwgtW8iHjwFf5Saif9423KKjfcPEoG4uX+Ocq7/+xxYQ==,iv:9zXAjGLivBQfdHLj7Z8k1gjPX4V/eIQ/Ue+SBnNHJWQ=,tag:t4OrWePcaOp9vBDtMrhWSA==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBEbDJYelc2YUl4QkwwaGha
+            RzExblpqejIxM1NiOFRiUW5VcjVpbVBDbnhzClZHdFBoa0pMcW5YYmpldmsyL3Vr
+            bVBqKzZ3d3ptVUJBZkhER0RyUitGMncKLS0tIGhNZFJxK1RSeXR1M2I4ajFxM2Yz
+            aUlLaTVVUm1Scm5yOUlKNTdON0lBbUEKxqWucVhPKOpvVZ6r5CcYpGXk+n9A07TP
+            MCu1KV3r75COXN1k3r8XMGOeOKucHusemMELVXVH+WmrAkXVUYDHGA==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBVMVUzVVgwNnBPUk1yeE40
+            bDJnZlVCTTRnWDR1bFdWSTF1NWZwdkxTa25zCnJyTEg5M2c5YXhubFBjaFNWbmJB
+            QzA1aEx3VWhHQWhYdDE4MkFDcUJhNkUKLS0tIGJ4QWlLWllvclAvZlBPdWZOTmlr
+            ajNjdmVrMjNLc1V3VmZ3ek5oS3BXTlEKFv+vfH4h6061v/HWJDFykrOlqqsFk+PT
+            C5bS64T0KX03V87NwL0iZVvb/J6B9xem87ypgD5VIJsFTkyrWi5ZBQ==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age10n9tyln0hwpdmxpe90af6kwtzrplgp9kq6qy58mnak4mugjcwy6s8w4es7
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-10-12T01:42:43Z"
+    mac: ENC[AES256_GCM,data:Gb4eo4Jqqj1YWoDWOipW7wZIVLHEhwkXhcpvibWFCBB+Gl8pn0tu43swm0iq06LFLj8m/NUZ4Y9XSULCjt1Qn78ewRKCoEdKl53wXmDKvm11URkZuxCMpvKhuHl5pj+Dz0STOcqJx2/ORObDnsy/ruRmQ3WK049epI1HAvQszTo=,iv:drJmYlAfYOBPj9gOrd8h633AbP0pUvfmmAX6j4oic4Y=,tag:xKjytLDKUrjixWh+H/TwUA==,type:str]
+    version: 3.13.3

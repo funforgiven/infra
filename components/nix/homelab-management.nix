@@ -34,7 +34,7 @@ in
         previousPackages.winbox4;
     };
 
-    # Kubespray's pinned Ansible runtime is isolated in its upstream container.
+    # Retain the workstation container runtime for image build and qualification.
     virtualisation.podman.enable = true;
   };
 }

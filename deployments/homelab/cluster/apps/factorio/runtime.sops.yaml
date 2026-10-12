@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: factorio-runtime
+    namespace: games
+type: Opaque
+stringData:
+    FACTORIO_GAME_PASSWORD: ENC[AES256_GCM,data:IXv83nxBOx/1rxuNrGZ/TmWfNqV3qR0faRQLhuEw1LA=,iv:qHWSSA/TOZx+gC4kYiJ5ptRxTfGLz0Wcc0fylBGsCY0=,tag:dDNAXXQ81qJ9iZHrXHbw3w==,type:str]
+    FACTORIO_RCON_PASSWORD: ENC[AES256_GCM,data:m/XoAR0q9moxW/o9Yf89RgzuOa9HoYwfTbpYwPH+n3HAamIP6bPKzylN9lTU3GZy9wzpCCsP6z2tONtJTnwZxA==,iv:KEr2i2gNtXTZRrlR+EXtahB0U0cVQroxQnT4owW3iI0=,tag:ApgGluDKfz/VMiStM0EXSA==,type:str]
+    FACTORIO_TOKEN: ENC[AES256_GCM,data:3opyEnBqLBtk683q2lla7nK4wRtvMt0ylW2I32t0,iv:7XI9U5xmOJ1ZlwzsbpW6AJyPbXPv1huXo3Lq/f6T0rY=,tag:uB3Ulzv7v9O81keGtulAhA==,type:str]
+    FACTORIO_USERNAME: ENC[AES256_GCM,data:WKAbQ6+eSFW2WIs=,iv:iRzAEBGWwwEvFSJh85zYPoTcIx2d3GT5nDGp0op7Q60=,tag:YKYIrwicBmtDqtLXcRtFGw==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBRRU5EYXh4TFFSL1pNdERa
+            THBGcmRwNHZOcnhza0h6aWQ5WXhQN1VIbER3CnRmOHRQQlpPZ1FPcjAvZDhsWEph
+            L3VMc2VxdHViQXpyMDZZeDhnenlOK1UKLS0tIHdQSWRTV1dma3hFLzNvSDlnT2Va
+            L1ZUeGxGRDRmVk1NN2ZXUnlRTnBIMTgKJwa7J1BKdHyzNcU1IppI8xNxS/+ihCT0
+            GGFzgq3ARru3qlhFNwQRAgZZXdxy6vK0JFxUDnq0yWFc42cOpoiIbA==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSAyaDlaOG5RdTJkS1A1SUNl
+            NTNPMEl5QVZJcXo4a1NwV2V6aXd6WXEwd2pJCitPaDROenl3bjJReWtsMEQ1SXFR
+            bkIzZWI2STdkUTRJeUI4MzZGYUZXMlUKLS0tIEQ5RklUakg1bFR6YmJId0VjOHh0
+            SWl6WitSVk9aZHNCeE0xR2UvVWhJdTQKW/Nw5P91L59h3RgVR/IuIFpKLRWZ8TOk
+            Il1dxqu+TRdJeBd/VD2EbWoxXjHVEeiQW++LIVUQQVcqW/8VvNoYgA==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age10n9tyln0hwpdmxpe90af6kwtzrplgp9kq6qy58mnak4mugjcwy6s8w4es7
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-10-12T01:42:43Z"
+    mac: ENC[AES256_GCM,data:4al9blozQzZkPjjqmuZfWmlI/I+/9ACnOvrj7bF+W+9dXSKUtJQNK34UVUZVPWyOeglnXtuNrJfuymxJ/BV6jQ78hvglKmRTpfSgJY/ZTS3NpiAuJRQT/DNg1buzYImvivwxbq13j4f+FGcZtoRPmALvfZzvJZe3HXwVHCMhVRQ=,iv:w7j6WqYgiG5tPoZuwtA5kU5b0GKdQNVAtrBqOq9Awhc=,tag:6liGn4xkFLEAclYjn86NEA==,type:str]
+    version: 3.13.3

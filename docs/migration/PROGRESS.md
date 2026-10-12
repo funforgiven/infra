@@ -1,0 +1,100 @@
+# Migration preparation status
+
+Preparation complete; live migration remains a future separately authorized task.
+
+Worktree: `/home/funforgiven/dev/infra-nixos-kubernetes`.
+Branch: `codex/nixos-kubernetes-migration`, based on `8d5f130`.
+Main's tracked files remain unchanged. No live deployment, provider apply,
+server installation, PiKVM operation or disk operation has occurred. Read-only
+inspection captured hardware, Kubernetes/cloud volumes, addresses, certificate
+fingerprints, provider states, runtime credentials and SSH host identities;
+all private values are encrypted immediately.
+
+Implemented: three NixOS/K3s servers with mirrored-SATA disko, networking,
+SSH/SOPS bootstrap and off-server etcd backups; Calico native v3 CRDs with its
+pinned Tigera Operator, MetalLB, Multus and direct Rook-Ceph RBD/CephFS; one
+semantic Flux graph and a restore suspension overlay; retained apps and
+independent AWS mail/providers; supported UniFi KubeVirt guest; original OIDC
+identities, TLS/ACME/runtime keys and encrypted provider state archives;
+native database recovery and preserved HA IoT/pairing state. Removed active
+OpenStack/CAPI/Magnum and native Windows/macOS runner deployments.
+
+Inventory: all 798 source document entries, 74 old Flux stages, 24 provider
+files, 23 explicit source claims, 56 captured live claims and 74 PVs are mapped.
+Cloud inspection also mapped 65 Cinder volumes, 11 Nova guests and 17 Glance
+images; captured the single Manila share and 13 floating IPs. Each floating IP
+is now joined to its actual Neutron/Octavia owner with an explicit disposition;
+the actual guest workload Kubernetes API is .40.197, and the retained public
+HTTPS/STUN addresses are .40.128/.40.129. All 54 captured certificate/account/
+provider objects have explicit ownership actions in certificate-plan.json. Forty-one TLS
+Secrets, twelve provider state Secrets and one ACME account key are archived
+as ciphertext. Byte exports and used-byte/capacity measurements are future
+execution gates, not completed preparation work.
+
+Validation: all five NixOS hosts and the three server disko selections evaluate;
+flake checking with `--no-build --all-systems` passes. The combined homelab Nix
+check builds successfully, including 273 retained network/service/recovery tests,
+manifest checks, provider formatting, RouterOS syntax and shell checks. Full
+schema validation passes for 33 Kustomize entrypoints, 29 Flux stages and 443
+exact pinned Helm-rendered resources, with no failures or missing schemas.
+All four provider configurations passed offline init/validate; four encrypted
+state exports verified lineage, mode and overwrite protection. Credential
+enrollment passed 46 tests again. All 106 generated claim/guest transfer
+resources pass strict schemas, and the actual four retained TLS/account Secrets
+pass offline key/fingerprint/hostname checks and private export safeguards.
+
+Added DATA-MIGRATION.md and RUNBOOK.md with future writer freeze, independent
+export/restore, native DB/UniFi/IoT recovery, SATA installation, CNI-before-Flux
+bootstrap, initial Ceph reuse hold, staged release, external provider/mail
+coordination, backup qualification and explicit rollback boundaries. One-time
+gateway TLS seeding avoids Flux overwriting renewed certificates. Matrix's
+managed pg_hba rules now use the target pod CIDR and preserve custom/local rules.
+Helm values-schema references are pinned/localized into a derived public cache;
+the full render/schema check succeeds without network access or skipped schemas.
+
+The current operation cleanup removes obsolete guest/cloud API permissions
+and target VLANs 31/32/33, with a separate exact-identity retirement phase that
+requires verified independent exports. All eight retained OIDC client outputs
+have an encrypted refresh path. All twelve provider states have explicit
+ownership dispositions; the four retained exports match the newer capture.
+Matrix/AudioMuse database-only bootstrap exports passed strict schemas on their
+actual private inputs: eleven resources, mode 0600 and overwrite refusal, without
+cluster calls. Current service/network/IoT docs describe the physical target;
+dated Forgejo records are clearly marked as source recovery evidence.
+
+Found and fixed two target dependency gaps: Linux Actions required retired CAPI
+worker labels, and Forgejo snapshots lacked the independent snapshot controller.
+NixOS now declares physical CI eligibility; required job anti-affinity spans
+physical hostnames. The Rook stage installs three v1 snapshot CRDs and the pinned
+controller, and enables RBD CSI snapshots. Validation rejects missing snapshot
+dependencies and stale CAPI scheduling constraints. MetalLB now uses verified
+v0.16.1 release bytes with immutable controller/speaker image digests. All vendor
+sources/hashes and twelve chart archives are recorded; local vendor hashes are
+checked by both refresh and offline validation.
+
+Latest broad checks: full formatting passed; all-system flake evaluation and
+all five host/four exported disko configurations evaluate; the combined Nix
+check built successfully with 273 tests. Full offline schema validation passed
+33 entrypoints, 29 Flux stages, 1,194 validation instances and 443 Helm resources,
+with zero failures/missing schemas. Working-tree and 851-commit history secret
+scans found no leaks. Main remains clean at 8d5f130. No live changes occurred.
+
+Repeatable source capture is implemented and qualified through the frozen source
+flake. It read 742 Secrets/ConfigMaps into ciphertext, the existing 56 claims/74
+PVs and complete cloud/actual owner inventories. All nine artifact hashes and
+owner-only modes verified; four fresh provider states and four TLS seed resources
+remain compatible with the reviewed prepared inputs. Manila export enumeration
+uses the required 2.9 microversion. Capture cannot overwrite or automatically
+update prepared Git inputs and publishes its complete manifest last.
+
+The residual documentation/reference audit is complete: current Matrix/backup/
+credential guides describe the physical target, dated Matrix evidence is separate,
+host-only credentials are consolidated and all mapped target paths exist. Final
+broad verification passed: 273 combined tests, 46 enrollment tests, all-system
+flake/five host/four disko evaluation, four provider validations, full offline
+schemas/Helm and redacted working-tree/history secret scan. The migration branch
+is committed locally for review; no push or merge occurred. See
+[ACCEPTANCE.md](ACCEPTANCE.md) for the original requirement-by-requirement audit.
+Hardware boot, mirrored-disk boot, network/USB behavior, independent backup
+completeness, actual byte exports/restores and PiKVM control remain future live
+execution qualifications. No live changes occurred.

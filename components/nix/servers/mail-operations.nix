@@ -13,7 +13,7 @@ _: {
           pkgs.systemd
         ];
         text = ''
-          exec ${python}/bin/python ${../../cloud/services/mail-aws/operations.py} "$@"
+          exec ${python}/bin/python ${../../homelab/services/mail-aws/operations.py} "$@"
         '';
       };
       unit = action: {

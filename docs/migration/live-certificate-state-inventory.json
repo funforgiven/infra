@@ -1,0 +1,737 @@
+{
+  "capturedAt": "2026-10-12T03:22:53.212477+00:00",
+  "objects": [
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "cert-manager",
+      "name": "cert-manager-qualification-tls",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "47da6d40a663b179b218162e13d9b3c00f81a8b9a2b75da33dcc3d3c28527d04",
+      "notAfter": "Oct 13 01:36:44 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "cert-manager",
+      "name": "letsencrypt-cloudflare-account",
+      "type": "Opaque",
+      "fields": [
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "cert-manager",
+      "name": "terraform-runner.tls-1792283697",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "ca.key",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "98cb12df6a00f70966ba408df828716486f2835a611287237445c44345ef24e0",
+      "notAfter": "Oct 18 00:34:57 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "cert-manager",
+      "name": "tfstate-default-service-dns",
+      "type": "Opaque",
+      "fields": [
+        "tfstate"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "stateLineage": "5a4ba38b-3227-8d5e-632a-cecfc01c14b6",
+      "stateSerial": 25,
+      "stateResourceGroups": 16
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "cnpg-system",
+      "name": "barman-cloud-client-tls",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "e5792478484e16301de2e1e491b1a9d8fbc2a3534027a969b87ce2d9dbc4dad0",
+      "notAfter": "Nov  6 22:37:11 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "cnpg-system",
+      "name": "barman-cloud-server-tls",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "40bcd33eff14a42c5092ab462d072faf255f9896076822d10e953775bfb51077",
+      "notAfter": "Nov  6 22:37:11 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "cnpg-system",
+      "name": "cnpg-webhook-cert",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "6a94d81c1447783dd559655e76e986a648055d6a07ad1688e28afd13dc80a87d",
+      "notAfter": "Nov  6 22:31:47 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "envoy-gateway-system",
+      "name": "envoy",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "e5d3b5d16316dc29b65e86a23975ff04aa15ea47ee7688e39e228e6cb94b8793",
+      "notAfter": "Aug  2 17:36:05 2031 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "envoy-gateway-system",
+      "name": "envoy-gateway",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "c43df53a1dbab9b1be407065c6e238e356f47eeeb91530471ef35e4ef0775883",
+      "notAfter": "Aug  2 17:36:05 2031 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "envoy-gateway-system",
+      "name": "envoy-rate-limit",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "db7a1e9d4acd554317863d589693b705e86e2ce24670d6131faff270192cfdfc",
+      "notAfter": "Aug  2 17:36:05 2031 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "identity",
+      "name": "zitadel-login-service-key",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "8ceb81d9b3d2443458355c74565c89a736e914370dee003a005b1f2cc46b60c7",
+      "notAfter": "Aug  5 23:13:32 2036 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "identity",
+      "name": "zitadel-postgres-replication",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "3e8904450110fd2dd3031a5c5f67303da3542676d9a12669b140d8d0edb363ee",
+      "notAfter": "Nov  6 22:32:37 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "identity",
+      "name": "zitadel-postgres-server",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "2e3c91e92a2170900a7ecc8f329e67358e067ff73ebd73af41a7caef40e33d2e",
+      "notAfter": "Nov  6 22:32:37 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "network-services",
+      "name": "management-tls",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "a00db3502122d42886b715833df307a5bfe9a69d945b10e040a8ac4279b7811c",
+      "notAfter": "Jan  5 21:35:52 2027 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "network-services",
+      "name": "private-api-tls",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "c4e26b034949009cbe2e6d78ebad7446ca7a4c6e149bd2a9201a68392db67391",
+      "notAfter": "Dec  5 07:44:55 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "barbican-client",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "76f88d4fb5a5b294a2500e8f6196b76b0c8f792cfd850ec770f3c8840e308da2",
+      "notAfter": "Nov  5 03:34:39 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "cinder-client",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "2e8e38e86f31808b97d971b1470d63be5b00cdfe7f7e34ec596ad21137280dc4",
+      "notAfter": "Nov  3 04:09:44 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "glance-client",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "b38cc6063e296a594e3ecddc83a05bdc97e9d91c337efc8836433713e0a4c61e",
+      "notAfter": "Nov  3 03:16:54 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "heat-client",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "70525b97e13e44f1091006084aba2fc87fee0281c00bdea0efe07b1b64ad25e1",
+      "notAfter": "Nov  4 02:42:49 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "keystone-client",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "7bc09ce1586114a8511b46ae9633f67688ed427a9fb681d290cfd8a267ebfd95",
+      "notAfter": "Nov  3 02:20:44 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "magnum-client",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "bf10c7a3e49a6231245d21cae97a38c7b19103b095593e7a04e33b05dffc3217",
+      "notAfter": "Jan  3 22:16:06 2027 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "manila-client",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "003ac590b4bd7340a650831d14dd869d09d2d221b92e369cc8ea158ec767c1aa",
+      "notAfter": "Nov  4 08:14:46 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "mariadb-tls-direct",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "0264edd4baceec09c3981d8921522d8919f8c79c9cb575a364677a300ba2dacd",
+      "notAfter": "Nov  3 01:42:08 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "neutron-client",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "ce2329868bb230f0603521e54c4b200ff5eb7c73166c3f07c17e404547cf0f05",
+      "notAfter": "Nov  3 04:45:34 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "nova-client",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "f3513bd543275ab703e601923521b70a600e826030e013fb284cd15f680ba39f",
+      "notAfter": "Nov  3 04:45:35 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "octavia-client",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "9ae3bbe2c9136e01fd3b57b9eee4d456762b95958bcb6adf510b572fb2c20d82",
+      "notAfter": "Jan  1 21:39:32 2027 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "placement-client",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "be703221ac9aa94d231d6176ba451ff9640aa61cfd85ee446293862b8734c1f4",
+      "notAfter": "Nov  3 04:21:36 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "rabbitmq-tls-direct",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "78982ac4f0ce4c8ad999a8cc0e61efae78edc2779e4f44a527c89dedc7ebbdc1",
+      "notAfter": "Nov  3 00:47:18 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "skyline-client",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "365212fd10c63457952cf8541e18a5df99fe9feba06df9d365c84afe2cba737a",
+      "notAfter": "Nov  8 02:04:33 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "terraform-runner.tls-1792283697",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "ca.key",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "918c2f37aa4023be766810ce666c8b266ec2425e4fc7f29b970e88d89a5ccf55",
+      "notAfter": "Oct 18 00:34:57 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "tfstate-default-forge-runners",
+      "type": "Opaque",
+      "fields": [
+        "tfstate"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "stateLineage": "7a901156-ccb8-291e-418e-c7697846fa42",
+      "stateSerial": 7,
+      "stateResourceGroups": 15
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "tfstate-default-gitlab-foundation",
+      "type": "Opaque",
+      "fields": [
+        "tfstate"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "stateLineage": "3f6262af-a926-2e4e-a595-2c19a761e1f8",
+      "stateSerial": 8,
+      "stateResourceGroups": 19
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "tfstate-default-mail-aws",
+      "type": "Opaque",
+      "fields": [
+        "tfstate"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "stateLineage": "2a6f443b-689d-795a-a1bf-39d0c7b0e39d",
+      "stateSerial": 97,
+      "stateResourceGroups": 59
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "tfstate-default-mail-edge",
+      "type": "Opaque",
+      "fields": [
+        "tfstate"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "stateLineage": "b51d9676-4751-0118-66ce-81bdefb76abd",
+      "stateSerial": 5,
+      "stateResourceGroups": 0
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "tfstate-default-services-foundation",
+      "type": "Opaque",
+      "fields": [
+        "tfstate"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "stateLineage": "fcb84cb4-b7fa-b70c-ddb3-1dc7a549731b",
+      "stateSerial": 4,
+      "stateResourceGroups": 23
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "tfstate-default-services-hosts",
+      "type": "Opaque",
+      "fields": [
+        "tfstate"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "stateLineage": "26ebc159-e6e1-e759-95b8-fd85e5716c5a",
+      "stateSerial": 14,
+      "stateResourceGroups": 1
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "openstack",
+      "name": "tfstate-default-unifi",
+      "type": "Opaque",
+      "fields": [
+        "tfstate"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "stateLineage": "856e8719-0b4b-c030-031b-4583d60efe18",
+      "stateSerial": 4,
+      "stateResourceGroups": 11
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "tofu-system",
+      "name": "terraform-runner.tls-1792283697",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "ca.key",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "b36e7c8024136479d743496140e47d4041a65d8e056156bf87e1863731f05799",
+      "notAfter": "Oct 18 00:34:57 2026 GMT"
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "tofu-system",
+      "name": "tfstate-default-netbird-policy",
+      "type": "Opaque",
+      "fields": [
+        "tfstate"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "stateLineage": "33fc94f6-67d6-1f8d-d66a-9534a6d28449",
+      "stateSerial": 2,
+      "stateResourceGroups": 9
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "tofu-system",
+      "name": "tfstate-default-openai-hermes",
+      "type": "Opaque",
+      "fields": [
+        "tfstate"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "stateLineage": "5065d713-dadb-299d-b6f5-c917eece3453",
+      "stateSerial": 2,
+      "stateResourceGroups": 8
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "tofu-system",
+      "name": "tfstate-default-services-identity",
+      "type": "Opaque",
+      "fields": [
+        "tfstate"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "stateLineage": "a2d196b0-c342-97ca-2659-9ccef8af011c",
+      "stateSerial": 4,
+      "stateResourceGroups": 0
+    },
+    {
+      "sourceCluster": "undercloud",
+      "namespace": "tofu-system",
+      "name": "tfstate-default-zitadel",
+      "type": "Opaque",
+      "fields": [
+        "tfstate"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "stateLineage": "39c41125-6a1c-4fd3-6271-434d53c423ac",
+      "stateSerial": 23,
+      "stateResourceGroups": 23
+    },
+    {
+      "sourceCluster": "services",
+      "namespace": "cnpg-system",
+      "name": "barman-cloud-client-tls",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "f7d2adddfff0e188779d013be9ee3922964d6b9d3c707f6b4bbf7c41b3c9a127",
+      "notAfter": "Jan  1 18:12:23 2027 GMT"
+    },
+    {
+      "sourceCluster": "services",
+      "namespace": "cnpg-system",
+      "name": "barman-cloud-server-tls",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "939aa413ca2fa0f324efd6efb8a599d94040282a920f434b7025629c4728fde2",
+      "notAfter": "Jan  1 18:12:23 2027 GMT"
+    },
+    {
+      "sourceCluster": "services",
+      "namespace": "cnpg-system",
+      "name": "cnpg-webhook-cert",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "cce62548794ac87503e683ed2cdcb7558e0bd7894843502655c93dd6ed291500",
+      "notAfter": "Jan  1 18:07:10 2027 GMT"
+    },
+    {
+      "sourceCluster": "services",
+      "namespace": "envoy-gateway-system",
+      "name": "envoy",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "937cfb2c6c7105ffdf71e3637c32d350286f4200e6e7eb58b4b2e6e54ca25313",
+      "notAfter": "Aug 19 02:48:18 2031 GMT"
+    },
+    {
+      "sourceCluster": "services",
+      "namespace": "envoy-gateway-system",
+      "name": "envoy-gateway",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "bf12bf1166b3d7cf92710d3305a06d9ebab846c2544014c259548d5ca88c656e",
+      "notAfter": "Aug 19 02:48:18 2031 GMT"
+    },
+    {
+      "sourceCluster": "services",
+      "namespace": "envoy-gateway-system",
+      "name": "envoy-rate-limit",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "5d54d295a0c1f7b80ccad5fd8e2665027311c4ab64d5a42e9a9b1a36642ad265",
+      "notAfter": "Aug 19 02:48:18 2031 GMT"
+    },
+    {
+      "sourceCluster": "services",
+      "namespace": "netbird-routing",
+      "name": "netbird-operator-tls",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "03e4d82305b1a080097e9cc8c3f2b1230c9592daf274d9e3cec8bcb9946d8d4a",
+      "notAfter": "Jan  1 18:49:46 2027 GMT"
+    },
+    {
+      "sourceCluster": "services",
+      "namespace": "netbird",
+      "name": "netbird-postgres-replication",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "0dedca276431a573401ff55e9068d5be338383f5fa7cfe9286aa5351a1b3d213",
+      "notAfter": "Jan  1 18:08:20 2027 GMT"
+    },
+    {
+      "sourceCluster": "services",
+      "namespace": "netbird",
+      "name": "netbird-postgres-server",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "167f76cc6e869141709c1e67d9d161374e3f9abc3c5147ef6459abf5d2669a78",
+      "notAfter": "Jan  1 18:08:20 2027 GMT"
+    },
+    {
+      "sourceCluster": "services",
+      "namespace": "services-network",
+      "name": "matrix-public-tls",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "38e21a91bacc9fe9ef2001b102166598f676542f66122079e84c598118420540",
+      "notAfter": "Jan  1 17:35:06 2027 GMT"
+    },
+    {
+      "sourceCluster": "services",
+      "namespace": "services-network",
+      "name": "services-tls",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "4ecf713a3dbf6a4b7d8816a34d63ce27011fb0146a30b1a08e325cd6c75e200b",
+      "notAfter": "Jan  1 17:14:34 2027 GMT"
+    },
+    {
+      "sourceCluster": "services",
+      "namespace": "services-observability",
+      "name": "kube-prometheus-stack-root-cert",
+      "type": "kubernetes.io/tls",
+      "fields": [
+        "ca.crt",
+        "tls.crt",
+        "tls.key"
+      ],
+      "disposition": "archive-and-review; restore only surviving app certificate/account/provider state, regenerate cluster-specific admission/database/control-plane certificates",
+      "certificateSHA256": "ae9bab5488f3a3e77a7fb8eff540fcf74fa2ab00cc873bb1f329cde6981719bc",
+      "notAfter": "Aug 20 23:08:12 2031 GMT"
+    }
+  ]
+}

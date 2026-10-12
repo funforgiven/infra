@@ -56,10 +56,10 @@ token. TLS certificate validation remains enabled and redirects are refused.
 See [HA webhook documentation](https://www.home-assistant.io/docs/automation/trigger/#webhook-trigger).
 
 Recovery templates and their installer are in
-`deployments/homelab/cloud/services/25-home-automation/`:
+`deployments/homelab/cluster/apps/home-automation/`:
 
 ```sh
-python3 deployments/homelab/cloud/services/25-home-automation/install-rodecaster-midi.py
+python3 deployments/homelab/cluster/apps/home-automation/install-rodecaster-midi.py
 ```
 
 The installer needs SOPS and Python with requests/PyYAML. It renders the private

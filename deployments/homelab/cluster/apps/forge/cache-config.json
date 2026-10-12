@@ -1,0 +1,19 @@
+{
+  "public_url": "https://cache.fahrican.com",
+  "cache_root": "/var/lib/forge-cache/backend/cache",
+  "state_path": "/var/lib/forge-cache/gateway.sqlite3",
+  "backend_secret_file": "/run/secrets/cache-backend-hmac",
+  "broker_tokens": {
+    "/run/secrets/cache-linux-broker": {
+      "repositories": [
+        "funforgiven/atollion"
+      ],
+      "lanes": [
+        "linux-quality",
+        "windows-build"
+      ]
+    }
+  },
+  "quota_bytes": 68719476736,
+  "minimum_free_bytes": 17179869184
+}

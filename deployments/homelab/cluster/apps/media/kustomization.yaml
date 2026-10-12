@@ -1,0 +1,40 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- storage.yaml
+- sftpgo.yaml
+- beets.yaml
+- navidrome.yaml
+- audiomuse-config.yaml
+- audiomuse.yaml
+- discord-music.yaml
+- routes.yaml
+- monitoring.yaml
+- network-policy.yaml
+- runtime.sops.yaml
+configMapGenerator:
+- name: sftpgo-bootstrap
+  namespace: media
+  files:
+  - render.sh=render-initial-data.sh
+- name: beets-config
+  namespace: media
+  files:
+  - config.yaml=beets-config.yaml
+  - import.sh=import.sh
+  - verify-lastgenre-offline.py=verify-lastgenre-offline.py
+  - normalize-provider-ids.py=normalize-provider-ids.py
+  - quarantine-live.py=quarantine-live.py
+- name: navidrome-bootstrap
+  namespace: media
+  files:
+  - migrate-navidrome-user.sh=migrate-navidrome-user.sh
+  - migrate-navidrome-database.sh=migrate-navidrome-database.sh
+  - reconcile-navidrome-service-account.py=reconcile-navidrome-service-account.py
+  - install-navidrome-plugins.sh=install-navidrome-plugins.sh
+  - configure-navidrome-plugins.sh=configure-navidrome-plugins.sh
+- name: audiomuse-bootstrap
+  namespace: media
+  files:
+  - reconcile-audiomuse.py=reconcile-audiomuse.py
+  - postgres-backup.sh=postgres-backup.sh

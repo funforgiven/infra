@@ -18,7 +18,7 @@ from runtime_contract import ContractError, RuntimeContract
 from sops_credentials import SopsCredentialError, SopsCredentialStore
 
 
-RESEND_CONTRACT_PATH = Path("deployments/homelab/cloud/resend-sending-keys.yaml")
+RESEND_CONTRACT_PATH = Path("deployments/homelab/credentials/resend-sending-keys.yaml")
 API_BASE = "https://api.resend.com"
 
 

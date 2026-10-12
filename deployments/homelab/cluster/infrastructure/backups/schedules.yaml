@@ -1,0 +1,47 @@
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: services-daily
+  namespace: velero
+spec:
+  paused: false
+  schedule: 30 2 * * *
+  useOwnerReferencesInBackup: false
+  template:
+    storageLocation: default
+    ttl: 720h
+    includedNamespaces:
+    - backup-qualification
+    - finance
+    - forge
+    - games
+    - home-automation
+    - media
+    - matrix
+    - services-databases
+    snapshotVolumes: false
+    defaultVolumesToFsBackup: true
+---
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: services-weekly
+  namespace: velero
+spec:
+  paused: false
+  schedule: 15 3 * * 0
+  useOwnerReferencesInBackup: false
+  template:
+    storageLocation: default
+    ttl: 2160h
+    includedNamespaces:
+    - backup-qualification
+    - finance
+    - forge
+    - games
+    - home-automation
+    - media
+    - matrix
+    - services-databases
+    snapshotVolumes: false
+    defaultVolumesToFsBackup: true

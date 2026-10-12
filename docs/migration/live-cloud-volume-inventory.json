@@ -1,0 +1,2249 @@
+{
+  "capturedAt": "2026-10-12T03:32:00.597322+00:00",
+  "sourceCommit": "8d5f130",
+  "errors": [],
+  "servers": [
+    {
+      "id": "294f80d3-6e79-4760-a527-29f49296938f",
+      "name": "unifi",
+      "status": "ACTIVE",
+      "tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "user_id": "0b03b1c805554b5588538f5966991e33",
+      "flavor": {
+        "id": "45168789-6c2a-48c6-8db1-382ef83e2b43",
+        "links": [
+          {
+            "rel": "bookmark",
+            "href": "https://compute.cloud.fahrican.com/flavors/45168789-6c2a-48c6-8db1-382ef83e2b43"
+          }
+        ]
+      },
+      "image": "",
+      "addresses": {
+        "services": [
+          {
+            "version": 4,
+            "addr": "192.168.80.12",
+            "OS-EXT-IPS:type": "fixed",
+            "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:bd:99:51"
+          },
+          {
+            "version": 4,
+            "addr": "10.21.40.127",
+            "OS-EXT-IPS:type": "floating",
+            "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:bd:99:51"
+          }
+        ]
+      },
+      "key_name": null,
+      "OS-EXT-SRV-ATTR:host": "pecorino",
+      "OS-EXT-SRV-ATTR:hypervisor_hostname": "pecorino",
+      "OS-EXT-AZ:availability_zone": "nova",
+      "os-extended-volumes:volumes_attached": [
+        {
+          "id": "a7dbe35a-ddfa-41fe-ae76-13481f3bc8c6"
+        }
+      ]
+    },
+    {
+      "id": "0a9b5810-fe34-4ef3-a098-0878338594be",
+      "name": "services-v1-gxs3ybwuh5vh-cpu-workers-6htwb-2blgz",
+      "status": "ACTIVE",
+      "tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "user_id": "0b03b1c805554b5588538f5966991e33",
+      "flavor": {
+        "id": "7d57f28b-6283-43aa-b2f5-e313449c3e3a",
+        "links": [
+          {
+            "rel": "bookmark",
+            "href": "https://compute.cloud.fahrican.com/flavors/7d57f28b-6283-43aa-b2f5-e313449c3e3a"
+          }
+        ]
+      },
+      "image": {
+        "id": "3d17c47f-f859-4d42-9486-66e4ecbff506",
+        "links": [
+          {
+            "rel": "bookmark",
+            "href": "https://compute.cloud.fahrican.com/images/3d17c47f-f859-4d42-9486-66e4ecbff506"
+          }
+        ]
+      },
+      "addresses": {
+        "services": [
+          {
+            "version": 4,
+            "addr": "192.168.80.65",
+            "OS-EXT-IPS:type": "fixed",
+            "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:e6:23:27"
+          }
+        ],
+        "manila-service": [
+          {
+            "version": 4,
+            "addr": "10.21.33.215",
+            "OS-EXT-IPS:type": "fixed",
+            "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:39:9f:e6"
+          }
+        ],
+        "services-iot": []
+      },
+      "key_name": null,
+      "OS-EXT-SRV-ATTR:host": "taleggio",
+      "OS-EXT-SRV-ATTR:hypervisor_hostname": "taleggio",
+      "OS-EXT-AZ:availability_zone": "nova",
+      "os-extended-volumes:volumes_attached": [
+        {
+          "id": "a75c9c5c-78b7-4cfa-9653-c79f9d8ae362"
+        },
+        {
+          "id": "9af3433e-505a-4411-ac40-0a1e05e36fee"
+        },
+        {
+          "id": "d7196955-2dce-49c2-a2a3-1b6dc929210d"
+        },
+        {
+          "id": "b53cf973-327f-41f2-ba71-745c97b49e63"
+        },
+        {
+          "id": "46b22bde-6c23-4384-badf-e6567624d4c8"
+        },
+        {
+          "id": "3a264785-f324-4b68-a447-75682f36c34e"
+        },
+        {
+          "id": "be3269ed-203f-49d0-ad79-b634c2c85c55"
+        },
+        {
+          "id": "b1cded8f-1aba-4da2-b9a8-f54a667690c1"
+        },
+        {
+          "id": "e2838415-e555-4812-bd5f-a304bbadfac4"
+        },
+        {
+          "id": "908a32bc-e3ae-4980-bced-b6dfca080640"
+        },
+        {
+          "id": "a3993f6d-3eb0-44a0-a717-74b9c320ce65"
+        },
+        {
+          "id": "65812073-f802-4a9a-906c-847a0f1eb959"
+        },
+        {
+          "id": "8e301b2f-9a65-454b-8bd8-1620687541c2"
+        },
+        {
+          "id": "7314015f-d0da-4867-81e3-cd09d28015ec"
+        },
+        {
+          "id": "76e9439b-33f0-4059-82a5-d6d1f418ecbd"
+        }
+      ]
+    },
+    {
+      "id": "0a618d23-4dd5-46db-ab8f-8ed17b6b67eb",
+      "name": "services-v1-gxs3ybwuh5vh-cpu-workers-6htwb-scpkr",
+      "status": "ACTIVE",
+      "tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "user_id": "0b03b1c805554b5588538f5966991e33",
+      "flavor": {
+        "id": "7d57f28b-6283-43aa-b2f5-e313449c3e3a",
+        "links": [
+          {
+            "rel": "bookmark",
+            "href": "https://compute.cloud.fahrican.com/flavors/7d57f28b-6283-43aa-b2f5-e313449c3e3a"
+          }
+        ]
+      },
+      "image": {
+        "id": "3d17c47f-f859-4d42-9486-66e4ecbff506",
+        "links": [
+          {
+            "rel": "bookmark",
+            "href": "https://compute.cloud.fahrican.com/images/3d17c47f-f859-4d42-9486-66e4ecbff506"
+          }
+        ]
+      },
+      "addresses": {
+        "services": [
+          {
+            "version": 4,
+            "addr": "192.168.80.79",
+            "OS-EXT-IPS:type": "fixed",
+            "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:6a:1f:f1"
+          }
+        ],
+        "manila-service": [
+          {
+            "version": 4,
+            "addr": "10.21.33.56",
+            "OS-EXT-IPS:type": "fixed",
+            "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:c4:e3:bf"
+          }
+        ],
+        "services-iot": []
+      },
+      "key_name": null,
+      "OS-EXT-SRV-ATTR:host": "asiago",
+      "OS-EXT-SRV-ATTR:hypervisor_hostname": "asiago",
+      "OS-EXT-AZ:availability_zone": "nova",
+      "os-extended-volumes:volumes_attached": [
+        {
+          "id": "8ebc207e-c762-4d9a-90af-5c48ba7d1695"
+        },
+        {
+          "id": "85b7fa00-b21b-4104-83d2-0cd061793169"
+        },
+        {
+          "id": "8ee07995-9c76-4965-91f4-de69dbd1b392"
+        },
+        {
+          "id": "0e27afa6-23bf-4442-8bf9-8f517fd73ed7"
+        },
+        {
+          "id": "4ecb9670-b2d7-4ff9-a3b7-b5b610a961ca"
+        },
+        {
+          "id": "957abf5c-38dc-48ba-bfe7-dd760126660a"
+        },
+        {
+          "id": "ea41a055-1b14-45dc-a5a5-9fc733632412"
+        },
+        {
+          "id": "396b389e-8d73-4e4f-8385-ebb5f3287e02"
+        },
+        {
+          "id": "d00afb7d-3fe1-479a-840d-a85046640348"
+        },
+        {
+          "id": "c4aa4ace-5970-4d36-b7eb-5020a069519f"
+        }
+      ]
+    },
+    {
+      "id": "69d67dc1-61f3-472b-948d-5b3faacf0862",
+      "name": "forge-macos",
+      "status": "ACTIVE",
+      "tenant_id": "ad96cba7383a4808a826f54eca53f765",
+      "user_id": "0b03b1c805554b5588538f5966991e33",
+      "flavor": {
+        "id": "c9ca600b-0cd3-499a-82a2-71f611813d2d",
+        "links": [
+          {
+            "rel": "bookmark",
+            "href": "https://compute.cloud.fahrican.com/flavors/c9ca600b-0cd3-499a-82a2-71f611813d2d"
+          }
+        ]
+      },
+      "image": "",
+      "addresses": {
+        "forge-ci": [
+          {
+            "version": 4,
+            "addr": "192.168.81.12",
+            "OS-EXT-IPS:type": "fixed",
+            "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:c4:8d:da"
+          },
+          {
+            "version": 4,
+            "addr": "10.21.40.126",
+            "OS-EXT-IPS:type": "floating",
+            "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:c4:8d:da"
+          }
+        ]
+      },
+      "key_name": null,
+      "OS-EXT-SRV-ATTR:host": "taleggio",
+      "OS-EXT-SRV-ATTR:hypervisor_hostname": "taleggio",
+      "OS-EXT-AZ:availability_zone": "nova",
+      "os-extended-volumes:volumes_attached": [
+        {
+          "id": "17e51d45-49fc-478c-a03d-7f98c2e48732"
+        }
+      ]
+    },
+    {
+      "id": "c7399906-360e-4e7c-92ad-efa7b83fd048",
+      "name": "services-v1-gxs3ybwuh5vh-control-plane-4jxnl",
+      "status": "ACTIVE",
+      "tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "user_id": "0b03b1c805554b5588538f5966991e33",
+      "flavor": {
+        "id": "e4e000ac-31ff-4e3d-8d61-55b16be52e83",
+        "links": [
+          {
+            "rel": "bookmark",
+            "href": "https://compute.cloud.fahrican.com/flavors/e4e000ac-31ff-4e3d-8d61-55b16be52e83"
+          }
+        ]
+      },
+      "image": {
+        "id": "3d17c47f-f859-4d42-9486-66e4ecbff506",
+        "links": [
+          {
+            "rel": "bookmark",
+            "href": "https://compute.cloud.fahrican.com/images/3d17c47f-f859-4d42-9486-66e4ecbff506"
+          }
+        ]
+      },
+      "addresses": {
+        "services": [
+          {
+            "version": 4,
+            "addr": "192.168.80.40",
+            "OS-EXT-IPS:type": "fixed",
+            "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:38:bd:d3"
+          }
+        ]
+      },
+      "key_name": null,
+      "OS-EXT-SRV-ATTR:host": "taleggio",
+      "OS-EXT-SRV-ATTR:hypervisor_hostname": "taleggio",
+      "OS-EXT-AZ:availability_zone": "nova",
+      "os-extended-volumes:volumes_attached": []
+    },
+    {
+      "id": "817c0209-e7d0-4ed6-8093-6d84bca4c6f2",
+      "name": "services-v1-gxs3ybwuh5vh-control-plane-6jq5n",
+      "status": "ACTIVE",
+      "tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "user_id": "0b03b1c805554b5588538f5966991e33",
+      "flavor": {
+        "id": "e4e000ac-31ff-4e3d-8d61-55b16be52e83",
+        "links": [
+          {
+            "rel": "bookmark",
+            "href": "https://compute.cloud.fahrican.com/flavors/e4e000ac-31ff-4e3d-8d61-55b16be52e83"
+          }
+        ]
+      },
+      "image": {
+        "id": "3d17c47f-f859-4d42-9486-66e4ecbff506",
+        "links": [
+          {
+            "rel": "bookmark",
+            "href": "https://compute.cloud.fahrican.com/images/3d17c47f-f859-4d42-9486-66e4ecbff506"
+          }
+        ]
+      },
+      "addresses": {
+        "services": [
+          {
+            "version": 4,
+            "addr": "192.168.80.196",
+            "OS-EXT-IPS:type": "fixed",
+            "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:c0:a7:04"
+          }
+        ]
+      },
+      "key_name": null,
+      "OS-EXT-SRV-ATTR:host": "taleggio",
+      "OS-EXT-SRV-ATTR:hypervisor_hostname": "taleggio",
+      "OS-EXT-AZ:availability_zone": "nova",
+      "os-extended-volumes:volumes_attached": []
+    },
+    {
+      "id": "1a53c1f0-2ec2-4b2c-981e-68768df5429e",
+      "name": "services-v1-gxs3ybwuh5vh-control-plane-7xqqc",
+      "status": "ACTIVE",
+      "tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "user_id": "0b03b1c805554b5588538f5966991e33",
+      "flavor": {
+        "id": "e4e000ac-31ff-4e3d-8d61-55b16be52e83",
+        "links": [
+          {
+            "rel": "bookmark",
+            "href": "https://compute.cloud.fahrican.com/flavors/e4e000ac-31ff-4e3d-8d61-55b16be52e83"
+          }
+        ]
+      },
+      "image": {
+        "id": "3d17c47f-f859-4d42-9486-66e4ecbff506",
+        "links": [
+          {
+            "rel": "bookmark",
+            "href": "https://compute.cloud.fahrican.com/images/3d17c47f-f859-4d42-9486-66e4ecbff506"
+          }
+        ]
+      },
+      "addresses": {
+        "services": [
+          {
+            "version": 4,
+            "addr": "192.168.80.209",
+            "OS-EXT-IPS:type": "fixed",
+            "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:eb:d3:ae"
+          }
+        ]
+      },
+      "key_name": null,
+      "OS-EXT-SRV-ATTR:host": "pecorino",
+      "OS-EXT-SRV-ATTR:hypervisor_hostname": "pecorino",
+      "OS-EXT-AZ:availability_zone": "nova",
+      "os-extended-volumes:volumes_attached": []
+    },
+    {
+      "id": "653b3721-b4a6-4a2f-a0f4-0f18285ab9d6",
+      "name": "services-v1-gxs3ybwuh5vh-default-worker-gnx2t-hkmcf",
+      "status": "ACTIVE",
+      "tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "user_id": "0b03b1c805554b5588538f5966991e33",
+      "flavor": {
+        "id": "5d6ea944-321f-46dd-943c-8579e38cf6b6",
+        "links": [
+          {
+            "rel": "bookmark",
+            "href": "https://compute.cloud.fahrican.com/flavors/5d6ea944-321f-46dd-943c-8579e38cf6b6"
+          }
+        ]
+      },
+      "image": {
+        "id": "3d17c47f-f859-4d42-9486-66e4ecbff506",
+        "links": [
+          {
+            "rel": "bookmark",
+            "href": "https://compute.cloud.fahrican.com/images/3d17c47f-f859-4d42-9486-66e4ecbff506"
+          }
+        ]
+      },
+      "addresses": {
+        "services": [
+          {
+            "version": 4,
+            "addr": "192.168.80.173",
+            "OS-EXT-IPS:type": "fixed",
+            "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:60:00:c9"
+          }
+        ],
+        "manila-service": [
+          {
+            "version": 4,
+            "addr": "10.21.33.90",
+            "OS-EXT-IPS:type": "fixed",
+            "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:20:08:55"
+          }
+        ],
+        "services-iot": []
+      },
+      "key_name": null,
+      "OS-EXT-SRV-ATTR:host": "taleggio",
+      "OS-EXT-SRV-ATTR:hypervisor_hostname": "taleggio",
+      "OS-EXT-AZ:availability_zone": "nova",
+      "os-extended-volumes:volumes_attached": [
+        {
+          "id": "48540b38-7e9c-4187-a1dc-d2d0c4211b7a"
+        },
+        {
+          "id": "52c5148c-fc12-4a6d-9e25-265579c40aad"
+        },
+        {
+          "id": "6f56a3ef-f6c4-413b-929f-e56332169a4a"
+        }
+      ]
+    },
+    {
+      "id": "db6a7e1f-27d9-41af-90be-0b577e60e0b5",
+      "name": "capi-management-2",
+      "status": "ACTIVE",
+      "tenant_id": "5fc9230b001d4c16bc305e8a98e2ef97",
+      "user_id": "0b03b1c805554b5588538f5966991e33",
+      "flavor": {
+        "id": "a7621103-3687-4036-9f46-604e18fcd78c",
+        "links": [
+          {
+            "rel": "bookmark",
+            "href": "https://compute.cloud.fahrican.com/flavors/a7621103-3687-4036-9f46-604e18fcd78c"
+          }
+        ]
+      },
+      "image": "",
+      "addresses": {
+        "capi-management": [
+          {
+            "version": 4,
+            "addr": "192.168.70.12",
+            "OS-EXT-IPS:type": "fixed",
+            "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:53:11:72"
+          },
+          {
+            "version": 4,
+            "addr": "10.21.40.102",
+            "OS-EXT-IPS:type": "floating",
+            "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:53:11:72"
+          }
+        ]
+      },
+      "key_name": "capi-management",
+      "OS-EXT-SRV-ATTR:host": "taleggio",
+      "OS-EXT-SRV-ATTR:hypervisor_hostname": "taleggio",
+      "OS-EXT-AZ:availability_zone": "nova",
+      "os-extended-volumes:volumes_attached": [
+        {
+          "id": "249bec77-7ffd-4ba0-9a5a-59307b2ba87b"
+        }
+      ]
+    },
+    {
+      "id": "92e904c5-1fbf-4505-8b1f-9746e7abb936",
+      "name": "capi-management-3",
+      "status": "ACTIVE",
+      "tenant_id": "5fc9230b001d4c16bc305e8a98e2ef97",
+      "user_id": "0b03b1c805554b5588538f5966991e33",
+      "flavor": {
+        "id": "a7621103-3687-4036-9f46-604e18fcd78c",
+        "links": [
+          {
+            "rel": "bookmark",
+            "href": "https://compute.cloud.fahrican.com/flavors/a7621103-3687-4036-9f46-604e18fcd78c"
+          }
+        ]
+      },
+      "image": "",
+      "addresses": {
+        "capi-management": [
+          {
+            "version": 4,
+            "addr": "192.168.70.13",
+            "OS-EXT-IPS:type": "fixed",
+            "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:01:83:fc"
+          },
+          {
+            "version": 4,
+            "addr": "10.21.40.103",
+            "OS-EXT-IPS:type": "floating",
+            "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:01:83:fc"
+          }
+        ]
+      },
+      "key_name": "capi-management",
+      "OS-EXT-SRV-ATTR:host": "asiago",
+      "OS-EXT-SRV-ATTR:hypervisor_hostname": "asiago",
+      "OS-EXT-AZ:availability_zone": "nova",
+      "os-extended-volumes:volumes_attached": [
+        {
+          "id": "4bce8449-74f8-436e-9be2-0afcb7d26394"
+        }
+      ]
+    },
+    {
+      "id": "17f891d1-a1df-4436-8eb5-2339eaff6075",
+      "name": "capi-management-1",
+      "status": "ACTIVE",
+      "tenant_id": "5fc9230b001d4c16bc305e8a98e2ef97",
+      "user_id": "0b03b1c805554b5588538f5966991e33",
+      "flavor": {
+        "id": "a7621103-3687-4036-9f46-604e18fcd78c",
+        "links": [
+          {
+            "rel": "bookmark",
+            "href": "https://compute.cloud.fahrican.com/flavors/a7621103-3687-4036-9f46-604e18fcd78c"
+          }
+        ]
+      },
+      "image": "",
+      "addresses": {
+        "capi-management": [
+          {
+            "version": 4,
+            "addr": "192.168.70.11",
+            "OS-EXT-IPS:type": "fixed",
+            "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:8f:6d:b4"
+          },
+          {
+            "version": 4,
+            "addr": "10.21.40.101",
+            "OS-EXT-IPS:type": "floating",
+            "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:8f:6d:b4"
+          }
+        ]
+      },
+      "key_name": "capi-management",
+      "OS-EXT-SRV-ATTR:host": "pecorino",
+      "OS-EXT-SRV-ATTR:hypervisor_hostname": "pecorino",
+      "OS-EXT-AZ:availability_zone": "nova",
+      "os-extended-volumes:volumes_attached": [
+        {
+          "id": "58e77987-1b58-486d-9853-01c44aee6151"
+        }
+      ]
+    }
+  ],
+  "volumes": [
+    {
+      "id": "21a9e9fd-2f22-4d77-98bd-94db5cf6afac",
+      "name": "pvc-bc4edef0-ca76-4030-a8ce-523ce880e20b",
+      "status": "available",
+      "size": 10,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "f40b0793-fa88-494c-8df9-b8384ea4bbf2",
+      "name": "pvc-83cd756b-6006-47b7-bf01-1cc4d624eb08",
+      "status": "available",
+      "size": 10,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "996db08e-4baf-402b-be63-1a185c1dbb0d",
+      "name": "pvc-58626394-888c-4c84-b927-6caa0eb74cca",
+      "status": "available",
+      "size": 10,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "6f56a3ef-f6c4-413b-929f-e56332169a4a",
+      "name": "pvc-baa7778c-da9c-4f51-9b4f-af724741d87b",
+      "status": "in-use",
+      "size": 10,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "6f56a3ef-f6c4-413b-929f-e56332169a4a",
+          "attachment_id": "bc6e076a-106c-4fe1-9877-93342956ac14",
+          "volume_id": "6f56a3ef-f6c4-413b-929f-e56332169a4a",
+          "server_id": "653b3721-b4a6-4a2f-a0f4-0f18285ab9d6",
+          "host_name": "taleggio",
+          "device": "/dev/sdc",
+          "attached_at": "2026-10-03T18:21:00.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "908a32bc-e3ae-4980-bced-b6dfca080640",
+      "name": "pvc-0c7eb42a-d700-4732-a1d6-14b13d26f105",
+      "status": "in-use",
+      "size": 10,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "908a32bc-e3ae-4980-bced-b6dfca080640",
+          "attachment_id": "5f3e3dec-d035-4fed-95aa-e36073c5e111",
+          "volume_id": "908a32bc-e3ae-4980-bced-b6dfca080640",
+          "server_id": "0a9b5810-fe34-4ef3-a098-0878338594be",
+          "host_name": "taleggio",
+          "device": "/dev/sdk",
+          "attached_at": "2026-10-03T21:22:23.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "d00afb7d-3fe1-479a-840d-a85046640348",
+      "name": "pvc-b216e517-d646-49d8-84d8-3d754cc7175a",
+      "status": "in-use",
+      "size": 10,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "d00afb7d-3fe1-479a-840d-a85046640348",
+          "attachment_id": "d73f9255-452d-4998-b9e3-2e60e35051ae",
+          "volume_id": "d00afb7d-3fe1-479a-840d-a85046640348",
+          "server_id": "0a618d23-4dd5-46db-ab8f-8ed17b6b67eb",
+          "host_name": "asiago",
+          "device": "/dev/sdm",
+          "attached_at": "2026-10-03T18:14:14.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "a3993f6d-3eb0-44a0-a717-74b9c320ce65",
+      "name": "pvc-fba48d8b-8f76-4f64-a48e-0884f5a39902",
+      "status": "in-use",
+      "size": 5,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "a3993f6d-3eb0-44a0-a717-74b9c320ce65",
+          "attachment_id": "f2e2636f-9e54-433e-af48-24128ad653d2",
+          "volume_id": "a3993f6d-3eb0-44a0-a717-74b9c320ce65",
+          "server_id": "0a9b5810-fe34-4ef3-a098-0878338594be",
+          "host_name": "taleggio",
+          "device": "/dev/sdm",
+          "attached_at": "2026-10-03T21:29:12.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "76e9439b-33f0-4059-82a5-d6d1f418ecbd",
+      "name": "pvc-2690b282-b8cc-4553-a4b5-a4a99ea0ffc3",
+      "status": "in-use",
+      "size": 20,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "76e9439b-33f0-4059-82a5-d6d1f418ecbd",
+          "attachment_id": "475aacd5-d4b6-4d36-967e-271a31cb3e72",
+          "volume_id": "76e9439b-33f0-4059-82a5-d6d1f418ecbd",
+          "server_id": "0a9b5810-fe34-4ef3-a098-0878338594be",
+          "host_name": "taleggio",
+          "device": "/dev/sdq",
+          "attached_at": "2026-10-05T23:39:28.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "7314015f-d0da-4867-81e3-cd09d28015ec",
+      "name": "pvc-b0bfbd90-3a7b-41ea-818e-d5cac6be427f",
+      "status": "in-use",
+      "size": 2,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "7314015f-d0da-4867-81e3-cd09d28015ec",
+          "attachment_id": "dd2b3c28-59d0-4179-adf2-706c19f66463",
+          "volume_id": "7314015f-d0da-4867-81e3-cd09d28015ec",
+          "server_id": "0a9b5810-fe34-4ef3-a098-0878338594be",
+          "host_name": "taleggio",
+          "device": "/dev/sdp",
+          "attached_at": "2026-10-05T23:39:20.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "65812073-f802-4a9a-906c-847a0f1eb959",
+      "name": "pvc-8ef2fca5-5f60-481f-8bd5-0feac78db34e",
+      "status": "in-use",
+      "size": 20,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "65812073-f802-4a9a-906c-847a0f1eb959",
+          "attachment_id": "af0d2af5-7dc4-4eb3-bb26-5c704fafe72d",
+          "volume_id": "65812073-f802-4a9a-906c-847a0f1eb959",
+          "server_id": "0a9b5810-fe34-4ef3-a098-0878338594be",
+          "host_name": "taleggio",
+          "device": "/dev/sdn",
+          "attached_at": "2026-10-03T21:29:17.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "6c6d9e88-aee1-4bdc-b102-5f62c2117b3d",
+      "name": "pvc-1547f77d-9795-4891-b856-769ae2ef75c8",
+      "status": "available",
+      "size": 1,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "323a0653-a40e-42cd-8af9-1d794682e6f3",
+      "name": "pvc-4505362e-c7ac-4a46-a761-d46ffa2cfa07",
+      "status": "available",
+      "size": 20,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "e2838415-e555-4812-bd5f-a304bbadfac4",
+      "name": "pvc-7c627e5a-fd4d-4d7b-9dcf-a3cb13cdecc6",
+      "status": "in-use",
+      "size": 20,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "e2838415-e555-4812-bd5f-a304bbadfac4",
+          "attachment_id": "64ead072-6f57-46f4-bf2b-f27a087d1aa3",
+          "volume_id": "e2838415-e555-4812-bd5f-a304bbadfac4",
+          "server_id": "0a9b5810-fe34-4ef3-a098-0878338594be",
+          "host_name": "taleggio",
+          "device": "/dev/sdj",
+          "attached_at": "2026-10-01T18:46:34.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "be3269ed-203f-49d0-ad79-b634c2c85c55",
+      "name": "pvc-a370c021-58f9-4de4-a51d-b7b7fc5c89d7",
+      "status": "in-use",
+      "size": 1,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "be3269ed-203f-49d0-ad79-b634c2c85c55",
+          "attachment_id": "9f77e879-09ed-4b17-9927-fca0237039c7",
+          "volume_id": "be3269ed-203f-49d0-ad79-b634c2c85c55",
+          "server_id": "0a9b5810-fe34-4ef3-a098-0878338594be",
+          "host_name": "taleggio",
+          "device": "/dev/sdh",
+          "attached_at": "2026-10-01T18:38:55.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "b1cded8f-1aba-4da2-b9a8-f54a667690c1",
+      "name": "pvc-d108b5be-6bef-4a5a-a3b1-ff5f165c9c90",
+      "status": "in-use",
+      "size": 20,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "b1cded8f-1aba-4da2-b9a8-f54a667690c1",
+          "attachment_id": "cb8a2477-9827-4c99-bd9b-b8086d7ce4d3",
+          "volume_id": "b1cded8f-1aba-4da2-b9a8-f54a667690c1",
+          "server_id": "0a9b5810-fe34-4ef3-a098-0878338594be",
+          "host_name": "taleggio",
+          "device": "/dev/sdi",
+          "attached_at": "2026-10-01T18:39:03.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "a7dbe35a-ddfa-41fe-ae76-13481f3bc8c6",
+      "name": "unifi-root",
+      "status": "in-use",
+      "size": 64,
+      "volume_type": "rbd1",
+      "bootable": "true",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "a7dbe35a-ddfa-41fe-ae76-13481f3bc8c6",
+          "attachment_id": "21c221ab-18bf-4119-8802-cee66c19e534",
+          "volume_id": "a7dbe35a-ddfa-41fe-ae76-13481f3bc8c6",
+          "server_id": "294f80d3-6e79-4760-a527-29f49296938f",
+          "host_name": "pecorino",
+          "device": "/dev/vda",
+          "attached_at": "2026-09-26T19:36:34.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {
+        "image_id": "0876f5b9-f8c1-4e68-b998-258035596ad3",
+        "image_name": "Ubuntu 24.04 Noble 20260801 amd64",
+        "disk_format": "qcow2",
+        "container_format": "bare",
+        "os_distro": "ubuntu",
+        "os_version": "24.04"
+      }
+    },
+    {
+      "id": "a9c16d04-a748-4716-9964-13dc363cdc7a",
+      "name": "pvc-de5ab957-bb4a-4a64-b048-7eccf2a92ee1",
+      "status": "available",
+      "size": 1,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "5734ece9-2478-471e-bb89-9cc3f13b64b9",
+      "name": "pvc-5ee80ad9-b30e-4c43-806b-bdbb7e09232c",
+      "status": "available",
+      "size": 20,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "dc685605-39b1-4dd8-8d86-9a68cc9649d0",
+      "name": "pvc-28f031d7-3740-416e-8087-6072eccb3883",
+      "status": "available",
+      "size": 20,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "d7196955-2dce-49c2-a2a3-1b6dc929210d",
+      "name": "pvc-91787568-7cbb-435e-93e2-80ce6fcf8893",
+      "status": "in-use",
+      "size": 1,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "d7196955-2dce-49c2-a2a3-1b6dc929210d",
+          "attachment_id": "9bfdad46-7913-4c79-a60f-f1fda269bfc3",
+          "volume_id": "d7196955-2dce-49c2-a2a3-1b6dc929210d",
+          "server_id": "0a9b5810-fe34-4ef3-a098-0878338594be",
+          "host_name": "taleggio",
+          "device": "/dev/sdc",
+          "attached_at": "2026-09-15T21:09:03.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "b53cf973-327f-41f2-ba71-745c97b49e63",
+      "name": "pvc-575b8201-b4d5-4dde-8660-9551d9fb9470",
+      "status": "in-use",
+      "size": 1,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "b53cf973-327f-41f2-ba71-745c97b49e63",
+          "attachment_id": "a0f45036-aff1-4a0e-8b28-86e3cb364f76",
+          "volume_id": "b53cf973-327f-41f2-ba71-745c97b49e63",
+          "server_id": "0a9b5810-fe34-4ef3-a098-0878338594be",
+          "host_name": "taleggio",
+          "device": "/dev/sde",
+          "attached_at": "2026-09-15T21:09:09.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "7e501e98-0de0-468f-993c-9b44d3c54495",
+      "name": "pvc-e7fd452a-7d75-4ffe-b328-77d3da630f1e",
+      "status": "available",
+      "size": 20,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "46b22bde-6c23-4384-badf-e6567624d4c8",
+      "name": "pvc-4d420413-71fe-48ba-a2af-470350d74f3b",
+      "status": "in-use",
+      "size": 20,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "46b22bde-6c23-4384-badf-e6567624d4c8",
+          "attachment_id": "a7dacf37-d3fc-4ae1-9a12-53a717fd1246",
+          "volume_id": "46b22bde-6c23-4384-badf-e6567624d4c8",
+          "server_id": "0a9b5810-fe34-4ef3-a098-0878338594be",
+          "host_name": "taleggio",
+          "device": "/dev/sdf",
+          "attached_at": "2026-09-16T19:18:13.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "3a264785-f324-4b68-a447-75682f36c34e",
+      "name": "pvc-892a5942-3d1b-4f69-9f27-4681c0803924",
+      "status": "in-use",
+      "size": 20,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "3a264785-f324-4b68-a447-75682f36c34e",
+          "attachment_id": "e1a44bca-42eb-4202-ab22-08ba3666017e",
+          "volume_id": "3a264785-f324-4b68-a447-75682f36c34e",
+          "server_id": "0a9b5810-fe34-4ef3-a098-0878338594be",
+          "host_name": "taleggio",
+          "device": "/dev/sdg",
+          "attached_at": "2026-09-16T19:18:20.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "9af3433e-505a-4411-ac40-0a1e05e36fee",
+      "name": "pvc-ee64cba9-62b9-4f31-96fb-8fee0b6da82d",
+      "status": "in-use",
+      "size": 20,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "9af3433e-505a-4411-ac40-0a1e05e36fee",
+          "attachment_id": "2403784c-3c17-4489-a4e9-0a9e12005456",
+          "volume_id": "9af3433e-505a-4411-ac40-0a1e05e36fee",
+          "server_id": "0a9b5810-fe34-4ef3-a098-0878338594be",
+          "host_name": "taleggio",
+          "device": "/dev/sdb",
+          "attached_at": "2026-09-11T20:29:33.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "8e301b2f-9a65-454b-8bd8-1620687541c2",
+      "name": "pvc-48301b1e-958a-45aa-8ecc-fd0bb6c440ba",
+      "status": "in-use",
+      "size": 320,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "8e301b2f-9a65-454b-8bd8-1620687541c2",
+          "attachment_id": "6a1f71dd-956d-4852-93a9-f270286420ab",
+          "volume_id": "8e301b2f-9a65-454b-8bd8-1620687541c2",
+          "server_id": "0a9b5810-fe34-4ef3-a098-0878338594be",
+          "host_name": "taleggio",
+          "device": "/dev/sdo",
+          "attached_at": "2026-10-04T02:08:44.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "d038e4ef-200e-4bb6-92de-e8244a1e4f2f",
+      "name": "image-e8f8b4f6-3956-44fe-80cc-1bd99bde08be",
+      "status": "available",
+      "size": 240,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": "de4c2f3f-87bc-44ef-b68e-dca07a13a29c",
+      "os-vol-tenant-attr:tenant_id": "f9f4359f54ac4caa9301f0d082d2462d",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "587cd89c-1494-4c62-be9a-5af69be3b3bf",
+      "name": "",
+      "status": "available",
+      "size": 240,
+      "volume_type": "rbd1",
+      "bootable": "true",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "ad96cba7383a4808a826f54eca53f765",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {
+        "image_id": "e8f8b4f6-3956-44fe-80cc-1bd99bde08be",
+        "image_name": "forge-windows-11-25h2-56e8ced33fa5-candidate",
+        "disk_format": "qcow2",
+        "container_format": "bare",
+        "os_type": "windows",
+        "os_distro": "windows",
+        "os_version": "11-25H2"
+      }
+    },
+    {
+      "id": "b0ed74b9-900f-4086-ae49-24cb950b3339",
+      "name": "image-e7a3008d-a791-4325-9853-d2bb3e2d3fa9",
+      "status": "available",
+      "size": 9,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": "627ecc87-2ffc-43ce-986f-6b826aec610a",
+      "os-vol-tenant-attr:tenant_id": "f9f4359f54ac4caa9301f0d082d2462d",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "31011591-b5ed-4f44-8576-0ab35ff47b24",
+      "name": "image-35deacae-3af3-424e-b5ab-80a3101471f3",
+      "status": "available",
+      "size": 9,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": "17e51d45-49fc-478c-a03d-7f98c2e48732",
+      "os-vol-tenant-attr:tenant_id": "f9f4359f54ac4caa9301f0d082d2462d",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "17e51d45-49fc-478c-a03d-7f98c2e48732",
+      "name": "forge-macos-root",
+      "status": "in-use",
+      "size": 240,
+      "volume_type": "rbd1",
+      "bootable": "true",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "17e51d45-49fc-478c-a03d-7f98c2e48732",
+          "attachment_id": "23bb0345-b0cf-497a-aa29-de8add7ade12",
+          "volume_id": "17e51d45-49fc-478c-a03d-7f98c2e48732",
+          "server_id": "69d67dc1-61f3-472b-948d-5b3faacf0862",
+          "host_name": "taleggio",
+          "device": "/dev/vda",
+          "attached_at": "2026-09-06T02:06:24.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "ad96cba7383a4808a826f54eca53f765",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {
+        "image_id": "35deacae-3af3-424e-b5ab-80a3101471f3",
+        "image_name": "nixos-forge-macos-08948624cdca",
+        "disk_format": "qcow2",
+        "container_format": "bare",
+        "os_type": "linux",
+        "os_distro": "nixos"
+      }
+    },
+    {
+      "id": "52c5148c-fc12-4a6d-9e25-265579c40aad",
+      "name": "pvc-b406583d-629e-4180-9a2e-8b385e3f5d63",
+      "status": "in-use",
+      "size": 800,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "52c5148c-fc12-4a6d-9e25-265579c40aad",
+          "attachment_id": "f5c9807b-50ac-4d76-9032-dca1c7c3ec9c",
+          "volume_id": "52c5148c-fc12-4a6d-9e25-265579c40aad",
+          "server_id": "653b3721-b4a6-4a2f-a0f4-0f18285ab9d6",
+          "host_name": "taleggio",
+          "device": "/dev/sdg",
+          "attached_at": "2026-09-08T22:17:32.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "48540b38-7e9c-4187-a1dc-d2d0c4211b7a",
+      "name": "pvc-02f614a6-3d8d-4b9f-af5a-55f82a30d86d",
+      "status": "in-use",
+      "size": 80,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "48540b38-7e9c-4187-a1dc-d2d0c4211b7a",
+          "attachment_id": "a4e27c9e-3d37-4f01-b626-6507aeec384c",
+          "volume_id": "48540b38-7e9c-4187-a1dc-d2d0c4211b7a",
+          "server_id": "653b3721-b4a6-4a2f-a0f4-0f18285ab9d6",
+          "host_name": "taleggio",
+          "device": "/dev/sde",
+          "attached_at": "2026-09-08T22:17:25.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "64dc8ea7-28fb-43ef-ab86-b64dee6c014c",
+      "name": "image-3d17c47f-f859-4d42-9486-66e4ecbff506",
+      "status": "available",
+      "size": 10,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": "191cde16-d5ca-4c58-9907-0f4d5d2f482b",
+      "os-vol-tenant-attr:tenant_id": "f9f4359f54ac4caa9301f0d082d2462d",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "255015ae-da9c-4374-82d0-d2958bdb6f92",
+      "name": "image-962077a4-eab9-4858-9f1d-34f6126b295d",
+      "status": "available",
+      "size": 6,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": "7c2dcdcd-1537-4bf2-af9c-8d2959fc21d0",
+      "os-vol-tenant-attr:tenant_id": "f9f4359f54ac4caa9301f0d082d2462d",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "ea41a055-1b14-45dc-a5a5-9fc733632412",
+      "name": "pvc-0789e85f-ad19-4f81-a4a6-608da21a7348",
+      "status": "in-use",
+      "size": 2,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "ea41a055-1b14-45dc-a5a5-9fc733632412",
+          "attachment_id": "479f2bc4-f444-4597-8600-5c654fce7ae9",
+          "volume_id": "ea41a055-1b14-45dc-a5a5-9fc733632412",
+          "server_id": "0a618d23-4dd5-46db-ab8f-8ed17b6b67eb",
+          "host_name": "asiago",
+          "device": "/dev/sdi",
+          "attached_at": "2026-09-08T22:32:46.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "957abf5c-38dc-48ba-bfe7-dd760126660a",
+      "name": "pvc-2a30aafb-e179-4ec2-ab35-a5609e2b8007",
+      "status": "in-use",
+      "size": 2,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "957abf5c-38dc-48ba-bfe7-dd760126660a",
+          "attachment_id": "8bc5b659-034a-4e6d-9760-147a321b0194",
+          "volume_id": "957abf5c-38dc-48ba-bfe7-dd760126660a",
+          "server_id": "0a618d23-4dd5-46db-ab8f-8ed17b6b67eb",
+          "host_name": "asiago",
+          "device": "/dev/sdg",
+          "attached_at": "2026-09-08T22:32:42.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "2069b43b-168b-4f71-880b-8e33683bd638",
+      "name": "pvc-1b673282-8f9e-4cfb-a8ce-12636d82870e",
+      "status": "available",
+      "size": 20,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "319221e6-5044-4cc4-bcf6-a603fe6a6e9a",
+      "name": "pvc-018bf8ec-4561-4fd9-a5e3-ca4f894c5799",
+      "status": "available",
+      "size": 1,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "0e27afa6-23bf-4442-8bf9-8f517fd73ed7",
+      "name": "pvc-529aaced-e7a7-40f6-a0a9-efbc226ab958",
+      "status": "in-use",
+      "size": 5,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "0e27afa6-23bf-4442-8bf9-8f517fd73ed7",
+          "attachment_id": "6fa499fc-5986-4ff7-b8e0-2700233f5d04",
+          "volume_id": "0e27afa6-23bf-4442-8bf9-8f517fd73ed7",
+          "server_id": "0a618d23-4dd5-46db-ab8f-8ed17b6b67eb",
+          "host_name": "asiago",
+          "device": "/dev/sdf",
+          "attached_at": "2026-09-08T22:32:16.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "83892bc9-8615-46f4-baf9-56ee49b8f2b4",
+      "name": "pvc-12204e9a-e598-4797-940b-0236b71a036b",
+      "status": "available",
+      "size": 20,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "156d0305-6230-4bd0-beb9-bacb4a82ce83",
+      "name": "pvc-6a4f92b5-0c8e-45fd-b328-d331b13e3db5",
+      "status": "available",
+      "size": 1,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "396b389e-8d73-4e4f-8385-ebb5f3287e02",
+      "name": "pvc-4079969d-7466-4a8a-920e-3dc8a10f4ff5",
+      "status": "in-use",
+      "size": 20,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "396b389e-8d73-4e4f-8385-ebb5f3287e02",
+          "attachment_id": "17461bc5-60e7-4a10-99b7-aa88f0710fdc",
+          "volume_id": "396b389e-8d73-4e4f-8385-ebb5f3287e02",
+          "server_id": "0a618d23-4dd5-46db-ab8f-8ed17b6b67eb",
+          "host_name": "asiago",
+          "device": "/dev/sdj",
+          "attached_at": "2026-09-08T22:34:43.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "ad04019f-2a5e-4151-b241-5277b85a5055",
+      "name": "pvc-f26bb657-e77a-4a0b-bab6-e4690d102bc7",
+      "status": "available",
+      "size": 5,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "8ee07995-9c76-4965-91f4-de69dbd1b392",
+      "name": "pvc-442c8932-880c-409a-b037-71e333079d5c",
+      "status": "in-use",
+      "size": 20,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "8ee07995-9c76-4965-91f4-de69dbd1b392",
+          "attachment_id": "1072b903-2ba9-4485-8a96-27b874012d6d",
+          "volume_id": "8ee07995-9c76-4965-91f4-de69dbd1b392",
+          "server_id": "0a618d23-4dd5-46db-ab8f-8ed17b6b67eb",
+          "host_name": "asiago",
+          "device": "/dev/sde",
+          "attached_at": "2026-09-08T22:32:10.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "2e8156d3-11c0-4c7e-88c0-4ebd607765e8",
+      "name": "pvc-1b9f75a8-6aea-4476-bc6b-2d0375cf935a",
+      "status": "available",
+      "size": 5,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "dbb6312b-c351-4deb-b073-756f1bd07e01",
+      "name": "image-c55a38bb-70f4-4299-a839-a1865c68f027",
+      "status": "available",
+      "size": 32,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": "7523d7d4-ac40-4e63-8a95-031e97e7f6f6",
+      "os-vol-tenant-attr:tenant_id": "f9f4359f54ac4caa9301f0d082d2462d",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "1e013c67-5971-455d-8782-c39965c01554",
+      "name": "pvc-85998d02-8e0a-4725-8265-80cbe562a678",
+      "status": "available",
+      "size": 5,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "0914f050-fb24-4a91-b073-c9082c1f5c65",
+      "name": "pvc-ab9cff94-5fa6-445e-a813-221895c79daa",
+      "status": "available",
+      "size": 20,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "599b3006-c392-4962-9486-4a4b82f79cd4",
+      "name": "pvc-5d473c80-b590-4a7d-a8fb-d486bc8d4ed5",
+      "status": "available",
+      "size": 5,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "df9fad00-415c-478c-9b0d-96218e8dbe5e",
+      "name": "pvc-3398ddc4-753b-4364-ae5e-97ae4acd1e46",
+      "status": "available",
+      "size": 20,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "8ebc207e-c762-4d9a-90af-5c48ba7d1695",
+      "name": "pvc-68154e73-0afe-4b10-9590-fe32fd4b9637",
+      "status": "in-use",
+      "size": 5,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "8ebc207e-c762-4d9a-90af-5c48ba7d1695",
+          "attachment_id": "7dbb63d4-ecdd-46d9-971f-aa887c5fdfa2",
+          "volume_id": "8ebc207e-c762-4d9a-90af-5c48ba7d1695",
+          "server_id": "0a618d23-4dd5-46db-ab8f-8ed17b6b67eb",
+          "host_name": "asiago",
+          "device": "/dev/sdc",
+          "attached_at": "2026-09-08T22:31:58.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "85b7fa00-b21b-4104-83d2-0cd061793169",
+      "name": "pvc-df13cab6-38e4-40f2-a19c-0757b002896d",
+      "status": "in-use",
+      "size": 20,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "85b7fa00-b21b-4104-83d2-0cd061793169",
+          "attachment_id": "b285c8e4-95ac-4b3c-80ee-fb66db943564",
+          "volume_id": "85b7fa00-b21b-4104-83d2-0cd061793169",
+          "server_id": "0a618d23-4dd5-46db-ab8f-8ed17b6b67eb",
+          "host_name": "asiago",
+          "device": "/dev/sdd",
+          "attached_at": "2026-09-08T22:32:04.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "4e3b87ea-10ac-42b5-9dba-d83e65954ec8",
+      "name": "pvc-7717aadb-1034-47f8-bfa8-d4b5fca18d9d",
+      "status": "available",
+      "size": 20,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "1c4c246c-9796-4294-aee2-48c2bacc2700",
+      "name": "pvc-8deebd18-91f7-41eb-9b9d-69e7ece36eb9",
+      "status": "available",
+      "size": 100,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "b57a4eeb-6663-49e0-a89e-ee80c963c583",
+      "name": "pvc-cc8261a5-2db5-47e2-82ae-9ed2251885e8",
+      "status": "available",
+      "size": 1,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "4ecb9670-b2d7-4ff9-a3b7-b5b610a961ca",
+      "name": "pvc-61236d09-2e20-489e-80ae-baeffb53eb3a",
+      "status": "in-use",
+      "size": 1,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "4ecb9670-b2d7-4ff9-a3b7-b5b610a961ca",
+          "attachment_id": "0277b258-3aec-4fa5-8ec6-3ac67472cf66",
+          "volume_id": "4ecb9670-b2d7-4ff9-a3b7-b5b610a961ca",
+          "server_id": "0a618d23-4dd5-46db-ab8f-8ed17b6b67eb",
+          "host_name": "asiago",
+          "device": "/dev/sdh",
+          "attached_at": "2026-09-08T22:32:26.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "c4aa4ace-5970-4d36-b7eb-5020a069519f",
+      "name": "pvc-ffc6f139-9e1a-4c27-88c9-0a250896d0a3",
+      "status": "in-use",
+      "size": 2,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "c4aa4ace-5970-4d36-b7eb-5020a069519f",
+          "attachment_id": "4a46d9c9-fc3e-4a33-8456-6b11d0cb6ff3",
+          "volume_id": "c4aa4ace-5970-4d36-b7eb-5020a069519f",
+          "server_id": "0a618d23-4dd5-46db-ab8f-8ed17b6b67eb",
+          "host_name": "asiago",
+          "device": "/dev/sdk",
+          "attached_at": "2026-10-03T20:42:27.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "a75c9c5c-78b7-4cfa-9653-c79f9d8ae362",
+      "name": "pvc-09421e9b-c278-4bfa-8403-32d637c4572e",
+      "status": "in-use",
+      "size": 20,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "a75c9c5c-78b7-4cfa-9653-c79f9d8ae362",
+          "attachment_id": "4a3043c5-2c45-4d14-ab91-e95e0d4d52bb",
+          "volume_id": "a75c9c5c-78b7-4cfa-9653-c79f9d8ae362",
+          "server_id": "0a9b5810-fe34-4ef3-a098-0878338594be",
+          "host_name": "taleggio",
+          "device": "/dev/sdd",
+          "attached_at": "2026-09-08T23:08:15.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "ba755eac-593f-4e27-801d-865226c39e08",
+      "name": "image-5b1b0918-ef21-4e80-a857-972fd52b1b90",
+      "status": "available",
+      "size": 9,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": "fb7c95e0-f835-44e8-91d3-91f4823d1b75",
+      "os-vol-tenant-attr:tenant_id": "f9f4359f54ac4caa9301f0d082d2462d",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "59bfa24a-d508-4246-948c-9b359696d206",
+      "name": "image-a532a28b-772d-4f9c-9833-04eaa49a1cde",
+      "status": "available",
+      "size": 9,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": "853ada8b-6c07-4165-8c3b-20f2aadcfb08",
+      "os-vol-tenant-attr:tenant_id": "f9f4359f54ac4caa9301f0d082d2462d",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "58e77987-1b58-486d-9853-01c44aee6151",
+      "name": "capi-management-1",
+      "status": "in-use",
+      "size": 40,
+      "volume_type": "rbd1",
+      "bootable": "true",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "58e77987-1b58-486d-9853-01c44aee6151",
+          "attachment_id": "197aa278-8228-4ca7-9478-4c1c5d4acd8f",
+          "volume_id": "58e77987-1b58-486d-9853-01c44aee6151",
+          "server_id": "17f891d1-a1df-4436-8eb5-2339eaff6075",
+          "host_name": "pecorino",
+          "device": "/dev/vda",
+          "attached_at": "2026-08-05T23:46:34.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "5fc9230b001d4c16bc305e8a98e2ef97",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {
+        "image_id": "0876f5b9-f8c1-4e68-b998-258035596ad3",
+        "image_name": "Ubuntu 24.04 Noble 20260801 amd64",
+        "disk_format": "qcow2",
+        "container_format": "bare",
+        "os_distro": "ubuntu",
+        "os_version": "24.04"
+      }
+    },
+    {
+      "id": "4bce8449-74f8-436e-9be2-0afcb7d26394",
+      "name": "capi-management-3",
+      "status": "in-use",
+      "size": 40,
+      "volume_type": "rbd1",
+      "bootable": "true",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "4bce8449-74f8-436e-9be2-0afcb7d26394",
+          "attachment_id": "efff9ed2-f457-4645-a6c3-f3eb02418320",
+          "volume_id": "4bce8449-74f8-436e-9be2-0afcb7d26394",
+          "server_id": "92e904c5-1fbf-4505-8b1f-9746e7abb936",
+          "host_name": "asiago",
+          "device": "/dev/vda",
+          "attached_at": "2026-08-05T23:46:35.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "5fc9230b001d4c16bc305e8a98e2ef97",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {
+        "image_id": "0876f5b9-f8c1-4e68-b998-258035596ad3",
+        "image_name": "Ubuntu 24.04 Noble 20260801 amd64",
+        "disk_format": "qcow2",
+        "container_format": "bare",
+        "os_distro": "ubuntu",
+        "os_version": "24.04"
+      }
+    },
+    {
+      "id": "baac366f-dcc6-4924-bfb7-0b90b64f8605",
+      "name": "image-0876f5b9-f8c1-4e68-b998-258035596ad3",
+      "status": "available",
+      "size": 4,
+      "volume_type": "rbd1",
+      "bootable": "false",
+      "encrypted": false,
+      "attachments": [],
+      "snapshot_id": null,
+      "source_volid": "249bec77-7ffd-4ba0-9a5a-59307b2ba87b",
+      "os-vol-tenant-attr:tenant_id": "f9f4359f54ac4caa9301f0d082d2462d",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {}
+    },
+    {
+      "id": "249bec77-7ffd-4ba0-9a5a-59307b2ba87b",
+      "name": "capi-management-2",
+      "status": "in-use",
+      "size": 40,
+      "volume_type": "rbd1",
+      "bootable": "true",
+      "encrypted": false,
+      "attachments": [
+        {
+          "id": "249bec77-7ffd-4ba0-9a5a-59307b2ba87b",
+          "attachment_id": "adac4d80-d13a-4342-98b2-39477e00c1a0",
+          "volume_id": "249bec77-7ffd-4ba0-9a5a-59307b2ba87b",
+          "server_id": "db6a7e1f-27d9-41af-90be-0b577e60e0b5",
+          "host_name": "taleggio",
+          "device": "/dev/vda",
+          "attached_at": "2026-08-05T23:47:01.000000"
+        }
+      ],
+      "snapshot_id": null,
+      "source_volid": null,
+      "os-vol-tenant-attr:tenant_id": "5fc9230b001d4c16bc305e8a98e2ef97",
+      "os-vol-host-attr:host": "cinder-volume-worker@rbd1#rbd1",
+      "imageMetadata": {
+        "image_id": "0876f5b9-f8c1-4e68-b998-258035596ad3",
+        "image_name": "Ubuntu 24.04 Noble 20260801 amd64",
+        "disk_format": "qcow2",
+        "container_format": "bare",
+        "os_distro": "ubuntu",
+        "os_version": "24.04"
+      }
+    }
+  ],
+  "snapshots": [],
+  "shares": [
+    {
+      "id": "fcbda35a-8a7e-443c-97fa-5f9732a1ba85",
+      "name": "pvc-2c541003-1888-460d-96ad-ad9e1751d4c8",
+      "status": "available",
+      "size": 1024,
+      "share_proto": "NFS",
+      "share_type": "default",
+      "share_network_id": null,
+      "project_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "host": "manila-share-2@cephfsnfs#cephfs",
+      "snapshot_id": null,
+      "is_public": false,
+      "export_locations": [
+        "10.21.33.20:/volumes/_nogroup/b4e47d22-754c-444a-bc0b-a80b51000209/67001d3e-b2fc-448f-bdbf-d2bbe5eb5704"
+      ],
+      "export_location": "10.21.33.20:/volumes/_nogroup/b4e47d22-754c-444a-bc0b-a80b51000209/67001d3e-b2fc-448f-bdbf-d2bbe5eb5704"
+    }
+  ],
+  "floatingips": [
+    {
+      "id": "06f7509a-0590-43dd-a256-bc109770dd68",
+      "floating_ip_address": "10.21.40.124",
+      "fixed_ip_address": "192.168.80.83",
+      "port_id": "7907f405-4dc1-46f3-a1ca-c969e7fc70f2",
+      "router_id": "ce0087c2-190b-4559-b6c9-e44ddbe71e46",
+      "project_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "0779618d-ac58-423d-89ee-9e73c108f5a6",
+      "floating_ip_address": "10.21.40.100",
+      "fixed_ip_address": "192.168.70.10",
+      "port_id": "dab39d8b-730f-437e-8cf7-d33318236a88",
+      "router_id": "fd4e2c2e-f4c7-4a6c-b9b3-6200b77b3c29",
+      "project_id": "5fc9230b001d4c16bc305e8a98e2ef97",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "2677aa74-f865-4399-926b-21564b191500",
+      "floating_ip_address": "10.21.40.123",
+      "fixed_ip_address": "192.168.80.235",
+      "port_id": "9ee5ad4c-7b11-4e01-9259-b8c3f61e47d2",
+      "router_id": "ce0087c2-190b-4559-b6c9-e44ddbe71e46",
+      "project_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "4e1c841b-958d-4dd1-a393-8e80e07924f2",
+      "floating_ip_address": "10.21.40.125",
+      "fixed_ip_address": "192.168.81.11",
+      "port_id": "a1eff774-e880-4f32-b6f2-88826101cbe2",
+      "router_id": "33cc7600-5c77-44f3-9bb4-4486733f6e7c",
+      "project_id": "ad96cba7383a4808a826f54eca53f765",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "552ce60f-a424-428f-bab2-925ac2235456",
+      "floating_ip_address": "10.21.40.122",
+      "fixed_ip_address": "192.168.80.127",
+      "port_id": "8d62a853-53b2-452c-af8f-fde23d216d32",
+      "router_id": "ce0087c2-190b-4559-b6c9-e44ddbe71e46",
+      "project_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "57ca7f0b-b430-4ba1-92d1-d0ca821c2792",
+      "floating_ip_address": "10.21.40.129",
+      "fixed_ip_address": "192.168.80.41",
+      "port_id": "a7754343-b203-4302-a3e8-c00d5aada1ef",
+      "router_id": "ce0087c2-190b-4559-b6c9-e44ddbe71e46",
+      "project_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "5bc862e5-0aed-4b79-81bc-06468c4e3289",
+      "floating_ip_address": "10.21.40.126",
+      "fixed_ip_address": "192.168.81.12",
+      "port_id": "541d5b20-d840-468f-b7a0-c25b23ae67f7",
+      "router_id": "33cc7600-5c77-44f3-9bb4-4486733f6e7c",
+      "project_id": "ad96cba7383a4808a826f54eca53f765",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "664a2363-f108-416f-8967-88d2326f3478",
+      "floating_ip_address": "10.21.40.127",
+      "fixed_ip_address": "192.168.80.12",
+      "port_id": "74d301dc-dde6-4d59-ba3b-f5705e05fd49",
+      "router_id": "ce0087c2-190b-4559-b6c9-e44ddbe71e46",
+      "project_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "885cbf02-8620-4294-b4c5-3aee39d396bd",
+      "floating_ip_address": "10.21.40.197",
+      "fixed_ip_address": "192.168.80.188",
+      "port_id": "f20edaee-8185-4dc4-abd3-3bfeb9d3e25e",
+      "router_id": "ce0087c2-190b-4559-b6c9-e44ddbe71e46",
+      "project_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "8c1f5ae8-0c4d-4882-bdbe-f860983a110a",
+      "floating_ip_address": "10.21.40.102",
+      "fixed_ip_address": "192.168.70.12",
+      "port_id": "091e3621-9f01-4b13-85d6-6b24d7b21c4a",
+      "router_id": "fd4e2c2e-f4c7-4a6c-b9b3-6200b77b3c29",
+      "project_id": "5fc9230b001d4c16bc305e8a98e2ef97",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "ca0a504b-feb0-45bb-a77a-70673f2c48d7",
+      "floating_ip_address": "10.21.40.101",
+      "fixed_ip_address": "192.168.70.11",
+      "port_id": "7ad20954-0c25-44b8-94d8-187d1d7c19e5",
+      "router_id": "fd4e2c2e-f4c7-4a6c-b9b3-6200b77b3c29",
+      "project_id": "5fc9230b001d4c16bc305e8a98e2ef97",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "f0597093-4837-4f2e-9592-0f0c1211bd74",
+      "floating_ip_address": "10.21.40.128",
+      "fixed_ip_address": "192.168.80.220",
+      "port_id": "d0c54d24-e41b-4b89-a6bf-f8bd278105a6",
+      "router_id": "ce0087c2-190b-4559-b6c9-e44ddbe71e46",
+      "project_id": "12ae0943a6c74034a6f3aea7956ff5ac",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "f66679c7-b96c-47f6-afa3-825cd522f163",
+      "floating_ip_address": "10.21.40.103",
+      "fixed_ip_address": "192.168.70.13",
+      "port_id": "47bf857f-6056-4b04-9aad-4c2f3299a30c",
+      "router_id": "fd4e2c2e-f4c7-4a6c-b9b3-6200b77b3c29",
+      "project_id": "5fc9230b001d4c16bc305e8a98e2ef97",
+      "status": "ACTIVE"
+    }
+  ],
+  "images": [
+    {
+      "id": "31d1a39a-1095-4fe4-81d9-b235b40edb5f",
+      "name": "nixos-forge-macos-fc024c9a63b8",
+      "status": "active",
+      "size": 4950130688,
+      "virtual_size": 8757706752,
+      "disk_format": "qcow2",
+      "container_format": "bare",
+      "visibility": "private",
+      "owner": "ad96cba7383a4808a826f54eca53f765"
+    },
+    {
+      "id": "e8f8b4f6-3956-44fe-80cc-1bd99bde08be",
+      "name": "forge-windows-11-25h2-56e8ced33fa5-candidate",
+      "status": "active",
+      "size": 17340823040,
+      "virtual_size": 257698037760,
+      "disk_format": "qcow2",
+      "container_format": "bare",
+      "visibility": "private",
+      "owner": "ad96cba7383a4808a826f54eca53f765"
+    },
+    {
+      "id": "d7219bdd-46e3-4311-96f8-2322da29e37d",
+      "name": "s_rally_09a5220a_OBYjmEkl",
+      "status": "queued",
+      "size": null,
+      "virtual_size": null,
+      "disk_format": "qcow2",
+      "container_format": "bare",
+      "visibility": "private",
+      "owner": "74a705d8602d472382c9398560e2dca6"
+    },
+    {
+      "id": "7441f2bf-c320-4d1d-b3bd-3ea38074fa6c",
+      "name": "s_rally_451d0bc9_3BcFWCsN",
+      "status": "queued",
+      "size": null,
+      "virtual_size": null,
+      "disk_format": "qcow2",
+      "container_format": "bare",
+      "visibility": "private",
+      "owner": "74a705d8602d472382c9398560e2dca6"
+    },
+    {
+      "id": "c68ff379-a2b1-4dfd-89aa-f6d3295d57fd",
+      "name": "s_rally_af06f628_XF0aiVSL",
+      "status": "queued",
+      "size": null,
+      "virtual_size": null,
+      "disk_format": "qcow2",
+      "container_format": "bare",
+      "visibility": "private",
+      "owner": "74a705d8602d472382c9398560e2dca6"
+    },
+    {
+      "id": "fdc23c58-d04d-45b1-804a-532b4912b617",
+      "name": "s_rally_17c34e36_lWIxrlWQ",
+      "status": "queued",
+      "size": null,
+      "virtual_size": null,
+      "disk_format": "qcow2",
+      "container_format": "bare",
+      "visibility": "private",
+      "owner": "74a705d8602d472382c9398560e2dca6"
+    },
+    {
+      "id": "e93c32a1-9fab-42f4-9492-28eb7ed2b375",
+      "name": "s_rally_c7e0a78c_lGt76twn",
+      "status": "queued",
+      "size": null,
+      "virtual_size": null,
+      "disk_format": "qcow2",
+      "container_format": "bare",
+      "visibility": "private",
+      "owner": "74a705d8602d472382c9398560e2dca6"
+    },
+    {
+      "id": "ed7f5e83-4e56-40c4-ab2a-390e15cab19e",
+      "name": "s_rally_c7fae6ef_pwarKhxU",
+      "status": "queued",
+      "size": null,
+      "virtual_size": null,
+      "disk_format": "qcow2",
+      "container_format": "bare",
+      "visibility": "private",
+      "owner": "74a705d8602d472382c9398560e2dca6"
+    },
+    {
+      "id": "35deacae-3af3-424e-b5ab-80a3101471f3",
+      "name": "nixos-forge-macos-08948624cdca",
+      "status": "active",
+      "size": 4949606400,
+      "virtual_size": 8758755328,
+      "disk_format": "qcow2",
+      "container_format": "bare",
+      "visibility": "private",
+      "owner": "ad96cba7383a4808a826f54eca53f765"
+    },
+    {
+      "id": "c55a38bb-70f4-4299-a839-a1865c68f027",
+      "name": "haos-18.2",
+      "status": "active",
+      "size": 1091698688,
+      "virtual_size": 34359738368,
+      "disk_format": "qcow2",
+      "container_format": "bare",
+      "visibility": "private",
+      "owner": "12ae0943a6c74034a6f3aea7956ff5ac"
+    },
+    {
+      "id": "a292a117-1a67-4dee-a5bc-bf6e11a70d88",
+      "name": "nixos-hermes-61b154bf1269",
+      "status": "active",
+      "size": 5195169792,
+      "virtual_size": 8922333184,
+      "disk_format": "qcow2",
+      "container_format": "bare",
+      "visibility": "private",
+      "owner": "12ae0943a6c74034a6f3aea7956ff5ac"
+    },
+    {
+      "id": "5b1b0918-ef21-4e80-a857-972fd52b1b90",
+      "name": "nixos-home-assistant-80ab8bcb18b7",
+      "status": "active",
+      "size": 4740808704,
+      "virtual_size": 8667529216,
+      "disk_format": "qcow2",
+      "container_format": "bare",
+      "visibility": "private",
+      "owner": "12ae0943a6c74034a6f3aea7956ff5ac"
+    },
+    {
+      "id": "a532a28b-772d-4f9c-9833-04eaa49a1cde",
+      "name": "nixos-hermes-80ab8bcb18b7",
+      "status": "active",
+      "size": 5322244096,
+      "virtual_size": 9106882560,
+      "disk_format": "qcow2",
+      "container_format": "bare",
+      "visibility": "private",
+      "owner": "12ae0943a6c74034a6f3aea7956ff5ac"
+    },
+    {
+      "id": "3d17c47f-f859-4d42-9486-66e4ecbff506",
+      "name": "ubuntu-jammy-kube-v1.36.2-260705-1940",
+      "status": "active",
+      "size": 3327852544,
+      "virtual_size": 10737418240,
+      "disk_format": "qcow2",
+      "container_format": "bare",
+      "visibility": "public",
+      "owner": "5fc9230b001d4c16bc305e8a98e2ef97"
+    },
+    {
+      "id": "1dab5698-5c2a-4fd7-a07e-41a911a18332",
+      "name": "ubuntu-jammy-kube-v1.35.6-260705-1940",
+      "status": "active",
+      "size": 3321692160,
+      "virtual_size": 10737418240,
+      "disk_format": "qcow2",
+      "container_format": "bare",
+      "visibility": "public",
+      "owner": "5fc9230b001d4c16bc305e8a98e2ef97"
+    },
+    {
+      "id": "0876f5b9-f8c1-4e68-b998-258035596ad3",
+      "name": "Ubuntu 24.04 Noble 20260801 amd64",
+      "status": "active",
+      "size": 624239616,
+      "virtual_size": 3758096384,
+      "disk_format": "qcow2",
+      "container_format": "bare",
+      "visibility": "public",
+      "owner": "5fc9230b001d4c16bc305e8a98e2ef97"
+    },
+    {
+      "id": "e291245e-3c83-45cc-a971-1c4dcd85127a",
+      "name": "Cirros 0.6.2 64-bit",
+      "status": "active",
+      "size": 21430272,
+      "virtual_size": 117440512,
+      "disk_format": "qcow2",
+      "container_format": "bare",
+      "visibility": "private",
+      "owner": "5fc9230b001d4c16bc305e8a98e2ef97"
+    }
+  ]
+}

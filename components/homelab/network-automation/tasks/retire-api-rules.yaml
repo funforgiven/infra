@@ -1,0 +1,31 @@
+---
+- name: Require verified independent exports before legacy network retirement
+  ansible.builtin.assert:
+    that:
+      - migration_exports_verified | default(false) | bool
+    fail_msg: >-
+      Legacy retirement requires the final independent data exports and
+      source recovery archives described in docs/migration/DATA-MIGRATION.md.
+      Run this separate phase only after verifying those exports.
+
+- name: Retire only the exact inventoried legacy API filter rules
+  community.routeros.command:
+    commands:
+      - >-
+        :local rows [/ip firewall filter find where comment="{{ item.comment }}"];
+        :local owned [/ip firewall filter find where comment="{{ item.comment }}" and
+        chain="{{ item.chain }}" and action=accept and
+        in-interface="{{ item.source_interface }}" and
+        dst-address={{ item.destination }} and protocol={{ item.protocol }} and
+        dst-port="{{ item.destination_port }}"];
+        :if (([:len $rows] > 1) or ([:len $rows] != [:len $owned])) do={
+        :error "legacy filter identity does not match the captured inventory" };
+        :if ([:len $owned] = 1) do={ /ip firewall filter remove $owned };
+        :if ([:len [/ip firewall filter find where comment="{{ item.comment }}"]] != 0)
+        do={ :error "legacy filter remains" }; :put "__infra_legacy_rule_retired__"
+    wait_for:
+      - result[0] contains "__infra_legacy_rule_retired__"
+    retries: 1
+  loop: "{{ routeros_retired_access_rules }}"
+  loop_control:
+    label: "{{ item.comment }}"

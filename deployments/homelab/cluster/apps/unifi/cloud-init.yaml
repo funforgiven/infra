@@ -1,0 +1,195 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: unifi-cloud-init
+  namespace: unifi
+type: Opaque
+stringData:
+  userdata: |
+    #cloud-config
+    hostname: unifi
+    manage_etc_hosts: true
+    ssh_pwauth: false
+    disable_root: true
+    users:
+    - name: ubuntu
+      groups:
+      - sudo
+      - adm
+      shell: /bin/bash
+      lock_passwd: true
+      sudo:
+      - ALL=(ALL) NOPASSWD:ALL
+      ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL1nHHxNA1YUl+89HhieA+YOyOLYJaSRBmutEOVxVQeB
+        github-funforgiven-2026-07-18
+    write_files:
+    - path: /usr/local/lib/unifi/bootstrap.sh
+      permissions: '0755'
+      content: "#!/usr/bin/env bash\nset -euo pipefail\numask 077\nreadonly source=/usr/local/lib/unifi\n\
+        readarray -t release < <(python3 - <<'PY'\nimport json\nwith open('/usr/local/lib/unifi/inputs.json')\
+        \ as stream:\n    data = json.load(stream)\nprint(data['url'])\nprint(data['sha256'])\n\
+        print(data['version'])\nPY\n)\nif [[ ! -e /var/lib/unifi-bootstrap-version ]];\
+        \ then\n  curl --fail --show-error --silent --location --proto '=https' --tlsv1.2\
+        \ \\\n    \"${release[0]}\" -o /var/tmp/unifi-installer\n  printf '%s  %s\\n'\
+        \ \"${release[1]}\" /var/tmp/unifi-installer | sha256sum --check --status\n  chmod\
+        \ 0700 /var/tmp/unifi-installer\n  /var/tmp/unifi-installer --non-interactive\
+        \ --network-mode pasta --web-port 11443\n  printf '%s\\n' \"${release[2]}\" >\
+        \ /var/lib/unifi-bootstrap-version\n  rm /var/tmp/unifi-installer\nfi\n\"$source/renew-tls.sh\"\
+        \ncat > /etc/nginx/sites-available/unifi <<'NGINX'\nmap $http_upgrade $connection_upgrade\
+        \ {\n    default upgrade;\n    '' close;\n}\nserver {\n    listen 8443 ssl;\n\
+        \    server_name unifi-origin.internal;\n    ssl_certificate /var/lib/unifi-proxy/tls/server.crt;\n\
+        \    ssl_certificate_key /var/lib/unifi-proxy/tls/server.key;\n    ssl_protocols\
+        \ TLSv1.2 TLSv1.3;\n    client_max_body_size 1g;\n    # Log status/latency at\
+        \ the existing Envoy gateway, without credential URLs.\n    access_log off;\n\
+        \    location / {\n        proxy_pass https://127.0.0.1:11443;\n        proxy_ssl_verify\
+        \ off;\n        proxy_http_version 1.1;\n        proxy_set_header Host $host;\n\
+        \        proxy_set_header X-Forwarded-Host $http_host;\n        proxy_set_header\
+        \ X-Forwarded-Proto https;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n\
+        \        proxy_set_header Upgrade $http_upgrade;\n        proxy_set_header Connection\
+        \ $connection_upgrade;\n        proxy_read_timeout 3600s;\n        proxy_buffering\
+        \ off;\n    }\n}\nNGINX\nln -sfn /etc/nginx/sites-available/unifi /etc/nginx/sites-enabled/unifi\n\
+        rm -f /etc/nginx/sites-enabled/default\nnginx -t\nsystemctl enable --now nginx\
+        \ qemu-guest-agent\nsystemctl reload nginx\ninstall -d -m 0755 /var/lib/prometheus/node-exporter\n\
+        cat > /etc/default/prometheus-node-exporter <<'NODE'\nARGS=\"--collector.systemd\
+        \ --collector.textfile.directory=/var/lib/prometheus/node-exporter\"\nNODE\nsystemctl\
+        \ restart prometheus-node-exporter\nfor name in backup health renew-tls; do\n\
+        \  cat > \"/etc/systemd/system/unifi-$name.service\" <<UNIT\n[Unit]\nDescription=UniFi\
+        \ $name\nAfter=network-online.target\nWants=network-online.target\n[Service]\n\
+        Type=oneshot\nUMask=0077\nExecStart=$source/$name.sh\nUNIT\n  if [[ \"$name\"\
+        \ == backup ]]; then\n    cat >> /etc/systemd/system/unifi-backup.service <<'UNIT'\n\
+        CacheDirectory=unifi-backup\nCacheDirectoryMode=0700\nEnvironment=RESTIC_CACHE_DIR=/var/cache/unifi-backup\n\
+        UNIT\n  fi\ndone\ncat > /etc/systemd/system/unifi-backup.timer <<'UNIT'\n[Unit]\n\
+        Description=Daily encrypted UniFi controller backup\n[Timer]\nOnCalendar=*-*-*\
+        \ 02:00:00 UTC\nRandomizedDelaySec=30m\nPersistent=true\n[Install]\nWantedBy=timers.target\n\
+        UNIT\ncat > /etc/systemd/system/unifi-health.timer <<'UNIT'\n[Timer]\nOnBootSec=2m\n\
+        OnUnitActiveSec=1m\n[Install]\nWantedBy=timers.target\nUNIT\ncat > /etc/systemd/system/unifi-renew-tls.timer\
+        \ <<'UNIT'\n[Timer]\nOnCalendar=daily\nPersistent=true\n[Install]\nWantedBy=timers.target\n\
+        UNIT\nsystemctl daemon-reload\nsystemctl enable --now unifi-health.timer unifi-renew-tls.timer\
+        \ unifi-backup.timer\n# The only API credential is a local Limited Admin with\
+        \ Network Read Only.\n# A separate enrollment step supplies its root-owned environment\
+        \ file.\ncat > /etc/systemd/system/unifi-poller.service <<'UNIT'\n[Unit]\nDescription=Read-only\
+        \ UniFi AP metrics\nAfter=network-online.target uosserver.service\nWants=network-online.target\n\
+        ConditionPathExists=/var/lib/unifi-poller/environment\n[Service]\nRestart=on-failure\n\
+        RestartSec=15\nExecStart=/usr/bin/podman run --rm --replace --name unifi-poller\
+        \ --network host --user 65534:65534 --cap-drop ALL --read-only --security-opt\
+        \ no-new-privileges --env-file /var/lib/unifi-poller/environment --env UP_INFLUXDB_DISABLE=true\
+        \ --env UP_PROMETHEUS_NAMESPACE=unifi --env UP_UNIFI_DEFAULT_URL=https://127.0.0.1:11443\
+        \ --env UP_UNIFI_DEFAULT_VERIFY_SSL=false --env UP_UNIFI_DEFAULT_SAVE_DPI=false\
+        \ --env UP_UNIFI_DEFAULT_HASH_PII=true --env UP_PROMETHEUS_HTTP_LISTEN=0.0.0.0:9130\
+        \ ghcr.io/unpoller/unpoller:v2.21.0@sha256:a08b532be181256318211b6170691e316d29ac04575bc54d59620189953f03aa\n\
+        ExecStop=/usr/bin/podman stop --time 20 unifi-poller\nTimeoutStartSec=180\nTimeoutStopSec=30\n\
+        [Install]\nWantedBy=multi-user.target\nUNIT\nsystemctl daemon-reload\nsystemctl\
+        \ enable --now unifi-poller.service\n"
+    - path: /usr/local/lib/unifi/backup.sh
+      permissions: '0755'
+      content: "#!/usr/bin/env bash\nset -euo pipefail\numask 077\nreadonly bootstrap=/var/lib/backup-bootstrap\n\
+        readonly staging=/var/lib/unifi-backup\nreadonly metrics=/var/lib/prometheus/node-exporter\n\
+        for file in repository password environment; do\n  test -s \"$bootstrap/$file\"\
+        \ndone\ninstall -d -m 0700 \"$staging\"\nexec 9>/run/lock/unifi-backup.lock\n\
+        flock -n 9\nexport RESTIC_REPOSITORY_FILE=\"$bootstrap/repository\"\nexport RESTIC_PASSWORD_FILE=\"\
+        $bootstrap/password\"\nset -a\n# This root-owned file is delivered by enroll-service-host-secrets.\n\
+        # shellcheck disable=SC1091\nsource \"$bootstrap/environment\"\nset +a\n# Check\
+        \ the repository before interrupting controller management.\nrestic cat config\
+        \ >/dev/null\nsystemctl is-active --quiet uosserver\nresume() {\n  systemctl start\
+        \ uosserver uosserver-updater\n}\ntrap resume EXIT\nsystemctl stop uosserver-updater\
+        \ uosserver\n# The rootless Podman container must be stopped before copying its\
+        \ databases.\nuid=$(id -u uosserver)\nrunning=$(runuser -u uosserver -- env XDG_RUNTIME_DIR=\"\
+        /run/user/$uid\" \\\n  podman inspect --format '{{.State.Running}}' uosserver)\n\
+        test \"$running\" = false\ntar --numeric-owner --acls --xattrs --sparse -cpf \"\
+        $staging/controller.tar.new\" \\\n  -C / home/uosserver var/lib/uosserver var/lib/unifi-proxy\
+        \ \\\n  etc/subuid etc/subgid etc/passwd etc/group \\\n  usr/local/lib/unifi etc/nginx/sites-available/unifi\
+        \ \\\n  etc/systemd/system/uosserver.service etc/systemd/system/uosserver-updater.service\n\
+        mv \"$staging/controller.tar.new\" \"$staging/controller.tar\"\nresume\ntrap -\
+        \ EXIT\nrestic backup --host unifi --tag unifi \"$staging/controller.tar\"\n#\
+        \ Retention failure must also surface as a failed backup unit.\nrestic forget\
+        \ --host unifi --tag unifi --group-by host,tags \\\n  --keep-daily 14 --keep-weekly\
+        \ 8 --keep-monthly 12 --keep-yearly 3 --prune\ninstall -d -m 0755 \"$metrics\"\
+        \nprintf 'unifi_backup_last_success_timestamp_seconds %s\\n' \"$(date +%s)\" >\
+        \ \"$metrics/unifi-backup.prom.new\"\nchmod 0644 \"$metrics/unifi-backup.prom.new\"\
+        \nmv \"$metrics/unifi-backup.prom.new\" \"$metrics/unifi-backup.prom\"\n"
+    - path: /usr/local/lib/unifi/renew-tls.sh
+      permissions: '0755'
+      content: "#!/usr/bin/env bash\nset -euo pipefail\numask 077\nreadonly tls=/var/lib/unifi-proxy/tls\n\
+        install -d -m 0700 \"$tls\"\n# A VM-local CA signs only this origin. Its PUBLIC\
+        \ certificate is enrolled in\n# Git over verified SSH; CA and leaf keys never\
+        \ enter user-data or Terraform.\nif [[ ! -s \"$tls/ca.key\" ]]; then\n  openssl\
+        \ req -x509 -newkey rsa:3072 -nodes -sha256 -days 3650 \\\n    -subj '/CN=Homelab\
+        \ UniFi origin CA' \\\n    -addext 'basicConstraints=critical,CA:TRUE,pathlen:0'\
+        \ \\\n    -addext 'keyUsage=critical,keyCertSign,cRLSign' \\\n    -keyout \"$tls/ca.key\"\
+        \ -out \"$tls/ca.crt\"\nfi\nif [[ -s \"$tls/server.crt\" ]] && openssl x509 -checkend\
+        \ 2592000 -noout -in \"$tls/server.crt\"; then\n  exit 0\nfi\nopenssl req -new\
+        \ -newkey rsa:3072 -nodes -sha256 \\\n  -subj '/CN=unifi-origin.internal' \\\n\
+        \  -keyout \"$tls/server.key.new\" -out \"$tls/server.csr\"\ncat > \"$tls/extensions.cnf\"\
+        \ <<'EXT'\nbasicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature,keyEncipherment\n\
+        extendedKeyUsage=serverAuth\nsubjectAltName=DNS:unifi-origin.internal\nEXT\nopenssl\
+        \ x509 -req -sha256 -days 90 -in \"$tls/server.csr\" \\\n  -CA \"$tls/ca.crt\"\
+        \ -CAkey \"$tls/ca.key\" -CAcreateserial \\\n  -extfile \"$tls/extensions.cnf\"\
+        \ -out \"$tls/server.crt.new\"\nopenssl verify -CAfile \"$tls/ca.crt\" -verify_hostname\
+        \ unifi-origin.internal \"$tls/server.crt.new\"\nmv \"$tls/server.key.new\" \"\
+        $tls/server.key\"\nmv \"$tls/server.crt.new\" \"$tls/server.crt\"\nif systemctl\
+        \ is-active --quiet nginx; then\n  nginx -t\n  systemctl reload nginx\nfi\n"
+    - path: /usr/local/lib/unifi/health.sh
+      permissions: '0755'
+      content: "#!/usr/bin/env bash\nset -euo pipefail\nreadonly directory=/var/lib/prometheus/node-exporter\n\
+        install -d -m 0755 \"$directory\"\nservice_up=0\nhttps_up=0\nsystemctl is-active\
+        \ --quiet uosserver && service_up=1\n# Only the VM's loopback hop uses UniFi's\
+        \ native self-signed certificate.\n# All network-facing admin traffic uses the\
+        \ verified origin TLS endpoint.\ncurl --insecure --silent --fail --max-time 10\
+        \ --output /dev/null \\\n  https://127.0.0.1:11443/ && https_up=1\nexpiry=$(openssl\
+        \ x509 -enddate -noout -in /var/lib/unifi-proxy/tls/server.crt)\nexpiry=$(date\
+        \ --date=\"${expiry#notAfter=}\" +%s)\n{\n  printf 'unifi_service_up %s\\n' \"\
+        $service_up\"\n  printf 'unifi_https_up %s\\n' \"$https_up\"\n  printf 'unifi_origin_certificate_expiry_timestamp_seconds\
+        \ %s\\n' \"$expiry\"\n  printf 'unifi_health_last_run_timestamp_seconds %s\\n'\
+        \ \"$(date +%s)\"\n} > \"$directory/unifi-health.prom.new\"\nchmod 0644 \"$directory/unifi-health.prom.new\"\
+        \nmv \"$directory/unifi-health.prom.new\" \"$directory/unifi-health.prom\"\n"
+    - path: /usr/local/lib/unifi/inputs.json
+      permissions: '0644'
+      content: "{\n  \"version\": \"5.1.42\",\n  \"url\": \"https://fw-download.ubnt.com/data/unifi-os-server/5172-linux-x64-5.1.42-12e9e3cf-8f8b-4e54-928c-76b80a10c8a4.42-x64\"\
+        ,\n  \"sha256\": \"f6111e9396a42c74016f5dde9b01fbef486a6fe69efe137935e6e38b7c22f94d\"\
+        ,\n  \"release\": \"https://community.ui.com/releases/UniFi-OS-Server-5-1-42/509f4de9-8fe4-4718-abad-1bb6990dedcc\"\
+        \n}\n"
+    - path: /etc/nftables.conf
+      permissions: '0600'
+      content: "#!/usr/sbin/nft -f\nflush ruleset\ntable inet unifi {\n  chain input {\n\
+        \    type filter hook input priority 0; policy drop;\n    iifname \"lo\" accept\n\
+        \    ct state established,related accept\n    ip protocol icmp accept\n    ip\
+        \ saddr { 10.21.10.20, 10.21.91.0/24 } tcp dport { 22, 11443 } accept\n    ip\
+        \ saddr { 10.100.0.0/16, 10.21.20.0/24 } tcp dport { 8443, 9100, 9130 } accept\n\
+        \    ip saddr { 10.21.90.6, 10.21.90.7 } tcp dport 8080 accept\n    ip saddr {\
+        \ 10.21.90.6, 10.21.90.7 } udp dport 3478 accept\n    udp sport 67 udp dport 68\
+        \ accept\n  }\n  chain forward { type filter hook forward priority 0; policy drop;\
+        \ }\n  chain output { type filter hook output priority 0; policy accept; }\n}\n"
+    runcmd:
+    - - /usr/local/lib/unifi/bootstrap.sh
+    - - systemctl
+      - enable
+      - --now
+      - nftables
+    package_update: true
+    packages:
+    - nftables
+  networkdata: |
+    version: 2
+    ethernets:
+      pod:
+        match:
+          macaddress: 02:00:21:40:01:28
+        set-name: pod0
+        dhcp4: true
+        dhcp4-overrides:
+          route-metric: 1000
+      services:
+        match:
+          macaddress: 02:00:21:40:01:27
+        set-name: services0
+        dhcp4: false
+        addresses:
+        - 10.21.40.127/24
+        routes:
+        - to: default
+          via: 10.21.40.1
+          metric: 50
+        nameservers:
+          addresses:
+          - 10.21.40.1

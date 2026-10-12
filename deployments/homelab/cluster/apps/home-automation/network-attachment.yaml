@@ -1,0 +1,14 @@
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: automation-lan
+  namespace: home-automation
+spec:
+  config: "{\n  \"cniVersion\": \"0.3.1\",\n  \"name\": \"automation-lan\",\n  \"plugins\": [\n    {\n\
+    \      \"type\": \"macvlan\",\n      \"master\": \"iot0\",\n      \"mode\": \"bridge\",\n      \"\
+    ipam\": {\n        \"type\": \"static\",\n        \"addresses\": [\n          {\n            \"address\"\
+    : \"10.21.50.10/24\"\n          }\n        ]\n      }\n    },\n    {\n      \"type\": \"tuning\",\n\
+    \      \"sysctl\": {\n        \"net.ipv6.conf.all.disable_ipv6\": \"0\",\n        \"net.ipv6.conf.IFNAME.disable_ipv6\"\
+    : \"0\",\n        \"net.ipv6.conf.all.forwarding\": \"0\",\n        \"net.ipv6.conf.IFNAME.accept_ra\"\
+    : \"1\",\n        \"net.ipv6.conf.IFNAME.accept_ra_rt_info_max_plen\": \"64\"\n      }\n    }\n  ]\n\
+    }"

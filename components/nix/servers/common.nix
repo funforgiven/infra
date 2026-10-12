@@ -103,7 +103,7 @@ in
         name = "notify-matrix-unit-failure";
         runtimeInputs = [ pkgs.python3 ];
         text = ''
-          exec python ${../../cloud/services/matrix/notify_host.py} /var/lib/monitoring-bootstrap/matrix.json "$1"
+          exec python ${../../homelab/services/matrix/notify_host.py} /var/lib/monitoring-bootstrap/matrix.json "$1"
         '';
       };
       notifier = pkgs.writeShellApplication {
@@ -153,7 +153,7 @@ in
         default =
           let
             rollout = builtins.fromJSON (
-              builtins.readFile ../../../deployments/homelab/cloud/services/47-matrix/rollout.json
+              builtins.readFile ../../../deployments/homelab/cluster/apps/matrix/rollout.json
             );
           in
           if rollout.phase == "prepared" then "telegram" else rollout.phase;

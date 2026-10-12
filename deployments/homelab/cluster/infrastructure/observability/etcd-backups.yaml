@@ -1,0 +1,25 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: homelab-etcd-backups
+  namespace: services-observability
+spec:
+  groups:
+  - name: homelab-etcd-backups
+    rules:
+    - alert: HomelabEtcdBackupStale
+      expr: time() - homelab_etcd_backup_last_success_timestamp_seconds > 28800
+      for: 15m
+      labels:
+        severity: critical
+      annotations:
+        summary: Off-server etcd backup is older than eight hours on {{ $labels.instance
+          }}
+    - alert: HomelabEtcdBackupMissing
+      expr: up{job="node-exporter"} == 1 unless on(instance) homelab_etcd_backup_last_success_timestamp_seconds
+      for: 8h
+      labels:
+        severity: critical
+      annotations:
+        summary: No successful off-server etcd backup has been recorded on {{ $labels.instance
+          }}

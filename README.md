@@ -1,139 +1,97 @@
 # infra
 
-NixOS, desktop, network, and private-cloud configuration for this homelab.
-Nix, OpenTofu, Flux, Kustomize, and SOPS hold desired state. Imperative tools
-are limited to hardware changes, credential issuance, provider APIs without a
-suitable provider, and recovery operations.
+NixOS, Kubernetes, desktop and physical-network configuration for this
+homelab. Three NixOS/K3s servers run one Flux-managed cluster with direct
+Rook-Ceph storage. Independent AWS mail and external provider resources
+retain their declarative configuration and existing state.
+
+This migration branch is preparation only. Live installation and provider
+changes require the documented backup, restore and hardware gates.
 
 ## Repository map
 
-- `components/nix/` contains NixOS and Home Manager modules, packages, checks,
-  and generated-file sources.
-- `components/cloud/` contains reusable host, network, identity, DNS, and
-  service infrastructure.
-- `deployments/homelab/routeros/` contains the physical-network runbook.
-- `deployments/homelab/cloud/` contains the OpenStack, Kubernetes, Flux, and
-  service-cluster desired state.
-- `secrets/` contains SOPS ciphertext and the secret-recovery runbook.
+- `components/nix/`: NixOS/Home Manager modules, packages, checks and generated files.
+- `deployments/homelab/hosts/`: physical host inventory, declarative mirrored-SATA disko, NixOS networking, K3s and encrypted bootstrap.
+- `deployments/homelab/cluster/`: one semantic Flux dependency graph, infrastructure and apps.
+- `deployments/homelab/recovery/`: suspension overlay for restoring persistent data before applications start.
+- `components/homelab/providers/`: independent identity, Cloudflare DNS, AWS mail and NetBird OpenTofu configurations.
+- `components/homelab/operations/`: encrypted credential/state and migration inventory helpers.
+- `deployments/homelab/network/` and `components/homelab/network-automation/`: RouterOS/Omada/UniFi desired network state.
+- `docs/migration/`: architecture, complete source/PVC mapping, owner inputs, console qualification and migration evidence.
+- `secrets/`: SOPS ciphertext and secret recovery instructions.
 
-`outputs.nix` loads every Nix module below `components/nix/`. The generated
-`flake.nix` declares inputs; host and feature selection lives in
-`components/nix/computers/`.
-
-## Common commands
-
-Enter the development shell and install the repository pre-commit hook:
-
-```sh
-nix develop --accept-flake-config
-```
-
-Format and evaluate the repository:
-
-```sh
-nix fmt --accept-flake-config
-nix flake check --no-build --accept-flake-config
-```
-
-Build all checks before merging a change:
-
-```sh
-nix flake check --accept-flake-config
-```
-
-Cloud checks are split by tool and can be built together or separately:
-
-```sh
-nix build .#checks.x86_64-linux.cloud-configuration \
-  --no-link --accept-flake-config
-nix build .#checks.x86_64-linux.cloud-kustomize \
-  --no-link --accept-flake-config
-```
-
-Scan the working tree and Git history for plaintext secrets:
-
-```sh
-nix run .#repository-secret-scan --accept-flake-config
-```
-
-Apply the desktop host configuration:
-
-```sh
-sudo nixos-rebuild switch --flake .#parmigiano --accept-flake-config
-```
-
-## Local state and secrets
-
-The personal age identity at
-`/home/funforgiven/.config/sops/age/keys.txt` can decrypt every SOPS file
-in this repository. Keep an offline backup.
-
-NixOS uses `/etc/ssh/ssh_host_ed25519_key` for unattended decryption. Before
-replacing that key, add its new age recipient to `.sops.yaml` and rekey the
-affected files. See [secrets/README.md](secrets/README.md) for recovery,
-editing, and rotation.
-
-The wallpaper is expected at
-`/home/funforgiven/Pictures/Wallpapers/current.png`. After replacing it,
-refresh the locked content with:
-
-```sh
-nix flake update wallpaper --accept-flake-config
-```
-
-## Generated files
-
-`flake.nix`, `.gitignore`, `README.md`, `LICENSE`, and
-`THIRD_PARTY_NOTICES.md` are generated. Edit their Nix sources and then run:
+`outputs.nix` loads every Nix module below `components/nix/`. Edit generated
+`flake.nix`, `.gitignore`, `README.md`, `LICENSE` and `THIRD_PARTY_NOTICES.md`
+through their Nix sources, then run:
 
 ```sh
 nix run .#write-flake --accept-flake-config
 nix run .#write-files --accept-flake-config
 ```
 
-Do not edit generated files by hand.
-
-## Fresh installation
-
-The disko command below destroys the disk selected in
-`components/nix/computers/parmigiano-disko.nix`. Verify that path first.
-
-1. Partition and mount the target disk:
-
-   ```sh
-   sudo nix run .#disko --accept-flake-config -- \
-     --mode destroy,format,mount --flake .#parmigiano
-   ```
-
-2. Restore the existing SSH host private key, or add the replacement host as
-   a SOPS recipient.
-
-3. Install NixOS:
-
-   ```sh
-   sudo nixos-install --flake .#parmigiano
-   ```
-
-Useful non-destructive evaluations are:
+## Local validation
 
 ```sh
-nix eval .#diskoConfigurations.parmigiano.disko.devices.disk.main.device
+nix develop --accept-flake-config
+nix fmt --accept-flake-config
+nix flake check --no-build --accept-flake-config
+nix build .#checks.x86_64-linux.homelab-configuration --no-link --accept-flake-config
+nix run .#repository-secret-scan --accept-flake-config
+```
+
+The homelab check combines strict native manifest validation, retained
+service tests, OpenTofu formatting, RouterOS syntax and shell checks.
+Full pinned Helm rendering and schema validation are documented in
+[VALIDATION.md](docs/migration/VALIDATION.md).
+
+Read-only evaluations of host and disk configuration:
+
+```sh
+nix eval .#nixosConfigurations.pecorino.config.system.build.toplevel.drvPath
+nix eval --json .#diskoConfigurations.pecorino.disko.devices.disk --apply 'disks: builtins.mapAttrs (_: disk: disk.device) disks'
 nix eval .#nixosConfigurations.parmigiano.config.system.build.toplevel.drvPath
 nix eval .#homeConfigurations."funforgiven@parmigiano".activationPackage.drvPath
 ```
 
-## Operations
+## Secrets and execution
 
-- [RouterOS topology and recovery](deployments/homelab/routeros/README.md)
-- [Cloud topology and operations](deployments/homelab/cloud/README.md)
-- [Service catalog](deployments/homelab/cloud/services/README.md)
-- [Secret recovery and rotation](secrets/README.md)
-- [Audio routing](components/nix/audio-channels/README.md)
-- [Quickshell behavior and manual tests](components/nix/funforgiven/window-manager/quickshell/README.md)
+The personal age identity at
+`/home/funforgiven/.config/sops/age/keys.txt` decrypts operator inputs.
+Keep its offline recovery copy. Cluster hosts use a dedicated age identity
+seeded during installation; existing Ed25519 SSH host identities remain
+encrypted in the host bootstrap. Flux has a separate age recipient.
+
+`migration-source-capture` reads the frozen old deployment into a new private
+directory outside Git and encrypts runtime/configuration/provider archives.
+It does not update the target or export application-volume bytes.
+
+Export archived provider state locally with the
+`migration-provider-state` app; never initialize an empty state for existing
+external resources. `render-cluster-credentials` refreshes concrete encrypted
+application Secrets from local enrollment inputs. Neither helper applies
+cluster or provider resources. `migration-certificate-bundle` exports the
+validated one-time TLS seed. `migration-volume-plan` renders claim transfer
+resources, and `migration-database-bootstrap` exports a private PostgreSQL
+bootstrap while application stages stay held.
+
+See [preparation acceptance](docs/migration/ACCEPTANCE.md),
+[migration status](docs/migration/PROGRESS.md),
+[architecture](docs/migration/ARCHITECTURE.md),
+[data migration](docs/migration/DATA-MIGRATION.md),
+[execution runbook](docs/migration/RUNBOOK.md),
+[complete inventory](docs/migration/INVENTORY.md),
+[owner execution inputs](docs/migration/DECISIONS-REQUIRED.md),
+[PiKVM console access](docs/migration/CONSOLE-ACCESS.md) and
+[secret recovery](secrets/README.md). Source disks, databases, certificates
+and Ceph monitor state must have verified independent recovery before any
+destructive installation. Keeping OSD disks alone is not a Ceph restore.
+
+The wallpaper remains at
+`/home/funforgiven/Pictures/Wallpapers/current.png`; after replacing
+it, refresh the lock with `nix flake update wallpaper --accept-flake-config`.
 
 ## Credits
 
 The Nix module layout follows
 [mightyiam's dendritic pattern](https://github.com/mightyiam/dendritic).
-Quickshell work draws on Noctalia v4 and DankMaterialShell. Exact adapted
-snapshots and licenses are recorded in `THIRD_PARTY_NOTICES.md`.
+Quickshell adaptations and licenses are recorded in `THIRD_PARTY_NOTICES.md`.

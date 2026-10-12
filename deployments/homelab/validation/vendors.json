@@ -1,0 +1,88 @@
+{
+  "files": [
+    {
+      "file": "deployments/homelab/cluster/infrastructure/metallb/vendor/install.yaml",
+      "url": "https://raw.githubusercontent.com/metallb/metallb/v0.16.1/config/manifests/metallb-native.yaml",
+      "sourceSHA256": "bf25feebb7582ca7df845efd52ffbc2960d6cbf4cfc972f47fded9f788b67f0b",
+      "localSHA256": "bf25feebb7582ca7df845efd52ffbc2960d6cbf4cfc972f47fded9f788b67f0b"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/multus/vendor/multus.yaml",
+      "url": "https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/v4.3.1/deployments/multus-daemonset-thick.yml",
+      "sourceSHA256": "24fb29530b760d28126bba76bd91fac8fd74100b53d9fc65943c223e3a82be30",
+      "localSHA256": "24fb29530b760d28126bba76bd91fac8fd74100b53d9fc65943c223e3a82be30"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/kubevirt/vendor/operator.yaml",
+      "url": "https://github.com/kubevirt/kubevirt/releases/download/v1.9.0/kubevirt-operator.yaml",
+      "sourceSHA256": "f11307caafc3c23ffedf9887d8beb5a4419e2694da242fa68f63d1ec820de2e0",
+      "localSHA256": "f11307caafc3c23ffedf9887d8beb5a4419e2694da242fa68f63d1ec820de2e0"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/calico/vendor/operator.yaml",
+      "url": "https://raw.githubusercontent.com/projectcalico/calico/v3.33.0/manifests/tigera-operator.yaml",
+      "sourceSHA256": "aef423b36aef8cf86567f92bbe5eea4b4ca105a6fc7dbf43de599c6fa70388ba",
+      "localSHA256": "aef423b36aef8cf86567f92bbe5eea4b4ca105a6fc7dbf43de599c6fa70388ba"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/calico/vendor/native-v3.yaml",
+      "url": "https://raw.githubusercontent.com/projectcalico/calico/v3.33.0/manifests/v3_projectcalico_org.yaml",
+      "sourceSHA256": "5306c2c6d9fd6762d804f9da51c049b8269c33498a364c5df0eed555aba026bd",
+      "localSHA256": "5306c2c6d9fd6762d804f9da51c049b8269c33498a364c5df0eed555aba026bd"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/kubevirt/kubevirt.yaml",
+      "url": "https://github.com/kubevirt/kubevirt/releases/download/v1.9.0/kubevirt-cr.yaml",
+      "sourceSHA256": "43106136dbce3312bdbfdeae612aacafc6c12da518d233f90645b4685d84a2af",
+      "localSHA256": "c47d09494887ac735dc95ba164a459b6408df855201ecc48c331adc9f9d4f22d",
+      "customized": "Enable hardware virtualization, LiveMigration and bounded migration concurrency using the pinned versioned API."
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/rook/snapshots/vendor/snapshot.storage.k8s.io_volumesnapshotclasses.yaml",
+      "url": "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.5.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml",
+      "sourceSHA256": "75e6565aac2c0f2949ed13ea884bbaa388cb7be576b558b709cf1168e011828d",
+      "localSHA256": "75e6565aac2c0f2949ed13ea884bbaa388cb7be576b558b709cf1168e011828d"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/rook/snapshots/vendor/snapshot.storage.k8s.io_volumesnapshotcontents.yaml",
+      "url": "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.5.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml",
+      "sourceSHA256": "895a3c1e73b60f06a0deb566dd123d01bdf1b2efc5d5ff5231ff8bbcf42dafc7",
+      "localSHA256": "895a3c1e73b60f06a0deb566dd123d01bdf1b2efc5d5ff5231ff8bbcf42dafc7"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/rook/snapshots/vendor/snapshot.storage.k8s.io_volumesnapshots.yaml",
+      "url": "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.5.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml",
+      "sourceSHA256": "b032116e987fb1d7d93cec7d942833adeb9d95c9bdc7e00c10b280c2fe4a6c33",
+      "localSHA256": "b032116e987fb1d7d93cec7d942833adeb9d95c9bdc7e00c10b280c2fe4a6c33"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/rook/snapshots/vendor/rbac-snapshot-controller.yaml",
+      "url": "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.5.0/deploy/kubernetes/snapshot-controller/rbac-snapshot-controller.yaml",
+      "sourceSHA256": "99c4ac480b6c9563be0d85599e29cc7b68b25a82d250b0e789726727551e8d38",
+      "localSHA256": "99c4ac480b6c9563be0d85599e29cc7b68b25a82d250b0e789726727551e8d38"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/rook/snapshots/vendor/setup-snapshot-controller.yaml",
+      "url": "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.5.0/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml",
+      "sourceSHA256": "bab025e1fed9199c5d827f64febb572dd8b746928e48d656312a215bede74d92",
+      "localSHA256": "bab025e1fed9199c5d827f64febb572dd8b746928e48d656312a215bede74d92"
+    }
+  ],
+  "images": [
+    {
+      "image": "quay.io/metallb/controller",
+      "tag": "v0.16.1",
+      "digest": "sha256:f51ab515de9ccd20dc3dccb093e48df8adddac019326c456f449e55ba91b6420"
+    },
+    {
+      "image": "quay.io/metallb/speaker",
+      "tag": "v0.16.1",
+      "digest": "sha256:16561e96531e1852d5c229ad7fae6e994dcfa983ff7f4de6b6208b34a4e2ddbc"
+    },
+    {
+      "image": "registry.k8s.io/sig-storage/snapshot-controller",
+      "tag": "v8.5.0",
+      "digest": "sha256:74ca61ab13e978f03cf0f336a607281d15f04cda0a38a881306365473b28a3d8"
+    }
+  ]
+}
