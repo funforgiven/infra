@@ -322,3 +322,54 @@ already reached consistency and replayed through each final application writer
 stop; both restored databases passed row-count and integrity checks. The target
 Clusters have not been created. This prevents bootstrap from selecting a later
 source backup implicitly while the source databases finish retiring.
+
+
+## Verified execution checkpoint, 22:54 UTC on 12 October 2026
+
+Independent final recovery evidence now covers 46 of 50 inventoried claims.
+Each filesystem archive passed an exact Backblaze-version download, authenticated
+decryption and restoration onto a fresh filesystem, with file hashes, numeric
+ownership, modes, ACLs and xattrs compared. Native database recovery covers the
+eight database-equivalent claims. The remaining four claims are Forgejo backup
+history, both old physical Prometheus histories and Loki; their transfers and
+native checks are still running. No physical installation gate has passed.
+
+All eight retained Glance images and all seven retained unclaimed cloud cache
+disks passed native disk conversion/integrity and full-byte comparison after
+Backblaze recovery. Both unidentified cached images were preserved. All three
+management guest roots and their cold etcd databases passed independent native
+restoration. The six service guests shut down cleanly; their cold root archives
+are in progress. Source images, root disks and data snapshots have not been
+deleted.
+
+Final OpenStack recovery includes a source-replica-pinned MariaDB logical dump,
+its separate optimizer-statistics export and both native OVN databases. An
+isolated MariaDB restore matched all 700 source tables and passed integrity
+checks. The restored OVN northbound and southbound schemas, all persistent rows,
+UUIDs and references match. All thirteen retired OpenStack claims also passed
+fresh-filesystem restoration. Forty-five old cloud controllers are held, and
+the four archived database/message-broker StatefulSets stopped gracefully. The
+old OpenStack APIs are now stopped; Ceph and physical administration remain
+available.
+
+Cold Ceph monitor stores were captured one at a time, with full three-monitor
+quorum restored between copies and the operator restored to its original
+replica count. Each Backblaze download passed fresh-filesystem comparison and
+independent native Ceph database copying. All enumerated keys and extracted
+monitor, OSD and CRUSH maps match, including the original cluster FSID. These
+checks started no replacement monitor or Ceph cluster.
+
+The official installer remains detached on PiKVM. All three locked NixOS system
+closures are built and protected by local GC roots. Source SATA identities match
+the inventory; partition tables, RAID/LVM identities and four filesystem UUIDs
+per host are recorded for cold root/boot/EFI archiving after installer boot.
+Installer SSH identity decryption also works independently of the retiring
+cluster, with the private key held only in memory. No physical server has been
+rebooted, reformatted or activated with the target configuration.
+
+The 22:54 Backblaze checkpoint contains 418 encrypted recovery artifacts and the
+signed migration-branch bundle. Its exact object version was downloaded,
+authenticated and verified against every artifact hash, and native Git bundle
+verification passed. Later proofs are recorded in the private execution ledger.
+Cilium 1.20.2 and kube-proxy replacement are prepared in the target branch;
+physical CNI, Multus IoT, VIP and restored-application checks remain outstanding.
