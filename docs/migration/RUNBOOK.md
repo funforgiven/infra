@@ -115,7 +115,12 @@ the recorded identity, not by disabling host verification.
 
 Boot the reviewed installer on pecorino first. Set up temporary installer
 networking on the existing tagged management VLAN/LACP fabric; verify both
-physical NICs, link/FEC, host identity and a reachable SSH address. Install the
+physical NICs, link/FEC, host identity and a reachable SSH address. Source
+inspection confirmed two Intel ice members per host, fixed 25 Gb/s full-duplex
+with autonegotiation off and active RS FEC; the CRS510 uses matching fixed
+25G-baseCR/fec91 settings. The target applies these PHY settings before networkd
+enslaves the members. Match permanent MAC/PCI identities when configuring the
+installer and verify both members negotiate 25 Gb/s with RS FEC. Install the
 operator public key from `secrets/github-ssh-key.pub` into the live installer's
 root authorized keys using the console. Disable installer password SSH after
 key access works. Record its temporary SSH host fingerprint separately from
