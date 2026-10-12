@@ -31,9 +31,9 @@ AUTH_INTAKE = Path("secrets")
 GITOPS_USER = "fahrican-mail-gitops"
 GITOPS_POLICY = "fahrican-mail-gitops"
 GITOPS_POLICY_FILE = Path(
-    "components/cloud/services/mail-aws/bootstrap-iam-policy.json"
+    "components/homelab/services/mail-aws/bootstrap-iam-policy.json"
 )
-RESEND_FILE = Path("deployments/homelab/cloud/undercloud/84-mail-aws/resend.sops.yaml")
+RESEND_FILE = Path("deployments/homelab/credentials/mail-aws/resend.sops.yaml")
 RESEND_KEY = "STALWART_RESEND_API_KEY"
 RESEND_SECRET_ID = "fahrican/stalwart/resend"
 AWS_REGION = "eu-central-1"
@@ -605,7 +605,7 @@ class AwsMailCredentials:
         except (KeyError, ValueError, TypeError):
             raise AwsMailCredentialError("Invalid mail VPN credential document") from None
         token = self.store.read(
-            Path("deployments/homelab/cloud/undercloud/38-service-api-foundation/acme/cloudflare-token.sops.yaml"),
+            Path("deployments/homelab/credentials/cloudflare-token.sops.yaml"),
             "api-token",
         )
         if not token:

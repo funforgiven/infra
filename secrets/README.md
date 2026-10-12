@@ -26,9 +26,10 @@ machine identity and avoids a recipient migration. If the key is replaced, add
 the new recipient and update every host-consumed SOPS document before
 installation.
 
-The undercloud and management Flux age identities are stable cluster-recovery
-assets. Do not regenerate them during a workstation, host, or cluster rebuild.
-Rotate them only as a planned recipient migration.
+The old undercloud/management/services Flux identities and management kubeconfig
+remain source recovery archives. The target uses separate host and Flux age
+identities in the encrypted migration bootstrap; preserve them and the original
+SSH host keys. Rotate recipients only as a reviewed migration.
 
 The management kubeconfig, Backblaze restore readers, backup decryption
 identities, and the ZITADEL break-glass credential are administrator recovery
@@ -47,11 +48,11 @@ nix run .#sops --accept-flake-config -- path/to/workload-secrets.sops.yaml
 Generate a replacement account password hash with `mkpasswd -m yescrypt`, then
 update `users/funforgiven/password_hash` in `password-hashes.yaml`.
 
-Cloud-host console passwords are stored as unique high-entropy plaintext values
-inside the encrypted `cloud-hosts.yaml` document. Do not precompute and commit a
-host hash: the controller sends only a salted one-way hash during enrollment.
-Password SSH login remains disabled; the original value is for supervised sudo
-and PiKVM console recovery.
+The encrypted `cloud-hosts.yaml` document is retained for source console/sudo
+recovery. It is not the target host enrollment source. Target installation uses
+`deployments/homelab/hosts/secrets.sops.yaml`, preserving captured SSH identities
+and account password hashes. Password SSH login stays disabled. Host keys,
+console recovery and age bootstrap are described in the migration runbook.
 
 Replace the binary GitHub SSH private key without first copying it into the
 repository:
@@ -65,7 +66,8 @@ nix run .#sops --accept-flake-config -- encrypt \
   /secure/path/github_ed25519
 ```
 
-Use the encrypted management kubeconfig without creating a plaintext copy:
+For source recovery only, use the archived CAPI management kubeconfig without
+creating a plaintext copy. Target access uses `matrix-access -- cluster`:
 
 ```sh
 nix run .#sops --accept-flake-config -- exec-file \
@@ -143,11 +145,11 @@ create narrower credentials; they clear it only after the returned credentials
 are encrypted and verified.
 
 Generated passwords and provider-derived identifiers do not have intake files.
-See the [service operations guide](../deployments/homelab/cloud/services/ACTIVATION.md)
+See the [service operations guide](../deployments/homelab/credentials/README.md)
 for Backblaze, Telegram, Discord music, Resend, AWS mail, and host enrollment.
 The Discord and YouTube issuance, least-privilege installation, rotation, and
 playback checks are detailed in the
-[Muse onboarding guide](../deployments/homelab/cloud/services/40-media/MUSE.md).
+[Muse onboarding guide](../deployments/homelab/cluster/apps/media/MUSE.md).
 
 ## Runtime files
 
@@ -223,7 +225,7 @@ Use a 24+ character random password accepted by the host enrollment profile.
 `UNIFI_BACKUP_RESTIC_PASSWORD` is generated; the Backblaze reconciler owns
 `UNIFI_BACKUP_B2_APPLICATION_KEY_ID` and `UNIFI_BACKUP_B2_APPLICATION_KEY`.
 The writer is restricted to `services/hosts/unifi/`. Use the standard enrollment
-commands and the [UniFi recovery runbook](../deployments/homelab/cloud/services/24-unifi/README.md).
+commands and the [UniFi recovery runbook](../deployments/homelab/cluster/apps/unifi/README.md).
 The origin CA private key stays on the VM and in its encrypted Restic backup;
 only the verified public certificate is committed. WLAN PSKs remain under
 `wireless.psks` in `secrets/omada.yaml` during the switch transition.

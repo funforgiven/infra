@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: matrix-registry
+    namespace: backup-qualification
+    labels:
+        velero.io/exclude-from-backup: "true"
+type: kubernetes.io/dockerconfigjson
+stringData:
+    .dockerconfigjson: ENC[AES256_GCM,data:cQvxiTAy5GL+MvheBxRiJ+AV9vXXrTqVJ2Dl/Fl15IjHax5m797B25mHIMHopVuysx16CAqMRf6JG+rX2UHx+pUjMfa9Cs2n6tdwaFT4FClKlp0Fd9WujGHVe7KOgLSd2cSFszhQT5QdLs5ydCdOS5NYNeSKpZHnShbGEMxhajwtjzBSn7scIlJoZipJwzZHIFJ22PA=,iv:eAvY0oh23Bt2fXgYvqfwe3fkeeSdLsvP0nLQhWBhgFg=,tag:qc8Dk1EeyWw98kxXOIjz2g==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBWMWU4Q2JUT2pzZUJjVU1k
+            dDhCbm1ldjRWbUlqK1VoeUhoWnJGMDhwSEVVCnNBKy9RbldYTjRqZGt2WVZnSVlj
+            SjFtamlmWkZkbnFkTFB5VjB4ZDZpVFUKLS0tIDlJcjEvdVc2KzdSdWpXOWEvcmJJ
+            OXJxbmxkZzBMdGVPUjlyOTM5S3JEQk0KUmPbM0xJR6VOcSHMZoOPT3wLgtDSsYXi
+            lajIqUxccEvEnTLh3293oDL1GuEmqi6fKVULLCaVIllKhQ7fDrd0SA==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBDUlhQVm94R0JTZFpVRm5K
+            QzBaWm5LNXk0ckVhNnJXR0xvKzBhNVNjMXlnCmM3VFc0Tzd0SkdBREdQU0htQmJC
+            Y3pjWUtZTVhXS2RvUloxRzNOcGdKZTAKLS0tIHVEbWZkY2lLcVFUWUl3ajM5QlV0
+            ditBL2FXblNiSGVlaVg1c082ZkRCTzAKqD0eo4IzfNsk+0lYsY+n7xpT7DPlw7R1
+            xd4+qEEO1ajz19R+Ky+u9zTU8iRqMZjbi6L9RDqAdHZZa5vUz8Wp8w==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age10n9tyln0hwpdmxpe90af6kwtzrplgp9kq6qy58mnak4mugjcwy6s8w4es7
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-10-12T01:18:59Z"
+    mac: ENC[AES256_GCM,data:MvhUI86MfRvQQ8jY0grSCHmaPP9Zb4q94SuOvCLqsfvfYVsu/vmeM5gxK1BQiLp5kZ/j5ksk/CCz8wrxF8d1+MEpAXR3LJN4zhhbIGohnEH8oFM+JKhFPo86Nl+RaU2d18aWQH1F8O5o4oivKyoBHE1Kuh1l7Ppy5jCzDhrEtpk=,iv:jY6+H6b+30wZG9y3ZhG4Qd94lfjoanRxTCvg0Cta3mQ=,tag:0c81A24a04LZu+N1bkoAOQ==,type:str]
+    version: 3.13.3

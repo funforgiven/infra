@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: kube-system
+resources:
+- vendor/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
+- vendor/snapshot.storage.k8s.io_volumesnapshotcontents.yaml
+- vendor/snapshot.storage.k8s.io_volumesnapshots.yaml
+- vendor/rbac-snapshot-controller.yaml
+- vendor/setup-snapshot-controller.yaml
+images:
+- name: registry.k8s.io/sig-storage/snapshot-controller
+  newTag: v8.5.0
+  digest: sha256:74ca61ab13e978f03cf0f336a607281d15f04cda0a38a881306365473b28a3d8
+patches:
+- target:
+    kind: Deployment
+    name: snapshot-controller
+  patch: "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: snapshot-controller\n\
+    spec:\n  template:\n    spec:\n      containers:\n      - name: snapshot-controller\n\
+    \        resources:\n          requests:\n            cpu: 20m\n            memory:\
+    \ 64Mi\n          limits:\n            memory: 256Mi\n"

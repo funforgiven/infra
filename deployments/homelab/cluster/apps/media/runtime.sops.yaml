@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: media-runtime
+    namespace: media
+type: Opaque
+stringData:
+    ND_LASTFM_APIKEY: ENC[AES256_GCM,data:DoQu8jxhjrHHhwj2zkXvpsi7Mop5NePS/23uqH8yytw=,iv:E7lzWXpYmOAFgGDtfU/fpeRXn3TsZzI9T5bvi4h97RE=,tag:DfWp9g8rdZoxaJ5H6ClCzQ==,type:str]
+    ND_LASTFM_SECRET: ENC[AES256_GCM,data:LhPNZbB003k18CcjFRuhaqasqhEwrhRHWkaxXJLYEOM=,iv:R5a97unQ/bPXHbv3p3ZX0mFQ5OhYn8OvmDthQlG5LE0=,tag:p/FY4Bnos8V5bMQry6Lijw==,type:str]
+    ND_PASSWORDENCRYPTIONKEY: ENC[AES256_GCM,data:18Xtrg8s4iWcINfSVvGSnbwC/7lmTbMoXDnxXgG9IXCTyOgZ0wYef1gxj1suEzbiPyWlyrKc/ChNpRc7Iy5lkA==,iv:pGFtqSdihgzFfMiR9owtOThyAS+tkLHx4X7b0CB0xR4=,tag:Ce8LV7ywJLzqtyPjTeEXYg==,type:str]
+    SFTPGO_ADMIN_PASSWORD: ENC[AES256_GCM,data:8v8m4tDWJ24Q8JGR6twD+L3MHtx9CgcLiMwHwVxeGGMpKZqmbGNTjAKeevd1cqb8MqSx0aF8m2SVYXNEEoMpzA==,iv:YXXSsgWwGvNYeh9EEl3tFeLJ8h8jpgSZaLLl9g8hy4E=,tag:T+EAVrfNYKtzMPGUyAByCg==,type:str]
+    AUDIOMUSE_NAVIDROME_PASSWORD: ENC[AES256_GCM,data:iPx9doFxc7L8W+8/8tlGU8jNWMa+Hdny5FthIfzJBDwaW+zOAYPkOaL2wvZi35WyRJIsNQWXxwq6TwX73OgBjQ==,iv:EzmvSXlNdHGs5+2HhqHerIfNpEWffpETa/rkzgnjCzY=,tag:HVrJQwrVHqr9TQ6PrgGM1g==,type:str]
+    AUDIOMUSE_POSTGRES_PASSWORD: ENC[AES256_GCM,data:wNuV9VMC+zedj+zzoPR0GBYWBwjvm8qLMi2AEwJqWrAFz5WrwZh0g335LR8eVH6+DNSyoqLLOAi2qL3ddds9Qg==,iv:S5XssLfkhDaFY4EhvcTdam9/9ujsqjfGin6B97JtY+E=,tag:7wCgkkZrrsp+cjVbtqhKXA==,type:str]
+    NAVIDROME_OAUTH2_COOKIE_SECRET: ENC[AES256_GCM,data:psuCL01ZFDbujm7K9C6cCZHT14VE4/W2NDKfoXFolNAyGBA0VF5tr123E6I=,iv:b/GRrjk2Z9tiYleOiVwgXhYQ2nWy1ofcLOsDgACmaX0=,tag:GBIeqf5N+VJCHsjfdRA3yw==,type:str]
+    AUDIOMUSE_OAUTH2_COOKIE_SECRET: ENC[AES256_GCM,data:TaNj/Vcv4JoL/8TDOSeGexPweJzTbh/UkEsKfHfqn7xnHTEChKzxUXEP6Nw=,iv:oOGZAlUX91z0hvuNBYW5TBBfkVL7PZ7cRUdmoHa/Ec4=,tag:5wAL8pbOd4oyPiIgu2aW+A==,type:str]
+    SFTPGO_OIDC_CLIENT_ID: ENC[AES256_GCM,data:O/P8kUqnFhNzzLYAdaz3tp+B,iv:Gq7mamv3JQnhZTVejNIqTryZYN5ZbXNXPKsOtiNK8iA=,tag:d8bfpF0rAd/o1UfCrWYGLw==,type:str]
+    SFTPGO_OIDC_CLIENT_SECRET: ENC[AES256_GCM,data:DcMjlvKSqwqI19f7l1DHAoffnl3JYRGtskH9QbiFJCmI3vcI832Cgp9Al53LeW3pnlcDcd0zD5Hy5im8BOblPA==,iv:NxAd5xp2OWG59OTtkBhztsLJEOjlYFeSJZEfGSz4qjA=,tag:hf3LuJNOOlaCXSA3h8uy0w==,type:str]
+    NAVIDROME_OIDC_CLIENT_ID: ENC[AES256_GCM,data:rBTlaOycC73TSo//F1paHJ2c,iv:mCHFej71ClQVR//JABjola/y06S/7ALAYaT508zAhok=,tag:dZyjy+G8Kh1ooVJki3olDw==,type:str]
+    NAVIDROME_OIDC_CLIENT_SECRET: ENC[AES256_GCM,data:SsfzrOErv1nMJJA9xpVmPw3i8gZczmJX45GO608EG4dA8tS79Nh20h2Q8jfnQyyVl8NTerKDr8cXvSDoO/IVOg==,iv:/ScSHk2vcC4qpYWrWO4FtXrZ5Jaa5urX8Rhe3c6p9Is=,tag:9OvJG+Y4tEddObiQFQIZAg==,type:str]
+    AUDIOMUSE_OIDC_CLIENT_ID: ENC[AES256_GCM,data:Z7k7WAKCi0SnfxSDtsrEWjKx,iv:L1n8Nf9K1W74zIShjARiPe/9qNTubsbPRIIocER3Img=,tag:CBVXq0xZuoKmBjlqVzZazw==,type:str]
+    AUDIOMUSE_OIDC_CLIENT_SECRET: ENC[AES256_GCM,data:bckbc+1jUf1kBNsTaXHPgMJOmAeiILSICJn/rJGR5LdMoDjm+RH9W0Ba0Zq6cONnTKI+gkSfkwTOsWDSdx2yOw==,iv:P+42NUKimUf+wVNkcHCNE9DgQrIF6uLOe4ddnYllj7k=,tag:9T8p/MQf8BYZMpIsfMNlSw==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBsa1hIdzlRZldiUXRWRUo0
+            OGp0cFlield1TDFrcmlpUmlodTlSSzN6Slc0CnQyTDZKc0tDWDVZdGtvYXNHRS9X
+            Nk1pQ1lJeTJ1a255czd0TDJPeEtGdVUKLS0tIGJWSUQ4QzdxdU5NdGM1dkZDU1VD
+            bU1MTE5pQlRuQVFMVjVhdWh5WGFaZHcK1rIyBGSJ22h6YYZFsVscfIN8vvEHMmlz
+            2zMtV4PWEYa7suFQOWGCpaxCvQJzZo7NenQWbGKXQ/YmgfBp8uiYUA==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBRU2EweXlXcC9hekcvTloz
+            Z241SFZJOVFnV3Z0T2J5Q09nb1I1MWxNTWxRCnRmT25rQ0RoK0U2ZEliVTFHWVRq
+            eHpTVjl1QVJMaWNFb1hCU0l5VWgySjQKLS0tIGlHNFFOQzg3eE5GRUR6V2ZYT2F5
+            Tzd0bEFrTmRzQzNobDZ4bmpRbUc1SUkKELEZWIXE6wKHwb20v2Y1pWJLKPlaaEZw
+            QwqSkwi4jNtUgbeyE+1GEoAoqBn5qAOGb5Uf1vAQWzF0ZwIRH4X2hA==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age10n9tyln0hwpdmxpe90af6kwtzrplgp9kq6qy58mnak4mugjcwy6s8w4es7
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-10-12T01:42:43Z"
+    mac: ENC[AES256_GCM,data:LC2/9PrXTJQSlfVAav6rHrGZ6yMDIyewLzMw9yKqTk62z3k3j41xarIeAlb+gah4j7PK3IWcE8FRrkBO3mA/w8fyo18twXI4ez4h2PukfSDrlbXFapSjGgHjGVujsn+16YMMytHYOF/FOIInkmrYzKx39X+StYGLWRgQlpEN9gc=,iv:uGfL7Q14aqYb2/P4UkB8GUZxpc/YAYpX6jlIRPJ+nZ8=,tag:JgOg5KgKsEe7HKJnF6SIaA==,type:str]
+    version: 3.13.3
+---
+apiVersion: v1
+kind: Secret
+metadata:
+    name: discord-music-runtime
+    namespace: media
+type: Opaque
+stringData:
+    DISCORD_TOKEN: ENC[AES256_GCM,data:RUX9mgU4XQmfKbKqSP2pocVtl/4u0/LKUeckIow6xCDj73ruwYxTlCrEhFjw5sx6jsflUPT4bhJvY//oXPrcNPKUEUlM6Q==,iv:ggS3HzSs4VVfNKd7zfanx9zGvjZfCenpxYg7frVHnsk=,tag:N1vze1fVXTPIKPLjO4caVw==,type:str]
+    YOUTUBE_API_KEY: ENC[AES256_GCM,data:D9hbKLfvSc1CtQccSPMphXItKU4aFurtZfBSv8zxhtoTAIWCDL7a,iv:9IRkN+R3neCZPmquTXUbJLiy7bCyEsp1HIlJwL2ukMU=,tag:u0tJde7ixZdIuf/kiCQG0Q==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBsa1hIdzlRZldiUXRWRUo0
+            OGp0cFlield1TDFrcmlpUmlodTlSSzN6Slc0CnQyTDZKc0tDWDVZdGtvYXNHRS9X
+            Nk1pQ1lJeTJ1a255czd0TDJPeEtGdVUKLS0tIGJWSUQ4QzdxdU5NdGM1dkZDU1VD
+            bU1MTE5pQlRuQVFMVjVhdWh5WGFaZHcK1rIyBGSJ22h6YYZFsVscfIN8vvEHMmlz
+            2zMtV4PWEYa7suFQOWGCpaxCvQJzZo7NenQWbGKXQ/YmgfBp8uiYUA==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBRU2EweXlXcC9hekcvTloz
+            Z241SFZJOVFnV3Z0T2J5Q09nb1I1MWxNTWxRCnRmT25rQ0RoK0U2ZEliVTFHWVRq
+            eHpTVjl1QVJMaWNFb1hCU0l5VWgySjQKLS0tIGlHNFFOQzg3eE5GRUR6V2ZYT2F5
+            Tzd0bEFrTmRzQzNobDZ4bmpRbUc1SUkKELEZWIXE6wKHwb20v2Y1pWJLKPlaaEZw
+            QwqSkwi4jNtUgbeyE+1GEoAoqBn5qAOGb5Uf1vAQWzF0ZwIRH4X2hA==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age10n9tyln0hwpdmxpe90af6kwtzrplgp9kq6qy58mnak4mugjcwy6s8w4es7
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-10-12T01:42:43Z"
+    mac: ENC[AES256_GCM,data:LC2/9PrXTJQSlfVAav6rHrGZ6yMDIyewLzMw9yKqTk62z3k3j41xarIeAlb+gah4j7PK3IWcE8FRrkBO3mA/w8fyo18twXI4ez4h2PukfSDrlbXFapSjGgHjGVujsn+16YMMytHYOF/FOIInkmrYzKx39X+StYGLWRgQlpEN9gc=,iv:uGfL7Q14aqYb2/P4UkB8GUZxpc/YAYpX6jlIRPJ+nZ8=,tag:JgOg5KgKsEe7HKJnF6SIaA==,type:str]
+    version: 3.13.3

@@ -1,0 +1,20 @@
+- id: '0x001788011015148f'
+  options:
+    hue_native_control: true
+    transition: 0
+- id: '0x0017880110151bb9'
+  options:
+    hue_native_control: true
+    transition: 0
+- id: '0x001788010c0b1125'
+  options:
+    hue_native_control: true
+    transition: 0
+- id: '0x001788010c012f69'
+  options:
+    hue_native_control: true
+    transition: 0
+- id: '0x001788010c0179eb'
+  options:
+    hue_native_control: true
+    transition: 0

@@ -1,0 +1,5198 @@
+{
+  "services_pvc": [
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "kustomize.toolkit.fluxcd.io/name": "services-backup-policy",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system",
+          "velero.io/backup-name": "services-daily-20261001023003",
+          "velero.io/restore-name": "qualification-20261001023003-20261001183846"
+        },
+        "name": "backup-canary",
+        "namespace": "backup-qualification-restore"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "1Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-a370c021-58f9-4de4-a51d-b7b7fc5c89d7"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "1Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "kustomize.toolkit.fluxcd.io/name": "services-backup-policy",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system"
+        },
+        "name": "backup-canary",
+        "namespace": "backup-qualification"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "1Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-61236d09-2e20-489e-80ae-baeffb53eb3a"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "1Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "kustomize.toolkit.fluxcd.io/name": "services-wallos",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system"
+        },
+        "name": "wallos-database",
+        "namespace": "finance"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "2Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-0789e85f-ad19-4f81-a4a6-608da21a7348"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "2Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "kustomize.toolkit.fluxcd.io/name": "services-wallos",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system"
+        },
+        "name": "wallos-logos",
+        "namespace": "finance"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "2Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-2a30aafb-e179-4ec2-ab35-a5609e2b8007"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "2Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "kustomize.toolkit.fluxcd.io/name": "services-forge",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system",
+          "velero.io/exclude-from-backup": "true"
+        },
+        "name": "forge-cache",
+        "namespace": "forge-cache"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "320Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-48301b1e-958a-45aa-8ecc-fd0bb6c440ba"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "320Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "kustomize.toolkit.fluxcd.io/name": "services-forge",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system"
+        },
+        "name": "forgejo-backups",
+        "namespace": "forge"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "800Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-b406583d-629e-4180-9a2e-8b385e3f5d63"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "allocatedResources": {
+          "storage": "800Gi"
+        },
+        "capacity": {
+          "storage": "800Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "kustomize.toolkit.fluxcd.io/name": "services-forge",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system"
+        },
+        "name": "forgejo-data",
+        "namespace": "forge"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "80Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-02f614a6-3d8d-4b9f-af5a-55f82a30d86d"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "80Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/name": "factorio",
+          "velero.io/backup-name": "services-daily-20261001023003",
+          "velero.io/restore-name": "qualification-20261001023003-20261001183846"
+        },
+        "name": "data-factorio-0",
+        "namespace": "games-restore"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "20Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-d108b5be-6bef-4a5a-a3b1-ff5f165c9c90"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/name": "valheim",
+          "velero.io/backup-name": "services-daily-20261001023003",
+          "velero.io/restore-name": "qualification-20261001023003-20261001183846"
+        },
+        "name": "data-valheim-0",
+        "namespace": "games-restore"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "20Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-7c627e5a-fd4d-4d7b-9dcf-a3cb13cdecc6"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/name": "factorio"
+        },
+        "name": "data-factorio-0",
+        "namespace": "games"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "20Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-4079969d-7466-4a8a-920e-3dc8a10f4ff5"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/name": "valheim"
+        },
+        "name": "data-valheim-0",
+        "namespace": "games"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "20Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-ee64cba9-62b9-4f31-96fb-8fee0b6da82d"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "backup.fahrican.com/verify": "automation",
+          "kustomize.toolkit.fluxcd.io/name": "services-home-automation",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system",
+          "velero.io/backup-name": "services-daily-20261001023003",
+          "velero.io/restore-name": "home-automation-restore-29848470"
+        },
+        "name": "automation-backups",
+        "namespace": "home-automation-restore"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "20Gi"
+          }
+        },
+        "storageClassName": "automation-restore",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-4505362e-c7ac-4a46-a761-d46ffa2cfa07"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "backup.fahrican.com/verify": "automation",
+          "kustomize.toolkit.fluxcd.io/name": "services-home-automation",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system",
+          "velero.io/backup-name": "services-daily-20261001023003",
+          "velero.io/restore-name": "home-automation-restore-29848470"
+        },
+        "name": "thread-backups",
+        "namespace": "home-automation-restore"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "1Gi"
+          }
+        },
+        "storageClassName": "automation-restore",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-1547f77d-9795-4891-b856-769ae2ef75c8"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "1Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "backup.fahrican.com/verify": "automation",
+          "kustomize.toolkit.fluxcd.io/name": "services-home-automation",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system"
+        },
+        "name": "automation-backups",
+        "namespace": "home-automation"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "20Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-4d420413-71fe-48ba-a2af-470350d74f3b"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "kustomize.toolkit.fluxcd.io/name": "services-home-automation",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system"
+        },
+        "name": "automation-state",
+        "namespace": "home-automation"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "20Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-892a5942-3d1b-4f69-9f27-4681c0803924"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "backup.fahrican.com/verify": "automation",
+          "kustomize.toolkit.fluxcd.io/name": "services-home-automation",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system"
+        },
+        "name": "thread-backups",
+        "namespace": "home-automation"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "1Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-575b8201-b4d5-4dde-8660-9551d9fb9470"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "1Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "kustomize.toolkit.fluxcd.io/name": "services-home-automation",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system"
+        },
+        "name": "thread-state",
+        "namespace": "home-automation"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "1Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-91787568-7cbb-435e-93e2-80ce6fcf8893"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "1Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/name": "matrix-postgres",
+          "app.kubernetes.io/part-of": "matrix",
+          "kustomize.toolkit.fluxcd.io/name": "services-matrix",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system"
+        },
+        "name": "matrix-dumps",
+        "namespace": "matrix"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "5Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-fba48d8b-8f76-4f64-a48e-0884f5a39902"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/name": "matrix-synapse",
+          "app.kubernetes.io/part-of": "matrix",
+          "kustomize.toolkit.fluxcd.io/name": "services-matrix",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system"
+        },
+        "name": "matrix-media",
+        "namespace": "matrix"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "20Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-2690b282-b8cc-4553-a4b5-a4a99ea0ffc3"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/name": "matrix-postgres",
+          "app.kubernetes.io/part-of": "matrix",
+          "kustomize.toolkit.fluxcd.io/name": "services-matrix",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system"
+        },
+        "name": "matrix-postgres",
+        "namespace": "matrix"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "20Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-8ef2fca5-5f60-481f-8bd5-0feac78db34e"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/name": "matrix-relay",
+          "app.kubernetes.io/part-of": "matrix",
+          "kustomize.toolkit.fluxcd.io/name": "services-matrix",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system"
+        },
+        "name": "matrix-relay",
+        "namespace": "matrix"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "2Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-b0bfbd90-3a7b-41ea-818e-d5cac6be427f"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "2Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "kustomize.toolkit.fluxcd.io/name": "services-media",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system"
+        },
+        "name": "audiomuse-postgres",
+        "namespace": "media"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "20Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-442c8932-880c-409a-b037-71e333079d5c"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "kustomize.toolkit.fluxcd.io/name": "services-media",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system"
+        },
+        "name": "audiomuse-postgres-dumps",
+        "namespace": "media"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "5Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-f26bb657-e77a-4a0b-bab6-e4690d102bc7"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "kustomize.toolkit.fluxcd.io/name": "services-media",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system"
+        },
+        "name": "beets-data",
+        "namespace": "media"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "5Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-1b9f75a8-6aea-4476-bc6b-2d0375cf935a"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/name": "discord-music",
+          "app.kubernetes.io/part-of": "media",
+          "kustomize.toolkit.fluxcd.io/name": "services-media",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system"
+        },
+        "name": "discord-music-data",
+        "namespace": "media"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "5Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-529aaced-e7a7-40f6-a0a9-efbc226ab958"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "kustomize.toolkit.fluxcd.io/name": "services-media",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system"
+        },
+        "name": "media-library",
+        "namespace": "media"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteMany"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "1Ti"
+          }
+        },
+        "storageClassName": "manila-nfs",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-2c541003-1888-460d-96ad-ad9e1751d4c8"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteMany"
+        ],
+        "capacity": {
+          "storage": "1Ti"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "kustomize.toolkit.fluxcd.io/name": "services-media",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system"
+        },
+        "name": "navidrome-data",
+        "namespace": "media"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "20Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-df13cab6-38e4-40f2-a19c-0757b002896d"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "kustomize.toolkit.fluxcd.io/name": "services-media",
+          "kustomize.toolkit.fluxcd.io/namespace": "flux-system"
+        },
+        "name": "sftpgo-data",
+        "namespace": "media"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "5Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-68154e73-0afe-4b10-9590-fe32fd4b9637"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/component": "database",
+          "app.kubernetes.io/managed-by": "cloudnative-pg",
+          "app.kubernetes.io/name": "postgresql",
+          "cnpg.io/cluster": "netbird-postgres",
+          "cnpg.io/instanceName": "netbird-postgres-1",
+          "cnpg.io/instanceRole": "replica",
+          "cnpg.io/pvcRole": "PG_DATA",
+          "role": "replica"
+        },
+        "name": "netbird-postgres-1",
+        "namespace": "netbird"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "10Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-b216e517-d646-49d8-84d8-3d754cc7175a"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "10Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/component": "database",
+          "app.kubernetes.io/managed-by": "cloudnative-pg",
+          "app.kubernetes.io/name": "postgresql",
+          "cnpg.io/cluster": "netbird-postgres",
+          "cnpg.io/instanceName": "netbird-postgres-2",
+          "cnpg.io/instanceRole": "replica",
+          "cnpg.io/pvcRole": "PG_DATA",
+          "role": "replica"
+        },
+        "name": "netbird-postgres-2",
+        "namespace": "netbird"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "10Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-0c7eb42a-d700-4732-a1d6-14b13d26f105"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "10Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/component": "database",
+          "app.kubernetes.io/managed-by": "cloudnative-pg",
+          "app.kubernetes.io/name": "postgresql",
+          "cnpg.io/cluster": "netbird-postgres",
+          "cnpg.io/instanceName": "netbird-postgres-3",
+          "cnpg.io/instanceRole": "primary",
+          "cnpg.io/pvcRole": "PG_DATA",
+          "role": "primary"
+        },
+        "name": "netbird-postgres-3",
+        "namespace": "netbird"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "10Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-baa7778c-da9c-4f51-9b4f-af724741d87b"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "10Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "alertmanager": "kube-prometheus-stack-alertmanager",
+          "app.kubernetes.io/instance": "kube-prometheus-stack-alertmanager",
+          "app.kubernetes.io/managed-by": "prometheus-operator",
+          "app.kubernetes.io/name": "alertmanager"
+        },
+        "name": "alertmanager-kube-prometheus-stack-alertmanager-db-alertmanager-kube-prometheus-stack-alertmanager-0",
+        "namespace": "services-observability"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "2Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-ffc6f139-9e1a-4c27-88c9-0a250896d0a3"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "2Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/instance": "kube-prometheus-stack-prometheus",
+          "app.kubernetes.io/managed-by": "prometheus-operator",
+          "app.kubernetes.io/name": "prometheus",
+          "operator.prometheus.io/name": "kube-prometheus-stack-prometheus",
+          "operator.prometheus.io/shard": "0",
+          "prometheus": "kube-prometheus-stack-prometheus"
+        },
+        "name": "prometheus-kube-prometheus-stack-prometheus-db-prometheus-kube-prometheus-stack-prometheus-0",
+        "namespace": "services-observability"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "20Gi"
+          }
+        },
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-09421e9b-c278-4bfa-8403-32d637c4572e"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "phase": "Bound"
+      }
+    }
+  ],
+  "services_pv": [
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-018bf8ec-4561-4fd9-a5e3-ca4f894c5799"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "1Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "backup-canary",
+          "namespace": "backup-qualification-restore",
+          "resourceVersion": "9329706",
+          "uid": "018bf8ec-4561-4fd9-a5e3-ca4f894c5799"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787514493758-5391-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "319221e6-5044-4cc4-bcf6-a603fe6a6e9a"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-10-01T18:36:08Z",
+        "phase": "Released"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-02f614a6-3d8d-4b9f-af5a-55f82a30d86d"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "80Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "forgejo-data",
+          "namespace": "forge",
+          "resourceVersion": "13199647",
+          "uid": "02f614a6-3d8d-4b9f-af5a-55f82a30d86d"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787514493758-5391-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "48540b38-7e9c-4187-a1dc-d2d0c4211b7a"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-09-05T22:52:30Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-0789e85f-ad19-4f81-a4a6-608da21a7348"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "2Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "wallos-database",
+          "namespace": "finance",
+          "resourceVersion": "9887996",
+          "uid": "0789e85f-ad19-4f81-a4a6-608da21a7348"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787514493758-5391-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "ea41a055-1b14-45dc-a5a5-9fc733632412"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-09-01T18:49:42Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-09421e9b-c278-4bfa-8403-32d637c4572e"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "prometheus-kube-prometheus-stack-prometheus-db-prometheus-kube-prometheus-stack-prometheus-0",
+          "namespace": "services-observability",
+          "resourceVersion": "543978",
+          "uid": "09421e9b-c278-4bfa-8403-32d637c4572e"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787192443536-5096-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "a75c9c5c-78b7-4cfa-9653-c79f9d8ae362"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-20T20:18:01Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-0c7eb42a-d700-4732-a1d6-14b13d26f105"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "10Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "netbird-postgres-2",
+          "namespace": "netbird",
+          "resourceVersion": "42091801",
+          "uid": "0c7eb42a-d700-4732-a1d6-14b13d26f105"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1790683432135-2146-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "908a32bc-e3ae-4980-bced-b6dfca080640"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-10-03T18:15:31Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-12204e9a-e598-4797-940b-0236b71a036b"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "data-factorio-0",
+          "namespace": "games-restore",
+          "resourceVersion": "7547034",
+          "uid": "12204e9a-e598-4797-940b-0236b71a036b"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787514493758-5391-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "83892bc9-8615-46f4-baf9-56ee49b8f2b4"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-09-01T02:03:11Z",
+        "phase": "Released"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-1547f77d-9795-4891-b856-769ae2ef75c8"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "1Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "thread-backups",
+          "namespace": "home-automation-restore",
+          "resourceVersion": "40336582",
+          "uid": "1547f77d-9795-4891-b856-769ae2ef75c8"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1790683432135-2146-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "6c6d9e88-aee1-4bdc-b102-5f62c2117b3d"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "automation-restore",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-10-02T02:30:27Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-1b673282-8f9e-4cfb-a8ce-12636d82870e"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "data-factorio-0",
+          "namespace": "games-restore",
+          "resourceVersion": "9329736",
+          "uid": "1b673282-8f9e-4cfb-a8ce-12636d82870e"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787514493758-5391-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "2069b43b-168b-4f71-880b-8e33683bd638"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-10-01T18:38:39Z",
+        "phase": "Released"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-1b9f75a8-6aea-4476-bc6b-2d0375cf935a"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "beets-data",
+          "namespace": "media",
+          "resourceVersion": "2686662",
+          "uid": "1b9f75a8-6aea-4476-bc6b-2d0375cf935a"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787192443536-5096-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "2e8156d3-11c0-4c7e-88c0-4ebd607765e8"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-23T18:20:01Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-2690b282-b8cc-4553-a4b5-a4a99ea0ffc3"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "matrix-media",
+          "namespace": "matrix",
+          "resourceVersion": "42050631",
+          "uid": "2690b282-b8cc-4553-a4b5-a4a99ea0ffc3"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1790683432135-2146-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "76e9439b-33f0-4059-82a5-d6d1f418ecbd"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-10-03T17:24:08Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-28f031d7-3740-416e-8087-6072eccb3883"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "automation-backups",
+          "namespace": "home-automation-restore",
+          "resourceVersion": "23223615",
+          "uid": "28f031d7-3740-416e-8087-6072eccb3883"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1788994654214-9262-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "dc685605-39b1-4dd8-8d86-9a68cc9649d0"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "automation-restore",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-09-15T21:21:23Z",
+        "phase": "Released"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-2a30aafb-e179-4ec2-ab35-a5609e2b8007"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "2Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "wallos-logos",
+          "namespace": "finance",
+          "resourceVersion": "9888000",
+          "uid": "2a30aafb-e179-4ec2-ab35-a5609e2b8007"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787514493758-5391-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "957abf5c-38dc-48ba-bfe7-dd760126660a"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-09-01T18:49:42Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-2c541003-1888-460d-96ad-ad9e1751d4c8"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteMany"
+        ],
+        "capacity": {
+          "storage": "1Ti"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "media-library",
+          "namespace": "media",
+          "resourceVersion": "1466892",
+          "uid": "2c541003-1888-460d-96ad-ad9e1751d4c8"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "csi-manila-credentials",
+            "namespace": "openstack-system"
+          },
+          "driver": "nfs.manila.csi.openstack.org",
+          "nodePublishSecretRef": {
+            "name": "csi-manila-credentials",
+            "namespace": "openstack-system"
+          },
+          "nodeStageSecretRef": {
+            "name": "csi-manila-credentials",
+            "namespace": "openstack-system"
+          },
+          "volumeAttributes": {
+            "cephfs-mounter": "fuse",
+            "shareAccessIDs": "dd77e709-f8aa-47e8-8fd9-8a6f6e74ef97",
+            "shareID": "fcbda35a-8a7e-443c-97fa-5f9732a1ba85",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787192422130-458-nfs.manila.csi.openstack.org"
+          },
+          "volumeHandle": "fcbda35a-8a7e-443c-97fa-5f9732a1ba85"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "manila-nfs",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-22T02:29:37Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-3398ddc4-753b-4364-ae5e-97ae4acd1e46"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "navidrome-data",
+          "namespace": "media-restore-qualification",
+          "resourceVersion": "1498620",
+          "uid": "3398ddc4-753b-4364-ae5e-97ae4acd1e46"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787192443536-5096-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "df9fad00-415c-478c-9b0d-96218e8dbe5e"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-22T03:32:32Z",
+        "phase": "Released"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-4079969d-7466-4a8a-920e-3dc8a10f4ff5"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "data-factorio-0",
+          "namespace": "games",
+          "resourceVersion": "7486850",
+          "uid": "4079969d-7466-4a8a-920e-3dc8a10f4ff5"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787514493758-5391-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "396b389e-8d73-4e4f-8385-ebb5f3287e02"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-29T18:43:23Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-442c8932-880c-409a-b037-71e333079d5c"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "audiomuse-postgres",
+          "namespace": "media",
+          "resourceVersion": "4393977",
+          "uid": "442c8932-880c-409a-b037-71e333079d5c"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787514493758-5391-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "8ee07995-9c76-4965-91f4-de69dbd1b392"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-25T21:39:31Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-4505362e-c7ac-4a46-a761-d46ffa2cfa07"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "automation-backups",
+          "namespace": "home-automation-restore",
+          "resourceVersion": "40336555",
+          "uid": "4505362e-c7ac-4a46-a761-d46ffa2cfa07"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1790683432135-2146-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "323a0653-a40e-42cd-8af9-1d794682e6f3"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "automation-restore",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-10-02T02:30:26Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-48301b1e-958a-45aa-8ecc-fd0bb6c440ba"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "320Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "forge-cache",
+          "namespace": "forge-cache",
+          "resourceVersion": "15043221",
+          "uid": "48301b1e-958a-45aa-8ecc-fd0bb6c440ba"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787514493758-5391-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "8e301b2f-9a65-454b-8bd8-1620687541c2"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-09-07T20:19:28Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-4d420413-71fe-48ba-a2af-470350d74f3b"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "automation-backups",
+          "namespace": "home-automation",
+          "resourceVersion": "23091232",
+          "uid": "4d420413-71fe-48ba-a2af-470350d74f3b"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1788994654214-9262-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "46b22bde-6c23-4384-badf-e6567624d4c8"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-09-15T18:14:36Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-529aaced-e7a7-40f6-a0a9-efbc226ab958"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "discord-music-data",
+          "namespace": "media",
+          "resourceVersion": "8372548",
+          "uid": "529aaced-e7a7-40f6-a0a9-efbc226ab958"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787514493758-5391-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "0e27afa6-23bf-4442-8bf9-8f517fd73ed7"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-30T21:16:33Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-575b8201-b4d5-4dde-8660-9551d9fb9470"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "1Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "thread-backups",
+          "namespace": "home-automation",
+          "resourceVersion": "23208110",
+          "uid": "575b8201-b4d5-4dde-8660-9551d9fb9470"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1788994654214-9262-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "b53cf973-327f-41f2-ba71-745c97b49e63"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-09-15T20:54:06Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-58626394-888c-4c84-b927-6caa0eb74cca"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "10Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "restore-1",
+          "namespace": "netbird-restore-b4e687d2",
+          "resourceVersion": "42163340",
+          "uid": "58626394-888c-4c84-b927-6caa0eb74cca"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1790683432135-2146-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "996db08e-4baf-402b-be63-1a185c1dbb0d"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-10-03T19:37:58Z",
+        "phase": "Released"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-5d473c80-b590-4a7d-a8fb-d486bc8d4ed5"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "sftpgo-data",
+          "namespace": "media-restore-qualification",
+          "resourceVersion": "1498689",
+          "uid": "5d473c80-b590-4a7d-a8fb-d486bc8d4ed5"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787192443536-5096-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "599b3006-c392-4962-9486-4a4b82f79cd4"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-22T03:32:32Z",
+        "phase": "Released"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-5ee80ad9-b30e-4c43-806b-bdbb7e09232c"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "automation-backups",
+          "namespace": "home-automation-restore",
+          "resourceVersion": "23229438",
+          "uid": "5ee80ad9-b30e-4c43-806b-bdbb7e09232c"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1788994654214-9262-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "5734ece9-2478-471e-bb89-9cc3f13b64b9"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "automation-restore",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-10-02T02:30:13Z",
+        "phase": "Released"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-61236d09-2e20-489e-80ae-baeffb53eb3a"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "1Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "backup-canary",
+          "namespace": "backup-qualification",
+          "resourceVersion": "1370496",
+          "uid": "61236d09-2e20-489e-80ae-baeffb53eb3a"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787192443536-5096-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "4ecb9670-b2d7-4ff9-a3b7-b5b610a961ca"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-21T23:23:59Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-68154e73-0afe-4b10-9590-fe32fd4b9637"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "sftpgo-data",
+          "namespace": "media",
+          "resourceVersion": "1460656",
+          "uid": "68154e73-0afe-4b10-9590-fe32fd4b9637"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787192443536-5096-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "8ebc207e-c762-4d9a-90af-5c48ba7d1695"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-22T02:17:48Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-6a4f92b5-0c8e-45fd-b328-d331b13e3db5"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "1Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "backup-canary",
+          "namespace": "backup-qualification-restore",
+          "resourceVersion": "7547015",
+          "uid": "6a4f92b5-0c8e-45fd-b328-d331b13e3db5"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787514493758-5391-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "156d0305-6230-4bd0-beb9-bacb4a82ce83"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-09-01T02:00:46Z",
+        "phase": "Released"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-7717aadb-1034-47f8-bfa8-d4b5fca18d9d"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "data-meilisearch-0",
+          "namespace": "knowledge",
+          "resourceVersion": "1389675",
+          "uid": "7717aadb-1034-47f8-bfa8-d4b5fca18d9d"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787192443536-5096-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "4e3b87ea-10ac-42b5-9dba-d83e65954ec8"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-22T01:12:26Z",
+        "phase": "Released"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-7c627e5a-fd4d-4d7b-9dcf-a3cb13cdecc6"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "data-valheim-0",
+          "namespace": "games-restore",
+          "resourceVersion": "39989603",
+          "uid": "7c627e5a-fd4d-4d7b-9dcf-a3cb13cdecc6"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1790683432135-2146-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "e2838415-e555-4812-bd5f-a304bbadfac4"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-10-01T18:38:52Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-83cd756b-6006-47b7-bf01-1cc4d624eb08"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "10Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "restore-1",
+          "namespace": "netbird-restore-2e53c81c",
+          "resourceVersion": "42171220",
+          "uid": "83cd756b-6006-47b7-bf01-1cc4d624eb08"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1790683432135-2146-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "f40b0793-fa88-494c-8df9-b8384ea4bbf2"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-10-03T19:44:50Z",
+        "phase": "Released"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-85998d02-8e0a-4725-8265-80cbe562a678"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "sftpgo-data",
+          "namespace": "media-restore-qualification",
+          "resourceVersion": "1870551",
+          "uid": "85998d02-8e0a-4725-8265-80cbe562a678"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787192443536-5096-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "1e013c67-5971-455d-8782-c39965c01554"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-22T15:44:08Z",
+        "phase": "Released"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-892a5942-3d1b-4f69-9f27-4681c0803924"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "automation-state",
+          "namespace": "home-automation",
+          "resourceVersion": "23091231",
+          "uid": "892a5942-3d1b-4f69-9f27-4681c0803924"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1788994654214-9262-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "3a264785-f324-4b68-a447-75682f36c34e"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-09-15T18:14:36Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-8deebd18-91f7-41eb-9b9d-69e7ece36eb9"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "100Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "data-karakeep-0",
+          "namespace": "knowledge",
+          "resourceVersion": "1389676",
+          "uid": "8deebd18-91f7-41eb-9b9d-69e7ece36eb9"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787192443536-5096-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "1c4c246c-9796-4294-aee2-48c2bacc2700"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-22T01:12:26Z",
+        "phase": "Released"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-8ef2fca5-5f60-481f-8bd5-0feac78db34e"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "matrix-postgres",
+          "namespace": "matrix",
+          "resourceVersion": "42050645",
+          "uid": "8ef2fca5-5f60-481f-8bd5-0feac78db34e"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1790683432135-2146-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "65812073-f802-4a9a-906c-847a0f1eb959"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-10-03T17:24:08Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-91787568-7cbb-435e-93e2-80ce6fcf8893"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "1Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "thread-state",
+          "namespace": "home-automation",
+          "resourceVersion": "23208100",
+          "uid": "91787568-7cbb-435e-93e2-80ce6fcf8893"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1788994654214-9262-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "d7196955-2dce-49c2-a2a3-1b6dc929210d"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-09-15T20:54:06Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-a370c021-58f9-4de4-a51d-b7b7fc5c89d7"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "1Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "backup-canary",
+          "namespace": "backup-qualification-restore",
+          "resourceVersion": "39989566",
+          "uid": "a370c021-58f9-4de4-a51d-b7b7fc5c89d7"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1790683432135-2146-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "be3269ed-203f-49d0-ad79-b634c2c85c55"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-10-01T18:38:51Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-ab9cff94-5fa6-445e-a813-221895c79daa"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "navidrome-data",
+          "namespace": "media-restore-qualification",
+          "resourceVersion": "1870536",
+          "uid": "ab9cff94-5fa6-445e-a813-221895c79daa"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787192443536-5096-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "0914f050-fb24-4a91-b073-c9082c1f5c65"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-22T15:44:08Z",
+        "phase": "Released"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-b0bfbd90-3a7b-41ea-818e-d5cac6be427f"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "2Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "matrix-relay",
+          "namespace": "matrix",
+          "resourceVersion": "42050651",
+          "uid": "b0bfbd90-3a7b-41ea-818e-d5cac6be427f"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1790683432135-2146-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "7314015f-d0da-4867-81e3-cd09d28015ec"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-10-03T17:24:09Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-b216e517-d646-49d8-84d8-3d754cc7175a"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "10Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "netbird-postgres-1",
+          "namespace": "netbird",
+          "resourceVersion": "42089840",
+          "uid": "b216e517-d646-49d8-84d8-3d754cc7175a"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1790683432135-2146-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "d00afb7d-3fe1-479a-840d-a85046640348"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-10-03T18:13:22Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-b406583d-629e-4180-9a2e-8b385e3f5d63"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "800Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "forgejo-backups",
+          "namespace": "forge",
+          "resourceVersion": "13199649",
+          "uid": "b406583d-629e-4180-9a2e-8b385e3f5d63"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787514493758-5391-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "52c5148c-fc12-4a6d-9e25-265579c40aad"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-09-05T22:52:30Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-baa7778c-da9c-4f51-9b4f-af724741d87b"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "10Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "netbird-postgres-3",
+          "namespace": "netbird",
+          "resourceVersion": "42096241",
+          "uid": "baa7778c-da9c-4f51-9b4f-af724741d87b"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1790683432135-2146-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "6f56a3ef-f6c4-413b-929f-e56332169a4a"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-10-03T18:20:56Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-bc4edef0-ca76-4030-a8ce-523ce880e20b"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "10Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "restore-1",
+          "namespace": "netbird-restore-994059ef",
+          "resourceVersion": "44849388",
+          "uid": "bc4edef0-ca76-4030-a8ce-523ce880e20b"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1790683432135-2146-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "21a9e9fd-2f22-4d77-98bd-94db5cf6afac"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-10-05T23:50:39Z",
+        "phase": "Released"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-cc8261a5-2db5-47e2-82ae-9ed2251885e8"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "1Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "backup-canary",
+          "namespace": "backup-qualification-restore",
+          "resourceVersion": "1382492",
+          "uid": "cc8261a5-2db5-47e2-82ae-9ed2251885e8"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787192443536-5096-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "b57a4eeb-6663-49e0-a89e-ee80c963c583"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-29T20:29:22Z",
+        "phase": "Released"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-d108b5be-6bef-4a5a-a3b1-ff5f165c9c90"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "data-factorio-0",
+          "namespace": "games-restore",
+          "resourceVersion": "39989594",
+          "uid": "d108b5be-6bef-4a5a-a3b1-ff5f165c9c90"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1790683432135-2146-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "b1cded8f-1aba-4da2-b9a8-f54a667690c1"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-10-01T18:38:51Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-de5ab957-bb4a-4a64-b048-7eccf2a92ee1"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "1Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "thread-backups",
+          "namespace": "home-automation-restore",
+          "resourceVersion": "23229465",
+          "uid": "de5ab957-bb4a-4a64-b048-7eccf2a92ee1"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1788994654214-9262-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "a9c16d04-a748-4716-9964-13dc363cdc7a"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "automation-restore",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-10-02T02:30:18Z",
+        "phase": "Released"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-df13cab6-38e4-40f2-a19c-0757b002896d"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "navidrome-data",
+          "namespace": "media",
+          "resourceVersion": "1460655",
+          "uid": "df13cab6-38e4-40f2-a19c-0757b002896d"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787192443536-5096-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "85b7fa00-b21b-4104-83d2-0cd061793169"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-22T02:17:48Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-e7fd452a-7d75-4ffe-b328-77d3da630f1e"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "automation-backups",
+          "namespace": "home-automation-restore",
+          "resourceVersion": "23128044",
+          "uid": "e7fd452a-7d75-4ffe-b328-77d3da630f1e"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1788994654214-9262-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "7e501e98-0de0-468f-993c-9b44d3c54495"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "automation-restore",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-09-15T21:14:13Z",
+        "phase": "Released"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-ee64cba9-62b9-4f31-96fb-8fee0b6da82d"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "data-valheim-0",
+          "namespace": "games",
+          "resourceVersion": "19046367",
+          "uid": "ee64cba9-62b9-4f31-96fb-8fee0b6da82d"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1788994654214-9262-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "9af3433e-505a-4411-ac40-0a1e05e36fee"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-09-11T20:29:29Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-f26bb657-e77a-4a0b-bab6-e4690d102bc7"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "audiomuse-postgres-dumps",
+          "namespace": "media",
+          "resourceVersion": "4430963",
+          "uid": "f26bb657-e77a-4a0b-bab6-e4690d102bc7"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787514493758-5391-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "ad04019f-2a5e-4151-b241-5277b85a5055"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-25T22:45:00Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-fba48d8b-8f76-4f64-a48e-0884f5a39902"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "matrix-dumps",
+          "namespace": "matrix",
+          "resourceVersion": "42050641",
+          "uid": "fba48d8b-8f76-4f64-a48e-0884f5a39902"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1790683432135-2146-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "a3993f6d-3eb0-44a0-a717-74b9c320ce65"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-10-03T17:24:08Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-ffc6f139-9e1a-4c27-88c9-0a250896d0a3"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "2Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "alertmanager-kube-prometheus-stack-alertmanager-db-alertmanager-kube-prometheus-stack-alertmanager-0",
+          "namespace": "services-observability",
+          "resourceVersion": "543977",
+          "uid": "ffc6f139-9e1a-4c27-88c9-0a250896d0a3"
+        },
+        "csi": {
+          "driver": "cinder.csi.openstack.org",
+          "fsType": "ext4",
+          "volumeAttributes": {
+            "storage.kubernetes.io/csiProvisionerIdentity": "1787192443536-5096-cinder.csi.openstack.org"
+          },
+          "volumeHandle": "c4aa4ace-5970-4d36-b7eb-5020a069519f"
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "rbd1",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-20T20:18:01Z",
+        "phase": "Bound"
+      }
+    }
+  ],
+  "infrastructure_pvc": [
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/component": "database",
+          "app.kubernetes.io/managed-by": "cloudnative-pg",
+          "app.kubernetes.io/name": "postgresql",
+          "cnpg.io/cluster": "zitadel-postgres",
+          "cnpg.io/instanceName": "zitadel-postgres-1",
+          "cnpg.io/instanceRole": "replica",
+          "cnpg.io/pvcRole": "PG_DATA",
+          "role": "replica"
+        },
+        "name": "zitadel-postgres-1",
+        "namespace": "identity"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "10Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-cd0f4012-a04b-49b9-906f-d46a78a116c7"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "10Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/component": "database",
+          "app.kubernetes.io/managed-by": "cloudnative-pg",
+          "app.kubernetes.io/name": "postgresql",
+          "cnpg.io/cluster": "zitadel-postgres",
+          "cnpg.io/instanceName": "zitadel-postgres-2",
+          "cnpg.io/instanceRole": "primary",
+          "cnpg.io/pvcRole": "PG_DATA",
+          "role": "primary"
+        },
+        "name": "zitadel-postgres-2",
+        "namespace": "identity"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "10Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-0f042bf0-52e6-4976-bc66-acf117da5b38"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "10Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/component": "database",
+          "app.kubernetes.io/managed-by": "cloudnative-pg",
+          "app.kubernetes.io/name": "postgresql",
+          "cnpg.io/cluster": "zitadel-postgres",
+          "cnpg.io/instanceName": "zitadel-postgres-3",
+          "cnpg.io/instanceRole": "replica",
+          "cnpg.io/pvcRole": "PG_DATA",
+          "role": "replica"
+        },
+        "name": "zitadel-postgres-3",
+        "namespace": "identity"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "10Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-61c8eab4-3de2-4fcb-a946-5ce1479b74b3"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "10Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "alertmanager": "kube-prometheus-stack-alertmanager",
+          "app.kubernetes.io/instance": "kube-prometheus-stack-alertmanager",
+          "app.kubernetes.io/managed-by": "prometheus-operator",
+          "app.kubernetes.io/name": "alertmanager"
+        },
+        "name": "alertmanager-kube-prometheus-stack-alertmanager-db-alertmanager-kube-prometheus-stack-alertmanager-0",
+        "namespace": "observability"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "2Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-205788f8-7ee2-4709-8414-a8b9ee7e08d9"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "2Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "alertmanager": "kube-prometheus-stack-alertmanager",
+          "app.kubernetes.io/instance": "kube-prometheus-stack-alertmanager",
+          "app.kubernetes.io/managed-by": "prometheus-operator",
+          "app.kubernetes.io/name": "alertmanager"
+        },
+        "name": "alertmanager-kube-prometheus-stack-alertmanager-db-alertmanager-kube-prometheus-stack-alertmanager-1",
+        "namespace": "observability"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "2Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-ad7ef6ed-1991-46c1-90b1-c63941ca9929"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "2Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "alertmanager": "kube-prometheus-stack-alertmanager",
+          "app.kubernetes.io/instance": "kube-prometheus-stack-alertmanager",
+          "app.kubernetes.io/managed-by": "prometheus-operator",
+          "app.kubernetes.io/name": "alertmanager"
+        },
+        "name": "alertmanager-kube-prometheus-stack-alertmanager-db-alertmanager-kube-prometheus-stack-alertmanager-2",
+        "namespace": "observability"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "2Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-08159b63-ba2e-4a7a-b183-de36d3eb5418"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "2Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/instance": "kube-prometheus-stack",
+          "app.kubernetes.io/managed-by": "Helm",
+          "app.kubernetes.io/name": "grafana",
+          "app.kubernetes.io/version": "13.1.1",
+          "helm.sh/chart": "grafana-12.10.1",
+          "helm.toolkit.fluxcd.io/name": "kube-prometheus-stack",
+          "helm.toolkit.fluxcd.io/namespace": "observability"
+        },
+        "name": "kube-prometheus-stack-grafana",
+        "namespace": "observability"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "10Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-d98f6249-715f-4633-b677-a1a77ff3ed82"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "10Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/instance": "kube-prometheus-stack-prometheus",
+          "app.kubernetes.io/managed-by": "prometheus-operator",
+          "app.kubernetes.io/name": "prometheus",
+          "operator.prometheus.io/name": "kube-prometheus-stack-prometheus",
+          "operator.prometheus.io/shard": "0",
+          "prometheus": "kube-prometheus-stack-prometheus"
+        },
+        "name": "prometheus-kube-prometheus-stack-prometheus-db-prometheus-kube-prometheus-stack-prometheus-0",
+        "namespace": "observability"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "50Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-819d5521-e7ce-46fe-ab90-e682d8c9c030"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "50Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/instance": "kube-prometheus-stack-prometheus",
+          "app.kubernetes.io/managed-by": "prometheus-operator",
+          "app.kubernetes.io/name": "prometheus",
+          "operator.prometheus.io/name": "kube-prometheus-stack-prometheus",
+          "operator.prometheus.io/shard": "0",
+          "prometheus": "kube-prometheus-stack-prometheus"
+        },
+        "name": "prometheus-kube-prometheus-stack-prometheus-db-prometheus-kube-prometheus-stack-prometheus-1",
+        "namespace": "observability"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "50Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-be6ac5c6-a088-449e-97bd-7b4f67574bc0"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "50Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/component": "single-binary",
+          "app.kubernetes.io/instance": "loki",
+          "app.kubernetes.io/name": "loki"
+        },
+        "name": "storage-loki-0",
+        "namespace": "observability"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "50Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-4bfada13-dd76-4287-aee0-e6a5c059fb0a"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "50Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/component": "ovn-ovsdb-nb",
+          "app.kubernetes.io/instance": "ovn",
+          "app.kubernetes.io/name": "ovn",
+          "application": "ovn",
+          "component": "ovn-ovsdb-nb",
+          "release_group": "ovn"
+        },
+        "name": "data-ovn-ovsdb-nb-0",
+        "namespace": "openstack"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "5Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-47ca2446-70c7-4397-b94c-1ae1aa5f634b"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/component": "ovn-ovsdb-nb",
+          "app.kubernetes.io/instance": "ovn",
+          "app.kubernetes.io/name": "ovn",
+          "application": "ovn",
+          "component": "ovn-ovsdb-nb",
+          "release_group": "ovn"
+        },
+        "name": "data-ovn-ovsdb-nb-1",
+        "namespace": "openstack"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "5Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-9c116224-b243-42c6-9185-551869a12398"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/component": "ovn-ovsdb-nb",
+          "app.kubernetes.io/instance": "ovn",
+          "app.kubernetes.io/name": "ovn",
+          "application": "ovn",
+          "component": "ovn-ovsdb-nb",
+          "release_group": "ovn"
+        },
+        "name": "data-ovn-ovsdb-nb-2",
+        "namespace": "openstack"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "5Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-ed7afd7b-1761-4c26-b936-beb666891659"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/component": "ovn-ovsdb-sb",
+          "app.kubernetes.io/instance": "ovn",
+          "app.kubernetes.io/name": "ovn",
+          "application": "ovn",
+          "component": "ovn-ovsdb-sb",
+          "release_group": "ovn"
+        },
+        "name": "data-ovn-ovsdb-sb-0",
+        "namespace": "openstack"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "5Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-4a64e5f5-41ca-499b-a17f-1337ecf34b1b"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/component": "ovn-ovsdb-sb",
+          "app.kubernetes.io/instance": "ovn",
+          "app.kubernetes.io/name": "ovn",
+          "application": "ovn",
+          "component": "ovn-ovsdb-sb",
+          "release_group": "ovn"
+        },
+        "name": "data-ovn-ovsdb-sb-1",
+        "namespace": "openstack"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "5Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-16fc02b1-7146-4f62-8012-5e309f389d9b"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/component": "ovn-ovsdb-sb",
+          "app.kubernetes.io/instance": "ovn",
+          "app.kubernetes.io/name": "ovn",
+          "application": "ovn",
+          "component": "ovn-ovsdb-sb",
+          "release_group": "ovn"
+        },
+        "name": "data-ovn-ovsdb-sb-2",
+        "namespace": "openstack"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "5Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-c5b50f7c-0e01-4108-806f-6d9704590b68"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/managed-by": "Helm",
+          "helm.toolkit.fluxcd.io/name": "mariadb",
+          "helm.toolkit.fluxcd.io/namespace": "openstack"
+        },
+        "name": "mariadb-backup-data",
+        "namespace": "openstack"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "20Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-e93efaba-0a70-4f5a-bf28-4d32f9374e94"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/component": "server",
+          "app.kubernetes.io/instance": "mariadb",
+          "app.kubernetes.io/name": "mariadb",
+          "application": "mariadb",
+          "component": "server",
+          "release_group": "mariadb"
+        },
+        "name": "mysql-data-mariadb-server-0",
+        "namespace": "openstack"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "20Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-12b32950-ef36-4f61-b87a-0d369a850f9c"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/component": "server",
+          "app.kubernetes.io/instance": "mariadb",
+          "app.kubernetes.io/name": "mariadb",
+          "application": "mariadb",
+          "component": "server",
+          "release_group": "mariadb"
+        },
+        "name": "mysql-data-mariadb-server-1",
+        "namespace": "openstack"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "20Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-6c938812-ceb1-4cf2-9e63-b09fad7379af"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/component": "server",
+          "app.kubernetes.io/instance": "mariadb",
+          "app.kubernetes.io/name": "mariadb",
+          "application": "mariadb",
+          "component": "server",
+          "release_group": "mariadb"
+        },
+        "name": "mysql-data-mariadb-server-2",
+        "namespace": "openstack"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "20Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-8a7ddb68-cd7c-4637-9a50-11f005608d68"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/component": "server",
+          "app.kubernetes.io/instance": "rabbitmq",
+          "app.kubernetes.io/name": "rabbitmq",
+          "application": "rabbitmq",
+          "component": "server",
+          "release_group": "rabbitmq"
+        },
+        "name": "rabbitmq-data-rabbitmq-rabbitmq-0",
+        "namespace": "openstack"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "5Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-5ff787e9-3bab-4a87-9f54-08eb92b12b6c"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/component": "server",
+          "app.kubernetes.io/instance": "rabbitmq",
+          "app.kubernetes.io/name": "rabbitmq",
+          "application": "rabbitmq",
+          "component": "server",
+          "release_group": "rabbitmq"
+        },
+        "name": "rabbitmq-data-rabbitmq-rabbitmq-1",
+        "namespace": "openstack"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "5Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-564c312b-ae30-4705-8313-d641d4e35bde"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/component": "server",
+          "app.kubernetes.io/instance": "rabbitmq",
+          "app.kubernetes.io/name": "rabbitmq",
+          "application": "rabbitmq",
+          "component": "server",
+          "release_group": "rabbitmq"
+        },
+        "name": "rabbitmq-data-rabbitmq-rabbitmq-2",
+        "namespace": "openstack"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "5Gi"
+          }
+        },
+        "storageClassName": "general",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-eaf0268e-f23a-4bd9-b6a7-50565e24a341"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "phase": "Bound"
+      }
+    }
+  ],
+  "infrastructure_pv": [
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-08159b63-ba2e-4a7a-b183-de36d3eb5418"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "2Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "alertmanager-kube-prometheus-stack-alertmanager-db-alertmanager-kube-prometheus-stack-alertmanager-2",
+          "namespace": "observability",
+          "resourceVersion": "128198",
+          "uid": "08159b63-ba2e-4a7a-b183-de36d3eb5418"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-cf321861-b738-4738-a441-f9f2b03de70c",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685430524-5262-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-cf321861-b738-4738-a441-f9f2b03de70c"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-02T18:33:28Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-0f042bf0-52e6-4976-bc66-acf117da5b38"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "10Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "zitadel-postgres-2",
+          "namespace": "identity",
+          "resourceVersion": "4350905",
+          "uid": "0f042bf0-52e6-4976-bc66-acf117da5b38"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-4f3322e8-9898-44fe-8299-05971eaee656",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685432122-6170-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-4f3322e8-9898-44fe-8299-05971eaee656"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-08T22:38:16Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-12b32950-ef36-4f61-b87a-0d369a850f9c"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "mysql-data-mariadb-server-0",
+          "namespace": "openstack",
+          "resourceVersion": "654043",
+          "uid": "12b32950-ef36-4f61-b87a-0d369a850f9c"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-e852b083-f4a7-42d1-af97-b5a15df6bad0",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685430524-5262-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-e852b083-f4a7-42d1-af97-b5a15df6bad0"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-03T19:04:50Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-16fc02b1-7146-4f62-8012-5e309f389d9b"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "data-ovn-ovsdb-sb-1",
+          "namespace": "openstack",
+          "resourceVersion": "762915",
+          "uid": "16fc02b1-7146-4f62-8012-5e309f389d9b"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-ae798626-9ca3-414b-8e7a-c54313155fed",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685430524-5262-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-ae798626-9ca3-414b-8e7a-c54313155fed"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-03T22:45:35Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-205788f8-7ee2-4709-8414-a8b9ee7e08d9"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "2Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "alertmanager-kube-prometheus-stack-alertmanager-db-alertmanager-kube-prometheus-stack-alertmanager-0",
+          "namespace": "observability",
+          "resourceVersion": "128191",
+          "uid": "205788f8-7ee2-4709-8414-a8b9ee7e08d9"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-649165cf-b23e-4cc6-922c-1fce2615ca1a",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685430524-5262-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-649165cf-b23e-4cc6-922c-1fce2615ca1a"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-02T18:33:28Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-47ca2446-70c7-4397-b94c-1ae1aa5f634b"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "data-ovn-ovsdb-nb-0",
+          "namespace": "openstack",
+          "resourceVersion": "762897",
+          "uid": "47ca2446-70c7-4397-b94c-1ae1aa5f634b"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-17cbb38a-6a12-4cfe-bfa5-63a48bcff6e4",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685430524-5262-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-17cbb38a-6a12-4cfe-bfa5-63a48bcff6e4"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-03T22:45:35Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-4a64e5f5-41ca-499b-a17f-1337ecf34b1b"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "data-ovn-ovsdb-sb-0",
+          "namespace": "openstack",
+          "resourceVersion": "762895",
+          "uid": "4a64e5f5-41ca-499b-a17f-1337ecf34b1b"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-5aa74c81-ac3c-4f5e-9288-3ef01564a401",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685430524-5262-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-5aa74c81-ac3c-4f5e-9288-3ef01564a401"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-03T22:45:34Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-4bfada13-dd76-4287-aee0-e6a5c059fb0a"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "50Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "storage-loki-0",
+          "namespace": "observability",
+          "resourceVersion": "127808",
+          "uid": "4bfada13-dd76-4287-aee0-e6a5c059fb0a"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-08843775-4ab9-4577-9317-ac8321f1ba81",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685430524-5262-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-08843775-4ab9-4577-9317-ac8321f1ba81"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-02T18:33:11Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-564c312b-ae30-4705-8313-d641d4e35bde"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "rabbitmq-data-rabbitmq-rabbitmq-1",
+          "namespace": "openstack",
+          "resourceVersion": "644490",
+          "uid": "564c312b-ae30-4705-8313-d641d4e35bde"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-39af888b-a2c2-4cbe-97ad-92d3541c92c6",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685430524-5262-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-39af888b-a2c2-4cbe-97ad-92d3541c92c6"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-03T18:47:19Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-5ff787e9-3bab-4a87-9f54-08eb92b12b6c"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "rabbitmq-data-rabbitmq-rabbitmq-0",
+          "namespace": "openstack",
+          "resourceVersion": "644465",
+          "uid": "5ff787e9-3bab-4a87-9f54-08eb92b12b6c"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-26640672-f4d0-459c-9506-0717a91be37b",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685430524-5262-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-26640672-f4d0-459c-9506-0717a91be37b"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-03T18:47:19Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-61c8eab4-3de2-4fcb-a946-5ce1479b74b3"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "10Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "zitadel-postgres-3",
+          "namespace": "identity",
+          "resourceVersion": "4351338",
+          "uid": "61c8eab4-3de2-4fcb-a946-5ce1479b74b3"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-4f130afa-7686-4de6-be0e-8aa76a060cc3",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685432122-6170-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-4f130afa-7686-4de6-be0e-8aa76a060cc3"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-08T22:38:53Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-6c938812-ceb1-4cf2-9e63-b09fad7379af"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "mysql-data-mariadb-server-1",
+          "namespace": "openstack",
+          "resourceVersion": "654060",
+          "uid": "6c938812-ceb1-4cf2-9e63-b09fad7379af"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-68e97761-6182-4f1e-be85-456c602112bc",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685430524-5262-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-68e97761-6182-4f1e-be85-456c602112bc"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-03T19:04:51Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-819d5521-e7ce-46fe-ab90-e682d8c9c030"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "50Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "prometheus-kube-prometheus-stack-prometheus-db-prometheus-kube-prometheus-stack-prometheus-0",
+          "namespace": "observability",
+          "resourceVersion": "128226",
+          "uid": "819d5521-e7ce-46fe-ab90-e682d8c9c030"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-80518b90-a4a7-4861-87a3-4ca40a99ca0d",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685430524-5262-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-80518b90-a4a7-4861-87a3-4ca40a99ca0d"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-02T18:33:29Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-8a7ddb68-cd7c-4637-9a50-11f005608d68"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "mysql-data-mariadb-server-2",
+          "namespace": "openstack",
+          "resourceVersion": "654061",
+          "uid": "8a7ddb68-cd7c-4637-9a50-11f005608d68"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-54b40252-56ad-419b-83e4-aa5f99f63d99",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685430524-5262-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-54b40252-56ad-419b-83e4-aa5f99f63d99"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-03T19:04:51Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-9c116224-b243-42c6-9185-551869a12398"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "data-ovn-ovsdb-nb-1",
+          "namespace": "openstack",
+          "resourceVersion": "762918",
+          "uid": "9c116224-b243-42c6-9185-551869a12398"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-df863156-b2ef-4e97-94ae-8d6c7b603e07",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685430524-5262-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-df863156-b2ef-4e97-94ae-8d6c7b603e07"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-03T22:45:34Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-ad7ef6ed-1991-46c1-90b1-c63941ca9929"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "2Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "alertmanager-kube-prometheus-stack-alertmanager-db-alertmanager-kube-prometheus-stack-alertmanager-1",
+          "namespace": "observability",
+          "resourceVersion": "128200",
+          "uid": "ad7ef6ed-1991-46c1-90b1-c63941ca9929"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-6e0ecd14-80e4-4e34-89d3-426cbff1e8fc",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685430524-5262-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-6e0ecd14-80e4-4e34-89d3-426cbff1e8fc"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-02T18:33:28Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-be6ac5c6-a088-449e-97bd-7b4f67574bc0"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "50Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "prometheus-kube-prometheus-stack-prometheus-db-prometheus-kube-prometheus-stack-prometheus-1",
+          "namespace": "observability",
+          "resourceVersion": "128235",
+          "uid": "be6ac5c6-a088-449e-97bd-7b4f67574bc0"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-d1d823ca-844b-4e9b-8dae-38fa29557a8e",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685430524-5262-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-d1d823ca-844b-4e9b-8dae-38fa29557a8e"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-02T18:33:29Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-c5b50f7c-0e01-4108-806f-6d9704590b68"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "data-ovn-ovsdb-sb-2",
+          "namespace": "openstack",
+          "resourceVersion": "762904",
+          "uid": "c5b50f7c-0e01-4108-806f-6d9704590b68"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-31fa3679-318a-4a79-b3ed-37d99e2c52e9",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685430524-5262-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-31fa3679-318a-4a79-b3ed-37d99e2c52e9"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-03T22:45:34Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-cd0f4012-a04b-49b9-906f-d46a78a116c7"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "10Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "zitadel-postgres-1",
+          "namespace": "identity",
+          "resourceVersion": "4350447",
+          "uid": "cd0f4012-a04b-49b9-906f-d46a78a116c7"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-a3d88c70-dd24-4cf2-bf2b-93d734773234",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685432122-6170-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-a3d88c70-dd24-4cf2-bf2b-93d734773234"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-08T22:37:38Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-d98f6249-715f-4633-b677-a1a77ff3ed82"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "10Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "kube-prometheus-stack-grafana",
+          "namespace": "observability",
+          "resourceVersion": "127947",
+          "uid": "d98f6249-715f-4633-b677-a1a77ff3ed82"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-1eff2903-2c6d-42a5-a0ed-7d371eedd056",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685430524-5262-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-1eff2903-2c6d-42a5-a0ed-7d371eedd056"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-02T18:33:20Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-e93efaba-0a70-4f5a-bf28-4d32f9374e94"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "mariadb-backup-data",
+          "namespace": "openstack",
+          "resourceVersion": "653999",
+          "uid": "e93efaba-0a70-4f5a-bf28-4d32f9374e94"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-0014223f-e90f-48c2-a511-b5920fca5c83",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685430524-5262-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-0014223f-e90f-48c2-a511-b5920fca5c83"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-03T19:04:50Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-eaf0268e-f23a-4bd9-b6a7-50565e24a341"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "rabbitmq-data-rabbitmq-rabbitmq-2",
+          "namespace": "openstack",
+          "resourceVersion": "644477",
+          "uid": "eaf0268e-f23a-4bd9-b6a7-50565e24a341"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-b0fc08c7-beca-488c-9e62-170b895054fa",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685430524-5262-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-b0fc08c7-beca-488c-9e62-170b895054fa"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-03T18:47:18Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "name": "pvc-ed7afd7b-1761-4c26-b936-beb666891659"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "data-ovn-ovsdb-nb-2",
+          "namespace": "openstack",
+          "resourceVersion": "762912",
+          "uid": "ed7afd7b-1761-4c26-b936-beb666891659"
+        },
+        "csi": {
+          "controllerExpandSecretRef": {
+            "name": "rook-csi-rbd-provisioner",
+            "namespace": "rook-ceph"
+          },
+          "driver": "rook-ceph.rbd.csi.ceph.com",
+          "fsType": "ext4",
+          "nodeStageSecretRef": {
+            "name": "rook-csi-rbd-node",
+            "namespace": "rook-ceph"
+          },
+          "volumeAttributes": {
+            "clusterID": "rook-ceph",
+            "imageFeatures": "layering",
+            "imageFormat": "2",
+            "imageName": "csi-vol-7e9dd222-7814-4576-9e3d-601218eaa86a",
+            "journalPool": "undercloud",
+            "pool": "undercloud",
+            "storage.kubernetes.io/csiProvisionerIdentity": "1785685430524-5262-rook-ceph.rbd.csi.ceph.com"
+          },
+          "volumeHandle": "0001-0009-rook-ceph-0000000000000008-7e9dd222-7814-4576-9e3d-601218eaa86a"
+        },
+        "persistentVolumeReclaimPolicy": "Delete",
+        "storageClassName": "general",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-08-03T22:45:34Z",
+        "phase": "Bound"
+      }
+    }
+  ],
+  "capturedAt": "2026-10-12T02:07:32.615139+00:00"
+}

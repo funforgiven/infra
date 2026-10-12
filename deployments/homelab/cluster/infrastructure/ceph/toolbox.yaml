@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rook-ceph-tools
+  namespace: rook-ceph
+  labels:
+    app: rook-ceph-tools
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rook-ceph-tools
+  template:
+    metadata:
+      labels:
+        app: rook-ceph-tools
+    spec:
+      dnsPolicy: ClusterFirstWithHostNet
+      serviceAccountName: rook-ceph-default
+      containers:
+      - name: rook-ceph-tools
+        image: quay.io/ceph/ceph:v20.2.2@sha256:6b4b5ae33acd3d736eb26d2a19238bce71a22f9cfb99cca887ba6312d0957644
+        command:
+        - /bin/bash
+        - -c
+        - "CEPH_CONFIG=/etc/ceph/ceph.conf\nMON_CONFIG=/etc/rook/mon-endpoints\nKEYRING_FILE=/etc/ceph/keyring\n\
+          CONFIG_OVERRIDE=/etc/rook-config-override/config\n\nwrite_endpoints() {\n  endpoints=$(cat ${MON_CONFIG})\n\
+          \  mon_endpoints=$(echo \"${endpoints}\" | sed 's/[a-z0-9_-]\\+=//g')\n  cat <<EOF > ${CEPH_CONFIG}\n\
+          [global]\nmon_host = ${mon_endpoints}\n\n[client.admin]\nkeyring = ${KEYRING_FILE}\nEOF\n  if\
+          \ [ -s \"${CONFIG_OVERRIDE}\" ]; then\n    cat \"${CONFIG_OVERRIDE}\" >> ${CEPH_CONFIG}\n  fi\n\
+          }\n\nwatch_endpoints() {\n  initial_time=$(stat -c %Z \"$(realpath ${MON_CONFIG})\")\n  while\
+          \ true; do\n    latest_time=$(stat -c %Z \"$(realpath ${MON_CONFIG})\")\n    if [ \"${latest_time}\"\
+          \ != \"${initial_time}\" ]; then\n      write_endpoints\n      initial_time=${latest_time}\n\
+          \    fi\n    sleep 10\n  done\n}\n\nceph_secret=${ROOK_CEPH_SECRET:-}\nif [ -z \"${ceph_secret}\"\
+          \ ]; then\n  ceph_secret=$(cat /var/lib/rook-ceph-mon/secret.keyring)\nfi\ncat <<EOF > ${KEYRING_FILE}\n\
+          [${ROOK_CEPH_USERNAME}]\nkey = ${ceph_secret}\nEOF\nwrite_endpoints\nwatch_endpoints\n"
+        imagePullPolicy: IfNotPresent
+        tty: true
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 2016
+          runAsGroup: 2016
+          capabilities:
+            drop:
+            - ALL
+        env:
+        - name: ROOK_CEPH_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: rook-ceph-mon
+              key: ceph-username
+        volumeMounts:
+        - mountPath: /etc/ceph
+          name: ceph-config
+        - mountPath: /etc/rook
+          name: mon-endpoint-volume
+        - mountPath: /var/lib/rook-ceph-mon
+          name: ceph-admin-secret
+          readOnly: true
+        - mountPath: /etc/rook-config-override
+          name: rook-config-override
+          readOnly: true
+      volumes:
+      - name: ceph-admin-secret
+        secret:
+          secretName: rook-ceph-mon
+          items:
+          - key: ceph-secret
+            path: secret.keyring
+      - name: mon-endpoint-volume
+        configMap:
+          name: rook-ceph-mon-endpoints
+          items:
+          - key: data
+            path: mon-endpoints
+      - name: rook-config-override
+        configMap:
+          name: rook-config-override
+          optional: true
+      - name: ceph-config
+        emptyDir: {}
+      tolerations:
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 5

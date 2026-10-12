@@ -24,7 +24,7 @@ from runtime_contract import ContractError, RuntimeContract
 from sops_credentials import SopsCredentialError, SopsCredentialStore
 
 
-BACKUP_CONTRACT_PATH = Path("deployments/homelab/cloud/backup-destination.yaml")
+BACKUP_CONTRACT_PATH = Path("deployments/homelab/credentials/backup-destination.yaml")
 AUTHORIZE_URL = "https://api.backblazeb2.com/b2api/v4/b2_authorize_account"
 REQUIRED_CAPABILITIES = frozenset(
     {

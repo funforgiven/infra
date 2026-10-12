@@ -3,7 +3,7 @@ _: {
     { pkgs, ... }:
     let
       python = pkgs.python3.withPackages (ps: [ ps.pyyaml ]);
-      source = ../../cloud/services/netbird;
+      source = ../../homelab/services/netbird;
     in
     {
       apps.netbird-admin = {

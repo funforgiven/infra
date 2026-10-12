@@ -68,20 +68,12 @@ let
       key = "cloud_hosts/pecorino/ubuntu_console_password";
       sopsFile = cloudHostSecretsFile;
     };
-    undercloud-kube-encrypt-token = {
-      key = "undercloud/kube_encrypt_token";
+    cluster-host-age-identity = {
+      key = "cluster/host_age_identity";
       sopsFile = kubernetesSecretsFile;
     };
-    undercloud-flux-age-identity = {
-      key = "undercloud/flux_age_identity";
-      sopsFile = kubernetesSecretsFile;
-    };
-    management-k3s-token = {
-      key = "management/k3s_token";
-      sopsFile = kubernetesSecretsFile;
-    };
-    management-flux-age-identity = {
-      key = "management/flux_age_identity";
+    cluster-flux-age-identity = {
+      key = "cluster/flux_age_identity";
       sopsFile = kubernetesSecretsFile;
     };
   };
@@ -160,19 +152,15 @@ let
       managedHostSshSettings = lib.mapAttrs (_: mkManagedHostSshSettings) {
         asiago = {
           hostName = "10.21.20.12";
-          user = "ubuntu";
-        };
-        home-assistant = {
-          hostName = "10.21.40.120";
           user = "funforgiven";
         };
         pecorino = {
           hostName = "10.21.20.10";
-          user = "ubuntu";
+          user = "funforgiven";
         };
         taleggio = {
           hostName = "10.21.20.11";
-          user = "ubuntu";
+          user = "funforgiven";
         };
       };
       context7McpLauncher = mkSecretMcpLauncher {

@@ -1,0 +1,796 @@
+{
+  "capturedAt": "2026-10-12T02:18:23.812315+00:00",
+  "hosts": {
+    "pecorino": {
+      "lsblk": {
+        "blockdevices": [
+          {
+            "name": "sda",
+            "path": "/dev/sda",
+            "size": 256060514304,
+            "model": "KINGSTON SKC6002",
+            "serial": "50026B7686FF9BC2",
+            "wwn": "0x50026b7686ff9bc2",
+            "type": "disk"
+          },
+          {
+            "name": "sdb",
+            "path": "/dev/sdb",
+            "size": 256060514304,
+            "model": "KINGSTON SKC6002",
+            "serial": "50026B7686FFA892",
+            "wwn": "0x50026b7686ffa892",
+            "type": "disk"
+          },
+          {
+            "name": "sdc",
+            "path": "/dev/sdc",
+            "size": 0,
+            "model": "CD-ROM Drive",
+            "serial": "CAFEBABE",
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd0",
+            "path": "/dev/nbd0",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd1",
+            "path": "/dev/nbd1",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd2",
+            "path": "/dev/nbd2",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd3",
+            "path": "/dev/nbd3",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd4",
+            "path": "/dev/nbd4",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd5",
+            "path": "/dev/nbd5",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd6",
+            "path": "/dev/nbd6",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd7",
+            "path": "/dev/nbd7",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd0",
+            "path": "/dev/rbd0",
+            "size": 2147483648,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd1",
+            "path": "/dev/rbd1",
+            "size": 21474836480,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd2",
+            "path": "/dev/rbd2",
+            "size": 5368709120,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd3",
+            "path": "/dev/rbd3",
+            "size": 5368709120,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd4",
+            "path": "/dev/rbd4",
+            "size": 5368709120,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd5",
+            "path": "/dev/rbd5",
+            "size": 53687091200,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd6",
+            "path": "/dev/rbd6",
+            "size": 10737418240,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nvme1n1",
+            "path": "/dev/nvme1n1",
+            "size": 2000398934016,
+            "model": "Samsung SSD 990 PRO 2TB",
+            "serial": "S7DNNJ0WC15351X",
+            "wwn": "eui.0025384c3140afbd",
+            "type": "disk"
+          },
+          {
+            "name": "nvme0n1",
+            "path": "/dev/nvme0n1",
+            "size": 2048408248320,
+            "model": "KINGSTON SKC3000D2048G",
+            "serial": "50026B76870CA30E",
+            "wwn": "eui.00000000000000000026b76870ca30e5",
+            "type": "disk"
+          },
+          {
+            "name": "nbd8",
+            "path": "/dev/nbd8",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd9",
+            "path": "/dev/nbd9",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd10",
+            "path": "/dev/nbd10",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd11",
+            "path": "/dev/nbd11",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd12",
+            "path": "/dev/nbd12",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd13",
+            "path": "/dev/nbd13",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd14",
+            "path": "/dev/nbd14",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd15",
+            "path": "/dev/nbd15",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          }
+        ]
+      },
+      "byPath": {
+        "/dev/disk/by-path/pci-0000:00:14.0-usbv2-0:9.4:1.2-scsi-0:0:0:0": "/dev/sdc",
+        "/dev/disk/by-path/pci-0000:00:14.0-usb-0:9.4:1.2-scsi-0:0:0:0": "/dev/sdc",
+        "/dev/disk/by-path/pci-0000:00:17.0-ata-8": "/dev/sda",
+        "/dev/disk/by-path/pci-0000:00:17.0-ata-8.0": "/dev/sda",
+        "/dev/disk/by-path/pci-0000:07:00.0-ata-2.0": "/dev/sdb",
+        "/dev/disk/by-path/pci-0000:07:00.0-ata-2": "/dev/sdb",
+        "/dev/disk/by-path/pci-0000:04:00.0-nvme-1": "/dev/nvme1n1",
+        "/dev/disk/by-path/pci-0000:02:00.0-nvme-1": "/dev/nvme0n1"
+      }
+    },
+    "taleggio": {
+      "lsblk": {
+        "blockdevices": [
+          {
+            "name": "sda",
+            "path": "/dev/sda",
+            "size": 256060514304,
+            "model": "KINGSTON SKC6002",
+            "serial": "50026B7686FFB37E",
+            "wwn": "0x50026b7686ffb37e",
+            "type": "disk"
+          },
+          {
+            "name": "sdb",
+            "path": "/dev/sdb",
+            "size": 256060514304,
+            "model": "KINGSTON SKC6002",
+            "serial": "50026B7686FF9BC4",
+            "wwn": "0x50026b7686ff9bc4",
+            "type": "disk"
+          },
+          {
+            "name": "nbd0",
+            "path": "/dev/nbd0",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd1",
+            "path": "/dev/nbd1",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd2",
+            "path": "/dev/nbd2",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd3",
+            "path": "/dev/nbd3",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd4",
+            "path": "/dev/nbd4",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd5",
+            "path": "/dev/nbd5",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd6",
+            "path": "/dev/nbd6",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd7",
+            "path": "/dev/nbd7",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd0",
+            "path": "/dev/rbd0",
+            "size": 53687091200,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd1",
+            "path": "/dev/rbd1",
+            "size": 10737418240,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd2",
+            "path": "/dev/rbd2",
+            "size": 2147483648,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd3",
+            "path": "/dev/rbd3",
+            "size": 53687091200,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd4",
+            "path": "/dev/rbd4",
+            "size": 5368709120,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd5",
+            "path": "/dev/rbd5",
+            "size": 21474836480,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd6",
+            "path": "/dev/rbd6",
+            "size": 5368709120,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd7",
+            "path": "/dev/rbd7",
+            "size": 5368709120,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nvme0n1",
+            "path": "/dev/nvme0n1",
+            "size": 2048408248320,
+            "model": "KINGSTON SKC3000D2048G",
+            "serial": "50026B76870CB1A2",
+            "wwn": "eui.00000000000000000026b76870cb1a25",
+            "type": "disk"
+          },
+          {
+            "name": "nvme1n1",
+            "path": "/dev/nvme1n1",
+            "size": 2048408248320,
+            "model": "KINGSTON SKC3000D2048G",
+            "serial": "50026B72833C0BF3",
+            "wwn": "eui.00000000000000000026b72833c0bf35",
+            "type": "disk"
+          },
+          {
+            "name": "nbd8",
+            "path": "/dev/nbd8",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd9",
+            "path": "/dev/nbd9",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd10",
+            "path": "/dev/nbd10",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd11",
+            "path": "/dev/nbd11",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd12",
+            "path": "/dev/nbd12",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd13",
+            "path": "/dev/nbd13",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd14",
+            "path": "/dev/nbd14",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd15",
+            "path": "/dev/nbd15",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          }
+        ]
+      },
+      "byPath": {
+        "/dev/disk/by-path/pci-0000:00:17.0-ata-5": "/dev/sda",
+        "/dev/disk/by-path/pci-0000:00:17.0-ata-5.0": "/dev/sda",
+        "/dev/disk/by-path/pci-0000:00:17.0-ata-6": "/dev/sdb",
+        "/dev/disk/by-path/pci-0000:00:17.0-ata-6.0": "/dev/sdb",
+        "/dev/disk/by-path/pci-0000:03:00.0-nvme-1": "/dev/nvme0n1",
+        "/dev/disk/by-path/pci-0000:02:00.0-nvme-1": "/dev/nvme1n1"
+      }
+    },
+    "asiago": {
+      "lsblk": {
+        "blockdevices": [
+          {
+            "name": "sda",
+            "path": "/dev/sda",
+            "size": 256060514304,
+            "model": "KINGSTON SKC6002",
+            "serial": "50026B7686FFB25A",
+            "wwn": "0x50026b7686ffb25a",
+            "type": "disk"
+          },
+          {
+            "name": "sdb",
+            "path": "/dev/sdb",
+            "size": 256060514304,
+            "model": "KINGSTON SKC6002",
+            "serial": "50026B7686FFB380",
+            "wwn": "0x50026b7686ffb380",
+            "type": "disk"
+          },
+          {
+            "name": "nbd0",
+            "path": "/dev/nbd0",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd1",
+            "path": "/dev/nbd1",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd2",
+            "path": "/dev/nbd2",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd3",
+            "path": "/dev/nbd3",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd4",
+            "path": "/dev/nbd4",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd5",
+            "path": "/dev/nbd5",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd6",
+            "path": "/dev/nbd6",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd7",
+            "path": "/dev/nbd7",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd0",
+            "path": "/dev/rbd0",
+            "size": 2147483648,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd1",
+            "path": "/dev/rbd1",
+            "size": 21474836480,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd2",
+            "path": "/dev/rbd2",
+            "size": 5368709120,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd3",
+            "path": "/dev/rbd3",
+            "size": 5368709120,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd4",
+            "path": "/dev/rbd4",
+            "size": 5368709120,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd5",
+            "path": "/dev/rbd5",
+            "size": 10737418240,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "rbd6",
+            "path": "/dev/rbd6",
+            "size": 10737418240,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nvme1n1",
+            "path": "/dev/nvme1n1",
+            "size": 2048408248320,
+            "model": "KINGSTON SKC3000D2048G",
+            "serial": "50026B72833C0C16",
+            "wwn": "eui.00000000000000000026b72833c0c165",
+            "type": "disk"
+          },
+          {
+            "name": "nvme0n1",
+            "path": "/dev/nvme0n1",
+            "size": 2048408248320,
+            "model": "KINGSTON SKC3000D2048G",
+            "serial": "50026B72833BFD0F",
+            "wwn": "eui.00000000000000000026b72833bfd0f5",
+            "type": "disk"
+          },
+          {
+            "name": "nbd8",
+            "path": "/dev/nbd8",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd9",
+            "path": "/dev/nbd9",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd10",
+            "path": "/dev/nbd10",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd11",
+            "path": "/dev/nbd11",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd12",
+            "path": "/dev/nbd12",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd13",
+            "path": "/dev/nbd13",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd14",
+            "path": "/dev/nbd14",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          },
+          {
+            "name": "nbd15",
+            "path": "/dev/nbd15",
+            "size": 0,
+            "model": null,
+            "serial": null,
+            "wwn": null,
+            "type": "disk"
+          }
+        ]
+      },
+      "byPath": {
+        "/dev/disk/by-path/pci-0000:0f:00.0-ata-3.0": "/dev/sdb",
+        "/dev/disk/by-path/pci-0000:0f:00.0-ata-3": "/dev/sdb",
+        "/dev/disk/by-path/pci-0000:0f:00.0-ata-2.0": "/dev/sda",
+        "/dev/disk/by-path/pci-0000:0f:00.0-ata-2": "/dev/sda",
+        "/dev/disk/by-path/pci-0000:10:00.0-nvme-1": "/dev/nvme1n1",
+        "/dev/disk/by-path/pci-0000:02:00.0-nvme-1": "/dev/nvme0n1"
+      }
+    }
+  }
+}

@@ -6,18 +6,18 @@ CCR/CRS uplinks.
 
 There are two current-state inputs:
 
-- `../cloud/network-inventory.yaml` is the RouterOS inventory: device
+- `../network/network-inventory.yaml` is the RouterOS inventory: device
   identity, current cloud bonds/VLANs, link policy, provider routing, declared
   static DHCP leases, private cloud DNS forward, WireGuard administration
   routes, and destination-scoped Mullvad egress.
-- `components/cloud/network-automation/reconcile-routeros.yaml` is the
+- `components/homelab/network-automation/reconcile-routeros.yaml` is the
   current convergence owner until the RouterOS Terraform import described
   below is complete.
 
 Device exports belong in encrypted backups, not in the desired-state tree.
 
 The cloud network and MTU design lives once in
-[`../cloud/README.md`](../cloud/README.md). Omada final state is documented by
+[the migration architecture](../../../docs/migration/ARCHITECTURE.md). Omada final state is documented by
 its compact desired-state file and reconciler.
 
 ## Physical map
@@ -73,7 +73,7 @@ individual LACP member has passed supervised failure testing. Cable make/model
 is observation, not stable desired identity.
 
 Current reconciliation carries VLAN 20 to the routed/admin uplinks, keeps
-VLANs 30–33 on the CRS server bonds, and carries VLAN 40 through Omada ports
+Ceph VLAN 30 on the CRS server bonds, and carries VLAN 40 through Omada ports
 1/9 to the CCR provider gateway. VLAN 40 passed every-direction host probes at
 MTU 1500, trusted routing, and provider-sourced WAN NAT at the 1492-byte PPPoE
 path MTU. The CCR's 1 Gb/s core uplink is not an east-west path.
@@ -127,15 +127,15 @@ the observed Japanese exit before applying the new `/32`.
 Native MikroTik WireGuard is the infrastructure recovery path. Keep its client
 configuration, direct management addresses and recovery credentials available
 without Kubernetes, ZITADEL or NetBird. Everyday private service access uses
-[NetBird](../cloud/services/48-netbird/README.md); adding a normal service client
+[NetBird](../cluster/apps/netbird/README.md); adding a normal service client
 does not add a RouterOS WireGuard peer. The router only forwards NetBird's public
 STUN port (UDP 3478) and the existing public HTTPS gateway traffic.
 
 The CCR2004 terminates the split-tunnel `wg-admin` network at
 `10.21.91.1/24`, UDP port `51820`, MTU `1420`. It is not added to a trusted
 interface list and is not NATed toward the internet. Firewall rules allow only
-DNS on the CCR, SSH to the three cloud hosts, HTTPS to the private and personal
-services Gateways, the undercloud and CAPI Kubernetes APIs, and the declared
+DNS on the CCR, SSH to the three NixOS hosts, HTTPS to the private and personal
+services Gateways, the homelab Kubernetes API at `10.21.20.128`, and the declared
 management ports for the CCR, CRS, PiKVM, UniFi AP, and Omada switch.
 
 Each administrator device supplies its own WireGuard public key and receives a
@@ -149,8 +149,8 @@ fronts every personal service hostname, so publishing another application on
 that Gateway does not require another WireGuard route or firewall rule.
 
 The mail administration backend is an isolated peer on the same WireGuard
-interface at `10.21.91.3/32`. Only the services router's `10.21.40.154/32` source
-may reach its port 8080; Envoy admits end users to that route only from the admin
+interface at `10.21.91.3/32`. Only the three server management egress addresses
+`10.21.20.10/32`, `.11/32` and `.12/32` may reach its port 8080; Envoy admits end users to that route only from the admin
 VPN. Early input and forward drops prevent the mail peer from initiating any
 router or homelab connection, while established replies continue normally. Its
 preshared key is in `secrets/mail-vpn.yaml`, exposed by sops-nix at the declared
@@ -164,7 +164,7 @@ surfaces:
 
 ```sh
 nix develop --accept-flake-config
-cd components/cloud/network-automation
+cd components/homelab/network-automation
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 ansible-playbook --syntax-check reconcile-routeros.yaml
 ```
@@ -243,14 +243,14 @@ set -o pipefail
 nix run .#sops --accept-flake-config -- \
   decrypt --output-type json secrets/omada.yaml \
   | nix develop --accept-flake-config -c \
-      python3 components/cloud/network-automation/omada_reconcile.py \
+      python3 components/homelab/network-automation/omada_reconcile.py \
       --credentials-stdin
 ```
 
 After reviewing the plan, add `--apply`. The current input is switch-only;
 the adapter neither requires the old EAP to be online nor changes its WLANs.
 It never deletes controller objects. UniFi manages the replacement APs;
-follow the [UniFi runbook](../cloud/services/24-unifi/README.md).
+follow the [UniFi runbook](../cluster/apps/unifi/README.md).
 
 ## Secrets and identity
 

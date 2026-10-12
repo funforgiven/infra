@@ -1,17 +1,19 @@
 _: {
   nixos.modules.services-aws-mail-admin =
-    { pkgs, ... }:
+    { pkgs, lib, ... }:
     let
-      vpn = builtins.fromJSON (builtins.readFile ../../../deployments/homelab/cloud/mail-admin-vpn.json);
+      vpn = builtins.fromJSON (
+        builtins.readFile ../../../deployments/homelab/network/mail-admin-vpn.json
+      );
       direct = builtins.fromJSON (
-        builtins.readFile ../../../deployments/homelab/cloud/mail-direct-vpn.json
+        builtins.readFile ../../../deployments/homelab/network/mail-direct-vpn.json
       );
       directOrigin = "${direct.hostname}:${toString direct.httpsPort}";
       python = pkgs.python3.withPackages (ps: [ ps.boto3 ]);
       acmeState = pkgs.writeShellApplication {
         name = "mail-admin-acme-state";
         text = ''
-          exec ${python}/bin/python ${../../cloud/services/mail-aws/acme-state.py} "$@"
+          exec ${python}/bin/python ${../../homelab/services/mail-aws/acme-state.py} "$@"
         '';
       };
       syncVpn = pkgs.writeShellApplication {
@@ -37,7 +39,7 @@ _: {
             jq --raw-output '"PrivateKey = " + .private_key' "$document"
             printf '%s\n' '[Peer]' 'PublicKey = ${vpn.routerPublicKey}'
             jq --raw-output '"PresharedKey = " + .preshared_key' "$document"
-            printf '%s\n' 'Endpoint = ${vpn.endpoint}' 'AllowedIPs = ${vpn.gatewaySource}' 'PersistentKeepalive = 25'
+            printf '%s\n' 'Endpoint = ${vpn.endpoint}' 'AllowedIPs = ${lib.concatStringsSep ", " vpn.gatewaySources}' 'PersistentKeepalive = 25'
           } > "$candidate"
           install -m 0600 "$candidate" /run/mail-admin-vpn/wg-mail.conf
           {
@@ -158,7 +160,7 @@ _: {
             }
           ];
           extraConfig = ''
-            allow ${vpn.gatewaySource};
+            ${lib.concatMapStringsSep "\n" (source: "allow ${source};") vpn.gatewaySources}
             deny all;
             client_max_body_size 50m;
           '';

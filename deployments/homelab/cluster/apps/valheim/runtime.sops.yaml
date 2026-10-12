@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: valheim-runtime
+    namespace: games
+type: Opaque
+stringData:
+    VALHEIM_GAME_PASSWORD: ENC[AES256_GCM,data:uXgTYejU8/QqFK4Svh5JaY1u31iu3x2r,iv:UmwFhFHuukmxgBX+zZkKo/CqtgetxbRn5AUkmBzDrQ4=,tag:lP9kSl0yRXTosC0ZqwI6wg==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA3RG1FV2NUNC85SldhY2JN
+            cEZjU0crOHEyMWlITndVQUZqaklzTUZkUTJRCnBWMW1EdWUwdTJxeHRGRWVOR21F
+            VVVpSHVuNWF4eVF5S3B4N1d6YlZEWGMKLS0tIHhPL1Mrb2pEbmQxbUFSTzF5TjYz
+            RlNnd3QxdkYzWWY4YS9XN2pvNHpwN1EKKM43OOfn0ooOc8AcJ/pGbl1qE6aUpbnn
+            WDuWm+CBNz4YTk19ZogdqrhmxCFrkdNE5onpNEw+stHR4hZpc1ypHw==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSAxWVdmL2thUmpvbk5CYkt4
+            RGNpWU9HbkM0bmtBeGdCeC96b1NUUHVIcVcwCkZjSVlLaXdFUStiOXQwaGYyLzFL
+            Y3ozK09xY1B3WEZzcGtzMHB3ZEx6TkkKLS0tIFNPRGxxWG92dWNuZDA2V1dSdEo0
+            c2pNUEdvQ1Rkc1Z2K2RhQndXSVVtN0UKmBGDVn30sEe0EJt9vYoBfCCF4W1Je/cy
+            U9PwUQ2ddm1FZh1wyPKT6u3nt+fKhHcSEekSFpCLPJDDnsKzOSecIg==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age10n9tyln0hwpdmxpe90af6kwtzrplgp9kq6qy58mnak4mugjcwy6s8w4es7
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-10-12T01:42:43Z"
+    mac: ENC[AES256_GCM,data:e8DMFcOYjCcWa7M6Qk9axtcR0IoUtlCoJXRzPWZVFcJ+ZrfmaQ8g4YZvrrWFY3rAuzf29yyn4XFYVT0RlahZu/BlhLlMMYgwNRSGDoJb5SRVx6oYHpwdaWPk0ycQwRHWnMfaR2OrFIgzZkRzpLVjqJ2wubGK/DRLjFbJqiPq2FU=,iv:41VN0c8F2UtRrwIelpPhH/cXOIlJN/H5i5yeIX5E1bk=,tag:yX3itPiU04qZ/7ZgguQJjQ==,type:str]
+    version: 3.13.3

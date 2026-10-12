@@ -10,7 +10,7 @@ in
   imports = [ inputs.flake-file.flakeModules.default ];
 
   flake-file = {
-    description = "Homelab NixOS, network, and private-cloud infrastructure";
+    description = "Homelab NixOS, Kubernetes, network, and application infrastructure";
     outputs = "inputs: import ./outputs.nix inputs";
     do-not-edit = "";
 
