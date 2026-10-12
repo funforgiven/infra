@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: matrix-registry
+    namespace: matrix
+    labels:
+        velero.io/exclude-from-backup: "true"
+type: kubernetes.io/dockerconfigjson
+stringData:
+    .dockerconfigjson: ENC[AES256_GCM,data:sddF61f7Ja55Aocu/la/je7l0Egre2S7dR71BPnYp1tAkaYaANYEFp3oaxPgQ8Xj0mcLHsTV4OcZ76ylSRFZoxOo/WLnRlAC1x5ory+9Ou6pTIa76OuRe8ycX9aJ6WLkTmV0ZqaiRVbzjzU+TxziAfGtUuRxshS4mglRzLiloKM5wTKJIssj27RL0y5F0ntn1UQeBIo=,iv:aogy/gUjPnMvA5BeU7N35ncT4cSoyh4Zx33c1gi1nEU=,tag:Wvt03oIYGSva2AAFTqs3XA==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBaZDlkL1NoTFZWZkliZVNm
+            eTF1T3BCWWNPRDJnaTBqb3NNMERJNE44QjFnCmxjS1pPZDl3Um9qVUlxLys5eUtp
+            b3YxOWNwa0ttaEl1bUo0ME85eURLOWsKLS0tIE84NEJRUGNOTWtqdUNQY0FVMFpC
+            YXNNVlU3VVBTNmk0cmNGdG9lNlUwM1EKjugAypBA0ZDFTyxYBd0W/6LBVzx8ff6S
+            e51U+ysOlJW6cj5D4skd+62HZzK1v5Q3DAOIDPj8M0jnTU0cEAN9VQ==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSB1dnlSNzRGQmZWTnQ1V3hx
+            bXZRMzAxNUtLZWQ5S1FRUk5WOXlpY0g5dVhzCjd3a3M2MXkrRUpHeCtseVAzYWhn
+            dkttK3ZRSVM3WEgwR2hGME1pYzJiM0UKLS0tIDFheXBITjBMdlpiRUptSFR2MWN2
+            aTRYcjhCVkRBelcxMXFUcFNyZHg0OEEK21vm8az1bTEkrF2aOysuqanuGtRgCEci
+            T3oi/MHYgvVX5avAjvg1aIFJD1B+zxvbXyMv7UCE6NyE3oTAVKKUiQ==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age10n9tyln0hwpdmxpe90af6kwtzrplgp9kq6qy58mnak4mugjcwy6s8w4es7
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-10-12T01:18:59Z"
+    mac: ENC[AES256_GCM,data:J1cQgJ/dT90nLuoWGTMN8d92Qv4s2k1s5MeI3Ejru/xW8DWqI4xAluOc8G+18ZMMZMBo02K5RiM9PaWiucwXGJF5M6zLBSWEgoYlBdNZgzS0RNWLT95xX4l5pbxy2NEn9Ahmn/qVvI/gXwgc9kvID0ZngHbfq4n6EgBvvA4PWFY=,iv:GUMvuS+8LXGMLdcI3HkMgbDXd0ehhptfhyf9+wqHh6U=,tag:0yiiQLyA38G1uynKsM0uZQ==,type:str]
+    version: 3.13.3

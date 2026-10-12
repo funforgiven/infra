@@ -9,7 +9,7 @@ _: {
           pkgs.stalwart-vandelay
         ];
         text = ''
-          exec ${pkgs.python3}/bin/python ${../../cloud/services/mail-aws/restore-drill.py} "$@"
+          exec ${pkgs.python3}/bin/python ${../../homelab/services/mail-aws/restore-drill.py} "$@"
         '';
       };
     };

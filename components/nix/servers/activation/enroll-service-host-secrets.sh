@@ -111,7 +111,7 @@ enroll_matrix_monitoring() {
     exit 64
   fi
   matrix_config="$(sops decrypt --extract '["stringData"]["config.json"]' \
-    "$repository_root/deployments/homelab/cloud/host-runtime/matrix-$producer.sops.yaml")"
+    "$repository_root/deployments/homelab/credentials/host-runtime/matrix-$producer.sops.yaml")"
   prepare_directory /var/lib/monitoring-bootstrap
   printf '%s' "$matrix_config" | install_stream /var/lib/monitoring-bootstrap/matrix.json
   unset matrix_config

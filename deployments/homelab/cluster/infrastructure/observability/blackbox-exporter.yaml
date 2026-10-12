@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: blackbox-exporter
+  namespace: services-observability
+data:
+  config.yaml: "modules:\n  http_2xx:\n    prober: http\n    timeout: 15s\n    http:\n      follow_redirects:\
+    \ true\n      preferred_ip_protocol: ip4\n  tcp_connect:\n    prober: tcp\n    timeout: 10s\n    tcp:\n\
+    \      preferred_ip_protocol: ip4\n  netbird_relay:\n    prober: http\n    timeout: 15s\n    http:\n\
+    \      preferred_ip_protocol: ip4\n      # NetBird 0.80.0's combined server registers its relay WebSocket\n\
+    \      # handler without standalone listeners. /health therefore returns\n      # 503/listeners:null\
+    \ even when its public WSS/TLS check succeeds.\n      valid_status_codes: [200, 503]\n      fail_if_body_not_matches_regexp:\n\
+    \        - '\"certificate_valid\"\\s*:\\s*true'\n        - '\"status\"\\s*:\\s*\"healthy\"|\"listeners\"\
+    \\s*:\\s*null'\n  mail_jmap:\n    prober: http\n    timeout: 10s\n    http:\n      preferred_ip_protocol:\
+    \ ip4\n      follow_redirects: true\n      fail_if_not_ssl: true\n      fail_if_body_not_matches_regexp:\n\
+    \        - '\"apiUrl\"\\s*:\\s*\"https://mail\\.fahrican\\.com/jmap/\"'\n        - '\"urn:ietf:params:jmap:mail\"\
+    '\n        - '\"urn:ietf:params:jmap:submission\"'\n  mail_public_admin_denied:\n    prober: http\n\
+    \    timeout: 10s\n    http:\n      preferred_ip_protocol: ip4\n      follow_redirects: false\n  \
+    \    fail_if_not_ssl: true\n      valid_status_codes: [404]\n  mail_private_admin_denied:\n    prober:\
+    \ http\n    timeout: 10s\n    http:\n      preferred_ip_protocol: ip4\n      follow_redirects: false\n\
+    \      fail_if_not_ssl: true\n      valid_status_codes: [403]\n"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blackbox-exporter
+  namespace: services-observability
+  labels:
+    app.kubernetes.io/name: blackbox-exporter
+spec:
+  selector:
+    app.kubernetes.io/name: blackbox-exporter
+  ports:
+  - name: http
+    port: 9115
+    targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blackbox-exporter
+  namespace: services-observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: blackbox-exporter
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: blackbox-exporter
+        app.kubernetes.io/part-of: self-hosted-platform
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: blackbox-exporter
+        image: quay.io/prometheus/blackbox-exporter:v0.28.0@sha256:e753ff9f3fc458d02cca5eddab5a77e1c175eee484a8925ac7d524f04366c2fc
+        args:
+        - --config.file=/etc/blackbox/config.yaml
+        - --config.enable-auto-reload
+        - --web.listen-address=:9115
+        ports:
+        - name: http
+          containerPort: 9115
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: http
+          initialDelaySeconds: 15
+          periodSeconds: 30
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: config
+          mountPath: /etc/blackbox
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: blackbox-exporter

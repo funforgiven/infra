@@ -1,0 +1,143 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: forgejo
+  namespace: forge
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: forgejo
+  endpoints:
+  - port: http
+    path: /metrics
+    authorization:
+      type: Bearer
+      credentials:
+        name: forge-runtime
+        key: forgejo-metrics-token
+    interval: 30s
+  - port: backup-metrics
+    path: /metrics
+    interval: 60s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: forge
+  namespace: forge
+spec:
+  groups:
+  - name: forge
+    rules:
+    - record: forge_controller_last_failed_start_timestamp_seconds
+      expr: "max by (namespace, cronjob) (\n  label_replace(\n    (kube_job_status_start_time{namespace=~\"\
+        forge|forge-ci|forge-control\"}\n     and on (namespace, job_name)\n     (kube_job_status_failed{namespace=~\"\
+        forge|forge-ci|forge-control\"} > 0))\n    * on (namespace, job_name) group_left (owner_name)\n\
+        \    max by (namespace, job_name, owner_name) (\n      kube_job_owner{namespace=~\"forge|forge-ci|forge-control\"\
+        ,owner_kind=\"CronJob\",\n        owner_name=~\"forge-linux-qualification|forge-linux-atollion-launcher|forge-snapshot-backup\"\
+        }\n    ), \"cronjob\", \"$1\", \"owner_name\", \"(.+)\"\n  )\n)"
+    - record: forge_controller_unrecovered_failure
+      expr: "(\n  (forge_controller_last_failed_start_timestamp_seconds\n   > on (namespace, cronjob)\n\
+        \   max by (namespace, cronjob) (kube_cronjob_status_last_successful_time))\n  or\n  (forge_controller_last_failed_start_timestamp_seconds\n\
+        \   unless on (namespace, cronjob)\n   max by (namespace, cronjob) (kube_cronjob_status_last_successful_time))\n\
+        ) and on (namespace, cronjob) (max by (namespace, cronjob) (kube_cronjob_spec_suspend) == 0)"
+    - alert: ForgejoUnavailable
+      expr: kube_statefulset_replicas{namespace="forge",statefulset="forgejo"} > 0 and kube_statefulset_status_replicas_ready{namespace="forge",statefulset="forgejo"}
+        < 1
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: forgejo is unavailable
+        description: The private development service has had no ready replica for five minutes.
+    - alert: ForgejoSnapshotBackupFailed
+      expr: forge_controller_unrecovered_failure{namespace="forge",cronjob="forge-snapshot-backup"}
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: The online Forgejo backup has failed
+        description: Inspect snapshot/export controller logs and disposable volume cleanup. Existing archives
+          are retained and Forgejo stays online.
+    - alert: ForgejoSnapshotControllerUnavailable
+      expr: kube_deployment_status_replicas_available{namespace="kube-system",deployment="snapshot-controller"}
+        < 1
+      for: 15m
+      labels:
+        severity: critical
+      annotations:
+        summary: Storage snapshot controller is unavailable
+        description: Online Forgejo backups require this controller; existing offsite restores remain
+          independent of it.
+    - alert: ForgejoBackupStale
+      expr: (time() - max(forge_backup_completed_timestamp_seconds{namespace="forge",service="forgejo"})
+        > 28800) or max(absent(forge_backup_completed_timestamp_seconds{namespace="forge",service="forgejo"}))
+      for: 15m
+      keep_firing_for: 5m
+      labels:
+        severity: critical
+        namespace: forge
+      annotations:
+        summary: forgejo recovery archive is overdue
+        description: No successful local recovery archive in eight hours; inspect the snapshot/export
+          controller and backup metrics before relying on Velero.
+    - alert: ForgejoRestoreQualificationFailed
+      expr: services_cronjob_unrecovered_failure{namespace="backup-qualification",cronjob="forge-restore-qualification"}
+      for: 15m
+      labels:
+        severity: critical
+      annotations:
+        summary: Forgejo offsite restore qualification failed
+        description: Inspect the qualification job and isolated forge-restore verifiers before retiring
+          recovery sources.
+    - alert: ForgejoRestoreQualificationStale
+      expr: (time() - kube_cronjob_status_last_successful_time{namespace="backup-qualification",cronjob="forge-restore-qualification"}
+        > 3456000) or absent(kube_cronjob_status_last_successful_time{namespace="backup-qualification",cronjob="forge-restore-qualification"})
+      for: 1h
+      labels:
+        severity: critical
+      annotations:
+        summary: No successful Forgejo offsite restore in 40 days
+    - alert: ForgejoActionsLauncherFailing
+      expr: forge_controller_unrecovered_failure{namespace="forge-ci",cronjob="forge-linux-qualification"}
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: The Linux qualification launcher has not recovered
+        description: No successful launcher completion since its latest failed attempt for five minutes.
+    - alert: ForgejoLinuxRunnerFailed
+      expr: max by (namespace) (kube_job_status_failed{namespace="forge-ci",job_name=~"forge-linux-atollion-[0-9].*"})
+        > 0
+      for: 5m
+      labels:
+        severity: warning
+        repository: atollion
+      annotations:
+        summary: An Atollion disposable Linux runner failed to finish
+        description: Inspect failed runner Jobs and their logs; concurrent failures share one incident.
+    - alert: ForgejoLinuxControllerFailed
+      expr: forge_controller_unrecovered_failure{namespace="forge-control",cronjob="forge-linux-atollion-launcher"}
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: The Atollion Linux queue launcher failed
+        description: No successful launcher completion since its latest failed attempt for five minutes.
+          Inspect launcher logs, job quota and disposable volume provisioning.
+    - alert: ForgejoActionsQueueStalled
+      expr: (time() - forge_actions_oldest_waiting_timestamp_seconds > 900) and ignoring(status) (forge_actions_jobs{status="waiting"}
+        > 0)
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: A Forgejo Actions job has waited over 15 minutes
+        description: Check runner launchers, platform labels, image pulls and native guest availability.
+    - alert: ForgejoActionsMetricsUnavailable
+      expr: (forge_actions_metrics_up == 0) or absent(forge_actions_metrics_up)
+      for: 15m
+      labels:
+        severity: warning
+      annotations:
+        summary: Forgejo Actions queue monitoring is unavailable

@@ -18,7 +18,7 @@ from runtime_contract import ContractError, RuntimeContract
 from sops_credentials import SopsCredentialError, SopsCredentialStore
 
 
-TELEGRAM_CONTRACT_PATH = Path("deployments/homelab/cloud/telegram-bots.yaml")
+TELEGRAM_CONTRACT_PATH = Path("deployments/homelab/credentials/telegram-bots.yaml")
 
 
 class TelegramReconcileError(RuntimeError):

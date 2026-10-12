@@ -1,0 +1,81 @@
+directory: /media/library
+library: /state/library.db
+statefile: /state/import-state.pickle
+create_backup_before_migrations: true
+plugins:
+- musicbrainz
+- deezer
+- chroma
+- fetchart
+- embedart
+- mbsync
+- replaygain
+- lastgenre
+- badfiles
+threaded: true
+art_filename: cover
+import:
+  write: true
+  copy: false
+  move: true
+  resume: false
+  incremental: false
+  quiet: true
+  quiet_fallback: skip
+  autotag: true
+  duplicate_keys:
+    album: albumartist album
+    item: artist title
+  duplicate_action: skip
+  log: /state/import.log
+paths:
+  default: $albumartist/$album%aunique{}/$track $title
+  singleton: Non-Album/$artist/$title
+  comp: Compilations/$album%aunique{}/$track $title
+fetchart:
+  auto: true
+  cautious: true
+embedart:
+  auto: true
+  ifempty: true
+  remove_art_file: false
+musicbrainz:
+  data_source_mismatch_penalty: 0.0
+  genres: true
+  extra_tags:
+  - barcode
+  - tracks
+  external_ids:
+    deezer: true
+    spotify: true
+deezer:
+  data_source_mismatch_penalty: 0.0
+chroma:
+  auto: true
+replaygain:
+  auto: true
+  backend: ffmpeg
+  overwrite: false
+  parallel_on_import: false
+  threads: 2
+lastgenre:
+  auto: false
+  force: false
+  cleanup_existing: true
+  aliases: true
+  canonical: false
+  whitelist: false
+  keep_existing: false
+  count: 3
+  fallback: null
+  min_weight: 10
+  prefer_specific: false
+  source: album
+  title_case: true
+  ignorelist: false
+badfiles:
+  check_on_import: true
+  import_action_on_error: skip
+  import_action_on_warning: continue
+  commands:
+    flac: flac --test --warnings-as-errors --silent

@@ -1,0 +1,51 @@
+apiVersion: ceph.rook.io/v1
+kind: CephBlockPool
+metadata:
+  name: services
+  namespace: rook-ceph
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  failureDomain: host
+  replicated:
+    size: 3
+    requireSafeReplicaSize: true
+  parameters:
+    min_size: '2'
+    pg_autoscale_mode: 'on'
+---
+apiVersion: ceph.rook.io/v1
+kind: CephFilesystem
+metadata:
+  name: services
+  namespace: rook-ceph
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  preserveFilesystemOnDelete: true
+  metadataPool:
+    failureDomain: host
+    replicated:
+      size: 3
+      requireSafeReplicaSize: true
+    parameters:
+      min_size: '2'
+      pg_autoscale_mode: 'on'
+  dataPools:
+  - failureDomain: host
+    replicated:
+      size: 3
+      requireSafeReplicaSize: true
+    parameters:
+      min_size: '2'
+      pg_autoscale_mode: 'on'
+    name: data
+  metadataServer:
+    activeCount: 1
+    activeStandby: true
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        memory: 2Gi

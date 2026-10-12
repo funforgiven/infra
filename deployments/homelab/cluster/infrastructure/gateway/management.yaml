@@ -1,0 +1,117 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: management
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 2
+        pod:
+          topologySpreadConstraints:
+          - maxSkew: 1
+            topologyKey: kubernetes.io/hostname
+            whenUnsatisfiable: DoNotSchedule
+            labelSelector:
+              matchLabels:
+                gateway.envoyproxy.io/owning-gateway-name: management
+                gateway.envoyproxy.io/owning-gateway-namespace: network-services
+        container:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+      envoyService:
+        type: LoadBalancer
+        loadBalancerClass: metallb.io/metallb
+        allocateLoadBalancerNodePorts: false
+        externalTrafficPolicy: Cluster
+        annotations:
+          metallb.io/address-pool: management
+          metallb.io/loadBalancerIPs: 10.21.20.131
+        labels:
+          infra.fahrican.com/vip-purpose: management-gateway
+      envoyPDB:
+        minAvailable: 1
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: management-envoy
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: management
+    namespace: envoy-gateway-system
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: management
+  namespace: network-services
+spec:
+  secretName: management-tls
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt-cloudflare
+  dnsNames:
+  - grafana.cloud.fahrican.com
+  - auth.cloud.fahrican.com
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: management
+  namespace: network-services
+spec:
+  gatewayClassName: management-envoy
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+    allowedRoutes:
+      namespaces:
+        from: Selector
+        selector:
+          matchLabels:
+            gateway.fahrican.com/management: allowed
+  - name: https
+    protocol: HTTPS
+    port: 443
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - kind: Secret
+        name: management-tls
+    allowedRoutes:
+      namespaces:
+        from: Selector
+        selector:
+          matchLabels:
+            gateway.fahrican.com/management: allowed
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: management-https-redirect
+  namespace: network-services
+spec:
+  parentRefs:
+  - name: management
+    sectionName: http
+  hostnames:
+  - grafana.cloud.fahrican.com
+  - auth.cloud.fahrican.com
+  rules:
+  - filters:
+    - type: RequestRedirect
+      requestRedirect:
+        scheme: https
+        statusCode: 301

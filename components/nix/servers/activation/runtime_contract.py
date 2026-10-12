@@ -15,7 +15,7 @@ import yaml
 
 
 CONTRACT_PATH = Path(
-    "deployments/homelab/cloud/undercloud/82-services-cluster/runtime-contract.yaml"
+    "deployments/homelab/credentials/runtime-contract.yaml"
 )
 KEY_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]+$")
 

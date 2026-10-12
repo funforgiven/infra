@@ -1,0 +1,336 @@
+{
+  "kubernetes": {
+    "url": "https://raw.githubusercontent.com/kubernetes/kubernetes/v1.36.4/api/openapi-spec/swagger.json",
+    "sha256": "dcede2063da1d7ad62ecb5af8adb6d7fabd0b52385a7fa0048afb491dac90450"
+  },
+  "kubevirt": {
+    "version": "v1.9.0",
+    "archiveSHA256": "5d2998666ce522d18dd157800cea22bbb15a2fbadc6e2130864ba869b2259588",
+    "swaggerSHA256": "2c12b9c092941cff4dddabc65567e44a42c70d6b6c8a70d1c2a644f4960743c5"
+  },
+  "charts": {
+    "identity/zitadel": {
+      "url": "https://codeload.github.com/zitadel/zitadel-charts/tar.gz/b05bb603b2ffd0b3284a4b37bad613871bfed94a",
+      "ref": "b05bb603b2ffd0b3284a4b37bad613871bfed94a",
+      "archiveSHA256": "40b605788f0edf39e987d8328314a697c1bb7449b5f113ae94df4d7f6e3f1c14",
+      "dependencies": [
+        {
+          "url": "oci://registry-1.docker.io/bitnamicharts/postgresql:18.5.13",
+          "version": "18.5.13",
+          "archiveSHA256": "af98a8b6eb66e42add4c6e27d723ed843ff8ea838b9e870ebc199e3723055b10"
+        }
+      ],
+      "offlineValuesSchemas": [
+        {
+          "file": "values.schema.json",
+          "originalSHA256": "7c841b1e6f0d3ef3dbabca1f394d9e7e0e7c4c3f2ffda146048587a8537a957a",
+          "derivedSHA256": "8d158e341fb1affdbf61c0a0c731abbbb82d2d8281c006eb9c9e2eadaafdd9b7",
+          "externalSources": [
+            {
+              "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/817113f21a2643311cbc3e992bb44ffe1c416c54/v1.30.0/_definitions.json",
+              "sha256": "428559f7d50d8624ce29ea144ba079309a025168e8bb7714e954dcb80d50cd9a",
+              "sourceReference": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.30.0/_definitions.json"
+            }
+          ]
+        }
+      ]
+    },
+    "netbird-routing/netbird-operator": {
+      "url": "https://codeload.github.com/netbirdio/kubernetes-operator/tar.gz/41d995671f55d790a4f4e1c37da8c9e41a36abee",
+      "ref": "41d995671f55d790a4f4e1c37da8c9e41a36abee",
+      "archiveSHA256": "a7e1523a5ad37f6383afbb8b3edc2b63dacd16e21e25810f8f4d2a4d8388dbbe"
+    },
+    "cert-manager/cert-manager": {
+      "url": "oci://quay.io/jetstack/charts/cert-manager",
+      "ref": "sha256:15c0b46d9006ce8eb9ff14d1bf54d1bbfcc587bb9e24cd9fe186fb8fec56af1f",
+      "archiveSHA256": "c27101f3f3e2349fb4a9e704316105bf7b52ad73b8c8257d3498ef7f2f6a4adc"
+    },
+    "envoy-gateway-system/envoy-gateway": {
+      "url": "oci://docker.io/envoyproxy/gateway-helm",
+      "ref": "sha256:cfb34ff4266c87a394cd6be5c13607a2dd47083aef771368302eaeaa99c4a0a9",
+      "archiveSHA256": "4bb4e46f4d13d234b0ce785bee691c821b39ebd6884d80bdd69205bea9939d71"
+    },
+    "cnpg-system/barman-cloud": {
+      "url": "https://codeload.github.com/cloudnative-pg/charts/tar.gz/b111f4a8eddc6c66bd61524e3bf0ec06387b78ab",
+      "ref": "b111f4a8eddc6c66bd61524e3bf0ec06387b78ab",
+      "archiveSHA256": "4288c4fd3dab2776164591c2983424e9050373b37fb18ad97be83dd86a23852b"
+    },
+    "cnpg-system/cloudnative-pg": {
+      "url": "https://codeload.github.com/cloudnative-pg/charts/tar.gz/d1b5ad60cee2d9432a9cc05627b42a8d8dc7bbae",
+      "ref": "d1b5ad60cee2d9432a9cc05627b42a8d8dc7bbae",
+      "archiveSHA256": "3018d417ca9ed4a55ac703cafcad5eb220e014b33ab6e11a9403301172912227",
+      "dependencies": [
+        {
+          "url": "https://github.com/cloudnative-pg/grafana-dashboards/releases/download/cluster-v0.0.5/cluster-0.0.5.tgz",
+          "version": "0.0.5",
+          "archiveSHA256": "6a464dac4267bb1a3699c08ef3ecf17ad5d5b77ed7b717e36282a6ac0d3d73dd"
+        }
+      ]
+    },
+    "services-observability/fluent-bit-collector": {
+      "url": "oci://ghcr.io/fluent/helm-charts/fluent-bit-collector",
+      "ref": "sha256:123bfa44d8402367138b3ba39d16e74c5fead51a68daad8082388618115aba92",
+      "archiveSHA256": "27ade6f7f57a414d0c3166ceeb4d8f5094630a917a6f5e6eb7de14903015753e"
+    },
+    "services-observability/kube-prometheus-stack": {
+      "url": "oci://ghcr.io/prometheus-community/charts/kube-prometheus-stack",
+      "ref": "sha256:db4805aa51d6566e6b628d71a6445be8a81ecd49701b99928c1a4cffc4132c1a",
+      "archiveSHA256": "0998b3fae8660cd9ea224caa1c7c4b5d2040d5a02c64e3cdfd3f48d184b50117"
+    },
+    "services-observability/loki": {
+      "url": "oci://ghcr.io/grafana-community/helm-charts/loki",
+      "ref": "sha256:7b785f8096f1eb03499d958280d65c634d6ecb5d9942a14d5302d7517d4c9fc4",
+      "archiveSHA256": "066756e9541507b665da700f3cf489cb990a9fab17b735845a60138a8e5c35fc"
+    },
+    "rook-ceph/ceph-csi-drivers": {
+      "url": "https://codeload.github.com/ceph/ceph-csi-operator/tar.gz/29a66b683aa8873001c729b7b120e18604cdb445",
+      "ref": "29a66b683aa8873001c729b7b120e18604cdb445",
+      "archiveSHA256": "83741558073367e05dad5594bd8daeafef728fe14dca83c84ce2ba10824ba9ad"
+    },
+    "rook-ceph/rook-ceph": {
+      "url": "oci://registry-1.docker.io/rook/rook-ceph",
+      "ref": "sha256:df8ebccb66165ff92aedf035cac9cd07eda9a44b92cb8f7f7570a7d7b5f19d84",
+      "archiveSHA256": "95bd3966bcf36b383b88e1996132642057e8fe4bc133b9681092c4ddec4dd0b2"
+    },
+    "velero/velero": {
+      "url": "https://github.com/vmware-tanzu/helm-charts/releases/download/velero-12.1.0/velero-12.1.0.tgz",
+      "ref": "12.1.0",
+      "archiveSHA256": "cd23589ad1b2d25cdd3220f6866b3f6f4c5683c4c09494e76a14700b33f81f83"
+    }
+  },
+  "calico": [
+    {
+      "file": "deployments/homelab/cluster/infrastructure/calico/vendor/operator.yaml",
+      "url": "https://raw.githubusercontent.com/projectcalico/calico/v3.33.0/manifests/tigera-operator.yaml",
+      "sha256": "aef423b36aef8cf86567f92bbe5eea4b4ca105a6fc7dbf43de599c6fa70388ba"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/calico/vendor/native-v3.yaml",
+      "url": "https://raw.githubusercontent.com/projectcalico/calico/v3.33.0/manifests/v3_projectcalico_org.yaml",
+      "sha256": "5306c2c6d9fd6762d804f9da51c049b8269c33498a364c5df0eed555aba026bd"
+    }
+  ],
+  "vendors": {
+    "files": [
+      {
+        "file": "deployments/homelab/cluster/infrastructure/metallb/vendor/install.yaml",
+        "url": "https://raw.githubusercontent.com/metallb/metallb/v0.16.1/config/manifests/metallb-native.yaml",
+        "sourceSHA256": "bf25feebb7582ca7df845efd52ffbc2960d6cbf4cfc972f47fded9f788b67f0b",
+        "localSHA256": "bf25feebb7582ca7df845efd52ffbc2960d6cbf4cfc972f47fded9f788b67f0b"
+      },
+      {
+        "file": "deployments/homelab/cluster/infrastructure/multus/vendor/multus.yaml",
+        "url": "https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/v4.3.1/deployments/multus-daemonset-thick.yml",
+        "sourceSHA256": "24fb29530b760d28126bba76bd91fac8fd74100b53d9fc65943c223e3a82be30",
+        "localSHA256": "24fb29530b760d28126bba76bd91fac8fd74100b53d9fc65943c223e3a82be30"
+      },
+      {
+        "file": "deployments/homelab/cluster/infrastructure/kubevirt/vendor/operator.yaml",
+        "url": "https://github.com/kubevirt/kubevirt/releases/download/v1.9.0/kubevirt-operator.yaml",
+        "sourceSHA256": "f11307caafc3c23ffedf9887d8beb5a4419e2694da242fa68f63d1ec820de2e0",
+        "localSHA256": "f11307caafc3c23ffedf9887d8beb5a4419e2694da242fa68f63d1ec820de2e0"
+      },
+      {
+        "file": "deployments/homelab/cluster/infrastructure/calico/vendor/operator.yaml",
+        "url": "https://raw.githubusercontent.com/projectcalico/calico/v3.33.0/manifests/tigera-operator.yaml",
+        "sourceSHA256": "aef423b36aef8cf86567f92bbe5eea4b4ca105a6fc7dbf43de599c6fa70388ba",
+        "localSHA256": "aef423b36aef8cf86567f92bbe5eea4b4ca105a6fc7dbf43de599c6fa70388ba"
+      },
+      {
+        "file": "deployments/homelab/cluster/infrastructure/calico/vendor/native-v3.yaml",
+        "url": "https://raw.githubusercontent.com/projectcalico/calico/v3.33.0/manifests/v3_projectcalico_org.yaml",
+        "sourceSHA256": "5306c2c6d9fd6762d804f9da51c049b8269c33498a364c5df0eed555aba026bd",
+        "localSHA256": "5306c2c6d9fd6762d804f9da51c049b8269c33498a364c5df0eed555aba026bd"
+      },
+      {
+        "file": "deployments/homelab/cluster/infrastructure/kubevirt/kubevirt.yaml",
+        "url": "https://github.com/kubevirt/kubevirt/releases/download/v1.9.0/kubevirt-cr.yaml",
+        "sourceSHA256": "43106136dbce3312bdbfdeae612aacafc6c12da518d233f90645b4685d84a2af",
+        "localSHA256": "c47d09494887ac735dc95ba164a459b6408df855201ecc48c331adc9f9d4f22d",
+        "customized": "Enable hardware virtualization, LiveMigration and bounded migration concurrency using the pinned versioned API."
+      },
+      {
+        "file": "deployments/homelab/cluster/infrastructure/rook/snapshots/vendor/snapshot.storage.k8s.io_volumesnapshotclasses.yaml",
+        "url": "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.5.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml",
+        "sourceSHA256": "75e6565aac2c0f2949ed13ea884bbaa388cb7be576b558b709cf1168e011828d",
+        "localSHA256": "75e6565aac2c0f2949ed13ea884bbaa388cb7be576b558b709cf1168e011828d"
+      },
+      {
+        "file": "deployments/homelab/cluster/infrastructure/rook/snapshots/vendor/snapshot.storage.k8s.io_volumesnapshotcontents.yaml",
+        "url": "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.5.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml",
+        "sourceSHA256": "895a3c1e73b60f06a0deb566dd123d01bdf1b2efc5d5ff5231ff8bbcf42dafc7",
+        "localSHA256": "895a3c1e73b60f06a0deb566dd123d01bdf1b2efc5d5ff5231ff8bbcf42dafc7"
+      },
+      {
+        "file": "deployments/homelab/cluster/infrastructure/rook/snapshots/vendor/snapshot.storage.k8s.io_volumesnapshots.yaml",
+        "url": "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.5.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml",
+        "sourceSHA256": "b032116e987fb1d7d93cec7d942833adeb9d95c9bdc7e00c10b280c2fe4a6c33",
+        "localSHA256": "b032116e987fb1d7d93cec7d942833adeb9d95c9bdc7e00c10b280c2fe4a6c33"
+      },
+      {
+        "file": "deployments/homelab/cluster/infrastructure/rook/snapshots/vendor/rbac-snapshot-controller.yaml",
+        "url": "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.5.0/deploy/kubernetes/snapshot-controller/rbac-snapshot-controller.yaml",
+        "sourceSHA256": "99c4ac480b6c9563be0d85599e29cc7b68b25a82d250b0e789726727551e8d38",
+        "localSHA256": "99c4ac480b6c9563be0d85599e29cc7b68b25a82d250b0e789726727551e8d38"
+      },
+      {
+        "file": "deployments/homelab/cluster/infrastructure/rook/snapshots/vendor/setup-snapshot-controller.yaml",
+        "url": "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.5.0/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml",
+        "sourceSHA256": "bab025e1fed9199c5d827f64febb572dd8b746928e48d656312a215bede74d92",
+        "localSHA256": "bab025e1fed9199c5d827f64febb572dd8b746928e48d656312a215bede74d92"
+      }
+    ],
+    "images": [
+      {
+        "image": "quay.io/metallb/controller",
+        "tag": "v0.16.1",
+        "digest": "sha256:f51ab515de9ccd20dc3dccb093e48df8adddac019326c456f449e55ba91b6420"
+      },
+      {
+        "image": "quay.io/metallb/speaker",
+        "tag": "v0.16.1",
+        "digest": "sha256:16561e96531e1852d5c229ad7fae6e994dcfa983ff7f4de6b6208b34a4e2ddbc"
+      },
+      {
+        "image": "registry.k8s.io/sig-storage/snapshot-controller",
+        "tag": "v8.5.0",
+        "digest": "sha256:74ca61ab13e978f03cf0f336a607281d15f04cda0a38a881306365473b28a3d8"
+      }
+    ]
+  },
+  "entrypoints": [
+    {
+      "path": "deployments/homelab/cluster/apps/factorio",
+      "resources": 7
+    },
+    {
+      "path": "deployments/homelab/cluster/apps/forge",
+      "resources": 70
+    },
+    {
+      "path": "deployments/homelab/cluster/apps/home-automation",
+      "resources": 28
+    },
+    {
+      "path": "deployments/homelab/cluster/apps/identity/database",
+      "resources": 12
+    },
+    {
+      "path": "deployments/homelab/cluster/apps/identity/server",
+      "resources": 5
+    },
+    {
+      "path": "deployments/homelab/cluster/apps/matrix",
+      "resources": 53
+    },
+    {
+      "path": "deployments/homelab/cluster/apps/media",
+      "resources": 42
+    },
+    {
+      "path": "deployments/homelab/cluster/apps/netbird/access",
+      "resources": 25
+    },
+    {
+      "path": "deployments/homelab/cluster/apps/netbird/operator",
+      "resources": 3
+    },
+    {
+      "path": "deployments/homelab/cluster/apps/netbird/server",
+      "resources": 25
+    },
+    {
+      "path": "deployments/homelab/cluster/apps/unifi",
+      "resources": 14
+    },
+    {
+      "path": "deployments/homelab/cluster/apps/valheim",
+      "resources": 6
+    },
+    {
+      "path": "deployments/homelab/cluster/apps/wallos",
+      "resources": 18
+    },
+    {
+      "path": "deployments/homelab/cluster/bootstrap/flux",
+      "resources": 35
+    },
+    {
+      "path": "deployments/homelab/cluster/infrastructure/backups",
+      "resources": 25
+    },
+    {
+      "path": "deployments/homelab/cluster/infrastructure/calico",
+      "resources": 48
+    },
+    {
+      "path": "deployments/homelab/cluster/infrastructure/ceph",
+      "resources": 3
+    },
+    {
+      "path": "deployments/homelab/cluster/infrastructure/controllers",
+      "resources": 13
+    },
+    {
+      "path": "deployments/homelab/cluster/infrastructure/databases",
+      "resources": 7
+    },
+    {
+      "path": "deployments/homelab/cluster/infrastructure/dns",
+      "resources": 6
+    },
+    {
+      "path": "deployments/homelab/cluster/infrastructure/gateway",
+      "resources": 21
+    },
+    {
+      "path": "deployments/homelab/cluster/infrastructure/kubevirt",
+      "resources": 11
+    },
+    {
+      "path": "deployments/homelab/cluster/infrastructure/load-balancers",
+      "resources": 4
+    },
+    {
+      "path": "deployments/homelab/cluster/infrastructure/metallb",
+      "resources": 26
+    },
+    {
+      "path": "deployments/homelab/cluster/infrastructure/multus",
+      "resources": 6
+    },
+    {
+      "path": "deployments/homelab/cluster/infrastructure/observability",
+      "resources": 17
+    },
+    {
+      "path": "deployments/homelab/cluster/infrastructure/rook",
+      "resources": 14
+    },
+    {
+      "path": "deployments/homelab/cluster/infrastructure/rook/snapshots",
+      "resources": 9
+    },
+    {
+      "path": "deployments/homelab/cluster/infrastructure/storage",
+      "resources": 2
+    },
+    {
+      "path": "deployments/homelab/cluster/infrastructure/synthetic-monitoring",
+      "resources": 5
+    },
+    {
+      "path": "deployments/homelab/cluster/infrastructure/velero",
+      "resources": 4
+    },
+    {
+      "path": "deployments/homelab/cluster",
+      "resources": 92
+    },
+    {
+      "path": "deployments/homelab/recovery",
+      "resources": 92
+    }
+  ],
+  "schemaCount": 481
+}

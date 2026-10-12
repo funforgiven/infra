@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: netbird-runtime
+    namespace: netbird
+type: kubernetes.io/basic-auth
+stringData:
+    username: ENC[AES256_GCM,data:6kms+3Qq2w==,iv:W1+qs2VLsbrXQV3he/v8yP6m7J+wpW0gdD9gTh+Rh1U=,tag:TluWQK0jCcHhzp7hod7vIA==,type:str]
+    password: ENC[AES256_GCM,data:zruUQM8NWat0Z8oufd2sbCpbjc5PTRYPFNneoNU3piQ60jKADIpcs0e9TPrcrMgAbRx+S1AvLDhPllfTGg+xoA==,iv:djDKlKQ3UYkIpFZrGRDZa8NYAmVOVfUWGVCDAWQ0Cj4=,tag:Dv8Blq9DduhtBEb0QgatKQ==,type:str]
+    config.yaml: ENC[AES256_GCM,data:yPRRaWkiZhwgIDuVsJacYmG0byxlO3sY/k9HyG58/FL4wcN/zZROIKBdwox/tJ/cDLui6JZ7zqH4hPI40oBaY49CWoCxcsjlQNVbDEbbNOnQkhg6h3JX0Pnr/DSi9iEU+VecpirMIyxmLgT/9skEg3m/BN/SKzvafnIRJt4xYmP+Hb0Q/Wix9hbutXAeimK1ho1Ej8B78HPZNgyveqT6TU+1DTqvzeayfswFNxOCmjhB/elaHu3Ir///gogQVQpkzXEZp1pnkL5oWuNXn7pjHAgrd5mLRwtCt8sMbCI7TKyYPrSVVDmC9kgvsjPJPtN7zKqLDhBjhGCXu3mmFHFQ54rdR+utA0R7n+S832fLl1MAhZFqbXLGu8iYnjewJMk4/N36JWnRNPb5lSlmiMBxqDubk8jfioHbzt9UDOGueMuKGSHNREg6Mp6d0Uwkv0ibhM7rVY0iEs5nsr2uRQtWXEza7vu/MrK+k3Y4oS8dBaVyuRRcehouUbO8MmmJYXR2tIzX2QXuEwpUH+/iYczqxXGrmu/zHkzCigZUXWPofa/mwTsCQQL32TmRymULjadzelBCvSqNUvwEg4wpyTk9nDuU9agxe5M+AfDiGrbe4nfQ5MitZEZouYN3oH9XGFxEQaVhBPsUeinMMllZXYEnzJat01p4fn74GzzWJGPYWpyL9PIshiKlKtV9eC97+NY0HcZ+EmTLdMB3bnEU6SUjViStj2/RPs7M/7Gl2RQBRDzrOGxd0PUCxn/YETNIad1u8O/eJGlTzBMCdK8qDk0fVFokjTe09yd+mbvqmar41EmkpwMkfzHzLPPYFmc14OoKp3JXZYVNEnso6V3qyQCbaaHLrC5vvDpWB9ZofTNy2G6+G1Y/XthPvo+TXT7mxs9dXUNYO5VtKigfA9ux0uJcTC1drBViAOhbhVPNRPxy6zUaC/SbS6Zf5EqmXH/VM3aJGHK0QcmGnn1eSsikZsictdxa+SNK5f8UwXj/LgYKr6AHBGNxhTUbV8HQEpbdUxVMGWTajwLIvW4QURPEEY77qvLsEdxbfBA0BZd7R4aYaTnsN5h3BFEM43Vh+3fR6Ush2GhxVdvenavmhEwgpzlwpFxuebJ5FZvP0Hgvzluw79xe0uMyGt5IEQAo4jRMnTWKpu1GbphgioPWX7GDz+4RxLDQOfFE2iLRHeaF/txcn+z03leqM2eziYeLmNISF6/sbfxNf/CN39RhDK/KqNOC8v6TggEIhLDfccaz9rwbqPUSm+yIKxSid0S4S/CdiEEkepkqlpZui83TFrC9oQi8aDleX2pZp67MsEP7UjxXB1WPC17lj1u32VmJStb2eV8eezkBrQH3hurCBBG0LH9XuMvssPM91ct415JSNHQuY7Jr+N6uJVw3eh+hZs6tDQ8yiZYR4BLwyEwV2ngijIOFeSMYF8JYp/2eBhK1Mcq9q6GAS1Xtu5ut+s1678SAZSNet8ICcIEU9qoAghxQ495WmIBoJuhH6IF1mmgTxgeSl4rwsCvrjUIz3XNNvmdVlICmdeko/0OAka7su4Y14cYobhUYtrGqJjnL4/HRptL9OvioQ16Nyx9wb7oWy/Y6RD57UEgimxHp8AR8lvreOH5GgacizlFoyMCrN0cy1SROKeam95jCIOWDZotXbygxp068LnldWFJVH2vJ82xE/5oac/oZZyxu1SfFY3DMJV9fj6P38kXo74danuFul3Ov+18GUgJC2rK2u/T5vIy7hmA20G8hP8xH+WWWNCl1zePGAgw1iBpWFL/CutCWIhOqbZNKYc+xVgHVSf9K8VIJarMTaX96qqgDgpZkUk+3I8yEnVctdB7sW8wopk7uFGMd6z11mti/hCV2eRrdgU3vMXRh9jfTlAKzKJ7u9zsmr0ts43IAulF+dZ9MaRG2kSxrh8bjRCbqF45uK4iPdek0B/BSe8WQhWtz85an+ZC1nd2VrOIxfnORHWPwZ8GgmDbqstrQKCXFKnbDTIlxwF9xNhup9g0BW3grVmLkxjUseKBUkF53G4fgLFSePAR35ILzYPSa54oOxIQN,iv:auFsF28pJeItJxYP2C2BU9SIO0cvBvj6ndFDOFQ+uWM=,tag:/YSXa/4g56zh3N6ggPL4FA==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBPMG1ielc5T0NMZWwraTFs
+            WGE2K21FSDJXL0hueFNnbHZ5MVRPZmRjMEhvCmxRTUZoWjRuZUZWbzZNZnA4K1dK
+            VGF3YVJ1M2JFckNGL1l4M1M1b21TRXMKLS0tIE9hcmN5b0JRUWd3ZXZtU2RyWHVz
+            UnhoekpabVpWaHdVRkdBMmdrdFBYdHMK5hEfVvnwwF52Gbgy21a6b4g1lxrzB/KU
+            N7sG4DHIeuBecMEyRWuVguy/wDXrRL8ScKHttTmV0DK7Shz6Wfg2AA==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBRNDZEZ3BkNCtTeFhHbHZO
+            VFY2b0F0dEhORjV5M2U3Mnh4RE1YSzdYTHcwCnQrQlBiRlNSdEFWcG5meUlUS2tv
+            QlQ0NGRRNFRYN24rTm1VcmhNRVdkdHcKLS0tIHRjYVhDM0I1MCtIODJiVHJQSGxs
+            elMwT1oxejkzUkgzTFJYM1pseGN5b2sKW57q0y+riJ+3q/b+D79Q6WQNH10Uk3Wx
+            4fVPbLxlLLCxuArbr+o6ZooMecKBhUCOz2X2NG4iA85ZFNKb+hPvAw==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age10n9tyln0hwpdmxpe90af6kwtzrplgp9kq6qy58mnak4mugjcwy6s8w4es7
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-10-12T01:18:59Z"
+    mac: ENC[AES256_GCM,data:YyVYZmPNVOoFjmLMM/kn82W8oQuyQ9My3etItp71rpQne2dMOzwZYYLuyEmG8BaUwR6Ssxk/Y94PEYKis7WcHo6qsS+AgEfcGxv5y4c806Bb6KWZ8LcRT/kMwVOuNmvRwug9m+2WK3vguXyzT92kZuDWBuxeCQwbdZhH7acg/H4=,iv:AlZbm14Gy/G46eePRFdaxfRKG1ZS8jTW73MRrSjrDXo=,tag:NcLiuaWgCafqz6o5u4B/vA==,type:str]
+    version: 3.13.3

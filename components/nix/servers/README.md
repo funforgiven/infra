@@ -1,72 +1,27 @@
-# Service hosts
+# NixOS physical servers and independent mail
 
-This component defines the NixOS service hosts and their shared backup and
-alerting modules. The current Home Assistant host is built from this flake.
-Mail uses the separate AWS configuration under
-`components/cloud/services/mail-aws/`.
+`deployments/homelab/hosts/` declares pecorino, taleggio and asiago as NixOS/K3s
+servers with embedded etcd, preserved SSH identities, dedicated SOPS recipient,
+25 Gb/s LACP/VLAN networking and mirrored-SATA disko. Their six NVMe disks are
+outside disko and belong to Rook-Ceph. Home automation runs as Kubernetes pods;
+UniFi retains a supported Ubuntu guest managed by KubeVirt. Mail remains on its
+independent aarch64 AWS NixOS host.
 
-The service accounts use the pinned SSH key and have no login password.
+The installation and credential-seeding commands are in
+[RUNBOOK.md](../../../docs/migration/RUNBOOK.md). Required independent exports,
+database recovery, guest and IoT state are in
+[DATA-MIGRATION.md](../../../docs/migration/DATA-MIGRATION.md).
+The migration branch performs no live installation or enrollment by itself.
 
-## Deploy host secrets
+Each physical server takes K3s etcd snapshots and sends them to the declared
+off-server Restic prefix using the preserved B2 credential and dedicated etcd
+password. New repository initialization is an explicit future step; the backup
+service deliberately has `initialize=false`. Recovery requires the snapshot,
+matching K3s token, TLS/bootstrap state and host identities together. Test a
+fresh backup and independent restore before qualifying this path.
 
-Provider credentials are first stored as SOPS ciphertext. Locally generated
-passwords are written directly to SOPS. To install one declared profile on a
-host, run:
-
-```sh
-nix run .#enroll-service-host-secrets -- SSH_TARGET PROFILE
-```
-
-The command decrypts only the selected profile and streams mode-`0400` files to
-the host over SSH. It does not put values in command arguments. Available
-profiles and credential-rotation procedures are documented in the
-[service operations guide](../../../deployments/homelab/cloud/services/ACTIVATION.md).
-
-## Off-site backups
-
-Each stateful NixOS host declares its Restic paths and retention in Nix. The
-backup unit starts only when these root-owned files exist:
-
-- `/var/lib/backup-bootstrap/repository`
-- `/var/lib/backup-bootstrap/password`
-- `/var/lib/backup-bootstrap/environment`
-
-Every host has a separate Backblaze application key restricted to its own
-prefix in the `fahrican-cloud-recovery` bucket. Initialize a new empty prefix
-once, then run and restore the first backup before placing important data on the
-host:
-
-```sh
-nix run .#initialize-services-restic -- check
-nix run .#initialize-services-restic -- apply
-```
-
-The timer runs daily and retains 14 daily, 8 weekly, 12 monthly, and 3 yearly
-snapshots.
-
-After the HAOS migration, Home Assistant uses its native encrypted backups.
-Keep the old Restic path and NixOS root volume until an isolated HAOS restore has
-succeeded.
-
-## Alerts
-
-Service hosts expose node and systemd metrics on TCP 9100 to the services
-subnet. A successful Restic run updates a node-exporter textfile metric; the
-services cluster alerts if the exporter is unavailable or the last successful
-backup is older than 26 hours.
-
-Critical units use the `servicesPlatform.alerting.transport` selected by the
-qualified Matrix rollout: Telegram initially, both transports during observation,
-then encrypted Matrix. The `matrix-monitoring:HOST_ID` enrollment profile installs
-a root-owned `/var/lib/monitoring-bootstrap/matrix.json` containing the host's
-scoped intake credential and independent TLS email fallback. The current native
-host monitors `quickemu-macos`. See the
-[Matrix runbook](../../../deployments/homelab/cloud/services/47-matrix/README.md).
-
-During Telegram and dual delivery, the monitoring profile supplies:
-
-- `/var/lib/monitoring-bootstrap/bot-token`
-- `/var/lib/monitoring-bootstrap/chat-id`
-
-The AWS mail appliance uses public protocol probes and CloudWatch alarms instead
-of this host profile.
+The retained service credential tools still enroll the declared native UniFi
+and independent mail backup/monitoring profiles. Read
+[secret recovery](../../../secrets/README.md) before changing credentials.
+Matrix/Telegram host alerts, node-exporter textfiles and application backup
+qualification remain part of the target observability configuration.

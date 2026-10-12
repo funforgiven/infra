@@ -102,7 +102,7 @@ class AwsMailCredentialsTest(unittest.TestCase):
         keys = ("private_key", "preshared_key", "direct_private_key", "direct_preshared_key")
         values = dict.fromkeys(keys, "a" * 43 + "=")
         run.return_value = subprocess.CompletedProcess([], 0, json.dumps(values), "")
-        token_file = Path("deployments/homelab/cloud/undercloud/38-service-api-foundation/acme/cloudflare-token.sops.yaml")
+        token_file = Path("deployments/homelab/credentials/cloudflare-token.sops.yaml")
         self.store.values[(token_file, "api-token")] = "test-dns-token"
         self.credentials.publish_vpn()
         secret_id, payload = publish.call_args.args

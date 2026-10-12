@@ -2,7 +2,7 @@ _: {
   perSystem =
     { pkgs, ... }:
     let
-      source = ../../cloud/services/matrix;
+      source = ../../homelab/services/matrix;
       python = pkgs.python3.withPackages (ps: [
         ps.pyyaml
         ps.aiohttp
@@ -11,8 +11,6 @@ _: {
       ]);
       accessPython = pkgs.python3.withPackages (ps: [
         ps.pyyaml
-        ps.python-openstackclient
-        ps.python-magnumclient
       ]);
       proxyConfig = pkgs.runCommand "matrix-proxy-config" { } ''
         mkdir -p "$out/etc"

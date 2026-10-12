@@ -1,0 +1,79 @@
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: services-lan
+  namespace: unifi
+spec:
+  config: '{"cniVersion": "0.3.1", "name": "services-lan", "plugins": [{"type": "bridge", "bridge": "br-services",
+    "disableContainerInterface": true}]}'
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: unifi-root
+  namespace: unifi
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  storageClassName: ceph-block
+  accessModes:
+  - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 80Gi
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: unifi
+  namespace: unifi
+spec:
+  runStrategy: Always
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: unifi-vm
+    spec:
+      domain:
+        cpu:
+          cores: 2
+        memory:
+          guest: 4Gi
+        resources:
+          requests:
+            memory: 4Gi
+            cpu: '1'
+        devices:
+          disks:
+          - name: root
+            disk:
+              bus: virtio
+            bootOrder: 1
+          - name: cloud-init
+            disk:
+              bus: virtio
+          interfaces:
+          - name: default
+            masquerade: {}
+            macAddress: 02:00:21:40:01:28
+          - name: services
+            bridge: {}
+            macAddress: 02:00:21:40:01:27
+      networks:
+      - name: default
+        pod: {}
+      - name: services
+        multus:
+          networkName: services-lan
+      volumes:
+      - name: root
+        persistentVolumeClaim:
+          claimName: unifi-root
+      - name: cloud-init
+        cloudInitNoCloud:
+          secretRef:
+            name: unifi-cloud-init
+          networkDataSecretRef:
+            name: unifi-cloud-init
+      terminationGracePeriodSeconds: 120
