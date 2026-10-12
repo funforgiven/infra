@@ -118,8 +118,23 @@ in
     };
   };
   services.resolved.enable = true;
+  # The CRS510 DAC ports use fixed 25 Gb/s and RS FEC on both members.
+  # Apply FEC after link setup and before udev makes the NIC available to networkd.
+  services.udev.extraRules = ''
+    ACTION=="add", SUBSYSTEM=="net", DRIVERS=="ice", RUN+="${pkgs.ethtool}/bin/ethtool --set-fec $name encoding rs"
+  '';
   systemd.network = {
     enable = true;
+    links."10-fabric" = {
+      matchConfig.Driver = "ice";
+      linkConfig = {
+        AutoNegotiation = false;
+        BitsPerSecond = "25G";
+        Duplex = "full";
+        MTUBytes = "9000";
+        NamePolicy = "keep kernel database onboard slot path";
+      };
+    };
     netdevs = {
       "10-bond" = {
         netdevConfig = {
