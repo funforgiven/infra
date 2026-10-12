@@ -81,3 +81,14 @@ spec:
       port: 465
     - protocol: TCP
       port: 587
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: envoy-gateway-system
+      podSelector:
+        matchLabels:
+          gateway.envoyproxy.io/owning-gateway-name: management
+          gateway.envoyproxy.io/owning-gateway-namespace: network-services
+    ports:
+    - protocol: TCP
+      port: 10443

@@ -1,0 +1,32 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: cilium-chart
+  namespace: kube-system
+spec:
+  interval: 24h
+  url: oci://quay.io/cilium/charts/cilium
+  ref:
+    digest: sha256:a7c12d330dd96bfcda3bf057b24be8f36566c34868265f930f776dff6f42d838
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cilium
+  namespace: kube-system
+spec:
+  interval: 30m
+  timeout: 20m
+  releaseName: cilium
+  chartRef:
+    kind: OCIRepository
+    name: cilium-chart
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+  - kind: ConfigMap
+    name: cilium-values

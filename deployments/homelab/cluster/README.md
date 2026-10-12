@@ -1,6 +1,6 @@
 # One homelab Kubernetes cluster
 
-The three NixOS hosts run K3s with embedded etcd, Calico native v3 policies,
+The three NixOS hosts run K3s with embedded etcd, Cilium with kube-proxy replacement,
 MetalLB, Multus and direct Rook-Ceph CSI. Flux owns the semantic dependency
 graph in `waves.yaml`; folder numbering is unnecessary. Independent identity,
 DNS, AWS mail and NetBird providers run from the workstation with preserved

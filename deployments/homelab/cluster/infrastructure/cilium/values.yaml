@@ -1,0 +1,69 @@
+kubeProxyReplacement: true
+k8sServiceHost: 10.21.20.128
+k8sServicePort: '6443'
+routingMode: tunnel
+tunnelProtocol: vxlan
+MTU: 1450
+devices:
+- bond0.20
+- bond0.40
+ipam:
+  mode: cluster-pool
+  operator:
+    clusterPoolIPv4PodCIDRList:
+    - 10.100.0.0/16
+    clusterPoolIPv4MaskSize: 24
+ipv4:
+  enabled: true
+ipv6:
+  enabled: false
+cni:
+  exclusive: false
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  binPath: /opt/cni/bin
+  confPath: /etc/cni/net.d
+cgroup:
+  autoMount:
+    enabled: false
+  hostRoot: /sys/fs/cgroup
+bpf:
+  masquerade: true
+  mapDynamicSizeRatio: 0.001
+  preallocateMaps: false
+socketLB:
+  hostNamespaceOnly: true
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 1536Mi
+operator:
+  replicas: 2
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+envoy:
+  enabled: false
+l7Proxy: false
+gatewayAPI:
+  enabled: false
+ingressController:
+  enabled: false
+l2announcements:
+  enabled: false
+bgpControlPlane:
+  enabled: false
+defaultLBServiceIPAM: none
+hubble:
+  enabled: true
+  relay:
+    enabled: false
+  ui:
+    enabled: false

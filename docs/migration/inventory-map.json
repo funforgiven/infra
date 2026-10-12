@@ -1411,15 +1411,7 @@
         "deployments/homelab/cluster/infrastructure/backups"
       ],
       "reason": "Application schedules, hooks and restore qualification remain; cloud storage handles are never rebound to a different CSI driver.",
-      "matchingTargetObjects": [
-        {
-          "apiVersion": "projectcalico.org/v3",
-          "kind": "NetworkPolicy",
-          "namespace": "backup-qualification",
-          "name": "home-automation-restore",
-          "entrypoint": "deployments/homelab/cluster/infrastructure/backups"
-        }
-      ]
+      "matchingTargetObjects": []
     },
     {
       "apiVersion": "monitoring.coreos.com/v1",
@@ -4439,15 +4431,7 @@
         "deployments/homelab/cluster/apps/forge"
       ],
       "reason": "Forgejo repositories/database/LFS/packages, signing, Linux/Atollion CI, cache and app recovery remain; native Windows/macOS objects have explicit exceptions.",
-      "matchingTargetObjects": [
-        {
-          "apiVersion": "projectcalico.org/v3",
-          "kind": "NetworkPolicy",
-          "namespace": "forge-cache",
-          "name": "forge-cache",
-          "entrypoint": "deployments/homelab/cluster/apps/forge"
-        }
-      ]
+      "matchingTargetObjects": []
     },
     {
       "apiVersion": "monitoring.coreos.com/v1",
@@ -4739,15 +4723,7 @@
         "deployments/homelab/cluster/apps/forge"
       ],
       "reason": "Forgejo repositories/database/LFS/packages, signing, Linux/Atollion CI, cache and app recovery remain; native Windows/macOS objects have explicit exceptions.",
-      "matchingTargetObjects": [
-        {
-          "apiVersion": "projectcalico.org/v3",
-          "kind": "NetworkPolicy",
-          "namespace": "forge",
-          "name": "forge",
-          "entrypoint": "deployments/homelab/cluster/apps/forge"
-        }
-      ]
+      "matchingTargetObjects": []
     },
     {
       "apiVersion": "projectcalico.org/v3",
@@ -4760,15 +4736,7 @@
         "deployments/homelab/cluster/apps/forge"
       ],
       "reason": "Forgejo repositories/database/LFS/packages, signing, Linux/Atollion CI, cache and app recovery remain; native Windows/macOS objects have explicit exceptions.",
-      "matchingTargetObjects": [
-        {
-          "apiVersion": "projectcalico.org/v3",
-          "kind": "NetworkPolicy",
-          "namespace": "forge-ci",
-          "name": "ci-jobs",
-          "entrypoint": "deployments/homelab/cluster/apps/forge"
-        }
-      ]
+      "matchingTargetObjects": []
     },
     {
       "apiVersion": "storage.k8s.io/v1",
@@ -4802,15 +4770,7 @@
         "deployments/homelab/cluster/apps/forge"
       ],
       "reason": "Forgejo repositories/database/LFS/packages, signing, Linux/Atollion CI, cache and app recovery remain; native Windows/macOS objects have explicit exceptions.",
-      "matchingTargetObjects": [
-        {
-          "apiVersion": "projectcalico.org/v3",
-          "kind": "NetworkPolicy",
-          "namespace": "forge-restore",
-          "name": "isolate-recovery",
-          "entrypoint": "deployments/homelab/cluster/apps/forge"
-        }
-      ]
+      "matchingTargetObjects": []
     },
     {
       "apiVersion": "v1",
@@ -5495,15 +5455,7 @@
         "deployments/homelab/cluster/apps/forge"
       ],
       "reason": "Forgejo repositories/database/LFS/packages, signing, Linux/Atollion CI, cache and app recovery remain; native Windows/macOS objects have explicit exceptions.",
-      "matchingTargetObjects": [
-        {
-          "apiVersion": "projectcalico.org/v3",
-          "kind": "NetworkPolicy",
-          "namespace": "forge",
-          "name": "forge-snapshot-backup",
-          "entrypoint": "deployments/homelab/cluster/apps/forge"
-        }
-      ]
+      "matchingTargetObjects": []
     },
     {
       "apiVersion": "projectcalico.org/v3",
@@ -5516,15 +5468,7 @@
         "deployments/homelab/cluster/apps/forge"
       ],
       "reason": "Forgejo repositories/database/LFS/packages, signing, Linux/Atollion CI, cache and app recovery remain; native Windows/macOS objects have explicit exceptions.",
-      "matchingTargetObjects": [
-        {
-          "apiVersion": "projectcalico.org/v3",
-          "kind": "NetworkPolicy",
-          "namespace": "forge",
-          "name": "forge-snapshot-export",
-          "entrypoint": "deployments/homelab/cluster/apps/forge"
-        }
-      ]
+      "matchingTargetObjects": []
     },
     {
       "apiVersion": "v1",
@@ -5663,15 +5607,7 @@
         "deployments/homelab/cluster/apps/matrix"
       ],
       "reason": "Synapse, MAS, Element, PostgreSQL, media, signing/session keys and encrypted relay state remain.",
-      "matchingTargetObjects": [
-        {
-          "apiVersion": "projectcalico.org/v3",
-          "kind": "GlobalNetworkPolicy",
-          "namespace": "",
-          "name": "matrix-egress-enforcement",
-          "entrypoint": "deployments/homelab/cluster/apps/matrix"
-        }
-      ]
+      "matchingTargetObjects": []
     },
     {
       "apiVersion": "crd.projectcalico.org/v1",
@@ -5684,15 +5620,7 @@
         "deployments/homelab/cluster/apps/matrix"
       ],
       "reason": "Synapse, MAS, Element, PostgreSQL, media, signing/session keys and encrypted relay state remain.",
-      "matchingTargetObjects": [
-        {
-          "apiVersion": "projectcalico.org/v3",
-          "kind": "GlobalNetworkPolicy",
-          "namespace": "",
-          "name": "matrix-restore-isolation",
-          "entrypoint": "deployments/homelab/cluster/apps/matrix"
-        }
-      ]
+      "matchingTargetObjects": []
     },
     {
       "apiVersion": "v1",
@@ -6726,15 +6654,7 @@
         "deployments/homelab/cluster/apps/netbird"
       ],
       "reason": "NetBird server/PostgreSQL, STUN, Kubernetes operator, routing/DNS and access policies remain.",
-      "matchingTargetObjects": [
-        {
-          "apiVersion": "projectcalico.org/v3",
-          "kind": "GlobalNetworkPolicy",
-          "namespace": "",
-          "name": "netbird-routing-egress-enforcement",
-          "entrypoint": "deployments/homelab/cluster/apps/netbird/access"
-        }
-      ]
+      "matchingTargetObjects": []
     },
     {
       "apiVersion": "gateway.envoyproxy.io/v1alpha1",
@@ -7563,15 +7483,7 @@
         "deployments/homelab/cluster/apps/netbird"
       ],
       "reason": "NetBird server/PostgreSQL, STUN, Kubernetes operator, routing/DNS and access policies remain.",
-      "matchingTargetObjects": [
-        {
-          "apiVersion": "projectcalico.org/v3",
-          "kind": "GlobalNetworkPolicy",
-          "namespace": "",
-          "name": "netbird-egress-enforcement",
-          "entrypoint": "deployments/homelab/cluster/apps/netbird/server"
-        }
-      ]
+      "matchingTargetObjects": []
     },
     {
       "apiVersion": "monitoring.coreos.com/v1",
@@ -11539,12 +11451,12 @@
       "source": "deployments/homelab/cloud/undercloud/37-service-network/cilium-vip.yaml",
       "disposition": "replaced",
       "targets": [
-        "deployments/homelab/cluster/infrastructure/calico",
+        "deployments/homelab/cluster/infrastructure/cilium",
         "deployments/homelab/cluster/infrastructure/metallb",
         "deployments/homelab/cluster/infrastructure/load-balancers",
         "deployments/homelab/hosts/common.nix"
       ],
-      "reason": "Native Calico v3 policies, MetalLB announcements and NixOS VLANs replace mixed Cilium/service-network staging and host-cloud reconciliation.",
+      "reason": "Cilium pod networking and kube-proxy replacement, MetalLB announcements and NixOS VLANs replace cloud service-network staging and host-cloud reconciliation.",
       "matchingTargetObjects": []
     },
     {
@@ -11555,12 +11467,12 @@
       "source": "deployments/homelab/cloud/undercloud/37-service-network/cilium-vip.yaml",
       "disposition": "replaced",
       "targets": [
-        "deployments/homelab/cluster/infrastructure/calico",
+        "deployments/homelab/cluster/infrastructure/cilium",
         "deployments/homelab/cluster/infrastructure/metallb",
         "deployments/homelab/cluster/infrastructure/load-balancers",
         "deployments/homelab/hosts/common.nix"
       ],
-      "reason": "Native Calico v3 policies, MetalLB announcements and NixOS VLANs replace mixed Cilium/service-network staging and host-cloud reconciliation.",
+      "reason": "Cilium pod networking and kube-proxy replacement, MetalLB announcements and NixOS VLANs replace cloud service-network staging and host-cloud reconciliation.",
       "matchingTargetObjects": []
     },
     {
@@ -11571,12 +11483,12 @@
       "source": "deployments/homelab/cloud/undercloud/37-service-network/internal-dns.yaml",
       "disposition": "replaced",
       "targets": [
-        "deployments/homelab/cluster/infrastructure/calico",
+        "deployments/homelab/cluster/infrastructure/cilium",
         "deployments/homelab/cluster/infrastructure/metallb",
         "deployments/homelab/cluster/infrastructure/load-balancers",
         "deployments/homelab/hosts/common.nix"
       ],
-      "reason": "Native Calico v3 policies, MetalLB announcements and NixOS VLANs replace mixed Cilium/service-network staging and host-cloud reconciliation.",
+      "reason": "Cilium pod networking and kube-proxy replacement, MetalLB announcements and NixOS VLANs replace cloud service-network staging and host-cloud reconciliation.",
       "matchingTargetObjects": [
         {
           "apiVersion": "v1",
@@ -11595,12 +11507,12 @@
       "source": "deployments/homelab/cloud/undercloud/37-service-network/internal-dns.yaml",
       "disposition": "replaced",
       "targets": [
-        "deployments/homelab/cluster/infrastructure/calico",
+        "deployments/homelab/cluster/infrastructure/cilium",
         "deployments/homelab/cluster/infrastructure/metallb",
         "deployments/homelab/cluster/infrastructure/load-balancers",
         "deployments/homelab/hosts/common.nix"
       ],
-      "reason": "Native Calico v3 policies, MetalLB announcements and NixOS VLANs replace mixed Cilium/service-network staging and host-cloud reconciliation.",
+      "reason": "Cilium pod networking and kube-proxy replacement, MetalLB announcements and NixOS VLANs replace cloud service-network staging and host-cloud reconciliation.",
       "matchingTargetObjects": [
         {
           "apiVersion": "v1",
@@ -11619,12 +11531,12 @@
       "source": "deployments/homelab/cloud/undercloud/37-service-network/internal-dns.yaml",
       "disposition": "replaced",
       "targets": [
-        "deployments/homelab/cluster/infrastructure/calico",
+        "deployments/homelab/cluster/infrastructure/cilium",
         "deployments/homelab/cluster/infrastructure/metallb",
         "deployments/homelab/cluster/infrastructure/load-balancers",
         "deployments/homelab/hosts/common.nix"
       ],
-      "reason": "Native Calico v3 policies, MetalLB announcements and NixOS VLANs replace mixed Cilium/service-network staging and host-cloud reconciliation.",
+      "reason": "Cilium pod networking and kube-proxy replacement, MetalLB announcements and NixOS VLANs replace cloud service-network staging and host-cloud reconciliation.",
       "matchingTargetObjects": [
         {
           "apiVersion": "apps/v1",
@@ -11643,12 +11555,12 @@
       "source": "deployments/homelab/cloud/undercloud/37-service-network/internal-dns.yaml",
       "disposition": "replaced",
       "targets": [
-        "deployments/homelab/cluster/infrastructure/calico",
+        "deployments/homelab/cluster/infrastructure/cilium",
         "deployments/homelab/cluster/infrastructure/metallb",
         "deployments/homelab/cluster/infrastructure/load-balancers",
         "deployments/homelab/hosts/common.nix"
       ],
-      "reason": "Native Calico v3 policies, MetalLB announcements and NixOS VLANs replace mixed Cilium/service-network staging and host-cloud reconciliation.",
+      "reason": "Cilium pod networking and kube-proxy replacement, MetalLB announcements and NixOS VLANs replace cloud service-network staging and host-cloud reconciliation.",
       "matchingTargetObjects": [
         {
           "apiVersion": "policy/v1",
@@ -11667,12 +11579,12 @@
       "source": "deployments/homelab/cloud/undercloud/37-service-network/internal-dns.yaml",
       "disposition": "replaced",
       "targets": [
-        "deployments/homelab/cluster/infrastructure/calico",
+        "deployments/homelab/cluster/infrastructure/cilium",
         "deployments/homelab/cluster/infrastructure/metallb",
         "deployments/homelab/cluster/infrastructure/load-balancers",
         "deployments/homelab/hosts/common.nix"
       ],
-      "reason": "Native Calico v3 policies, MetalLB announcements and NixOS VLANs replace mixed Cilium/service-network staging and host-cloud reconciliation.",
+      "reason": "Cilium pod networking and kube-proxy replacement, MetalLB announcements and NixOS VLANs replace cloud service-network staging and host-cloud reconciliation.",
       "matchingTargetObjects": [
         {
           "apiVersion": "v1",
@@ -11691,12 +11603,12 @@
       "source": "deployments/homelab/cloud/undercloud/37-service-network/internal-dns.yaml",
       "disposition": "replaced",
       "targets": [
-        "deployments/homelab/cluster/infrastructure/calico",
+        "deployments/homelab/cluster/infrastructure/cilium",
         "deployments/homelab/cluster/infrastructure/metallb",
         "deployments/homelab/cluster/infrastructure/load-balancers",
         "deployments/homelab/hosts/common.nix"
       ],
-      "reason": "Native Calico v3 policies, MetalLB announcements and NixOS VLANs replace mixed Cilium/service-network staging and host-cloud reconciliation.",
+      "reason": "Cilium pod networking and kube-proxy replacement, MetalLB announcements and NixOS VLANs replace cloud service-network staging and host-cloud reconciliation.",
       "matchingTargetObjects": [
         {
           "apiVersion": "v1",
@@ -11715,12 +11627,12 @@
       "source": "deployments/homelab/cloud/undercloud/37-service-network/kustomization.yaml",
       "disposition": "consolidated",
       "targets": [
-        "deployments/homelab/cluster/infrastructure/calico",
+        "deployments/homelab/cluster/infrastructure/cilium",
         "deployments/homelab/cluster/infrastructure/metallb",
         "deployments/homelab/cluster/infrastructure/load-balancers",
         "deployments/homelab/hosts/common.nix"
       ],
-      "reason": "Native Calico v3 policies, MetalLB announcements and NixOS VLANs replace mixed Cilium/service-network staging and host-cloud reconciliation. This entry is a local Kustomize configuration document, not a live API object.",
+      "reason": "Cilium pod networking and kube-proxy replacement, MetalLB announcements and NixOS VLANs replace cloud service-network staging and host-cloud reconciliation. This entry is a local Kustomize configuration document, not a live API object.",
       "matchingTargetObjects": []
     },
     {
@@ -11731,12 +11643,12 @@
       "source": "deployments/homelab/cloud/undercloud/37-service-network/monitoring.yaml",
       "disposition": "replaced",
       "targets": [
-        "deployments/homelab/cluster/infrastructure/calico",
+        "deployments/homelab/cluster/infrastructure/cilium",
         "deployments/homelab/cluster/infrastructure/metallb",
         "deployments/homelab/cluster/infrastructure/load-balancers",
         "deployments/homelab/hosts/common.nix"
       ],
-      "reason": "Native Calico v3 policies, MetalLB announcements and NixOS VLANs replace mixed Cilium/service-network staging and host-cloud reconciliation.",
+      "reason": "Cilium pod networking and kube-proxy replacement, MetalLB announcements and NixOS VLANs replace cloud service-network staging and host-cloud reconciliation.",
       "matchingTargetObjects": []
     },
     {
@@ -11747,12 +11659,12 @@
       "source": "deployments/homelab/cloud/undercloud/37-service-network/monitoring.yaml",
       "disposition": "replaced",
       "targets": [
-        "deployments/homelab/cluster/infrastructure/calico",
+        "deployments/homelab/cluster/infrastructure/cilium",
         "deployments/homelab/cluster/infrastructure/metallb",
         "deployments/homelab/cluster/infrastructure/load-balancers",
         "deployments/homelab/hosts/common.nix"
       ],
-      "reason": "Native Calico v3 policies, MetalLB announcements and NixOS VLANs replace mixed Cilium/service-network staging and host-cloud reconciliation.",
+      "reason": "Cilium pod networking and kube-proxy replacement, MetalLB announcements and NixOS VLANs replace cloud service-network staging and host-cloud reconciliation.",
       "matchingTargetObjects": []
     },
     {
@@ -11763,12 +11675,12 @@
       "source": "deployments/homelab/cloud/undercloud/37-service-network/namespace.yaml",
       "disposition": "replaced",
       "targets": [
-        "deployments/homelab/cluster/infrastructure/calico",
+        "deployments/homelab/cluster/infrastructure/cilium",
         "deployments/homelab/cluster/infrastructure/metallb",
         "deployments/homelab/cluster/infrastructure/load-balancers",
         "deployments/homelab/hosts/common.nix"
       ],
-      "reason": "Native Calico v3 policies, MetalLB announcements and NixOS VLANs replace mixed Cilium/service-network staging and host-cloud reconciliation.",
+      "reason": "Cilium pod networking and kube-proxy replacement, MetalLB announcements and NixOS VLANs replace cloud service-network staging and host-cloud reconciliation.",
       "matchingTargetObjects": [
         {
           "apiVersion": "v1",
@@ -12538,7 +12450,7 @@
       "disposition": "removed",
       "targets": [
         "deployments/homelab/hosts",
-        "deployments/homelab/cluster/infrastructure/calico"
+        "deployments/homelab/cluster/infrastructure/cilium"
       ],
       "reason": "OpenStack MariaDB, RabbitMQ, OVN databases and cloud shared infrastructure are unnecessary when apps and CSI run directly on bare-metal Kubernetes; archive their state for rollback.",
       "matchingTargetObjects": []
@@ -12552,7 +12464,7 @@
       "disposition": "removed",
       "targets": [
         "deployments/homelab/hosts",
-        "deployments/homelab/cluster/infrastructure/calico"
+        "deployments/homelab/cluster/infrastructure/cilium"
       ],
       "reason": "OpenStack MariaDB, RabbitMQ, OVN databases and cloud shared infrastructure are unnecessary when apps and CSI run directly on bare-metal Kubernetes; archive their state for rollback. This entry is a local Kustomize configuration document, not a live API object.",
       "matchingTargetObjects": []
@@ -12566,7 +12478,7 @@
       "disposition": "removed",
       "targets": [
         "deployments/homelab/hosts",
-        "deployments/homelab/cluster/infrastructure/calico"
+        "deployments/homelab/cluster/infrastructure/cilium"
       ],
       "reason": "OpenStack MariaDB, RabbitMQ, OVN databases and cloud shared infrastructure are unnecessary when apps and CSI run directly on bare-metal Kubernetes; archive their state for rollback.",
       "matchingTargetObjects": []
@@ -12580,7 +12492,7 @@
       "disposition": "removed",
       "targets": [
         "deployments/homelab/hosts",
-        "deployments/homelab/cluster/infrastructure/calico"
+        "deployments/homelab/cluster/infrastructure/cilium"
       ],
       "reason": "OpenStack MariaDB, RabbitMQ, OVN databases and cloud shared infrastructure are unnecessary when apps and CSI run directly on bare-metal Kubernetes; archive their state for rollback.",
       "matchingTargetObjects": []
@@ -12594,7 +12506,7 @@
       "disposition": "removed",
       "targets": [
         "deployments/homelab/hosts",
-        "deployments/homelab/cluster/infrastructure/calico"
+        "deployments/homelab/cluster/infrastructure/cilium"
       ],
       "reason": "OpenStack MariaDB, RabbitMQ, OVN databases and cloud shared infrastructure are unnecessary when apps and CSI run directly on bare-metal Kubernetes; archive their state for rollback.",
       "matchingTargetObjects": []
@@ -12608,7 +12520,7 @@
       "disposition": "removed",
       "targets": [
         "deployments/homelab/hosts",
-        "deployments/homelab/cluster/infrastructure/calico"
+        "deployments/homelab/cluster/infrastructure/cilium"
       ],
       "reason": "OpenStack MariaDB, RabbitMQ, OVN databases and cloud shared infrastructure are unnecessary when apps and CSI run directly on bare-metal Kubernetes; archive their state for rollback.",
       "matchingTargetObjects": []
@@ -12622,7 +12534,7 @@
       "disposition": "removed",
       "targets": [
         "deployments/homelab/hosts",
-        "deployments/homelab/cluster/infrastructure/calico"
+        "deployments/homelab/cluster/infrastructure/cilium"
       ],
       "reason": "OpenStack MariaDB, RabbitMQ, OVN databases and cloud shared infrastructure are unnecessary when apps and CSI run directly on bare-metal Kubernetes; archive their state for rollback.",
       "matchingTargetObjects": []
@@ -12636,7 +12548,7 @@
       "disposition": "removed",
       "targets": [
         "deployments/homelab/hosts",
-        "deployments/homelab/cluster/infrastructure/calico"
+        "deployments/homelab/cluster/infrastructure/cilium"
       ],
       "reason": "OpenStack MariaDB, RabbitMQ, OVN databases and cloud shared infrastructure are unnecessary when apps and CSI run directly on bare-metal Kubernetes; archive their state for rollback.",
       "matchingTargetObjects": []
@@ -12650,7 +12562,7 @@
       "disposition": "removed",
       "targets": [
         "deployments/homelab/hosts",
-        "deployments/homelab/cluster/infrastructure/calico"
+        "deployments/homelab/cluster/infrastructure/cilium"
       ],
       "reason": "OpenStack MariaDB, RabbitMQ, OVN databases and cloud shared infrastructure are unnecessary when apps and CSI run directly on bare-metal Kubernetes; archive their state for rollback.",
       "matchingTargetObjects": []
@@ -12664,7 +12576,7 @@
       "disposition": "removed",
       "targets": [
         "deployments/homelab/hosts",
-        "deployments/homelab/cluster/infrastructure/calico"
+        "deployments/homelab/cluster/infrastructure/cilium"
       ],
       "reason": "OpenStack MariaDB, RabbitMQ, OVN databases and cloud shared infrastructure are unnecessary when apps and CSI run directly on bare-metal Kubernetes; archive their state for rollback.",
       "matchingTargetObjects": []
@@ -12678,7 +12590,7 @@
       "disposition": "removed",
       "targets": [
         "deployments/homelab/hosts",
-        "deployments/homelab/cluster/infrastructure/calico"
+        "deployments/homelab/cluster/infrastructure/cilium"
       ],
       "reason": "OpenStack MariaDB, RabbitMQ, OVN databases and cloud shared infrastructure are unnecessary when apps and CSI run directly on bare-metal Kubernetes; archive their state for rollback.",
       "matchingTargetObjects": []
@@ -12692,7 +12604,7 @@
       "disposition": "removed",
       "targets": [
         "deployments/homelab/hosts",
-        "deployments/homelab/cluster/infrastructure/calico"
+        "deployments/homelab/cluster/infrastructure/cilium"
       ],
       "reason": "OpenStack MariaDB, RabbitMQ, OVN databases and cloud shared infrastructure are unnecessary when apps and CSI run directly on bare-metal Kubernetes; archive their state for rollback.",
       "matchingTargetObjects": []
@@ -12706,7 +12618,7 @@
       "disposition": "removed",
       "targets": [
         "deployments/homelab/hosts",
-        "deployments/homelab/cluster/infrastructure/calico"
+        "deployments/homelab/cluster/infrastructure/cilium"
       ],
       "reason": "OpenStack MariaDB, RabbitMQ, OVN databases and cloud shared infrastructure are unnecessary when apps and CSI run directly on bare-metal Kubernetes; archive their state for rollback.",
       "matchingTargetObjects": []
@@ -12720,7 +12632,7 @@
       "disposition": "removed",
       "targets": [
         "deployments/homelab/hosts",
-        "deployments/homelab/cluster/infrastructure/calico"
+        "deployments/homelab/cluster/infrastructure/cilium"
       ],
       "reason": "OpenStack MariaDB, RabbitMQ, OVN databases and cloud shared infrastructure are unnecessary when apps and CSI run directly on bare-metal Kubernetes; archive their state for rollback.",
       "matchingTargetObjects": []

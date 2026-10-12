@@ -187,22 +187,11 @@ def main():
             schema=version.get('schema',{}).get('openAPIV3Schema')
             if schema:schemas[document['spec']['group']+'/'+version['name']+':'+document['spec']['names']['kind']]=schema
 
-    calico_provenance=[]
-    for filename, upstream, digest in [
-        ('operator.yaml', 'tigera-operator.yaml', 'aef423b36aef8cf86567f92bbe5eea4b4ca105a6fc7dbf43de599c6fa70388ba'),
-        ('native-v3.yaml', 'v3_projectcalico_org.yaml', '5306c2c6d9fd6762d804f9da51c049b8269c33498a364c5df0eed555aba026bd')]:
-        vendor=root/'deployments/homelab/cluster/infrastructure/calico/vendor'/filename
-        if hashlib.sha256(vendor.read_bytes()).hexdigest()!=digest:
-            raise ValueError('Calico vendor checksum mismatch: '+filename)
-        calico_provenance.append({'file':str(vendor.relative_to(root)),
-                                 'url':'https://raw.githubusercontent.com/projectcalico/calico/v3.33.0/manifests/'+upstream,
-                                 'sha256':digest})
-
     output=root/'deployments/homelab/validation'
     output.mkdir(exist_ok=True)
     bundle={'definitions':swagger['definitions'],'schemas':schemas}
     (output/'schemas.json.gz').write_bytes(gzip.compress(json.dumps(bundle,separators=(',',':')).encode(),mtime=0))
-    provenance={'kubernetes':{'url':swagger_url,'sha256':hashlib.sha256(fetch(swagger_url)).hexdigest()},'kubevirt':{'version':'v1.9.0','archiveSHA256':hashlib.sha256(payload).hexdigest(),'swaggerSHA256':hashlib.sha256(kv_swagger_path.read_bytes()).hexdigest()},'charts':{k:v['source'] for k,v in chart_map.items()},'calico':calico_provenance,'vendors':vendors,'entrypoints':entrypoints,'schemaCount':len(schemas)}
+    provenance={'kubernetes':{'url':swagger_url,'sha256':hashlib.sha256(fetch(swagger_url)).hexdigest()},'kubevirt':{'version':'v1.9.0','archiveSHA256':hashlib.sha256(payload).hexdigest(),'swaggerSHA256':hashlib.sha256(kv_swagger_path.read_bytes()).hexdigest()},'charts':{k:v['source'] for k,v in chart_map.items()},'vendors':vendors,'entrypoints':entrypoints,'schemaCount':len(schemas)}
     (output/'sources.json').write_text(json.dumps(provenance,indent=2)+'\n')
     (cache/'charts.json').write_text(json.dumps(chart_map,indent=2)+'\n')
     print('Wrote pinned validation schema bundle with '+str(len(schemas))+' GVKs; '+str(len(rendered))+' Helm resources rendered. Plaintext values remained in memory.',flush=True)

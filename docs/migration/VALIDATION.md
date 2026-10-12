@@ -6,13 +6,13 @@ to a live Kubernetes cluster, provider or physical host.
 ## Manifest and schema validation
 
 The full offline run passed with 33 Kustomize entrypoints, 29 acyclic Flux
-stages and 1,194 validated resources across those entrypoints and twelve pinned
-Helm renders. Entry points share resources, so 1,194 is a validation count,
-not a count of unique deployed objects. Helm rendered 443 resources. There were
+stages and 1,189 validated resources across those entrypoints and thirteen pinned
+Helm renders. Entry points share resources, so 1,189 is a validation count,
+not a count of unique deployed objects. Helm rendered 464 resources. There were
 zero failures and zero missing-schema exemptions.
 
 `deployments/homelab/validation/schemas.json.gz` contains official Kubernetes
-1.36.4 OpenAPI definitions, the pinned charts' CRDs, Calico 3.33 native v3 CRDs
+1.36.4 OpenAPI definitions, the pinned charts' CRDs, Cilium 1.20.2 CRDs
 and the KubeVirt 1.9.0 versioned API Swagger. `sources.json` records immutable
 references and hashes. KubeVirt test-fixture CRDs are excluded because they
 can silently replace current API definitions with stale/minimal schemas.
@@ -95,7 +95,7 @@ The latest evaluations pass for pecorino, taleggio, asiago, parmigiano and
 independent aarch64 mail-aws, including the new mail-admin source allowlist.
 All three host disko exports select only their inventoried SATA pair.
 `nix flake check --no-build --all-systems` passes, and the x86_64
-`homelab-configuration` check builds successfully (manifests, all 273 retained
+`homelab-configuration` check builds successfully (manifests, all 280 retained
 service/network/recovery tests, provider formatting, RouterOS syntax and shell checks).
 Documentation/operations cleanup and final repository acceptance remain in
 progress; these checks do not establish deployment or restore readiness.
@@ -129,8 +129,8 @@ application-data backups or a target deployment.
 
 Final broad verification passed on 2026-10-12 after the source capture and
 credential/documentation cleanup. All-system flake checking, five host and four
-disko evaluations, the combined Nix check with 273 tests, 46 enrollment tests,
-four offline provider validations, the full 1,194-instance native/Helm validation
+disko evaluations, the combined Nix check with 280 tests, 46 enrollment tests,
+four offline provider validations, the full 1,189-instance native/Helm validation
 and both secret scans passed. No missing schemas or local guide links remain.
 The original main checkout remains clean at 8d5f130; no live configuration,
 PiKVM, data-transfer or disk operation occurred.

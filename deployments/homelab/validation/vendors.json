@@ -19,18 +19,6 @@
       "localSHA256": "f11307caafc3c23ffedf9887d8beb5a4419e2694da242fa68f63d1ec820de2e0"
     },
     {
-      "file": "deployments/homelab/cluster/infrastructure/calico/vendor/operator.yaml",
-      "url": "https://raw.githubusercontent.com/projectcalico/calico/v3.33.0/manifests/tigera-operator.yaml",
-      "sourceSHA256": "aef423b36aef8cf86567f92bbe5eea4b4ca105a6fc7dbf43de599c6fa70388ba",
-      "localSHA256": "aef423b36aef8cf86567f92bbe5eea4b4ca105a6fc7dbf43de599c6fa70388ba"
-    },
-    {
-      "file": "deployments/homelab/cluster/infrastructure/calico/vendor/native-v3.yaml",
-      "url": "https://raw.githubusercontent.com/projectcalico/calico/v3.33.0/manifests/v3_projectcalico_org.yaml",
-      "sourceSHA256": "5306c2c6d9fd6762d804f9da51c049b8269c33498a364c5df0eed555aba026bd",
-      "localSHA256": "5306c2c6d9fd6762d804f9da51c049b8269c33498a364c5df0eed555aba026bd"
-    },
-    {
       "file": "deployments/homelab/cluster/infrastructure/kubevirt/kubevirt.yaml",
       "url": "https://github.com/kubevirt/kubevirt/releases/download/v1.9.0/kubevirt-cr.yaml",
       "sourceSHA256": "43106136dbce3312bdbfdeae612aacafc6c12da518d233f90645b4685d84a2af",
@@ -66,6 +54,138 @@
       "url": "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.5.0/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml",
       "sourceSHA256": "bab025e1fed9199c5d827f64febb572dd8b746928e48d656312a215bede74d92",
       "localSHA256": "bab025e1fed9199c5d827f64febb572dd8b746928e48d656312a215bede74d92"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliumbgpadvertisements.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumbgpadvertisements.yaml",
+      "sourceSHA256": "44f04798cdfcfece42128630836086ee8c160ece8a4801dcb02eb03b1eadc5f7",
+      "localSHA256": "44f04798cdfcfece42128630836086ee8c160ece8a4801dcb02eb03b1eadc5f7"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliumbgpclusterconfigs.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumbgpclusterconfigs.yaml",
+      "sourceSHA256": "51206558786549a8962fa7c6e178583409a655a480f9fc5e5c277fb48969908c",
+      "localSHA256": "51206558786549a8962fa7c6e178583409a655a480f9fc5e5c277fb48969908c"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliumbgpnodeconfigoverrides.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumbgpnodeconfigoverrides.yaml",
+      "sourceSHA256": "8032d71df06d36600de9e6d7c6808e719537118feb5ffa528d692adbb4552238",
+      "localSHA256": "8032d71df06d36600de9e6d7c6808e719537118feb5ffa528d692adbb4552238"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliumbgpnodeconfigs.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumbgpnodeconfigs.yaml",
+      "sourceSHA256": "fcc8689b3e2985935e4badf23b545e5c4343e878e78c567fde28b035c56272b8",
+      "localSHA256": "fcc8689b3e2985935e4badf23b545e5c4343e878e78c567fde28b035c56272b8"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliumbgppeerconfigs.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumbgppeerconfigs.yaml",
+      "sourceSHA256": "91ab4563c9b4a6fd4314e9fe0b128fcd77f15b50f3a5be6a32a7703dede70f60",
+      "localSHA256": "91ab4563c9b4a6fd4314e9fe0b128fcd77f15b50f3a5be6a32a7703dede70f60"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliumcidrgroups.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumcidrgroups.yaml",
+      "sourceSHA256": "8060269a3ef63271578a090bbe5be135d0dad2932f7ccc7204b37820c990e535",
+      "localSHA256": "8060269a3ef63271578a090bbe5be135d0dad2932f7ccc7204b37820c990e535"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliumclusterwideenvoyconfigs.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumclusterwideenvoyconfigs.yaml",
+      "sourceSHA256": "99fb35a331563f37031b9f8aabc42aee2e371eb28f98fa1b25af810417eff614",
+      "localSHA256": "99fb35a331563f37031b9f8aabc42aee2e371eb28f98fa1b25af810417eff614"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliumclusterwidenetworkpolicies.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumclusterwidenetworkpolicies.yaml",
+      "sourceSHA256": "ae65e44fdee9da399cb7257a8464f197bea5270fdc213f6343700309c39abad6",
+      "localSHA256": "ae65e44fdee9da399cb7257a8464f197bea5270fdc213f6343700309c39abad6"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliumegressgatewaypolicies.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumegressgatewaypolicies.yaml",
+      "sourceSHA256": "c92dc81014168aff5d8d2f730c28c992f97ee85e5483f473555f1e5bc4a90298",
+      "localSHA256": "c92dc81014168aff5d8d2f730c28c992f97ee85e5483f473555f1e5bc4a90298"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliumendpoints.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumendpoints.yaml",
+      "sourceSHA256": "fecfbb3886d3683e93b6adce98553db7c6f52cbc4442de253db488df0ad44a7e",
+      "localSHA256": "fecfbb3886d3683e93b6adce98553db7c6f52cbc4442de253db488df0ad44a7e"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliumenvoyconfigs.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumenvoyconfigs.yaml",
+      "sourceSHA256": "7fc86c57011374cc3447839eea290c6c4bbb5f1c9d613c4be76893f9cb51e484",
+      "localSHA256": "7fc86c57011374cc3447839eea290c6c4bbb5f1c9d613c4be76893f9cb51e484"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliumidentities.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumidentities.yaml",
+      "sourceSHA256": "6584bb0e5bd3cb41d6f1e1ff80b866407d21a44cba00d35b1c39abab0a2d0d57",
+      "localSHA256": "6584bb0e5bd3cb41d6f1e1ff80b866407d21a44cba00d35b1c39abab0a2d0d57"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliumloadbalancerippools.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumloadbalancerippools.yaml",
+      "sourceSHA256": "31dd3d26d987e46bc04d66ec2f9bdcf2aa2b13b7b368e515ca324961b55d65b1",
+      "localSHA256": "31dd3d26d987e46bc04d66ec2f9bdcf2aa2b13b7b368e515ca324961b55d65b1"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliumlocalredirectpolicies.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumlocalredirectpolicies.yaml",
+      "sourceSHA256": "e4673421422e46bb43e16d4e214c57fef6f07a3f95b0aaca92a4044a7e59ae91",
+      "localSHA256": "e4673421422e46bb43e16d4e214c57fef6f07a3f95b0aaca92a4044a7e59ae91"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliumnetworkpolicies.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumnetworkpolicies.yaml",
+      "sourceSHA256": "62c6de8f358da125b94468d39187edb1cea157d79503fdc50ccec8a6aaa79a76",
+      "localSHA256": "62c6de8f358da125b94468d39187edb1cea157d79503fdc50ccec8a6aaa79a76"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliumnodeconfigs.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumnodeconfigs.yaml",
+      "sourceSHA256": "89aae253c84e12785034a4a06ead94c8a61ee0954e6d60816e79fcd584aa6d59",
+      "localSHA256": "89aae253c84e12785034a4a06ead94c8a61ee0954e6d60816e79fcd584aa6d59"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliumnodes.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumnodes.yaml",
+      "sourceSHA256": "cc3e57ace385353b237b04f466fb99fd9c75c96682044063daae3e0150d2247f",
+      "localSHA256": "cc3e57ace385353b237b04f466fb99fd9c75c96682044063daae3e0150d2247f"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliumdatapathplugins.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2alpha1/ciliumdatapathplugins.yaml",
+      "sourceSHA256": "c235378e12ae3e8108dac90188068de92e8e4ff54df3720cc4d394ec7a1973ed",
+      "localSHA256": "c235378e12ae3e8108dac90188068de92e8e4ff54df3720cc4d394ec7a1973ed"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliumendpointslices.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2alpha1/ciliumendpointslices.yaml",
+      "sourceSHA256": "bb6626fd03bc2d70ef39ae182420da42fecbc41cbca40c484082a7ce6a7fb705",
+      "localSHA256": "bb6626fd03bc2d70ef39ae182420da42fecbc41cbca40c484082a7ce6a7fb705"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliumgatewayclassconfigs.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2alpha1/ciliumgatewayclassconfigs.yaml",
+      "sourceSHA256": "8e06be025a6bd04dab073ba4396e382278ff19059c7d1183aaa11fed4f530946",
+      "localSHA256": "8e06be025a6bd04dab073ba4396e382278ff19059c7d1183aaa11fed4f530946"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliuml2announcementpolicies.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2alpha1/ciliuml2announcementpolicies.yaml",
+      "sourceSHA256": "5a5ada1455e5169d1f95d4814302677ebff4bf477b5298483e9b827a70feee7a",
+      "localSHA256": "5a5ada1455e5169d1f95d4814302677ebff4bf477b5298483e9b827a70feee7a"
+    },
+    {
+      "file": "deployments/homelab/cluster/infrastructure/cilium/vendor/ciliumpodippools.yaml",
+      "url": "https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2alpha1/ciliumpodippools.yaml",
+      "sourceSHA256": "34dd4b4a6a6f588b1936e1b01acb72fb9cb2c9cf7c3fefead7b5b253a356a9e8",
+      "localSHA256": "34dd4b4a6a6f588b1936e1b01acb72fb9cb2c9cf7c3fefead7b5b253a356a9e8"
     }
   ],
   "images": [

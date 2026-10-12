@@ -1,13 +1,13 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: calico
+  name: cilium
   namespace: flux-system
 spec:
   interval: 10m
   retryInterval: 1m
   timeout: 20m
-  path: ./deployments/homelab/cluster/infrastructure/calico
+  path: ./deployments/homelab/cluster/infrastructure/cilium
   prune: true
   wait: false
   sourceRef:
@@ -19,21 +19,18 @@ spec:
       name: sops-age
   dependsOn: []
   healthChecks:
-  - apiVersion: operator.tigera.io/v1
-    kind: TigeraStatus
-    name: calico
-  - apiVersion: operator.tigera.io/v1
-    kind: TigeraStatus
-    name: apiserver
-  healthCheckExprs:
-  - apiVersion: operator.tigera.io/v1
-    kind: TigeraStatus
-    inProgress: '!(has(status) && has(status.conditions) && status.conditions.exists(c,
-      c.type == ''Available'' && c.status == ''True'') && !status.conditions.exists(c,
-      c.type in [''Progressing'', ''Degraded''] && c.status == ''True''))'
-    current: has(status) && has(status.conditions) && status.conditions.exists(c,
-      c.type == 'Available' && c.status == 'True') && !status.conditions.exists(c,
-      c.type in ['Progressing', 'Degraded'] && c.status == 'True')
+  - apiVersion: helm.toolkit.fluxcd.io/v2
+    kind: HelmRelease
+    name: cilium
+    namespace: kube-system
+  - apiVersion: apps/v1
+    kind: DaemonSet
+    name: cilium
+    namespace: kube-system
+  - apiVersion: apps/v1
+    kind: Deployment
+    name: cilium-operator
+    namespace: kube-system
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -55,7 +52,7 @@ spec:
     secretRef:
       name: sops-age
   dependsOn:
-  - name: calico
+  - name: cilium
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -99,7 +96,7 @@ spec:
     secretRef:
       name: sops-age
   dependsOn:
-  - name: calico
+  - name: cilium
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -121,7 +118,7 @@ spec:
     secretRef:
       name: sops-age
   dependsOn:
-  - name: calico
+  - name: cilium
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -293,7 +290,7 @@ spec:
     secretRef:
       name: sops-age
   dependsOn:
-  - name: calico
+  - name: cilium
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -407,7 +404,7 @@ spec:
     secretRef:
       name: sops-age
   dependsOn:
-  - name: calico
+  - name: cilium
   healthCheckExprs:
   - apiVersion: kubevirt.io/v1
     kind: KubeVirt

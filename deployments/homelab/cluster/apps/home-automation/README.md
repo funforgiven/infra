@@ -78,7 +78,7 @@ multicast to use each pod's own MAC. Tenant ports keep their existing security.
 Stale ports from retired workers are retained for inspection rather than
 silently detached or reassigned.
 
-Calico NetworkPolicies filter the primary pod interface. They do not protect
+Cilium-enforced NetworkPolicies filter the primary pod interface. They do not protect
 Multus interfaces: the explicit pod nftables rules protect `net1`. IoT clients
 can exchange discovery and Matter traffic but cannot reach HA, Matter's
 management API or the metrics endpoint on that interface. MQTT on `.10:1883`

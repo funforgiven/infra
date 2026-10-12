@@ -117,26 +117,11 @@ def restore_check():
                     "from": [{"namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": "cnpg-system"}}}],
                     "ports": [{"protocol": "TCP", "port": 8000}],
                 }],
-                "egress": [],
-            },
-        })
-        # Enforce before any broad Calico egress policy. The restored
-        # server accepts no application traffic and has no production DB route.
-        policy_name = namespace + "-egress"
-        create({
-            "apiVersion": "projectcalico.org/v3", "kind": "GlobalNetworkPolicy",
-            "metadata": {"name": policy_name},
-            "spec": {
-                "order": 15, "namespaceSelector": f"kubernetes.io/metadata.name == '{namespace}'",
-                "selector": "all()", "types": ["Egress"],
                 "egress": [
-                    {"action": "Allow", "protocol": protocol, "destination": {
-                        "namespaceSelector": "kubernetes.io/metadata.name == 'kube-system'",
-                        "selector": "k8s-app == 'kube-dns'", "ports": [53],
-                    }} for protocol in ("TCP", "UDP")
-                ] + [
-                    {"action": "Allow", "protocol": "TCP", "destination": {"ports": [443, 6443]}},
-                    {"action": "Deny"},
+                    {"to": [{"namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": "kube-system"}},
+                              "podSelector": {"matchLabels": {"k8s-app": "kube-dns"}}}],
+                     "ports": [{"protocol": protocol, "port": 53} for protocol in ("TCP", "UDP")]},
+                    {"ports": [{"protocol": "TCP", "port": port} for port in (443, 6443)]},
                 ],
             },
         })
@@ -179,5 +164,4 @@ def restore_check():
     finally:
         # Retain the egress boundary until all disposable pods are gone.
         kubectl("delete", "namespace", namespace, "--wait=true", "--timeout=180s")
-        kubectl("delete", "globalnetworkpolicy", namespace + "-egress", "--ignore-not-found")
         print(f"Removed disposable namespace {namespace}", flush=True)

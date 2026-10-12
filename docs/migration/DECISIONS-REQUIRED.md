@@ -1,7 +1,7 @@
 # Owner input for the future cutover
 
 Software choices are implemented in this branch: NixOS on the three physical
-hosts, embedded-etcd K3s, Calico, MetalLB, Multus, direct Rook-Ceph CSI and
+hosts, embedded-etcd K3s, Cilium, MetalLB, Multus, direct Rook-Ceph CSI and
 KubeVirt for the existing supported UniFi OS guest. Windows/macOS runners are
 excluded at the owner's request. Downtime is acceptable; parallel old/new
 production clusters are unnecessary. No live changes are authorized by this

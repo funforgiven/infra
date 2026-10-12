@@ -1,6 +1,6 @@
 # Secondary IoT networking
 
-Calico owns the primary pod network. Multus v4.3.1-thick adds secondary macvlan
+Cilium owns the primary pod network. Multus v4.3.1-thick adds secondary macvlan
 attachments for home automation. Its upstream release manifest is vendored,
 image digest pinned, NAD RBAC narrowed to reads and resources bounded through
 Kustomize. It keeps the host mounts and privileges needed for CNI delegation.
@@ -26,6 +26,6 @@ Check isolation and all device identities before normal schedules resume.
 
 Stop pods using secondary attachments before removing Multus or a NAD. Remove
 their network annotations before restarting without that attachment. Preserve
-the primary Calico/kube-proxy firewall state during recovery. The full data and
+the primary Cilium eBPF state during recovery. The full data and
 cutover procedures are in [DATA-MIGRATION.md](../../../../../docs/migration/DATA-MIGRATION.md)
 and [RUNBOOK.md](../../../../../docs/migration/RUNBOOK.md).
