@@ -10,6 +10,10 @@ spec:
   bootstrap:
     recovery:
       source: migration-source
+      recoveryTarget:
+        backupID: 20261012T192825
+        targetLSN: 48/F741A818
+        targetTLI: '2'
       database: zitadel
       owner: zitadel
       secret:

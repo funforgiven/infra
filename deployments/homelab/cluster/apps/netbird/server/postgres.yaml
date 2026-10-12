@@ -10,6 +10,10 @@ spec:
   bootstrap:
     recovery:
       source: migration-source
+      recoveryTarget:
+        backupID: 20261012T193100
+        targetLSN: 11/2B011EF8
+        targetTLI: '5'
       database: netbird
       owner: netbird
       secret:

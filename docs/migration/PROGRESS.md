@@ -314,3 +314,11 @@ installation files preserve each pinned source SSH host identity; the host age
 key independently decrypts the target host secrets. Those private bootstrap
 files are excluded from public Git and plaintext checkpoint artifacts. No
 physical host activation, installer boot or disk reformat has occurred.
+
+
+The execution branch now pins both CNPG bootstraps to their tested final base
+backup IDs, end LSNs and source timelines. Those exact native recovery settings
+already reached consistency and replayed through each final application writer
+stop; both restored databases passed row-count and integrity checks. The target
+Clusters have not been created. This prevents bootstrap from selecting a later
+source backup implicitly while the source databases finish retiring.
