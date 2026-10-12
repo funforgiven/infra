@@ -55,7 +55,7 @@ spec:
                 - linux
       containers:
       - name: postgres
-        image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0
+        image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0@sha256:9a2085fccc6c24252b545f0a1899542cf315d02c91d78171d389594753e8ddcc
         command:
         - python
         - /scripts/postgres.py
@@ -110,7 +110,7 @@ spec:
           failureThreshold: 60
           periodSeconds: 10
       - name: dumps
-        image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0
+        image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0@sha256:9a2085fccc6c24252b545f0a1899542cf315d02c91d78171d389594753e8ddcc
         env:
         - name: MATRIX_DB_HOST
           value: 127.0.0.1
@@ -230,7 +230,7 @@ spec:
                 - linux
       containers:
       - name: synapse
-        image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0
+        image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0@sha256:9a2085fccc6c24252b545f0a1899542cf315d02c91d78171d389594753e8ddcc
         command:
         - synapse_homeserver
         - --config-path
@@ -359,7 +359,7 @@ spec:
                 - linux
       containers:
       - name: mas
-        image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0
+        image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0@sha256:9a2085fccc6c24252b545f0a1899542cf315d02c91d78171d389594753e8ddcc
         command:
         - mas-cli
         - server
@@ -479,7 +479,7 @@ spec:
                 - linux
       containers:
       - name: proxy
-        image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0
+        image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0@sha256:9a2085fccc6c24252b545f0a1899542cf315d02c91d78171d389594753e8ddcc
         command:
         - nginx
         - -c
@@ -593,7 +593,7 @@ spec:
                 - linux
       containers:
       - name: relay
-        image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0
+        image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0@sha256:9a2085fccc6c24252b545f0a1899542cf315d02c91d78171d389594753e8ddcc
         command:
         - python
         - /scripts/relay.py
@@ -717,7 +717,7 @@ spec:
                 - linux
       containers:
       - name: egress
-        image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0
+        image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0@sha256:9a2085fccc6c24252b545f0a1899542cf315d02c91d78171d389594753e8ddcc
         command:
         - squid
         - -N
@@ -804,7 +804,7 @@ spec:
                     app.kubernetes.io/name: matrix-postgres
           containers:
           - name: backup
-            image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0
+            image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0@sha256:9a2085fccc6c24252b545f0a1899542cf315d02c91d78171d389594753e8ddcc
             command:
             - python
             - /scripts/backup.py

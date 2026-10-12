@@ -218,3 +218,50 @@ flake evaluation, formatter, strict native/Helm schema checks and the evaluated
 K3s flags. The updated encrypted B2 checkpoint at 19:06 UTC downloaded and passed
 authenticated decryption plus every artifact hash; it includes the one verified
 final cold claim and keeps `cutoverReady: false`.
+
+
+## Recorded source outage and independent recovery, 12 October 2026
+
+Execution now has recorded reconciliation holds for infrastructure, services and
+the CAPI management cluster. Application writers and schedulers are stopped;
+provisioning and provider controllers are held. Original states, object UIDs and
+termination proofs are in the private execution package. Source storage and cloud
+APIs remain available for exports. No physical server has been reinstalled.
+
+Final logical PostgreSQL exports for ZITADEL, Matrix, AudioMuse and NetBird have
+been stored in Backblaze, downloaded, authenticated and restored with their
+native PostgreSQL versions. Source row counts, role/table ownership, indexes and
+page checks passed. Both CNPG clusters also passed independent base-backup/WAL
+recovery beyond their recorded final application LSNs. ZITADEL's one unlogged
+leadership row has the documented PostgreSQL recovery reset; every persistent
+table matches, and the logical export retains the original row.
+
+At 20:25 UTC, 12 of 50 source claims have verified final recovery exports. Beets,
+both Wallos claims and the Forge cache passed fresh-filesystem restoration,
+content/ownership/mode/ACL/xattr comparison and applicable SQLite integrity.
+The remaining cold filesystem exports, including monitoring history, are active.
+The media share has a separate final read-only archive and restore verification.
+These counts are checkpoints; the private ledger records subsequent proofs.
+
+UniFi shut down cleanly. Its complete standalone 64 GiB root export was stored
+in Backblaze and downloaded/decrypted. An isolated local copy booted Ubuntu
+24.04, started UOS/controller services and served loopback HTTPS with the original
+origin certificate. The test had no outside network and left the pristine
+source export unchanged. KubeVirt's two-NIC/cloud-init preparation is separate.
+
+The held configuration capture passed every artifact hash and all four inner
+SOPS archives after an independent Backblaze download. The four retained provider
+states match the prepared lineages, serials and contents; retained credentials
+and certificate fingerprints are unchanged. Independent SOPS-encrypted B2
+access was qualified without relying on the source Kubernetes API.
+
+Matrix's running source image digest is now pinned in application and restore
+manifests. Its cached OCI image and the exact retained Linux runner/cache images
+were independently stored in Backblaze, downloaded and restored with native
+OCI tools, including every content digest. Source registry availability is no
+longer required to recover these images.
+
+The official NixOS minimal installer 26.05.11680.6fcc160353f6 was downloaded and
+matched its published SHA-256. PiKVM media attachment/boot and all physical disk
+changes remain pending. The backup gate remains closed while the remaining
+claims, source recovery metadata and device dispositions are verified.
