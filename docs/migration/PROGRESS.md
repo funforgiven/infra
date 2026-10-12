@@ -265,3 +265,20 @@ The official NixOS minimal installer 26.05.11680.6fcc160353f6 was downloaded and
 matched its published SHA-256. PiKVM media attachment/boot and all physical disk
 changes remain pending. The backup gate remains closed while the remaining
 claims, source recovery metadata and device dispositions are verified.
+
+
+UniFi NoCloud transfer qualification at 20:57 UTC passed in a second isolated
+boot. The prepared standalone raw disk clears the source OpenStack metadata
+cache and only its generated Netplan file. The exact target user/network data
+configured both fixed NIC MACs, services address 10.21.40.127 and its metric-50
+default route. Controller HTTPS, machine ID, all three SSH host keys, bootstrap
+version and origin certificate passed preservation checks. `ssh_deletekeys:
+false` explicitly retains SSH identity when cloud-init sees a new instance.
+The pristine Backblaze source disk and prepared backing image were unchanged by
+the boot test. No physical LAN or host action was involved; pod DHCP and actual
+KubeVirt networking remain live acceptance checks.
+
+The reviewed installer is now stored on PiKVM. Its stored 1,738,014,720 bytes
+matched the published SHA-256 again through the authorized SSH login. Virtual
+media remains detached with the previous selection unchanged. Pecorino's exact
+locked NixOS system closure also built successfully on the workstation.
