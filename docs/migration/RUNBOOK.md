@@ -156,7 +156,7 @@ verified installation no longer needs them.
 Boot pecorino and verify SSH fingerprint, SOPS, root console login, both MD
 members, EFI boot path, NIC LACP/RS-FEC, management MTU 1500 and Ceph MTU 9000.
 Inspect `systemctl status k3s keepalived`, the local API `/readyz` and expected
-`.20.128` ownership. Calico is not installed yet, so Node Ready/pod scheduling
+`.20.128` ownership. Cilium is not installed yet, so Node Ready/pod scheduling
 is a later check. Copy the new owner-only admin kubeconfig, replace its server
 with `https://10.21.20.128:6443`, and use it explicitly for target operations.
 
@@ -170,23 +170,34 @@ proceeding.
 
 ## 5. Bootstrap CNI, then the recovery Flux graph
 
-Flux Pods cannot bootstrap a missing CNI. Apply the pinned Calico CRDs/operator
-and configuration manually first, using the new admin kubeconfig. Keep the
-operator's `-manage-crds=false` and resource patch from its Kustomization.
+Flux Pods cannot bootstrap a missing CNI. Install the pinned Cilium release
+using the same values file as the Flux HelmRelease. Run Helm from the workstation
+against the enrolled target kubeconfig. These commands change the target only:
 
 ```sh
-target apply -f deployments/homelab/cluster/infrastructure/calico/vendor/native-v3.yaml
-target wait crd/installations.operator.tigera.io --for=condition=Established --timeout=2m
-target wait crd/apiservers.operator.tigera.io --for=condition=Established --timeout=2m
-target apply -k deployments/homelab/cluster/infrastructure/calico
+target apply -f deployments/homelab/cluster/infrastructure/cilium/vendor/
+target wait crd/ciliumnetworkpolicies.cilium.io --for=condition=Established --timeout=2m
+helm pull oci://quay.io/cilium/charts/cilium --version 1.20.2 --destination /tmp
+echo 'b2afd87b7f75f875f92a14559f14f59b7babbb479d968e3fd625a20bf30ec20e  /tmp/cilium-1.20.2.tgz' | sha256sum --check
+helm upgrade --install cilium /tmp/cilium-1.20.2.tgz --namespace kube-system \
+  --values deployments/homelab/cluster/infrastructure/cilium/values.yaml --wait --timeout 20m
+target rollout status daemonset/cilium -n kube-system --timeout=20m
+target rollout status deployment/cilium-operator -n kube-system --timeout=20m
 target wait nodes --all --for=condition=Ready --timeout=20m
-target get tigerastatus
+target -n kube-system exec daemonset/cilium -- cilium-dbg status --verbose
 ```
 
-Require Calico and apiserver Available without Progressing/Degraded, pod DNS,
-cross-host pod traffic and policies before proceeding. Flux later adopts this
-same configuration. Verify `/opt/cni/bin` and `/etc/cni/net.d`; K3s flannel is
-disabled and the static Multus plugins are installed by NixOS.
+Require kube-proxy replacement to be active on every node, with no kube-proxy
+process or DaemonSet. Verify pod DNS, cross-host traffic, IPv4 masquerading,
+allowed/denied application flows and Cilium health before proceeding. Keep
+MetalLB and Envoy Gateway for the retained Local traffic policies. Verify client
+addresses and VIP failover after these controllers start. Check `/opt/cni/bin`
+and `/etc/cni/net.d`: K3s flannel is disabled, the static secondary plugins are
+installed by NixOS, and `cni.exclusive: false` preserves Multus. Qualify HA/OTBR
+multicast and UniFi's secondary VLAN independently of the primary CNI.
+
+Flux later adopts the existing Helm release with the identical values and chart
+manifest digest `sha256:a7c12d330dd96bfcda3bf057b24be8f36566c34868265f930f776dff6f42d838`.
 
 Create the root namespaces, then seed the approved gateway certificate/account
 bundle **before** installing the root graph:

@@ -1,0 +1,35 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: kube-system
+resources:
+- vendor/ciliumbgpadvertisements.yaml
+- vendor/ciliumbgpclusterconfigs.yaml
+- vendor/ciliumbgpnodeconfigoverrides.yaml
+- vendor/ciliumbgpnodeconfigs.yaml
+- vendor/ciliumbgppeerconfigs.yaml
+- vendor/ciliumcidrgroups.yaml
+- vendor/ciliumclusterwideenvoyconfigs.yaml
+- vendor/ciliumclusterwidenetworkpolicies.yaml
+- vendor/ciliumegressgatewaypolicies.yaml
+- vendor/ciliumendpoints.yaml
+- vendor/ciliumenvoyconfigs.yaml
+- vendor/ciliumidentities.yaml
+- vendor/ciliumloadbalancerippools.yaml
+- vendor/ciliumlocalredirectpolicies.yaml
+- vendor/ciliumnetworkpolicies.yaml
+- vendor/ciliumnodeconfigs.yaml
+- vendor/ciliumnodes.yaml
+- vendor/ciliumdatapathplugins.yaml
+- vendor/ciliumendpointslices.yaml
+- vendor/ciliumgatewayclassconfigs.yaml
+- vendor/ciliuml2announcementpolicies.yaml
+- vendor/ciliumpodippools.yaml
+- release.yaml
+configMapGenerator:
+- name: cilium-values
+  files:
+  - values.yaml
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    reconcile.fluxcd.io/watch: Enabled

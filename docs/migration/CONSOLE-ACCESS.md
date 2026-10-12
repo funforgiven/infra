@@ -10,6 +10,27 @@ buttons or a guaranteed recovery path for a powered-off or frozen host.
 No PiKVM port, input event, firmware setting, media attachment or server has
 been changed during preparation. The new hardware has not been qualified.
 
+## Existing device qualified on 12 October 2026
+
+The registered ricotta device at `10.21.90.3` is a PiKVM v2 on Raspberry Pi 4,
+not the proposed V4 Plus/switch combination. Its API has no switch endpoint.
+The connected host is pecorino, identified by its source console messages and
+a unique marker written to `/dev/tty0` over the independently pinned source SSH
+session. The fresh captured console showed that exact marker and host name.
+
+The supplied SSH key works for `funforgiven`. API authentication also uses
+`funforgiven`; credentials remain in ignored mode-0600 files. Root inspection
+used the second owner-provided password candidate. Nginx exposes HTTP locally,
+so workstation access uses an encrypted SSH tunnel without changing device auth.
+A WebSocket session keeps the streamer active while capturing fresh snapshots.
+
+The USB controller is configured and virtual media is available. A harmless
+Shift press/release returned HTTP 200 and changed keyboard status to online.
+Mouse control, ISO attachment and firmware/media boot remain unqualified. The
+old Ubuntu image stays detached. No power, boot or persistent PiKVM settings
+were changed. The steps below for a switch apply only when one is connected;
+taleggio and asiago have no qualified console path through this device yet.
+
 ## Operator and owner responsibilities
 
 The owner connects the devices and supplies a reachable PiKVM address and

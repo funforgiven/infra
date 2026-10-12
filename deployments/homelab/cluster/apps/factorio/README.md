@@ -35,7 +35,7 @@ change, even though player names are verified.
 From any local LAN, use the public game browser; the trusted VLAN may also
 direct-connect to `10.21.40.123:34197`. Remote friends use the public game
 browser or direct-connect to the site's public IP on port `34197`. The WAN path
-forwards UDP 34197 to the provider VIP. Calico may randomize an outbound probe's
+forwards UDP 34197 to the provider VIP. The CNI may randomize an outbound probe's
 source port, so a narrow CCR source-NAT rule pins only provider-originated UDP
 traffic to destination port 34197 back to public source port 34197. Factorio's
 public endpoint detection therefore advertises the same port accepted by the

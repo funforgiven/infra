@@ -51,8 +51,8 @@ credentials, or a Docker socket. Forgejo removes the identity after its job;
 Kubernetes discards the writable container layer and workspace.
 
 Labels are `linux-x86_64` and `linux`. Jobs run as UID 1000 with Nix, Node 24,
-Git and standard build tools. Calico rules precede the provider's general
-egress allow policy and deny metadata, cluster APIs, identity administration,
+Git and standard build tools. Cilium policies allow only the documented
+egress paths and deny metadata, cluster APIs, identity administration,
 and other private networks. Each job has a two-hour limit and bounded CPU,
 memory and ephemeral storage. The container registry credential can only read
 packages and is held by kubelet, not mounted into job containers.
@@ -153,8 +153,8 @@ releasing a volume. Velero restores the source PV's `Retain` policy even when
 the scratch class specifies `Delete`, so the policy must be corrected after
 verification. Successful drills remove their pod and both disposable volumes;
 failed drills remain for diagnosis. Completion is not reported until cleanup
-finishes, and controller logs plus the Velero Restore retain the evidence. Calico
-denies all ingress and egress in that namespace. Restore modifiers remove
+finishes, and controller logs plus the Velero Restore retain the evidence. Cilium
+explicitly denies all ingress and egress in that namespace. Restore modifiers remove
 production bootstrap and replace application containers with verification
 processes; no duplicate Forgejo or OAuth callback runs during the test. The
 controller allows four hours for offsite transfer and verification, with a

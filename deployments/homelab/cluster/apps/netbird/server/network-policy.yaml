@@ -96,6 +96,28 @@ spec:
     ports:
     - protocol: TCP
       port: 10443
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: envoy-gateway-system
+      podSelector:
+        matchLabels:
+          gateway.envoyproxy.io/owning-gateway-name: management
+          gateway.envoyproxy.io/owning-gateway-namespace: network-services
+    ports:
+    - protocol: TCP
+      port: 10443
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: envoy-gateway-system
+      podSelector:
+        matchLabels:
+          gateway.envoyproxy.io/owning-gateway-name: matrix-public
+          gateway.envoyproxy.io/owning-gateway-namespace: services-network
+    ports:
+    - protocol: TCP
+      port: 10443
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

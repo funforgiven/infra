@@ -4,81 +4,98 @@ metadata:
   name: automation-restore-modifiers
   namespace: velero
 data:
-  resource-modifiers.yaml: "version: v1\nresourceModifierRules:\n- conditions:\n    groupResource: pods\n\
-    \    resourceNameRegex: ^home-assistant-0$\n    namespaces:\n    - home-automation\n  patches:\n \
-    \ - operation: test\n    path: /spec/initContainers/0/name\n    value: restore-wait\n  - operation:\
-    \ move\n    from: /spec/initContainers/0\n    path: /automationRestoreHelper\n  - operation: replace\n\
-    \    path: /spec\n    value: |-\n      {\n        \"automountServiceAccountToken\": false,\n     \
-    \   \"restartPolicy\": \"Never\",\n        \"securityContext\": {\n          \"fsGroup\": 1000,\n\
-    \          \"seccompProfile\": {\n            \"type\": \"RuntimeDefault\"\n          }\n        },\n\
-    \        \"containers\": [\n          {\n            \"name\": \"backup\",\n            \"image\"\
-    : \"docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4\"\
-    ,\n            \"command\": [\n              \"python\",\n              \"/bootstrap/backup.py\",\n\
-    \              \"--verify\",\n              \"/backups/home-automation.tar.gz\"\n            ],\n\
-    \            \"securityContext\": {\n              \"runAsNonRoot\": true,\n              \"runAsUser\"\
-    : 1000,\n              \"runAsGroup\": 1000,\n              \"allowPrivilegeEscalation\": false,\n\
-    \              \"readOnlyRootFilesystem\": true,\n              \"capabilities\": {\n            \
-    \    \"drop\": [\n                  \"ALL\"\n                ]\n              }\n            },\n\
-    \            \"resources\": {\n              \"requests\": {\n                \"cpu\": \"25m\",\n\
-    \                \"memory\": \"64Mi\"\n              },\n              \"limits\": {\n           \
-    \     \"cpu\": \"1\",\n                \"memory\": \"512Mi\"\n              }\n            },\n  \
-    \          \"volumeMounts\": [\n              {\n                \"name\": \"backups\",\n        \
-    \        \"mountPath\": \"/backups\",\n                \"readOnly\": true\n              },\n    \
-    \          {\n                \"name\": \"bootstrap\",\n                \"mountPath\": \"/bootstrap\"\
-    ,\n                \"readOnly\": true\n              },\n              {\n                \"name\"\
-    : \"tmp\",\n                \"mountPath\": \"/tmp\"\n              }\n            ]\n          }\n\
-    \        ],\n        \"volumes\": [\n          {\n            \"name\": \"backups\",\n           \
-    \ \"persistentVolumeClaim\": {\n              \"claimName\": \"automation-backups\"\n            }\n\
-    \          },\n          {\n            \"name\": \"bootstrap\",\n            \"configMap\": {\n \
-    \             \"name\": \"automation-recovery-tools\"\n            }\n          },\n          {\n\
-    \            \"name\": \"tmp\",\n            \"emptyDir\": {\n              \"sizeLimit\": \"20Gi\"\
-    \n            }\n          }\n        ],\n        \"initContainers\": []\n      }\n  - operation:\
-    \ move\n    from: /automationRestoreHelper\n    path: /spec/initContainers/0\n  # Velero inherits\
-    \ the source container's security context, including\n  # OTBR's privilege. The filesystem restore\
-    \ helper needs none of it.\n  - operation: add\n    path: /spec/initContainers/0/securityContext\n\
-    \    value: |-\n      {\n        \"runAsNonRoot\": true,\n        \"runAsUser\": 1000,\n        \"\
-    runAsGroup\": 1000,\n        \"allowPrivilegeEscalation\": false,\n        \"readOnlyRootFilesystem\"\
-    : true,\n        \"capabilities\": {\"drop\": [\"ALL\"]}\n      }\n  - operation: add\n    path: /metadata/annotations\n\
-    \    value: '{}'\n  - operation: add\n    path: /metadata/ownerReferences\n    value: '[]'\n- conditions:\n\
-    \    groupResource: pods\n    resourceNameRegex: ^openthread-border-router-0$\n    namespaces:\n \
-    \   - home-automation\n  patches:\n  - operation: test\n    path: /spec/initContainers/0/name\n  \
-    \  value: restore-wait\n  - operation: move\n    from: /spec/initContainers/0\n    path: /automationRestoreHelper\n\
+  resource-modifiers.yaml: "version: v1\nresourceModifierRules:\n- conditions:\n \
+    \   groupResource: pods\n    resourceNameRegex: ^home-assistant-0$\n    namespaces:\n\
+    \    - home-automation\n  patches:\n  - operation: test\n    path: /spec/initContainers/0/name\n\
+    \    value: restore-wait\n  - operation: move\n    from: /spec/initContainers/0\n\
+    \    path: /automationRestoreHelper\n  - operation: replace\n    path: /spec\n\
+    \    value: |-\n      {\n        \"automountServiceAccountToken\": false,\n  \
+    \      \"restartPolicy\": \"Never\",\n        \"securityContext\": {\n       \
+    \   \"fsGroup\": 1000,\n          \"seccompProfile\": {\n            \"type\"\
+    : \"RuntimeDefault\"\n          }\n        },\n        \"containers\": [\n   \
+    \       {\n            \"name\": \"backup\",\n            \"image\": \"docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4\"\
+    ,\n            \"command\": [\n              \"python\",\n              \"/bootstrap/backup.py\"\
+    ,\n              \"--verify\",\n              \"/backups/home-automation.tar.gz\"\
+    \n            ],\n            \"securityContext\": {\n              \"runAsNonRoot\"\
+    : true,\n              \"runAsUser\": 1000,\n              \"runAsGroup\": 1000,\n\
+    \              \"allowPrivilegeEscalation\": false,\n              \"readOnlyRootFilesystem\"\
+    : true,\n              \"capabilities\": {\n                \"drop\": [\n    \
+    \              \"ALL\"\n                ]\n              }\n            },\n \
+    \           \"resources\": {\n              \"requests\": {\n                \"\
+    cpu\": \"25m\",\n                \"memory\": \"64Mi\"\n              },\n    \
+    \          \"limits\": {\n                \"cpu\": \"1\",\n                \"\
+    memory\": \"512Mi\"\n              }\n            },\n            \"volumeMounts\"\
+    : [\n              {\n                \"name\": \"backups\",\n               \
+    \ \"mountPath\": \"/backups\",\n                \"readOnly\": true\n         \
+    \     },\n              {\n                \"name\": \"bootstrap\",\n        \
+    \        \"mountPath\": \"/bootstrap\",\n                \"readOnly\": true\n\
+    \              },\n              {\n                \"name\": \"tmp\",\n     \
+    \           \"mountPath\": \"/tmp\"\n              }\n            ]\n        \
+    \  }\n        ],\n        \"volumes\": [\n          {\n            \"name\": \"\
+    backups\",\n            \"persistentVolumeClaim\": {\n              \"claimName\"\
+    : \"automation-backups\"\n            }\n          },\n          {\n         \
+    \   \"name\": \"bootstrap\",\n            \"configMap\": {\n              \"name\"\
+    : \"automation-recovery-tools\"\n            }\n          },\n          {\n  \
+    \          \"name\": \"tmp\",\n            \"emptyDir\": {\n              \"sizeLimit\"\
+    : \"20Gi\"\n            }\n          }\n        ],\n        \"initContainers\"\
+    : []\n      }\n  - operation: move\n    from: /automationRestoreHelper\n    path:\
+    \ /spec/initContainers/0\n  # Velero inherits the source container's security\
+    \ context, including\n  # OTBR's privilege. The filesystem restore helper needs\
+    \ none of it.\n  - operation: add\n    path: /spec/initContainers/0/securityContext\n\
+    \    value: |-\n      {\n        \"runAsNonRoot\": true,\n        \"runAsUser\"\
+    : 1000,\n        \"runAsGroup\": 1000,\n        \"allowPrivilegeEscalation\":\
+    \ false,\n        \"readOnlyRootFilesystem\": true,\n        \"capabilities\"\
+    : {\"drop\": [\"ALL\"]}\n      }\n  - operation: add\n    path: /metadata/annotations\n\
+    \    value: '{}'\n  - operation: add\n    path: /metadata/ownerReferences\n  \
+    \  value: '[]'\n- conditions:\n    groupResource: pods\n    resourceNameRegex:\
+    \ ^openthread-border-router-0$\n    namespaces:\n    - home-automation\n  patches:\n\
+    \  - operation: test\n    path: /spec/initContainers/0/name\n    value: restore-wait\n\
+    \  - operation: move\n    from: /spec/initContainers/0\n    path: /automationRestoreHelper\n\
     \  - operation: replace\n    path: /spec\n    value: |-\n      {\n        \"automountServiceAccountToken\"\
-    : false,\n        \"restartPolicy\": \"Never\",\n        \"securityContext\": {\n          \"fsGroup\"\
-    : 1000,\n          \"seccompProfile\": {\n            \"type\": \"RuntimeDefault\"\n          }\n\
-    \        },\n        \"containers\": [\n          {\n            \"name\": \"backup\",\n         \
-    \   \"image\": \"docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4\"\
+    : false,\n        \"restartPolicy\": \"Never\",\n        \"securityContext\":\
+    \ {\n          \"fsGroup\": 1000,\n          \"seccompProfile\": {\n         \
+    \   \"type\": \"RuntimeDefault\"\n          }\n        },\n        \"containers\"\
+    : [\n          {\n            \"name\": \"backup\",\n            \"image\": \"\
+    docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4\"\
     ,\n            \"command\": [\n              \"python\",\n              \"/bootstrap/thread-recovery.py\"\
-    ,\n              \"--verify\",\n              \"/backups/thread-recovery.tar.gz\"\n            ],\n\
-    \            \"securityContext\": {\n              \"runAsNonRoot\": true,\n              \"runAsUser\"\
-    : 1000,\n              \"runAsGroup\": 1000,\n              \"allowPrivilegeEscalation\": false,\n\
-    \              \"readOnlyRootFilesystem\": true,\n              \"capabilities\": {\n            \
-    \    \"drop\": [\n                  \"ALL\"\n                ]\n              }\n            },\n\
-    \            \"resources\": {\n              \"requests\": {\n                \"cpu\": \"25m\",\n\
-    \                \"memory\": \"64Mi\"\n              },\n              \"limits\": {\n           \
-    \     \"cpu\": \"1\",\n                \"memory\": \"512Mi\"\n              }\n            },\n  \
-    \          \"volumeMounts\": [\n              {\n                \"name\": \"backups\",\n        \
-    \        \"mountPath\": \"/backups\",\n                \"readOnly\": true\n              },\n    \
-    \          {\n                \"name\": \"bootstrap\",\n                \"mountPath\": \"/bootstrap\"\
-    ,\n                \"readOnly\": true\n              },\n              {\n                \"name\"\
-    : \"tmp\",\n                \"mountPath\": \"/tmp\"\n              }\n            ]\n          }\n\
-    \        ],\n        \"volumes\": [\n          {\n            \"name\": \"backups\",\n           \
-    \ \"persistentVolumeClaim\": {\n              \"claimName\": \"thread-backups\"\n            }\n \
-    \         },\n          {\n            \"name\": \"bootstrap\",\n            \"configMap\": {\n  \
-    \            \"name\": \"automation-recovery-tools\"\n            }\n          },\n          {\n \
-    \           \"name\": \"tmp\",\n            \"emptyDir\": {\n              \"sizeLimit\": \"20Gi\"\
-    \n            }\n          }\n        ],\n        \"initContainers\": []\n      }\n  - operation:\
-    \ move\n    from: /automationRestoreHelper\n    path: /spec/initContainers/0\n  # Velero inherits\
-    \ the source container's security context, including\n  # OTBR's privilege. The filesystem restore\
-    \ helper needs none of it.\n  - operation: add\n    path: /spec/initContainers/0/securityContext\n\
-    \    value: |-\n      {\n        \"runAsNonRoot\": true,\n        \"runAsUser\": 1000,\n        \"\
-    runAsGroup\": 1000,\n        \"allowPrivilegeEscalation\": false,\n        \"readOnlyRootFilesystem\"\
-    : true,\n        \"capabilities\": {\"drop\": [\"ALL\"]}\n      }\n  - operation: add\n    path: /metadata/annotations\n\
-    \    value: '{}'\n  - operation: add\n    path: /metadata/ownerReferences\n    value: '[]'\n- conditions:\n\
-    \    groupResource: persistentvolumeclaims\n    resourceNameRegex: ^(automation|thread)-(state|backups)$\n\
-    \    namespaces:\n    - home-automation\n  patches:\n  - operation: add\n    path: /spec/volumeName\n\
-    \    value: ''\n  - operation: remove\n    path: /spec/volumeName\n  - operation: add\n    path: /spec/storageClassName\n\
-    \    value: automation-restore\n  - operation: add\n    path: /metadata/annotations\n    value: '{}'\n"
+    ,\n              \"--verify\",\n              \"/backups/thread-recovery.tar.gz\"\
+    \n            ],\n            \"securityContext\": {\n              \"runAsNonRoot\"\
+    : true,\n              \"runAsUser\": 1000,\n              \"runAsGroup\": 1000,\n\
+    \              \"allowPrivilegeEscalation\": false,\n              \"readOnlyRootFilesystem\"\
+    : true,\n              \"capabilities\": {\n                \"drop\": [\n    \
+    \              \"ALL\"\n                ]\n              }\n            },\n \
+    \           \"resources\": {\n              \"requests\": {\n                \"\
+    cpu\": \"25m\",\n                \"memory\": \"64Mi\"\n              },\n    \
+    \          \"limits\": {\n                \"cpu\": \"1\",\n                \"\
+    memory\": \"512Mi\"\n              }\n            },\n            \"volumeMounts\"\
+    : [\n              {\n                \"name\": \"backups\",\n               \
+    \ \"mountPath\": \"/backups\",\n                \"readOnly\": true\n         \
+    \     },\n              {\n                \"name\": \"bootstrap\",\n        \
+    \        \"mountPath\": \"/bootstrap\",\n                \"readOnly\": true\n\
+    \              },\n              {\n                \"name\": \"tmp\",\n     \
+    \           \"mountPath\": \"/tmp\"\n              }\n            ]\n        \
+    \  }\n        ],\n        \"volumes\": [\n          {\n            \"name\": \"\
+    backups\",\n            \"persistentVolumeClaim\": {\n              \"claimName\"\
+    : \"thread-backups\"\n            }\n          },\n          {\n            \"\
+    name\": \"bootstrap\",\n            \"configMap\": {\n              \"name\":\
+    \ \"automation-recovery-tools\"\n            }\n          },\n          {\n  \
+    \          \"name\": \"tmp\",\n            \"emptyDir\": {\n              \"sizeLimit\"\
+    : \"20Gi\"\n            }\n          }\n        ],\n        \"initContainers\"\
+    : []\n      }\n  - operation: move\n    from: /automationRestoreHelper\n    path:\
+    \ /spec/initContainers/0\n  # Velero inherits the source container's security\
+    \ context, including\n  # OTBR's privilege. The filesystem restore helper needs\
+    \ none of it.\n  - operation: add\n    path: /spec/initContainers/0/securityContext\n\
+    \    value: |-\n      {\n        \"runAsNonRoot\": true,\n        \"runAsUser\"\
+    : 1000,\n        \"runAsGroup\": 1000,\n        \"allowPrivilegeEscalation\":\
+    \ false,\n        \"readOnlyRootFilesystem\": true,\n        \"capabilities\"\
+    : {\"drop\": [\"ALL\"]}\n      }\n  - operation: add\n    path: /metadata/annotations\n\
+    \    value: '{}'\n  - operation: add\n    path: /metadata/ownerReferences\n  \
+    \  value: '[]'\n- conditions:\n    groupResource: persistentvolumeclaims\n   \
+    \ resourceNameRegex: ^(automation|thread)-(state|backups)$\n    namespaces:\n\
+    \    - home-automation\n  patches:\n  - operation: add\n    path: /spec/volumeName\n\
+    \    value: ''\n  - operation: remove\n    path: /spec/volumeName\n  - operation:\
+    \ add\n    path: /spec/storageClassName\n    value: automation-restore\n  - operation:\
+    \ add\n    path: /metadata/annotations\n    value: '{}'\n"
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -261,26 +278,24 @@ spec:
             configMap:
               name: automation-restore-controller
 ---
-apiVersion: projectcalico.org/v3
-kind: NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
 metadata:
   name: home-automation-restore
   namespace: backup-qualification
 spec:
-  order: 15
-  selector: app.kubernetes.io/name == 'home-automation-restore'
-  types:
-  - Ingress
-  - Egress
-  ingress:
-  - action: Deny
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: home-automation-restore
+  ingressDeny:
+  - {}
   egress:
-  - action: Allow
-    destination:
-      services:
-        name: kubernetes
-        namespace: default
-  - action: Deny
+  - toEntities:
+    - kube-apiserver
+    toPorts:
+    - ports:
+      - port: '6443'
+        protocol: TCP
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule

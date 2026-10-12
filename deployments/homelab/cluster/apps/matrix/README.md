@@ -110,7 +110,7 @@ Use `configure-alerting --phase dual` for reviewed routing changes, qualify
 both transports and the required observation period, and retire Telegram only
 after its explicit recovery checks pass. The migration does not retire Telegram.
 
-Calico native and Kubernetes policy allowlists retain the intended Matrix,
+Kubernetes policy allowlists enforced by Cilium retain the intended Matrix,
 ZITADEL, DNS, mail and restricted push-gateway paths. Target policies use the
 single cluster's pod CIDR and explicitly deny unwanted traffic. New infrastructure
 does not depend on the old Magnum global policy or guest DHCP host routes.
