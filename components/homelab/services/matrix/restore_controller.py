@@ -107,9 +107,9 @@ def main():
                 "backupName": backup_name,
                 "includedNamespaces": ["matrix"],
                 "namespaceMapping": {"matrix": "matrix-restore"},
-                "includedResources": ["pods", "persistentvolumeclaims"],
+                "includedResources": ["pods", "persistentvolumeclaims", "persistentvolumes"],
                 "includeClusterResources": False,
-                "restorePVs": False,
+                "restorePVs": True,
                 "labelSelector": {
                     "matchExpressions": [
                         {
