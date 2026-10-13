@@ -224,10 +224,14 @@ in
     before = [ "systemd-networkd.service" ];
     after = [ "systemd-udev-settle.service" ];
     wants = [ "systemd-udev-settle.service" ];
-    serviceConfig.Type = "oneshot";
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
     path = [
       pkgs.ethtool
       pkgs.coreutils
+      pkgs.gnugrep
     ];
     script = ''
       count=0
@@ -235,8 +239,18 @@ in
         test -L "$device/device/driver" || continue
         test "$(basename "$(readlink -f "$device/device/driver")")" = ice || continue
         interface=$(basename "$device")
-        ethtool -s "$interface" speed 25000 duplex full autoneg off
-        ethtool --set-fec "$interface" encoding rs
+        settings=$(ethtool "$interface")
+        if ! {
+          grep -Fq 'Speed: 25000Mb/s' <<< "$settings" &&
+            grep -Fq 'Duplex: Full' <<< "$settings" &&
+            grep -Fq 'Auto-negotiation: off' <<< "$settings"
+        }; then
+          ethtool -s "$interface" speed 25000 duplex full autoneg off
+        fi
+        fec=$(ethtool --show-fec "$interface")
+        if ! grep -Fq 'Active FEC encoding: RS' <<< "$fec"; then
+          ethtool --set-fec "$interface" encoding rs
+        fi
         count=$((count + 1))
       done
       test "$count" -eq 2
