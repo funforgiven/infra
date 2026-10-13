@@ -221,12 +221,22 @@ in
   systemd.services.fabric-link-settings = {
     description = "Qualify the two ice links and set the switch-matched RS-FEC policy";
     wantedBy = [ "multi-user.target" ];
-    before = [ "systemd-networkd.service" ];
-    after = [ "systemd-udev-settle.service" ];
-    wants = [ "systemd-udev-settle.service" ];
+    before = [
+      "k3s.service"
+      "keepalived.service"
+    ];
+    after = [
+      "systemd-udev-settle.service"
+      "network-online.target"
+    ];
+    wants = [
+      "systemd-udev-settle.service"
+      "network-online.target"
+    ];
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
+      TimeoutStartSec = 120;
     };
     path = [
       pkgs.ethtool
@@ -239,6 +249,11 @@ in
         test -L "$device/device/driver" || continue
         test "$(basename "$(readlink -f "$device/device/driver")")" = ice || continue
         interface=$(basename "$device")
+        for attempt in $(seq 1 30); do
+          test "$(cat "$device/carrier" 2>/dev/null || true)" = 1 && break
+          sleep 1
+        done
+        test "$(cat "$device/carrier")" = 1
         settings=$(ethtool "$interface")
         if ! {
           grep -Fq 'Speed: 25000Mb/s' <<< "$settings" &&
