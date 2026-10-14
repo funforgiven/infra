@@ -124,6 +124,7 @@ class FakeApi:
             4: {"profileId": "p-iot", "profileName": "infra-iot-access"},
             5: {"profileId": "p-iot", "profileName": "infra-iot-access"},
             6: {"profileId": "p-ap", "profileName": "infra-ap-trunk"},
+            7: {"profileId": "p-management", "profileName": "infra-management-access"},
             8: {"profileId": "p-iot", "profileName": "infra-iot-access"},
             9: {"profileId": "p-crs", "profileName": "infra-crs-trunk"},
         }

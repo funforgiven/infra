@@ -39,6 +39,7 @@ its compact desired-state file and reconciler.
 | CRS510 | `ether1` | direct rescue, `192.168.89.2/24` |
 | SG3210XHP-M2 | port 6 | U7 Pro Max `74:F9:2C:3C:99:F7`; untagged management VLAN 90, tagged WLAN VLANs 10/50; reserved `10.21.90.6` |
 | SG3210XHP-M2 | port 3 | PiKVM `ricotta`, MAC `2C:CF:67:9D:A2:F7`; VLAN 90 DHCP reservation `10.21.90.3` |
+| SG3210XHP-M2 | port 7 | PiKVM V4 Plus `burrata`, MAC `88:A2:9E:41:73:2C`; VLAN 90 DHCP reservation `10.21.90.8`; two PiKVM Switch units |
 
 CCR ports 2 and 15 both carry native VLAN 1 and tagged VLANs 10, 20, 40, 50,
 60, and 90. Move the existing Omada uplink cable from 15 to 2 when ready;
@@ -222,8 +223,12 @@ drift.
 
 VLAN 90 reserves `10.21.90.3` for PiKVM `ricotta` through a CCR2004 static
 DHCP lease on a static-only management DHCP server; no dynamic management pool
-exists. The SG3210XHP-M2 uses the same model at `10.21.90.5`. Omada port 3 is
-an untagged VLAN-90 access port, so PiKVM needs no host-side VLAN configuration.
+exists. The second PiKVM, V4 Plus `burrata`, reserves `10.21.90.8` for its
+distinct MAC `88:A2:9E:41:73:2C`. The SG3210XHP-M2 uses the same model at
+`10.21.90.5`. Omada ports 3 and 7 are untagged VLAN-90 access ports for
+`ricotta` and `burrata`, respectively, so neither PiKVM needs host-side VLAN
+configuration. See the [PiKVM runbook](../pikvm/README.md) for access,
+credentials, and the two-switch setup on `burrata`.
 The switch's sole management interface uses VLAN 90 and DHCP; its previous
 management interface is disabled. If DHCP is unavailable, its direct-recovery
 address is `192.168.90.5/24` with no gateway.
