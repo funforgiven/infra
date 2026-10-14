@@ -30,7 +30,6 @@ metadata:
     metallb.io/loadBalancerIPs: 10.21.40.120
 spec:
   type: LoadBalancer
-  loadBalancerClass: metallb.io/metallb
   externalTrafficPolicy: Local
   allocateLoadBalancerNodePorts: false
   selector:

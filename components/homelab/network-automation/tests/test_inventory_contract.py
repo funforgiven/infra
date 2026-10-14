@@ -453,7 +453,7 @@ class NetworkInventoryTests(unittest.TestCase):
             rows = [row for row in self.router[section] if row["comment"] == comment]
             self.assertEqual(1, len(rows))
             row = rows[0]
-            self.assertEqual(service["spec"]["loadBalancerIP"], row["to_address"])
+            self.assertEqual(service["metadata"]["annotations"]["metallb.io/loadBalancerIPs"], row["to_address"])
             self.assertEqual("udp", row["protocol"])
             self.assertEqual("2456-2457", row["destination_port"])
             self.assertEqual(row["destination_port"], row["to_port"])
@@ -506,11 +506,12 @@ class NetworkInventoryTests(unittest.TestCase):
             ],
             self.router["routeros_source_port_pins"],
         )
-        self.assertEqual("10.21.40.123", self.factorio_service["spec"]["loadBalancerIP"])
+        self.assertEqual("10.21.40.123", self.factorio_service["metadata"]["annotations"]["metallb.io/loadBalancerIPs"])
         self.assertEqual(
             "Cluster", self.factorio_service["spec"]["externalTrafficPolicy"]
         )
-        self.assertEqual("metallb.io/metallb", self.factorio_service["spec"]["loadBalancerClass"])
+        self.assertNotIn("loadBalancerClass", self.factorio_service["spec"])
+        self.assertNotIn("loadBalancerIP", self.factorio_service["spec"])
         self.assertEqual("10.21.40.123", self.factorio_service["metadata"]["annotations"]["metallb.io/loadBalancerIPs"])
         save_integrity = next(
             container
@@ -658,6 +659,18 @@ class NetworkInventoryTests(unittest.TestCase):
                     "infra: UniFi trusted bootstrap", "infra-forward", "vlan10-trusted",
                     "10.21.40.127", "tcp", "22,11443",
                 ),
+                (
+                    "infra: pecorino to UniFi HTTPS and metrics", "infra-forward", "vlan20-servers",
+                    "10.21.40.127/32", "tcp", "8443,9100,9130",
+                ),
+                (
+                    "infra: taleggio to UniFi HTTPS and metrics", "infra-forward", "vlan20-servers",
+                    "10.21.40.127/32", "tcp", "8443,9100,9130",
+                ),
+                (
+                    "infra: asiago to UniFi HTTPS and metrics", "infra-forward", "vlan20-servers",
+                    "10.21.40.127/32", "tcp", "8443,9100,9130",
+                ),
             ],
             [
                 (
@@ -671,6 +684,12 @@ class NetworkInventoryTests(unittest.TestCase):
                 for rule in provider_rules
             ],
         )
+        unifi = [rule for rule in provider_rules if rule.get("host") in self.host_inventory]
+        self.assertEqual(3, len(unifi))
+        for rule in unifi:
+            self.assertEqual(self.host_inventory[rule["host"]]["management"] + "/32", rule["source_address"])
+            self.assertEqual("vlan40-external", rule["out_interface"])
+            self.assertEqual("new", rule["connection_state"])
         self.assertIn('loop: "{{ routeros_access_rules }}"', self.playbook)
         self.assertIn("Reconcile the external provider network", self.playbook)
         self.assertIn("Reconcile routed access rules", self.playbook)

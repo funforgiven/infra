@@ -17,6 +17,7 @@ spec:
         metadata:
           labels:
             app.kubernetes.io/name: beets-import
+            velero.io/exclude-from-backup: "true"
             app.kubernetes.io/part-of: media
         spec:
           restartPolicy: Never

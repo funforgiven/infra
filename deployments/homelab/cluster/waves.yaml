@@ -144,19 +144,19 @@ spec:
   healthCheckExprs:
   - apiVersion: ceph.rook.io/v1
     kind: CephCluster
-    inProgress: '!has(status) || !has(status.phase) || status.phase != ''Ready'''
-    failed: has(status) && has(status.phase) && status.phase == 'Failure'
-    current: has(status) && has(status.phase) && status.phase == 'Ready'
+    inProgress: '!has(status.phase) || !(status.phase in [''Ready'', ''Failure''])'
+    failed: has(status.phase) && status.phase == 'Failure'
+    current: has(status.phase) && status.phase == 'Ready'
   - apiVersion: ceph.rook.io/v1
     kind: CephBlockPool
-    inProgress: '!has(status) || !has(status.phase) || status.phase != ''Ready'''
-    failed: has(status) && has(status.phase) && status.phase == 'Failure'
-    current: has(status) && has(status.phase) && status.phase == 'Ready'
+    inProgress: '!has(status.phase) || !(status.phase in [''Ready'', ''Failure''])'
+    failed: has(status.phase) && status.phase == 'Failure'
+    current: has(status.phase) && status.phase == 'Ready'
   - apiVersion: ceph.rook.io/v1
     kind: CephFilesystem
-    inProgress: '!has(status) || !has(status.phase) || status.phase != ''Ready'''
-    failed: has(status) && has(status.phase) && status.phase == 'Failure'
-    current: has(status) && has(status.phase) && status.phase == 'Ready'
+    inProgress: '!has(status.phase) || !(status.phase in [''Ready'', ''Failure''])'
+    failed: has(status.phase) && status.phase == 'Failure'
+    current: has(status.phase) && status.phase == 'Ready'
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -408,9 +408,9 @@ spec:
   healthCheckExprs:
   - apiVersion: kubevirt.io/v1
     kind: KubeVirt
-    inProgress: '!has(status) || !has(status.phase) || status.phase != ''Deployed'''
-    failed: has(status) && has(status.phase) && status.phase == 'Deleted'
-    current: has(status) && has(status.phase) && status.phase == 'Deployed'
+    inProgress: '!has(status.phase) || !(status.phase in [''Deployed'', ''Deleted''])'
+    failed: has(status.phase) && status.phase == 'Deleted'
+    current: has(status.phase) && status.phase == 'Deployed'
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization

@@ -68,10 +68,11 @@ it with `components/homelab/services/forge/publish-runner-image.py`. Pin the
 verified registry digest in `runners.yaml` before deployment.
 
 Native Windows/macOS runner VMs and their brokers are retired for this target.
-The retained Linux `windows-build` lane may cross-compile artifacts. Retiring
-native execution requires updating the application's workflow and branch check
-requirements through its normal reviewed change before CI scheduling resumes;
-the infrastructure preparation does not modify that separate live repository.
+The retained Linux `windows-build` lane may cross-compile artifacts. At cutover,
+Atollion's actual workflow was already manual certification, with ordinary local
+validation and independent review permitted by its current delivery policy.
+No application source or branch-protection change was required or performed.
+Windows/macOS native certification remains deferred, not reported as passing.
 Retain existing source validation and signed migration evidence for recovery.
 
 ## Backup and recovery
@@ -85,8 +86,11 @@ and reader tracking. Eviction causes a cold build; repository data, Actions
 artifacts and native recovery images are stored separately. The 320 GiB cache
 PVC stays provisioned; its thin storage allocation is reclaimed through the
 worker's weekly trim policy rather than shrinking the filesystem in place.
+Compiler cache is disposable and excluded from routine application backups;
+its migrated contents remain in the verified cutover archive. Durable Git, LFS,
+packages, Actions logs and artifacts use the separate Forgejo recovery path.
 
-`forge-snapshot-backup` runs every six hours. The existing Cinder CSI driver
+`forge-snapshot-backup` runs every six hours. The direct RBD CSI driver
 captures a point-in-time snapshot of the single volume containing SQLite, Git,
 LFS, packages, identity configuration, Actions logs and artifacts. A disposable
 volume is restored from that snapshot. Only the clone is mounted by an isolated

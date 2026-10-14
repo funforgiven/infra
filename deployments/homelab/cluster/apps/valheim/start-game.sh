@@ -10,8 +10,7 @@ if (( ${#password} < 12 || ${#password} > 128 )) ||
   exit 1
 fi
 cd /data/server
-/bootstrap/prepare-app480.py
-export SteamAppId=480
+export SteamAppId=892970
 printf '%s\n' "$SteamAppId" > steam_appid.txt
 export LD_LIBRARY_PATH=/data/server/linux64
 exec ./valheim_server.x86_64 \

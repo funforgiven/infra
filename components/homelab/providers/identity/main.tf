@@ -295,7 +295,8 @@ output "wallos_client_secret" {
 }
 
 output "cluster_kubernetes_client_id" {
-  value = zitadel_application_oidc.kubernetes["homelab"].client_id
+  value     = zitadel_application_oidc.kubernetes["homelab"].client_id
+  sensitive = true
 }
 
 

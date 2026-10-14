@@ -47,10 +47,15 @@ Restore observability first, verify its CRDs/readiness, then release database
 controllers and dependent apps. Single replicas mean Grafana/logs/recent metrics
 can be unavailable while a host or RWO volume relocates. Replica-3 Ceph protects
 against a host failure; it does not replace an independent history backup.
-The application Velero schedules currently exclude `services-observability`.
-The migration cold exports preserve current history, and Git recreates rules,
-dashboards, routes and encrypted runtime inputs. Ongoing automatic backup of
-metrics, Loki history, Grafana runtime changes and silences is not claimed.
+The separate `observability-history` Velero schedule runs daily at 03:45 UTC,
+retaining 30 days in Backblaze. It exports all four RBD CSI snapshots through
+Kopia data movement; local Ceph snapshots are temporary and are removed after
+upload. Each volume is a crash-consistent point in time, with its database/WAL
+files captured together. Cross-service snapshots are not atomic. Recovery
+requires native SQLite integrity and Prometheus/Loki WAL replay checks before
+serving traffic. The application filesystem schedules continue separately.
+An alert reports missing or stale history uploads. Git preserves rules,
+dashboards, routes and encrypted runtime inputs.
 
 With the explicit target cluster access:
 

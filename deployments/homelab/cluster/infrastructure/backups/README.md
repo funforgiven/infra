@@ -4,8 +4,9 @@ Velero backs up the single homelab cluster with Kopia filesystem backups. The po
 covers the `backup-qualification`, `finance`, `forge`, `games`, `home-automation`, `matrix`, `media`, and
 `services-databases` namespaces. The application backup policy uses filesystem copies. Forgejo separately uses
 temporary local direct-CSI snapshots to create portable recovery archives.
-Observability history is migrated/archived during cutover; its ongoing data is
-excluded from this application policy.
+Separate daily CSI data-movement schedules export monitoring history and the
+Beets/AudioMuse dump claims to Backblaze, including claims with no running Pod.
+The application filesystem policy and native dump hooks continue separately.
 
 ## Schedules
 
@@ -13,14 +14,26 @@ excluded from this application policy.
 | --- | --- | --- | --- |
 | `services-daily` | 02:30 UTC every day (`30 2 * * *`) | 720 hours (30 days) | Daily application backup |
 | `services-weekly` | 03:15 UTC every Sunday (`15 3 * * 0`) | 2160 hours (90 days) | Weekly application backup |
+| `observability-history` | 03:45 UTC every day (`45 3 * * *`) | 720 hours (30 days) | CSI snapshots exported to B2 for Prometheus, Loki, Grafana and Alertmanager |
+| `media-passive-state` | 04:15 UTC every day (`15 4 * * *`) | 720 hours (30 days) | CSI snapshots exported to B2 for the Beets catalog and native AudioMuse dumps |
 | `restore-qualification` | `0 7 1 * *`, `Europe/Istanbul` | Latest restored namespace remains until the next run | Monthly B2 restore test |
 
 The Velero controller runs the backup schedules in UTC.
 
+For an isolated PVC-only CSI restore into a `WaitForFirstConsumer` scratch
+storage class, create an inert consumer after the restored PVCs appear. Velero
+1.18 waits for the scheduler's selected-node annotation before provisioning
+the temporary download volumes. Keep that consumer unprivileged, without a
+service-account token, and inside the deny-all restore namespace. After every
+DataDownload and the Restore complete, remove it before starting the offline
+native database readers. Application restores normally supply their own
+consumers; qualification must keep their production writers inactive.
+
 AudioMuse's live PostgreSQL volume is excluded from filesystem backup. Its
 `audiomuse-postgres-backup` CronJob writes a PostgreSQL 15 custom-format dump at
 01:45 `Europe/Istanbul` to the `audiomuse-postgres-dumps` PVC and retains the
-three newest dumps. Velero backs up that dump volume. Recover AudioMuse from a
+three newest dumps. The passive-state schedule backs up that dump volume even
+when the dump Job has completed. Recover AudioMuse from a
 dump, not from the empty restored live-data PVC.
 
 Wallos creates an integrity-checked SQLite native backup every six hours. Its
@@ -162,7 +175,7 @@ kubectl -n media-restore get pvc,pods
 ```
 
 `media-restore-modifiers` removes every media PVC's production
-`spec.volumeName`, allowing Cinder and Manila to provision isolated volumes.
+`spec.volumeName`, allowing direct Ceph CSI to provision isolated volumes.
 Inspect representative audio and application files. Mount the restored
 `audiomuse-postgres-dumps` PVC in a disposable PostgreSQL 15 environment, run
 `pg_restore --list` on the chosen dump, restore it into an empty database, and
@@ -187,6 +200,19 @@ a successful daily backup for 26 hours. This policy adds:
 The automated canary checks object-store discovery, namespace mapping, dynamic
 PVC provisioning, node-agent access, Kopia transfer, and workload startup. It
 does not validate application consistency or recovery after loss of the whole
-OpenStack storage plane. Filesystem backups can capture changing application
+Ceph storage cluster. Filesystem backups can capture changing application
 files at different instants, so application-native dumps and isolated restore
 checks remain necessary. The B2 prefix is not protected by Object Lock.
+
+
+The `observability-history` schedule runs at 03:45 UTC with 30-day retention.
+It uses `snapshotMoveData` to export all four monitoring RBD volumes. Local
+snapshots are temporary. Recovery must replay Prometheus/Loki WAL and check
+Grafana SQLite integrity before accepting traffic. Each volume is a separate
+crash-consistent recovery point; there is no cross-service atomic snapshot.
+
+`media-passive-state` runs at 04:15 UTC with the same retention, selecting only
+`beets-data` and `audiomuse-postgres-dumps`. CSI snapshot movement captures them
+when their CronJob Pods have completed. Filesystem backup alone cannot cover
+an unmounted claim. Recover AudioMuse from its native dump, and verify Beets
+SQLite integrity plus its paths against the separately restored media library.

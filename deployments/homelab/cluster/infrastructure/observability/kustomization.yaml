@@ -10,3 +10,5 @@ resources:
 - runtime.sops.yaml
 - grafana-route.yaml
 - etcd-backups.yaml
+- alerting.sops.yaml
+- alerting-credentials.sops.yaml

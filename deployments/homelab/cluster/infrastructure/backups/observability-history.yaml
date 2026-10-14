@@ -1,0 +1,76 @@
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: observability-history
+driver: rook-ceph.rbd.csi.ceph.com
+deletionPolicy: Delete
+parameters:
+  clusterID: rook-ceph
+  csi.storage.k8s.io/snapshotter-secret-name: rook-csi-rbd-provisioner
+  csi.storage.k8s.io/snapshotter-secret-namespace: rook-ceph
+---
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: observability-history
+  namespace: velero
+  annotations:
+    velero.io/csi-volumesnapshot-class_rook-ceph.rbd.csi.ceph.com: observability-history
+spec:
+  paused: false
+  schedule: 45 3 * * *
+  useOwnerReferencesInBackup: false
+  template:
+    storageLocation: default
+    ttl: 720h
+    includedNamespaces:
+    - services-observability
+    snapshotVolumes: true
+    snapshotMoveData: true
+    defaultVolumesToFsBackup: false
+    itemOperationTimeout: 4h
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: observability-history-backup
+  namespace: services-observability
+spec:
+  groups:
+  - name: observability-history-backup
+    rules:
+    - alert: ObservabilityHistoryBackupStale
+      expr: (time() - velero_backup_last_successful_timestamp{schedule="observability-history"} > 93600) or absent(velero_backup_last_successful_timestamp{schedule="observability-history"})
+      for: 1h
+      labels:
+        severity: critical
+      annotations:
+        summary: No successful offsite monitoring history backup within 26 hours.
+
+---
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: media-passive-state
+  namespace: velero
+  annotations:
+    velero.io/csi-volumesnapshot-class_rook-ceph.rbd.csi.ceph.com: observability-history
+spec:
+  paused: false
+  schedule: 15 4 * * *
+  useOwnerReferencesInBackup: false
+  template:
+    storageLocation: default
+    ttl: 720h
+    includedNamespaces:
+    - media
+    includedResources:
+    - persistentvolumeclaims
+    - persistentvolumes
+    labelSelector:
+      matchLabels:
+        backup.fahrican.com/passive-media-state: "true"
+    snapshotVolumes: true
+    snapshotMoveData: true
+    defaultVolumesToFsBackup: false
+    itemOperationTimeout: 4h
