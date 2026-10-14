@@ -57,5 +57,6 @@ switch:
     # Physical speed is temporarily 1 Gb/s full duplex; the reconciler preserves
     # it. See unifi-network.yaml and services/24-unifi/migration-validation.md.
     6: infra-ap-trunk
+    7: infra-management-access # PiKVM burrata
     8: infra-iot-access
     9: infra-crs-trunk

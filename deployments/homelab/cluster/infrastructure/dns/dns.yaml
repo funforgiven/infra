@@ -13,12 +13,28 @@ metadata:
 data:
   Corefile: "cloud.fahrican.com:53 {\n    errors\n    health :8080\n    ready :8181\n    prometheus :9153\n\
     \    cache 30\n    file /etc/coredns/cloud.fahrican.com.zone {\n        reload 30s\n    }\n}\n"
-  cloud.fahrican.com.zone: "$ORIGIN cloud.fahrican.com.\n$TTL 60\n@ IN SOA ns1.cloud.fahrican.com. hostmaster.cloud.fahrican.com.\
-    \ (\n    2026090501 3600 600 86400 60\n)\n@   IN NS ns1.cloud.fahrican.com.\nns1 IN A  10.21.20.129\n\
-    grafana IN A 10.21.20.131\nauth IN A 10.21.20.131\npecorino.mgmt IN A 10.21.20.10\ntaleggio.mgmt IN\
-    \ A 10.21.20.11\nasiago.mgmt IN A 10.21.20.12\nundercloud-api.mgmt IN A 10.21.20.128\nccr2004.mgmt\
-    \ IN A 10.21.90.1\ncrs510.mgmt IN A 10.21.90.2\nricotta.mgmt IN A 10.21.90.3\neap670.mgmt IN A 10.21.90.4\n\
-    sg3210.mgmt IN A 10.21.90.5\ncluster-api.mgmt IN A 10.21.20.128\n"
+  cloud.fahrican.com.zone: |
+    $ORIGIN cloud.fahrican.com.
+    $TTL 60
+    @ IN SOA ns1.cloud.fahrican.com. hostmaster.cloud.fahrican.com. (
+        2026101501 3600 600 86400 60
+    )
+    @   IN NS ns1.cloud.fahrican.com.
+    ns1 IN A  10.21.20.129
+    grafana IN A 10.21.20.131
+    auth IN A 10.21.20.131
+    pecorino.mgmt IN A 10.21.20.10
+    taleggio.mgmt IN A 10.21.20.11
+    asiago.mgmt IN A 10.21.20.12
+    undercloud-api.mgmt IN A 10.21.20.128
+    ccr2004.mgmt IN A 10.21.90.1
+    crs510.mgmt IN A 10.21.90.2
+    ricotta.mgmt IN A 10.21.90.3
+    burrata.mgmt IN A 10.21.90.8
+    eap670.mgmt IN A 10.21.90.4
+    sg3210.mgmt IN A 10.21.90.5
+    cluster-api.mgmt IN A 10.21.20.128
+
 ---
 apiVersion: apps/v1
 kind: Deployment
