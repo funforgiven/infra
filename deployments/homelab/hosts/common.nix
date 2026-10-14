@@ -22,7 +22,7 @@ let
     tar -xzf ${cniArchive} -C "$out/bin" ./macvlan ./static ./tuning ./bridge ./host-local ./loopback
   '';
   apiCheck = pkgs.writeShellScript "kubernetes-api-ready" ''
-    exec ${pkgs.k3s}/bin/k3s kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml --request-timeout=2s get --raw=/readyz >/dev/null 2>&1
+    exec ${pkgs.kubectl}/bin/kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml --request-timeout=2s get --raw=/readyz >/dev/null 2>&1
   '';
   vlan = id: mtu: {
     netdevConfig = {
