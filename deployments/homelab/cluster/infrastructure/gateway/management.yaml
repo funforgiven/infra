@@ -27,7 +27,6 @@ spec:
               memory: 512Mi
       envoyService:
         type: LoadBalancer
-        loadBalancerClass: metallb.io/metallb
         allocateLoadBalancerNodePorts: false
         externalTrafficPolicy: Cluster
         annotations:

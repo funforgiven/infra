@@ -894,6 +894,8 @@
             src-address={{ item.source_address | default('0.0.0.0/0') }}
             dst-port={{ item.destination_port }}
             in-interface={{ item.source_interface }}
+            {% if item.out_interface is defined %}out-interface={{ item.out_interface }}{% endif %}
+            {% if item.connection_state is defined %}connection-state={{ item.connection_state }}{% endif %}
             protocol={{ item.protocol }} place-before=$drop } else={
             /ip firewall filter set $row action=accept chain={{ item.chain }}
             disabled=no
@@ -901,6 +903,8 @@
             src-address={{ item.source_address | default('0.0.0.0/0') }}
             dst-port={{ item.destination_port }}
             in-interface={{ item.source_interface }}
+            {% if item.out_interface is defined %}out-interface={{ item.out_interface }}{% endif %}
+            {% if item.connection_state is defined %}connection-state={{ item.connection_state }}{% endif %}
             protocol={{ item.protocol }} };
             :set row [/ip firewall filter find where
             comment="{{ item.comment }}"];
@@ -1194,6 +1198,8 @@
             src-address={{ item.source_address | default('0.0.0.0/0') }} and
             dst-port={{ item.destination_port }} and
             in-interface="{{ item.source_interface }}" and
+            {% if item.out_interface is defined %}out-interface="{{ item.out_interface }}" and{% endif %}
+            {% if item.connection_state is defined %}connection-state="{{ item.connection_state }}" and{% endif %}
             protocol={{ item.protocol }}]] != 1) do={
             :error "routed access rule failed: {{ item.comment }}" }
       loop: "{{ routeros_access_rules }}"

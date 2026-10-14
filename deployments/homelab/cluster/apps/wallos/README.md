@@ -51,7 +51,7 @@ reconcile, and use that password; restore the UI restriction after recovery.
 
 ## Storage and backup
 
-The `wallos-database` and `wallos-logos` PVCs use Cinder `rbd1` storage. The
+The `wallos-database` and `wallos-logos` PVCs use direct Ceph `ceph-block` storage. The
 claims opt out of Flux pruning so a manifest rename or temporary service
 removal cannot delete the financial data while the `finance` namespace remains;
 deleting the namespace still deletes its claims. After verifying the expected
@@ -62,7 +62,7 @@ backup immediately before Kopia copies both PVCs off-cluster.
 For an isolated restore, create a disposable `finance-restore` namespace with
 a deny-all NetworkPolicy. Restore the `finance` namespace without routes,
 SecurityPolicies, Services, Pods, StatefulSets, NetworkPolicies, or Secrets,
-and use `finance-restore-modifiers` so Cinder provisions isolated volumes.
+and use `finance-restore-modifiers` so direct Ceph CSI provisions isolated volumes.
 
 ```console
 kubectl create namespace finance-restore

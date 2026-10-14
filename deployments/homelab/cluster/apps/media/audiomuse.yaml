@@ -493,6 +493,7 @@ spec:
         metadata:
           labels:
             app.kubernetes.io/name: audiomuse-reconcile
+            velero.io/exclude-from-backup: "true"
             app.kubernetes.io/part-of: media
         spec:
           restartPolicy: Never
@@ -556,6 +557,7 @@ spec:
         metadata:
           labels:
             app.kubernetes.io/name: audiomuse-postgres-backup
+            velero.io/exclude-from-backup: "true"
             app.kubernetes.io/part-of: media
         spec:
           restartPolicy: Never

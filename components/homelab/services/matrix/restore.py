@@ -92,17 +92,28 @@ def main():
         relay = Path(
             os.environ.get("MATRIX_RESTORE_RELAY", "/var/lib/matrix/relay/backups")
         )
+        import shutil
         import sqlite3
 
         databases = list(relay.glob("*.db")) + list(relay.glob("*.sqlite"))
         if not databases:
             raise ValueError("relay recovery snapshots absent")
+        # A standalone SQLite backup can retain WAL journal mode. SQLite may
+        # need temporary WAL/SHM files even for a read-only connection. Keep
+        # the recovered claim read-only and inspect an isolated writable copy.
+        sqlite_work = work / "restored-sqlite"
+        sqlite_work.mkdir()
         for backup in databases:
-            with sqlite3.connect(f"file:{backup}?mode=ro", uri=True) as connection:
+            restored = sqlite_work / backup.name
+            shutil.copyfile(backup, restored)
+            for suffix in ("-wal", "-shm"):
+                sidecar = backup.with_name(backup.name + suffix)
+                if sidecar.is_file():
+                    shutil.copyfile(sidecar, restored.with_name(restored.name + suffix))
+            with sqlite3.connect(f"file:{restored}?mode=ro", uri=True) as connection:
                 if connection.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                     raise ValueError("relay snapshot corrupt")
         # Open an isolated copy of the backed-up crypto store, never a live store.
-        import shutil
         from nio import AsyncClient, AsyncClientConfig
 
         identity = json.loads((relay / "identity.json").read_text())

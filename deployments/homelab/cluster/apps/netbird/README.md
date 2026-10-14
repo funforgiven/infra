@@ -12,7 +12,7 @@ AWS mail backend tunnel are not migrated into NetBird.
 | ZITADEL project, service-user grant and OIDC client | Identity OpenTofu | Existing ZITADEL PostgreSQL |
 | NetBird combined server 0.80.0 | Flux | PostgreSQL; cryptographic keys in SOPS |
 | Coturn 4.18.0 STUN workers | Flux DaemonSet | None; STUN only, TURN disabled |
-| PostgreSQL 18, three instances | CloudNativePG | Three Cinder volumes, synchronous replica |
+| PostgreSQL 18, three instances | CloudNativePG | Three direct RBD volumes, synchronous replica |
 | PostgreSQL recovery | Barman Cloud plugin | Continuous WAL and daily base backups in B2 |
 | Account settings, disabled default policy, IdP, groups, DNS and HTTPS policy | NetBird OpenTofu | NetBird PostgreSQL |
 | Network and routing peers | NetBird Kubernetes operator 0.8.0 | Reconciled Kubernetes resources and NetBird API |
@@ -28,9 +28,8 @@ owns its identity. Neither controller also owns the other's network resources.
 The operator's experimental Gateway API integration and automatic policy
 creation are disabled.
 
-The OVN load balancer cannot use Kubernetes' HTTP readiness check for a UDP
-pool. STUN therefore runs on every worker, separately from the singleton
-controller, with source addresses preserved. `netbird-stun.fahrican.com`
+STUN runs on every physical host with MetalLB local endpoints and original
+source addresses preserved, separately from the singleton controller. `netbird-stun.fahrican.com`
 uses UDP 3478. Routing pods resolve the coordination and STUN names to their
 separate local gateway addresses; their connections stay within the homelab.
 The operator's DNS zone name must equal its domain because version 0.8.0 uses

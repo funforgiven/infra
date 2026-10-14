@@ -39,7 +39,6 @@ spec:
       envoyService:
         type: LoadBalancer
         externalTrafficPolicy: Local
-        loadBalancerClass: metallb.io/metallb
         allocateLoadBalancerNodePorts: false
         annotations:
           metallb.io/address-pool: services

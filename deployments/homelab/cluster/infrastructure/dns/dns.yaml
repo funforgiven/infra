@@ -129,7 +129,6 @@ metadata:
     metallb.io/loadBalancerIPs: 10.21.20.129
 spec:
   type: LoadBalancer
-  loadBalancerClass: metallb.io/metallb
   externalTrafficPolicy: Cluster
   selector:
     app.kubernetes.io/name: internal-coredns

@@ -29,6 +29,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: beets-data
   namespace: media
+  labels:
+    backup.fahrican.com/passive-media-state: "true"
 spec:
   accessModes:
   - ReadWriteOnce
@@ -68,6 +70,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: audiomuse-postgres-dumps
   namespace: media
+  labels:
+    backup.fahrican.com/passive-media-state: "true"
 spec:
   accessModes:
   - ReadWriteOnce

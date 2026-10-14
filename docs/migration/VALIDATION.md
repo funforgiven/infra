@@ -1,5 +1,7 @@
 # Migration validation evidence
 
+This document records the preparation baseline. See [LIVE-RECOVERY.md](LIVE-RECOVERY.md) for the authorized live execution and current qualifications.
+
 All checks described here operate on the prepared worktree. None apply resources
 to a live Kubernetes cluster, provider or physical host.
 

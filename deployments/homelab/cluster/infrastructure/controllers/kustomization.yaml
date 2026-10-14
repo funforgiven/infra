@@ -4,3 +4,4 @@ resources:
 - cert-manager.yaml
 - envoy-gateway.yaml
 - ../../../../../components/homelab/storage-snapshots
+- ../../../../../components/homelab/monitoring-crds
