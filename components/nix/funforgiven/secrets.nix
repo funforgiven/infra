@@ -154,6 +154,10 @@ let
           hostName = "10.21.20.12";
           user = "funforgiven";
         };
+        burrata = {
+          hostName = "10.21.90.8";
+          user = "root";
+        };
         pecorino = {
           hostName = "10.21.20.10";
           user = "funforgiven";

@@ -6,6 +6,14 @@
     ],
     "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGWis+1Mr8gpI5tTaaprEBhSBim3Q/owQ0HNGfR40wEd"
   },
+  "burrata": {
+    "hostNames": [
+      "10.21.90.8",
+      "burrata",
+      "burrata.mgmt.cloud.fahrican.com"
+    ],
+    "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBzLJtYAYOomqSAZQb59wTDLwH5tmPLzOLdGLr55UPIx"
+  },
   "ccr2004": {
     "hostNames": [
       "10.21.10.1"
