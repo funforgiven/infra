@@ -1,5 +1,7 @@
 # Preparation acceptance
 
+This document records the preparation baseline. See [LIVE-RECOVERY.md](LIVE-RECOVERY.md) for the authorized live execution and current qualifications.
+
 Scope: replace the OpenStack deployment in a separate NixOS/Kubernetes branch,
 implement the migration code and document the future outage. This acceptance
 does not authorize or certify live installation, data restoration or hardware.

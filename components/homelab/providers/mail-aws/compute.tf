@@ -175,7 +175,9 @@ resource "aws_instance" "mail" {
   }
 
   lifecycle {
-    create_before_destroy = true
+    # Retain the enrolled mail appliance; deploy day-two NixOS changes in place.
+    prevent_destroy = true
+    ignore_changes  = [user_data]
   }
 
   depends_on = [

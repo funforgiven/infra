@@ -10,7 +10,7 @@ data:
       - name: default
         provider: aws
         bucket: fahrican-cloud-recovery
-        prefix: services/kubernetes
+        prefix: services/kubernetes/plugins/nixos-v1/velero
         default: true
         accessMode: ReadWrite
         credential:

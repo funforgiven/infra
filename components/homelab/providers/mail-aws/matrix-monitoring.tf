@@ -13,7 +13,7 @@ variable "enable_matrix_delivery_alerts" {
 data "archive_file" "matrix_probe" {
   count       = var.enable_matrix_monitoring ? 1 : 0
   type        = "zip"
-  source_file = "${path.module}/../../matrix/outside_check.py"
+  source_file = "${path.module}/../../services/matrix/outside_check.py"
   output_path = "/tmp/fahrican-matrix-probe.zip"
 }
 

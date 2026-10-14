@@ -10,7 +10,6 @@ metadata:
     metallb.io/loadBalancerIPs: 10.21.40.123
 spec:
   type: LoadBalancer
-  loadBalancerIP: 10.21.40.123
   externalTrafficPolicy: Cluster
   selector:
     app.kubernetes.io/name: factorio
@@ -19,7 +18,6 @@ spec:
     protocol: UDP
     port: 34197
     targetPort: game
-  loadBalancerClass: metallb.io/metallb
 ---
 apiVersion: apps/v1
 kind: StatefulSet

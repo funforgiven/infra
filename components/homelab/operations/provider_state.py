@@ -20,8 +20,12 @@ def read_state(snapshot,provider):
     if state.get("version")!=4 or not state.get("lineage"): raise ValueError("unsupported or unidentifiable state")
     return state
 
+def current_snapshot():
+    current=Path("secrets/current-provider-state.sops.yaml")
+    return current if current.exists() else Path("secrets/migration-state.sops.yaml")
+
 def outputs(provider):
-    return read_state(decrypt(Path("secrets/migration-state.sops.yaml"))[0],provider).get("outputs",{})
+    return read_state(decrypt(current_snapshot())[0],provider).get("outputs",{})
 
 def export(snapshot,provider,target):
     state=read_state(snapshot,provider)
@@ -35,7 +39,7 @@ def export(snapshot,provider,target):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("provider",choices=STATE_NAMES)
-    parser.add_argument("--snapshot",type=Path,default=Path("secrets/migration-state.sops.yaml"))
+    parser.add_argument("--snapshot",type=Path,default=current_snapshot())
     parser.add_argument("--output",type=Path,required=True)
     args=parser.parse_args()
     count=export(decrypt(args.snapshot)[0],args.provider,args.output)

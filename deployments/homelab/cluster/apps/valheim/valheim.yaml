@@ -10,7 +10,6 @@ metadata:
     metallb.io/loadBalancerIPs: 10.21.40.124
 spec:
   type: LoadBalancer
-  loadBalancerIP: 10.21.40.124
   externalTrafficPolicy: Cluster
   selector:
     app.kubernetes.io/name: valheim
@@ -23,7 +22,6 @@ spec:
     protocol: UDP
     port: 2457
     targetPort: query
-  loadBalancerClass: metallb.io/metallb
 ---
 apiVersion: apps/v1
 kind: StatefulSet

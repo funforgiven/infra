@@ -14,8 +14,9 @@ in
     Rook-Ceph storage. Independent AWS mail and external provider resources
     retain their declarative configuration and existing state.
 
-    This migration branch is preparation only. Live installation and provider
-    changes require the documented backup, restore and hardware gates.
+    The three physical hosts have been rebuilt and retained applications restored.
+    Live recovery checks and the remaining offsite qualification are recorded in
+    [the execution record](docs/migration/LIVE-RECOVERY.md).
 
     ## Repository map
 

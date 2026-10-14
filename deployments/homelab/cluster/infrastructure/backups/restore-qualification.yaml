@@ -199,14 +199,14 @@ data:
     ])).total_seconds() < 93600]\nif eligible:\n    print(max(eligible, key=lambda b: b[\"metadata\"][\"\
     creationTimestamp\"])[\"metadata\"][\"name\"])\n')\"\ncase \"$backup\" in\n  services-daily-[a-z0-9-]*)\
     \ ;;\n  *)\n    echo \"No valid completed services-daily backup was found.\" >&2\n    exit 1\n   \
-    \ ;;\nesac\ntest \"$($kubectl -n velero get backup \"$backup\" \\\n  -o jsonpath='{.status.phase}')\"\
+    \ ;;\nesac\ntest \"$($kubectl -n velero get backups.velero.io \"$backup\" \\\n  -o jsonpath='{.status.phase}')\"\
     \ = Completed\n\nfor target in backup-qualification-restore games-restore; do\n  \"$kubectl\" delete\
     \ namespace \"$target\" --ignore-not-found --wait=false\ndone\nfor target in backup-qualification-restore\
     \ games-restore; do\n  while \"$kubectl\" get namespace \"$target\" >/dev/null 2>&1; do\n    sleep\
     \ 5\n  done\ndone\n\nsuffix=\"${backup#services-daily-}\"\nrestore=\"qualification-$suffix-$(date\
     \ -u +%Y%m%d%H%M%S)\"\nsed \"s/BACKUP_NAME/$backup/; s/RESTORE_NAME/$restore/\" \\\n  /config/restore.yaml\
     \ | \"$kubectl\" create -f -\n\nattempt=0\nwhile [ \"$attempt\" -lt 360 ]; do\n  phase=\"$($kubectl\
-    \ -n velero get restore \"$restore\" \\\n    -o jsonpath='{.status.phase}' 2>/dev/null || true)\"\n\
+    \ -n velero get restores.velero.io \"$restore\" \\\n    -o jsonpath='{.status.phase}' 2>/dev/null || true)\"\n\
     \  case \"$phase\" in\n    Completed) break ;;\n    Failed|PartiallyFailed|FailedValidation)\n   \
     \   echo \"Restore qualification entered phase $phase.\" >&2\n      exit 1\n      ;;\n  esac\n  attempt=$((attempt\
     \ + 1))\n  sleep 10\ndone\ntest \"$phase\" = Completed\n\"$kubectl\" -n backup-qualification-restore\
