@@ -1,5 +1,11 @@
 # NixOS and Kubernetes migration execution
 
+This is the historical execution procedure for the completed outage. Read
+[LIVE-RECOVERY.md](LIVE-RECOVERY.md) for the deployed state and recovery results.
+The active GitOps source follows signed commits on `main`; retain the original
+migration branch and source revision below as historical recovery references.
+Do not repeat the installation or disk-formatting sequence for normal updates.
+
 This runbook is for a separately authorized future outage. Preparation has not
 applied any target configuration, changed a running server or copied final app
 data. Use the prepared branch `codex/nixos-kubernetes-migration`; keep the main

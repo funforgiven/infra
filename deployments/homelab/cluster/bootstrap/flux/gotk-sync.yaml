@@ -19,7 +19,7 @@ spec:
   interval: 1m
   url: https://github.com/funforgiven/infra.git
   ref:
-    branch: codex/nixos-kubernetes-migration
+    branch: main
   verify:
     mode: HEAD
     secretRef:

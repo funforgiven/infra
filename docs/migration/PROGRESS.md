@@ -1,5 +1,11 @@
 # Migration status
 
+This journal preserves the preparation and early execution record. The live
+migration and independent recovery checks are complete; see
+[LIVE-RECOVERY.md](LIVE-RECOVERY.md) for current results. The active GitOps
+source now follows signed `main` commits. Statements below about work that had
+not yet run describe the earlier audit stage.
+
 Preparation is complete. The owner has now requested a sequential live migration, conditional on verified recovery copies. The recovery audit has started; no physical host has been rebooted, reinstalled or reformatted.
 
 Worktree: `/home/funforgiven/dev/infra-nixos-kubernetes`.
