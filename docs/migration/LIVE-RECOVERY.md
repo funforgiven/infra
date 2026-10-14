@@ -95,26 +95,43 @@ Both decrypt with the existing personal age key kept outside these servers.
 Those Git-hosted credentials independently listed, downloaded and decrypted a
 checkpoint, verified every artifact hash, and recovered its signed Git bundle.
 
-## Permanent graph handoff in progress
+## Completed deployment and independent recovery
 
-The fresh full application backup and independent Forgejo, Matrix,
-home-automation, finance and media restore drills passed their native checks.
-All four monitoring snapshots were independently downloaded; native Prometheus
-history, Loki WAL replay/sample hashes, Grafana SQLite and original Alertmanager
-silences passed. The passive Beets catalog and AudioMuse dump snapshots also
-passed independent downloads, all 353 original catalog references, a fresh
-PostgreSQL 15 restore of all 29 tables and native index checks. Successful
-isolated test copies and their volumes were removed with UID safeguards.
+The normal Flux root and all 29 child stages reconciled at the signed migration
+revision. Temporary recovery holds and runtime overlays were removed. The two
+alerting Secrets moved to their permanent observability owner with their UIDs
+and encrypted contents preserved. All 34 production claim UIDs and CSI handles
+remained unchanged through that handoff.
 
-Daily CSI data-movement policies now cover the monitoring history and passive
-media claims even when no application Pod mounts them. Short-lived media
-CronJob Pods are excluded from filesystem backups. Matrix's offline verifier
-checks writable temporary copies of its recovered SQLite snapshots while the
-restored source claims remain read-only, allowing WAL/SHM bookkeeping.
+A fresh full application backup completed after all services were released.
+Independent Forgejo, Matrix, home-automation, finance and media restores passed
+their native checks. The four monitoring snapshots were independently downloaded
+and opened with native Prometheus, Loki, Alertmanager and SQLite readers;
+original historical queries and Loki WAL replay passed. The Beets catalog and
+native AudioMuse dump claims also passed independent CSI downloads, all original
+catalog references, a fresh PostgreSQL 15 restore and native index checks.
+Successful disposable restore copies and their volumes were removed.
 
-Normal-root Flux reconciliation and the final post-deployment etcd backups and
-independent native restores are the remaining completion gates. Exact private
-receipts are preserved in the encrypted Backblaze execution checkpoints.
+All three hosts then produced new native etcd backups after the permanent graph
+was running. Each was independently downloaded using credentials recovered from
+the Backblaze-restored signed Git bundle. Snapshot hash checks, native etcd
+restores, stored ownership/modes, token/TLS material, the new CA and preserved
+host age/SSH identities passed. These snapshots capture the deployed application
+graph; the final documentation-only commit follows those successful checks.
+
+Daily CSI data-movement schedules now export the four monitoring volumes and
+the passive Beets/AudioMuse dump claims to Backblaze. Short-lived media CronJob
+Pods are excluded from filesystem backups. The native Matrix verifier checks
+writable temporary copies of recovered SQLite snapshots while its restored
+source claims remain read-only, permitting SQLite WAL/SHM bookkeeping.
+
+The final encrypted execution checkpoint contains the signed source bundle,
+current encrypted provider ownership, original recovery archive locators,
+volume bindings and native acceptance receipts. Select the newest verified
+checkpoint by Backblaze upload/version time under
+`services/kubernetes/plugins/migration/20261012/`; local `/tmp` verification
+copies are temporary working data. Keep the personal/offline age identities
+and the existing backup credentials available independently of these servers.
 
 Interactive human OIDC sign-in, a real player joining each game, a personal
 NetBird device tunnel, and an externally delivered test notification have not
