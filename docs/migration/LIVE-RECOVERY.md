@@ -14,6 +14,20 @@ OSDs with three physical failure domains. The new Ceph FSID is
 never adopted. Reusing the source NVMe disks ended simple on-disk rollback.
 Recovery now relies on the independently downloaded Backblaze exports.
 
+## Main branch handoff — 15 October 2026
+
+The owner authorized merging the completed migration into `main` with linear
+history. The migration already descends directly from the unchanged `main`
+revision `8d5f130`, so its signed commits can be retained in a fast-forward.
+Flux now follows `main` and continues requiring a trusted signature on HEAD.
+The separately published AWS mail gateway address correction is already
+included in the migration tree; the existing AWS appliance stays in place.
+
+The original migration branch, installed host revision and independently
+verified recovery checkpoints remain historical recovery references. Subsequent
+cluster changes belong on `main`; the installer runbook and progress journal
+describe the completed outage rather than instructions to repeat it.
+
 ## Preserved data and bindings
 
 All 50 retained source claims passed independent downloads and native recovery
