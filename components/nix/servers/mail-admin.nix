@@ -1,6 +1,6 @@
 _: {
   nixos.modules.services-aws-mail-admin =
-    { pkgs, ... }:
+    { pkgs, lib, ... }:
     let
       vpn = builtins.fromJSON (builtins.readFile ../../../deployments/homelab/cloud/mail-admin-vpn.json);
       syncVpn = pkgs.writeShellApplication {
@@ -26,7 +26,7 @@ _: {
             jq --raw-output '"PrivateKey = " + .private_key' "$document"
             printf '%s\n' '[Peer]' 'PublicKey = ${vpn.routerPublicKey}'
             jq --raw-output '"PresharedKey = " + .preshared_key' "$document"
-            printf '%s\n' 'Endpoint = ${vpn.endpoint}' 'AllowedIPs = ${vpn.gatewaySource}' 'PersistentKeepalive = 25'
+            printf '%s\n' 'Endpoint = ${vpn.endpoint}' 'AllowedIPs = ${lib.concatStringsSep ", " vpn.gatewaySources}' 'PersistentKeepalive = 25'
           } > "$candidate"
           install -m 0600 "$candidate" /run/mail-admin-vpn/wg-mail.conf
         '';
@@ -42,8 +42,8 @@ _: {
       '';
     in
     {
-      # Only the services gateway's SNAT address can use this backend. The
-      # gateway separately admits administrator devices from wg-admin only.
+      # Only the three declared Kubernetes gateway hosts can use this backend.
+      # The gateway separately admits the declared administrator devices.
       networking.wg-quick.interfaces.wg-mail.configFile = "/run/mail-admin-vpn/wg-mail.conf";
       networking.firewall.interfaces.wg-mail.allowedTCPPorts = [ 8080 ];
       systemd.services.mail-admin-vpn-secrets = {
@@ -76,7 +76,7 @@ _: {
             }
           ];
           extraConfig = ''
-            allow ${vpn.gatewaySource};
+            ${lib.concatMapStringsSep "\n" (source: "allow ${source};") vpn.gatewaySources}
             deny all;
             client_max_body_size 50m;
           '';
