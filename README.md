@@ -6,7 +6,7 @@ Rook-Ceph storage. Independent AWS mail and external provider resources
 retain their declarative configuration and existing state.
 
 The three physical hosts have been rebuilt and retained applications restored.
-Live recovery checks and the remaining offsite qualification are recorded in
+Live deployment and independent recovery results are recorded in
 [the execution record](docs/migration/LIVE-RECOVERY.md).
 
 ## Repository map
