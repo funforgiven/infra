@@ -9,6 +9,11 @@ Kubernetes workload secrets are generally stored beside the deployment that
 consumes them. The Nix modules, runtime credential schemas, and SOPS documents
 are the inventory; this README does not duplicate every key.
 
+Windows and WSL local accounts are kept in [`windows-gorgonzola.yaml`](windows-gorgonzola.yaml).
+[`local-recovery.yaml`](local-recovery.yaml) preserves legacy intake credentials
+by original filename, including retired Ricotta access and media-account passwords.
+Both documents use the personal recovery recipient and are not deployed to hosts.
+
 ## Recovery keys
 
 Back up the complete personal age identity at:
