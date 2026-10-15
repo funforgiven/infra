@@ -30,7 +30,7 @@ switch:
     infra-trusted-access:
       nativeVlan: 10
       taggedVlans: []
-      # Disable STP only for workstation port 2 to avoid its observed 33-second
+      # Disable STP for desktop ports 2/3 to avoid the observed 33-second
       # link-up delay. Switch links retain STP.
       spanningTree:
         enabled: false
@@ -51,7 +51,7 @@ switch:
   ports:
     1: infra-ccr-trunk
     2: infra-trusted-access
-    3: infra-management-access
+    3: infra-trusted-access # gorgonzola, GMKtec NucBox K8 Plus
     4: infra-iot-access # Dongle-M Zigbee coordinator
     5: infra-iot-access # Dongle-M Thread RCP
     # Physical speed is temporarily 1 Gb/s full duplex; the reconciler preserves
