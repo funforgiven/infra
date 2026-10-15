@@ -386,6 +386,7 @@ class SwitchOnlyTests(unittest.TestCase):
     def setUp(self) -> None:
         self.desired = omada.load_desired(SWITCH_ONLY_PATH)
         self.api = FakeApi()
+        self.api.ports[3] = {"profileId": "p-trusted", "profileName": "infra-trusted-access"}
         self.api.devices = [item for item in self.api.devices if item["type"] == "switch"]
 
     def test_no_wireless_reads_or_writes_without_an_ap(self) -> None:

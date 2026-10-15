@@ -38,7 +38,7 @@ its compact desired-state file and reconciler.
 | CRS510 | `sfp28-7/8` | `bond-server3`, `pecorino` |
 | CRS510 | `ether1` | direct rescue, `192.168.89.2/24` |
 | SG3210XHP-M2 | port 6 | U7 Pro Max `74:F9:2C:3C:99:F7`; untagged management VLAN 90, tagged WLAN VLANs 10/50; reserved `10.21.90.6` |
-| SG3210XHP-M2 | port 3 | PiKVM `ricotta`, MAC `2C:CF:67:9D:A2:F7`; VLAN 90 DHCP reservation `10.21.90.3` |
+| SG3210XHP-M2 | port 3 | Windows desktop `gorgonzola`, GMKtec NucBox K8 Plus, Ethernet MAC `C8:FF:BF:04:46:7B`; untagged trusted VLAN 10 |
 | SG3210XHP-M2 | port 7 | PiKVM V4 Plus `burrata`, MAC `88:A2:9E:41:73:2C`; VLAN 90 DHCP reservation `10.21.90.8`; two PiKVM Switch units |
 
 CCR ports 2 and 15 both carry native VLAN 1 and tagged VLANs 10, 20, 40, 50,
