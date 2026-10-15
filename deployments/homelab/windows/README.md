@@ -18,6 +18,11 @@ Ubuntu's optional platform metrics are declined during first-run setup.
 WSL services need an explicit startup mechanism to run after Windows boots;
 disabling sleep alone does not start Linux services at boot.
 
+ChatGPT desktop opens at Windows sign-in through the user's `ChatGPT.lnk`
+Startup shortcut. After signing in to ChatGPT, connect the dot from its profile
+under **Computers > Your computer > Allow access**. Keep the app running for
+local access; see the [connection guide](https://learn.chatgpt.com/docs/dots/computers-and-apps#connect-your-computer).
+
 Microsoft references: [privacy controls](https://learn.microsoft.com/en-us/windows/privacy/manage-connections-from-windows-operating-system-components-to-microsoft-services),
 [Pro diagnostic-data minimum](https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-system#allowtelemetry),
 [app privacy](https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-privacy),
