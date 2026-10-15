@@ -21,7 +21,7 @@ creation_rules:
   - age:
     - age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
     - age124tkmur0lvtqykjrv7um30s74rp9a5s8djytsd3kj5pet9v5hq3qzsm7r6
-- path_regex: ^secrets/(home-automation-radios|home-assistant|daikin-onecta|omada|backblaze|zitadel)\.yaml$
+- path_regex: ^secrets/(home-automation-radios|home-assistant|daikin-onecta|omada|backblaze|zitadel|local-recovery|windows-gorgonzola)\.yaml$
   key_groups:
   - age:
     - age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea

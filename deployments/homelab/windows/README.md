@@ -10,8 +10,10 @@ Optional diagnostics are disabled; Windows Pro still permits required diagnostic
 
 Install stable WSL2 with `wsl --install --no-distribution --web-download`, restart,
 then install Ubuntu LTS with `wsl --install -d Ubuntu --web-download`.
-The installed instance is Ubuntu 26.04.1 LTS with local user `funforgiven`;
-its separate password is in the ignored `secrets/windows-gorgonzola-wsl.key`.
+The installed instance is Ubuntu 26.04.1 LTS with local user `funforgiven`.
+Windows credentials and recovery answers are under `windows`, and the separate
+Ubuntu credentials under `wsl`, in SOPS-encrypted
+[`secrets/windows-gorgonzola.yaml`](../../../secrets/windows-gorgonzola.yaml).
 Ubuntu's optional platform metrics are declined during first-run setup.
 WSL services need an explicit startup mechanism to run after Windows boots;
 disabling sleep alone does not start Linux services at boot.
