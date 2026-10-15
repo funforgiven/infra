@@ -1,7 +1,8 @@
 # PiKVM management
 
-The two PiKVMs have separate identities and credentials. Check the Ethernet
-MAC before any enrollment, network change, or recovery operation.
+`burrata` is the active PiKVM; `ricotta` is retired. Their identities and
+credentials remain separate. Check the Ethernet MAC before enrollment,
+network changes or recovery.
 
 | Device | Management address | Ethernet MAC | Omada port |
 | --- | --- | --- | --- |
@@ -64,12 +65,20 @@ metadata identify this device as `burrata`; its timezone is `Europe/Istanbul`.
 `burrata` has two official PiKVM Switch Multiport Extenders, with four ports
 per unit. Unit 1 is closest to the PiKVM; unit 2 connects to unit 1's
 DOWNLINK connectors. The web interface exposes ports `1.1`–`1.4` and
-`2.1`–`2.4`. Port names remain unset until the target machines are connected.
+`2.1`–`2.4`. The qualified unit-1 mapping is:
 
-Target computers were not connected during initial enrollment. HDMI video,
-USB input, boot media, and ATX power control must be qualified after cabling.
-Both units and selection of all eight ports passed verification; port `1.1`
-is selected initially.
+| Port | Computer | CPU |
+| --- | --- | --- |
+| `1.1` | `gorgonzola`, GMKtec NucBox K8 Plus, Windows 11 Pro | Ryzen 7 8845HS |
+| `1.2` | `pecorino`, Kubernetes | Core i9-14900K |
+| `1.3` | `asiago`, Kubernetes | Ryzen 9 9900X |
+| `1.4` | `taleggio`, Kubernetes | Core i5-13600K |
+
+Unit 2 is unused. Pecorino's HDMI/USB were disconnected during its hardware
+investigation; its port remains reserved. There are no ATX connections, so
+PiKVM cannot physically power-cycle these PCs. Windows installation media,
+keyboard and mouse were qualified on `1.1`; check the active port and visible
+hardware identity before attaching media or sending input.
 For each computer, the official switch guide specifies:
 
 - One HDMI 2.0 cable, at least 50 cm long.
