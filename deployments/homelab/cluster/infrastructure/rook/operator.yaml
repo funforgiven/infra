@@ -139,12 +139,24 @@ spec:
         snapshotPolicy: volumeSnapshot
         controllerPlugin:
           replicas: 2
+          hostNetwork: true
+          deploymentStrategy:
+            type: RollingUpdate
+            rollingUpdate:
+              maxSurge: 0
+              maxUnavailable: 1
       cephfs:
         enabled: true
         name: rook-ceph.cephfs.csi.ceph.com
         snapshotPolicy: none
         controllerPlugin:
           replicas: 2
+          hostNetwork: true
+          deploymentStrategy:
+            type: RollingUpdate
+            rollingUpdate:
+              maxSurge: 0
+              maxUnavailable: 1
       nfs:
         enabled: false
         name: rook-ceph.nfs.csi.ceph.com
