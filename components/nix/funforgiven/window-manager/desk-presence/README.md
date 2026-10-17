@@ -3,24 +3,24 @@
 ## Current behavior
 
 Desk-presence screen control is disabled in `../idle.nix`
-(`deskPresenceEnabled = false`) after repeated occupied reports from an empty
-desk. The screen saver activates after **120 seconds of input inactivity**
-and wakes on keyboard, pointer or touch input. Rebuilding NixOS preserves
-this choice; the presence reader is not installed or started.
+(`deskPresenceEnabled = false`) because the sensor reported presence at an
+empty desk. The screen saver activates after **120 seconds of input
+inactivity** and wakes on keyboard, pointer or touch input. The presence reader
+is not installed or started.
 
-The FP300 remains available in Home Assistant for presence and climate data.
-Its Medium sensitivity, 2 m range and enabled interference identification
-were read back on October 2. Adaptive sensitivity remains off.
+The FP300 is still used in Home Assistant for presence and climate data, with
+Medium sensitivity, 2 m range, interference identification on and adaptive
+sensitivity off.
 
 ## Optional presence mode (disabled)
 
-When explicitly enabled in `../idle.nix`, Parmigiano uses the desk FP300's
+When enabled in `../idle.nix`, Parmigiano uses the desk FP300's
 `binary_sensor.0x54ef4410017220eb_presence` through Home Assistant's TLS
 WebSocket API. The `desk-presence.service` user service only reads states;
 it sends no Home Assistant service commands.
 
 - Presence keeps all screens awake, including while reading without input.
-- A clear desk activates Quickshell's existing black overlay. The sensor
+- A clear desk activates Quickshell's black overlay. The sensor
   uses medium sensitivity and waits 30 seconds before reporting absence;
   Quickshell follows that report directly.
 - Returning clears the overlay. Keyboard, pointer and touch input also wake
@@ -45,10 +45,10 @@ deployed, as user-owned mode `0400`
 `LoadCredential`. No plaintext token is embedded in the Nix store or command
 line. The reader requires normal TLS certificate validation.
 
-To restore presence mode, explicitly enable it in `../idle.nix` and apply the
+To restore presence mode, enable it in `../idle.nix` and apply the
 NixOS configuration to install the user service.
 The service starts after `graphical-session.target` and Quickshell, and
-reconnects after HA or network interruptions. The explicit session ordering
+reconnects after HA or network interruptions. The session ordering
 prevents a startup cycle that otherwise causes systemd to skip the reader at
 login and leave the screen saver using its input-idle fallback. After
 rotating the token, rebuild and restart `desk-presence.service` to refresh

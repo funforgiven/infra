@@ -120,9 +120,8 @@ locals {
   ])
 }
 
-# Individual zones deliberately leave public mail/JMAP, ZITADEL, and the rest
-# of fahrican.com DNS untouched. With NetBird disconnected, LAN DNS still
-# resolves these names to the existing LAN gateway.
+# Zones cover only service hosts; other fahrican.com names stay on public/LAN DNS.
+# With NetBird disconnected, LAN DNS resolves these names to the LAN gateway.
 resource "netbird_dns_zone" "service" {
   for_each             = local.service_hosts
   name                 = "Private service ${each.key}"

@@ -1,6 +1,6 @@
 # fahrican.routeros
 
-This source-local collection layers the repository's narrowly scoped terminal
+This local collection layers the repository's narrowly scoped terminal
 compatibility on top of `ansible.netcommon` 8.6.2 and `community.routeros`
 3.22.0 from the flake-locked Ansible runtime. It is not an independent
 RouterOS module collection.

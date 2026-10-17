@@ -393,8 +393,8 @@ def backup():
     run(["vandelay", "import", "jmap", "--url", f"https://{HOST}", "--auth-basic",
          f"fahrican@{DOMAIN}", "--account-name", f"fahrican@{DOMAIN}", str(archive)], env=env, timeout=3600)
     validate_archive(archive)
-    # The portable account archive is the independent recovery source. A
-    # PostgreSQL dump additionally preserves the full server registry/metadata
+    # The portable account archive restores without AWS. A
+    # PostgreSQL dump additionally holds the full server registry/metadata
     # for AWS recovery with matching S3 versions.
     db_env = os.environ.copy()
     db_env.update(PGHOST=os.environ["STALWART_RDS_HOST"], PGDATABASE="stalwart", PGUSER="stalwart",
@@ -459,7 +459,7 @@ def main():
         {"reconcile": reconcile, "health": health, "canary": canary, "backup": backup,
          "restore-check": restore_check}[args.action]()
     except Exception as error:
-        # Deliberately omit exception text from APIs/SQL: it may contain
+        # Omit exception text from APIs/SQL: it may contain
         # credentials, recipients, or message content.
         detail = str(error) if isinstance(error, OperationError) else type(error).__name__
         print(f"Mail {args.action} failed: {detail}.", flush=True)

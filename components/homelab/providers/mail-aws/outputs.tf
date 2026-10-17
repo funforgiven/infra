@@ -1,5 +1,5 @@
 output "ipv4_address" {
-  description = "Stable AWS address prepared for the deliberate mail DNS cutover"
+  description = "Stable public mail address (EIP)"
   value       = aws_eip.mail.public_ip
 }
 

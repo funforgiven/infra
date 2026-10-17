@@ -6,7 +6,6 @@ covers the `backup-qualification`, `finance`, `forge`, `games`, `home-automation
 temporary local direct-CSI snapshots to create portable recovery archives.
 Separate daily CSI data-movement schedules export monitoring history and the
 Beets/AudioMuse dump claims to Backblaze, including claims with no running Pod.
-The application filesystem policy and native dump hooks continue separately.
 
 ## Schedules
 
@@ -27,7 +26,7 @@ the temporary download volumes. Keep that consumer unprivileged, without a
 service-account token, and inside the deny-all restore namespace. After every
 DataDownload and the Restore complete, remove it before starting the offline
 native database readers. Application restores normally supply their own
-consumers; qualification must keep their production writers inactive.
+consumers; restore checks must keep their production writers inactive.
 
 AudioMuse's live PostgreSQL volume is excluded from filesystem backup. Its
 `audiomuse-postgres-backup` CronJob writes a PostgreSQL 15 custom-format dump at
@@ -63,7 +62,7 @@ sources and local media. A separate monthly `matrix-restore-qualification`
 controller restores only Matrix PVCs and inert pods into the deny-all
 `matrix-restore` namespace, restores both databases into disposable PostgreSQL,
 checks queue integrity, and decrypts the canary with its recovered session.
-See the [Matrix runbook](../../apps/matrix/README.md) for on-demand qualification,
+See the [Matrix runbook](../../apps/matrix/README.md) for on-demand restore checks,
 SOPS recovery requirements and the coordinated live recovery sequence.
 
 ## Run and inspect a backup
@@ -90,9 +89,9 @@ named save before the filesystem copy begins. Valheim's hook briefly stops the
 game, archives the entire 1.0 world directory with a checksum, and resumes play
 before the filesystem copy. Its archive is the coordinated recovery source.
 
-At 07:00 Istanbul on the first day of each month, after the 05:30 daily backup,
-the restore job selects the newest `Completed` `services-daily` backup whose
-completion is less than 26 hours old. It fails if none qualifies. Unique restore
+At 07:00 Istanbul on the first day of each month, after the daily 02:30 UTC
+backup, the restore job selects the newest `Completed` `services-daily` backup
+whose completion is less than 26 hours old. It fails if none matches. Unique restore
 names let an on-demand retry validate the same backup again. The job then:
 
 1. deletes only `backup-qualification-restore` and waits for it to disappear;
@@ -101,7 +100,7 @@ names let an on-demand retry validate the same backup again. The job then:
    namespaces;
 4. removes the backed-up PVCs' `spec.volumeName` fields so `ceph-block` provisions
    new volumes;
-5. gives the isolated sleepers small qualification-only resource requests;
+5. gives the isolated sleepers small restore-only resource requests;
 6. waits for the restored canary Deployment and both game StatefulSets to become
    ready and verifies those resource requests were applied.
 
@@ -202,17 +201,9 @@ PVC provisioning, node-agent access, Kopia transfer, and workload startup. It
 does not validate application consistency or recovery after loss of the whole
 Ceph storage cluster. Filesystem backups can capture changing application
 files at different instants, so application-native dumps and isolated restore
-checks remain necessary. The B2 prefix is not protected by Object Lock.
+checks are still necessary. The B2 prefix is not protected by Object Lock.
 
-
-The `observability-history` schedule runs at 03:45 UTC with 30-day retention.
-It uses `snapshotMoveData` to export all four monitoring RBD volumes. Local
-snapshots are temporary. Recovery must replay Prometheus/Loki WAL and check
-Grafana SQLite integrity before accepting traffic. Each volume is a separate
-crash-consistent recovery point; there is no cross-service atomic snapshot.
-
-`media-passive-state` runs at 04:15 UTC with the same retention, selecting only
-`beets-data` and `audiomuse-postgres-dumps`. CSI snapshot movement captures them
-when their CronJob Pods have completed. Filesystem backup alone cannot cover
-an unmounted claim. Recover AudioMuse from its native dump, and verify Beets
-SQLite integrity plus its paths against the separately restored media library.
+Recover observability history by replaying Prometheus/Loki WAL and checking
+Grafana SQLite integrity before serving traffic; each volume is a separate
+crash-consistent point. Recover AudioMuse from its native dump, and verify Beets
+SQLite integrity plus its paths against the restored media library.

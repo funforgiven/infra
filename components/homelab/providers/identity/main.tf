@@ -305,7 +305,7 @@ output "identity_controller_key" {
   sensitive = true
 }
 
-# Preserve the existing Kubernetes OAuth client ID during state migration.
+# Keeps the Kubernetes OAuth client ID stable under the renamed key.
 moved {
   from = zitadel_application_oidc.kubernetes["undercloud"]
   to   = zitadel_application_oidc.kubernetes["homelab"]

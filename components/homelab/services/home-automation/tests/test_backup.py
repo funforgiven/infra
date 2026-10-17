@@ -141,7 +141,7 @@ class VolumeSelectionTests(unittest.TestCase):
                 operations.append(operation)
             for owner_present in (False, True):
                 pod = copy.deepcopy(original)
-                pod['spec']['nodeName'] = 'production-worker'
+                pod['spec']['nodeName'] = 'production-node'
                 if owner_present:
                     pod['metadata']['ownerReferences'] = [{'kind': 'StatefulSet', 'name': 'home-assistant', 'uid': 'old'}]
                 helper = {'name': 'restore-wait', 'image': 'velero', 'args': [f'restore-{owner_present}'],
@@ -172,8 +172,8 @@ class VolumeSelectionTests(unittest.TestCase):
         rule = next(item for item in rules if item['conditions']['groupResource'] == 'persistentvolumeclaims')
         for name in ('automation-state', 'automation-backups', 'thread-state', 'thread-backups'):
             for bound in (False, True):
-                claim = {'metadata': {'name': name, 'annotations': {'volume.kubernetes.io/selected-node': 'production-worker'}},
-                         'spec': {'storageClassName': 'rbd1'}}
+                claim = {'metadata': {'name': name, 'annotations': {'volume.kubernetes.io/selected-node': 'production-node'}},
+                         'spec': {'storageClassName': 'ceph-block'}}
                 if bound:
                     claim['spec']['volumeName'] = 'production-volume'
                 operations = [{'op': p['operation'], 'path': p['path'],

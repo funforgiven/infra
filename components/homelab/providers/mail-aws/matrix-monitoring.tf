@@ -1,7 +1,7 @@
 variable "enable_matrix_monitoring" {
   type        = bool
   default     = false
-  description = "Enable independent Matrix checks after public endpoint enrollment"
+  description = "Enable AWS-side Matrix checks after public endpoint enrollment"
 }
 
 variable "enable_matrix_delivery_alerts" {

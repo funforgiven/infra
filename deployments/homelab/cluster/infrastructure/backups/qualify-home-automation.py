@@ -71,7 +71,7 @@ restore = {
         'includedNamespaces': ['home-automation'],
         # Velero 1.18 requires both PV/PVC resource types in its filter before
         # starting filesystem restores. Cluster resources remain disabled;
-        # PVC modifiers clear original bindings and select new scratch storage.
+        # PVC modifiers clear the backed-up bindings and select new scratch storage.
         'includedResources': ['pods', 'persistentvolumeclaims', 'persistentvolumes'],
         'labelSelector': {'matchLabels': {'backup.fahrican.com/verify': 'automation'}},
         'includeClusterResources': False,

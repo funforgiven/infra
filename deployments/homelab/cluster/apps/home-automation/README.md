@@ -1,23 +1,21 @@
 # Home automation on Kubernetes
 
-Home Assistant Container replaces the empty standalone NixOS/HAOS installation.
-Flux owns the deployment and image upgrades. Home Assistant owns integrations,
-users, dashboards and automations in its persistent configuration directory.
-The old appliance has no data to migrate; its VM, two boot volumes, dedicated
-ports and security groups are explicitly retired by the services-hosts root.
+Flux owns the Home Assistant Container deployment and image upgrades. Home
+Assistant owns integrations, users, dashboards and automations in its persistent
+configuration directory.
 
 The [Rooftrollen dashboard](dashboard/README.md) provides room controls, lighting,
 climate and door pages with a theme that follows the system's light/dark setting.
-Its recovery source and pinned frontend resources are tracked in `dashboard/`;
-Home Assistant owns the live, UI-editable configuration and existing application
-backups include it.
+Its recovery copy and pinned frontend resources are tracked in `dashboard/`;
+Home Assistant owns the live, UI-editable configuration and application backups
+include it.
 
 ## Components
 
 | Component | Pinned release | Purpose |
 | --- | --- | --- |
 | Home Assistant Container | 2026.9.2 | Frontend, automations and integration configuration |
-| Matter.js Server | 1.4.0 | Matter controller and persistent fabric identity; matches the current official HA app's base image |
+| Matter.js Server | 1.4.0 | Matter controller and persistent fabric identity; matches the official HA app's base image |
 | Eclipse Mosquitto | 2.1.2 | Authenticated local MQTT broker with per-user topic ACLs |
 | Zigbee2MQTT | 2.14.1 | Ember coordinator over Ethernet at `10.21.50.20` |
 | OpenThread Border Router | ownbee v0.3.0 | TCP-connected Thread RCP at `10.21.50.21` |
@@ -27,11 +25,10 @@ Every image is pinned by digest. The main StatefulSet contains HA, Matter,
 Mosquitto, Zigbee2MQTT and a backup/metrics sidecar. They share one network
 namespace so internal MQTT and the unauthenticated Matter WebSocket API use
 loopback. A separate MQTT listener accepts only Nuki telemetry through OTBR.
-A single 20 GiB Cinder volume holds four separate state directories.
-This is deliberately a single-writer stack: upgrades and recovery replace the
-whole instance. Do not scale it above one replica or start a second copy of its
-Zigbee network or Matter fabric. A second 20 GiB volume holds verified recovery
-archives. Cinder can reattach the volumes to another prepared worker.
+A 20 GiB `ceph-block` volume holds four state directories; a second 20 GiB
+volume holds verified recovery archives. This is a single-writer stack: upgrades
+and recovery replace the whole instance. Do not scale it above one replica or
+start a second copy of its Zigbee network or Matter fabric.
 
 OTBR has its own pod and 1 GiB state/archive volumes because it creates a TUN
 interface and routes IPv6. Its privileged-container exception is confined to
@@ -46,37 +43,28 @@ network namespace.
 ```text
 LAN / administration WireGuard
           |
-https://home.fahrican.com -> Octavia -> Envoy -> HA :8123 on eth0
-                                              |
-                                              +-- MQTT 127.0.0.1:1883
-                                              +-- Matter ws://127.0.0.1:5580/ws
-                                              +-- Zigbee2MQTT -> Dongle-M TCP :6638
-                                              |
-                                        net1 10.21.50.10
-                                              |
-               physical IoT VLAN 50 -- Multus macvlan bridge
-                                              |
-                                        net1 10.21.50.11
-                                              |
-                                  OTBR -> separate Thread RCP
-                                              |
-                                        Thread mesh IPv6
+https://home.fahrican.com -> MetalLB VIP -> Envoy -> HA :8123 on eth0
+                                                  |
+                                                  +-- MQTT 127.0.0.1:1883
+                                                  +-- Matter ws://127.0.0.1:5580/ws
+                                                  +-- Zigbee2MQTT -> Dongle-M TCP :6638
+                                                  |
+                                            net1 10.21.50.10
+                                                  |
+                   physical IoT VLAN 50 -- Multus macvlan bridge
+                                                  |
+                                            net1 10.21.50.11
+                                                  |
+                                      OTBR -> separate Thread RCP
+                                                  |
+                                            Thread mesh IPv6
 ```
 
-The Omada-to-CRS trunk, CRS server bonds, `bond0.50`, OVS `br-iot`, and the
-Neutron `physnet-iot` network carry VLAN 50 end to end. Neutron supplies no DHCP,
-router or IPv6 advertisements on this attachment. The existing IoT DHCP pool
-is `10.21.50.100–199`; `.10` and `.11` are reserved here for automation pods.
-
-The services-cluster reconciler attaches one unnumbered IoT NIC to each worker,
-identified by a deterministic `fa:16:51:*` MAC. A restricted node label selects
-prepared workers. The node-network DaemonSet names the interface `iot0`, leaves
-it unnumbered, blocks host input on it and installs pinned CNI plugins.
-Multus gives each automation pod its secondary interface. Port security is
-disabled **only on these IoT ports**, allowing pod IPv4/IPv6 addresses and
-multicast to use each pod's own MAC. Tenant ports keep their existing security.
-Stale ports from retired workers are retained for inspection rather than
-silently detached or reassigned.
+The RouterOS/Omada trunk carries IoT VLAN 50 to the hosts. NixOS creates the
+unnumbered `iot0` interface on each server and blocks host input on it; Multus
+macvlan gives each automation pod its `net1` interface. The IoT DHCP pool is
+`10.21.50.100–199`; `.10` and `.11` are reserved for the automation pods. See
+[secondary IoT networking](../../infrastructure/multus/README.md).
 
 Cilium-enforced NetworkPolicies filter the primary pod interface. They do not protect
 Multus interfaces: the explicit pod nftables rules protect `net1`. IoT clients
@@ -95,12 +83,11 @@ Do not substitute an mDNS reflector for this L2 attachment. Disable multicast
 blocking/client isolation on that SSID if present. Ordinary phone use can return
 to the trusted LAN after commissioning. The router permits IoT clients to reach
 the services HTTPS VIP `10.21.40.122:443`; the onboarding and Zigbee administration
-routes still require an operator network. End-device commissioning is performed later with the Companion app.
+routes still require an operator network.
 
 ## First login and integrations
 
-The owner account exists, MQTT/Matter/OTBR are enrolled, and HA discovery uses
-`net1`. The following settings also document how to recreate those integrations.
+To recreate the integrations:
 
 1. From the trusted LAN or administration WireGuard, open
    <https://home.fahrican.com> and create the owner account. Enable MFA in the
@@ -115,26 +102,24 @@ The owner account exists, MQTT/Matter/OTBR are enrolled, and HA discovery uses
    must survive every upgrade and restore. No host Bluetooth or D-Bus mount is
    needed for Companion-app commissioning.
 4. Configure HA's network adapter selection for the IoT interface `net1` under
-   Settings → System → Network. HA's supported native account remains the
-   authentication authority; no OIDC proxy interferes with its app or APIs.
+   Settings → System → Network. HA's native accounts are the authentication
+   authority; no OIDC proxy sits in front of its app or APIs.
 
-HA 2026.8 moved HTTP options into authenticated runtime storage. `bootstrap.py`
-seeds the pinned 2026.9.2 HTTP schema **once** with forwarded-header trust for
-`10.100.0.0/16`, login banning and port 8123. Restored stable/pending
-HTTP settings migrate only the known old `172.16.0.0/13` proxy range; custom
-proxies and other user settings stay intact. The primary-interface ingress
-policy admits Envoy and the separate trusted-LAN/admin-VPN `10.21.40.120:8123`
-Service; Zigbee UI and metrics remain internal/gateway controlled. Subsequent HTTP changes use HA's UI and its
-confirmation/rollback mechanism. The initializer never overwrites existing
+HA keeps HTTP options in authenticated runtime storage. `bootstrap.py` seeds the
+2026.9.2 HTTP schema **once** with forwarded-header trust for `10.100.0.0/16`,
+login banning and port 8123. The primary-interface ingress policy admits Envoy
+and the separate trusted-LAN/admin-VPN `10.21.40.120:8123` Service; Zigbee UI and
+metrics are internal or gateway controlled. Later HTTP changes use HA's UI and
+its confirmation/rollback mechanism. The initializer never overwrites
 configuration, network identities or user state.
 
 ## Daikin Onecta
 
 The Fahrican Loft FTXM71A2V1B uses a BRP069C4x adapter on `Rooftrollen_IoT`, observed at
 `10.21.50.119` (DHCP), MAC `34:90:EA:D1:9B:20`. Firmware `2.6.2` answers Daikin
-UDP discovery, but the legacy HTTP status endpoints and a read-only POST to
-`/dsiot/multireq` return HTTP 404; HTTPS port 443 refuses connections. These
-checks were performed from HA's own IoT address. The built-in local Daikin
+UDP discovery, but from HA's IoT address the legacy HTTP status endpoints and a
+read-only POST to `/dsiot/multireq` return HTTP 404, and HTTPS port 443 refuses
+connections. The built-in local Daikin
 integration cannot control this adapter/firmware; use the
 [Onecta integration](https://github.com/jwillemsen/daikin_onecta).
 
@@ -143,7 +128,7 @@ to commit `719600642d2e21f02d87f4a570ce4580849f87b1` and a SHA-256 checksum.
 It caches the verified source archive under `home-assistant/.managed-integrations`
 on the state PVC, so subsequent pod starts do not need GitHub access. A new
 volume needs HTTPS access to `codeload.github.com`. Both the cache and installed
-component are included in the existing application backups. Upgrade the version,
+component are included in application backups. Upgrade the version,
 commit and checksum together after checking HA compatibility. HACS is not used
 to manage this component.
 
@@ -185,11 +170,11 @@ webhook automations are recovered from `rodecaster-midi-automations.yaml` using
 `secrets/home-assistant-midi.yaml` and verifies HA API readback.
 
 The bulb changes instantly. The AC action only calls `climate.set_swing_mode`;
-it uses the existing Onecta cloud connection and command quota, with no polling
+it uses the Onecta cloud connection and command quota, with no polling
 change. If the device is unavailable or does not expose both modes, the
 automation does not issue a command. The initial Stop position selects Comfort
-Airflow on the first press. Both automations and their traces remain in HA's
-normal backed-up state.
+Airflow on the first press. Both automations and their traces are part of HA's
+backed-up state.
 
 ## Radio inventory
 
@@ -221,14 +206,14 @@ Zigbee coordinator, Zigbee router and Thread RCP modes are mutually exclusive.
 
 `radios.env` enables the coordinator at `tcp://10.21.50.20:6638`. Its serial
 allowlist admits only `10.21.50.10`. The `ember` adapter uses 115200 baud with
-hardware flow control disabled. Before any future firmware change, check
+hardware flow control disabled. Before a firmware change, check
 compatibility with the pinned Zigbee2MQTT release.
 
 The frontend is <https://home.fahrican.com/zigbee2mqtt/>. It is restricted to
 operator networks and additionally requires `zigbee-ui-token` from SOPS.
 Pairing stays closed by default; open it only for the bounded pairing window.
 Review the channel before pairing (initial Zigbee channel 20); network keys,
-PAN ID and extended PAN ID are generated once and retained on the state PVC.
+PAN ID and extended PAN ID are generated once and stored on the state PVC.
 Never replace an initialized configuration with a new `GENERATE` configuration.
 Mesh routers can be added later without changing the Kubernetes infrastructure.
 
@@ -243,32 +228,40 @@ NAT64 and upstream DNS are enabled for Nuki's MQTT-over-Thread connection.
 IPv4 forwarding is enabled only inside the OTBR pod. Its nftables rules permit
 translated Thread traffic only to `10.21.50.10:1883` and ICMP to that same broker;
 all other translated IPv4 forwarding is dropped, including cluster and internet
-destinations. Native IPv6 Matter traffic retains its existing IoT-only routing.
-DNS queries handled by OTBR use its existing cluster DNS egress permission.
+destinations. Native IPv6 Matter traffic uses IoT-only routing. DNS queries
+handled by OTBR use its cluster DNS egress permission.
 `thread-ready.sh` configures NAT64 after every agent start, including the
 service restart performed by backups; the image's initial configuration runs
 only once per container.
 
 The **OpenThread Border Router** integration uses `http://10.21.50.11:8081`.
 `Rooftrollen` is the preferred Thread network on channel 25; Zigbee uses channel
-20. Its keys were generated once and are retained in OTBR state and HA's Thread
-integration. Sync this network's credentials into the Companion app before
-pairing Matter-over-Thread devices. Additional border routers must join this
-same dataset. Avoid forming a second independent network for the same home.
+20. Its keys were generated once and are stored in OTBR state and HA's Thread
+integration. Additional border routers must join this same dataset; never form a
+second Thread network for the same home.
+
+Before commissioning a Matter-over-Thread device, connect the phone to
+`Rooftrollen_IoT` and sync the preferred Thread credentials, even though HA
+already prefers the network:
+
+- Android: Companion app → Settings → Companion app → Troubleshooting →
+  **Sync Thread credentials**.
+- iPhone: Settings → Devices & services → Thread → Configure →
+  **Send credentials to phone** under the preferred network.
+
+Then use the Companion app to add the Matter device.
 
 ## Nuki Ultra MQTT activity
 
 The Nuki Ultra (`4E988F8F`) is paired through Matter as
-`lock.smart_lock_ultra`. Matter remains the command interface. The separate
+`lock.smart_lock_ultra`. Matter is the command interface. The separate
 MQTT account `nuki` can publish an explicit list of status/event topics under
 `nuki/4E988F8F/`; it cannot read commands, publish commands, alter discovery,
 or access Zigbee topics. Its password is `stringData.nuki-password` in
 `credentials.sops.yaml`. It is not accepted by the loopback listener.
-Use a random 24-character ASCII alphanumeric password for this account. This
-leaves room below Nuki's documented 32-character limit. During enrollment, the
-lock transmitted 31 characters for a configured 32-character password and the
-broker rejected authentication; the exact cause of the missing character was
-not established. Avoid special characters for compatibility.
+Use a random 24-character ASCII alphanumeric password for this account, well
+below Nuki's documented 32-character limit: with a 32-character password the
+lock sends only 31 characters and authentication fails. Avoid special characters.
 
 In the Nuki app use **Features & Configuration → Smart Home → MQTT**:
 
@@ -293,8 +286,8 @@ trigger, authorization ID, code ID, and keypad source when reported. IDs are
 not PINs. The MQTT event is an action request, not proof the door unlocked;
 use the Matter lock state to confirm completion. Invalid payloads are ignored,
 and HA discards replayed retained event messages. No door, alarm or access
-automation is created by discovery. User-name mappings require observing the
-owner's deliberate keypad/fingerprint actions.
+automation is created by discovery. Mapping IDs to user names requires observing
+each person's keypad/fingerprint actions.
 
 ### Keypad lighting
 
@@ -302,7 +295,7 @@ owner's deliberate keypad/fingerprint actions.
 `nuki_keypad_hue_1600_lighting` ("Fahrican Loft keypad - Loft and Bedroom lights"). Install
 its YAML mapping as JSON through HA's authenticated
 `POST /api/config/automation/config/nuki_keypad_hue_1600_lighting` endpoint.
-HA validates, saves and reloads this automation; its live configuration remains
+HA validates, saves and reloads this automation; its live configuration is
 editable in the UI and is included in application backups. It is not a
 Kubernetes resource and does not restart the automation pod.
 
@@ -314,7 +307,7 @@ automation preserves brightness and color and sets transition to zero.
 It requires a keypad code ID and source, excludes other command sources,
 and waits up to 20 seconds for Matter to confirm the requested lock state.
 If confirmation times out or another action supersedes the request, it stops.
-Firmware 5.9.4 was observed reporting fingerprint actions with action ID `0`,
+Firmware 5.9.4 reports fingerprint actions with action ID `0`,
 which the event entity labels `unknown`, followed by the actual Matter lock
 state. For an identified keypad event with action `0`, the automation waits
 for a final Matter state whose change timestamp is at or after that event;
@@ -323,10 +316,8 @@ the pre-event state to guess what action `0` will do. Other unknown action IDs
 are ignored.
 The event trigger ignores restored states on startup/reconnection; a new
 keypad request replaces a pending run. No lock command is sent.
-Live verification with firmware 5.9.4 confirmed that fingerprint locking turns
-both bulbs off, fingerprint unlocking turns both on, and inside-button locking
-leaves them unchanged. PIN actions use the same source filter but have not yet
-been verified with a physical PIN entry.
+Verified with fingerprint actions on firmware 5.9.4; inside-button locking leaves
+the lights unchanged. PIN actions are untested.
 
 MQTT publishes an action request, not a physical door-open sensor reading.
 Keypad back-button actions without a code ID cannot be identified by this
@@ -339,12 +330,11 @@ Home Assistant owns the live floor, area and device registries, which are
 included in application backups. Apply the inventory through HA's authenticated
 `config/floor_registry`, `config/area_registry` and `config/device_registry`
 WebSocket APIs. Registry display names describe the rooms while entity IDs and
-Zigbee2MQTT friendly names remain stable for existing automations.
+Zigbee2MQTT friendly names stay stable for automations.
 
 HA permits one floor per area. The shared `5th–6th` floor entry contains
-Stairwell; its level is unset because it spans the two physical floors. The
-unused initial Bedroom area was renamed Enes Room. Living Room and Kitchen
-retain their original registry IDs. Both the Matter lock and MQTT activity
+Stairwell; its level is unset because it spans the two physical floors. Both
+the Matter lock and MQTT activity
 device belong to Fahrican Loft, at the external door. The SONOFF `d047` relay
 and Aqara FP300 `4e3e` presence sensor belong to Fahrican Bathroom.
 
@@ -361,7 +351,7 @@ Its Hue button (`off_press`) has a separate automation that toggles the
 Fahrican Loft light `light.0x001788011015148f` with zero transition. Its power
 and brightness buttons continue to control the bedroom bulb. Hold and release
 events on the Hue button do not add toggles.
-MQTT trigger payloads explicitly use UTF-8 decoding. All five Hue bulbs use
+MQTT trigger payloads use UTF-8 decoding. All five Hue bulbs use
 `hue_native_control: true` and `transition: 0`. `hue-device-options.yaml`
 contains recovery payloads: publish each mapping to
 `zigbee2mqtt/bridge/request/device/options` with QoS 1 and retain disabled,
@@ -369,29 +359,13 @@ then verify the response has `status: ok` and the expected `data.to` options.
 These options apply immediately and persist in the backed-up Zigbee2MQTT
 configuration; the recovery file is not a Kubernetes resource.
 
-Native control is required here to preserve brightness while switching off
-instantly. In converters 26.105.0, the standard light converter treats an
-explicit zero transition as a level-to-zero off command. Hue then reports
-brightness 1; the converter stores the previous brightness only in memory.
-A Zigbee2MQTT restart, including the routine backup pause/resume, loses that
-value and a subsequent on command restores minimum brightness. On September
-26, logs showed the Loft and Bedroom bulbs drop from 254 to 1 after their
-01:44 off commands, then turn on at 2 at 18:54 and 15:22 respectively (Istanbul
-time), with service restarts in between and no intervening down-button events.
-The supported [native Hue control option](https://www.zigbee2mqtt.io/devices/9290038536H.html#options)
+Native control keeps brightness while switching off instantly. In converters
+26.105.0, the standard light converter treats an explicit zero transition as a
+level-to-zero off command; Hue then reports brightness 1 and the converter keeps
+the previous brightness only in memory. A Zigbee2MQTT restart, including the
+backup pause/resume, loses that value, so the next on command restores minimum
+brightness. The [native Hue control option](https://www.zigbee2mqtt.io/devices/9290038536H.html#options)
 sends on/off and zero fade directly without overwriting brightness.
-Live HA toggle checks passed on the 1600 lm Loft and 1100 lm Spare Room bulbs:
-hardware reads retained brightness 254 and 129 respectively while off and
-after turning on. The Spare Room also passed a 129 → 193 → 129 brightness-step
-check. Both bulbs were returned to their starting on/off state.
-
-The complete scheduled backup cycle also passed on September 26 at 19:36
-Istanbul time. The Spare Room bulb was set to 37% (94/254) and switched off
-before the backup. Logs confirmed Zigbee2MQTT stopped and restarted; the
-archive passed integrity verification at 19:36:44. Afterward, a hardware read
-still returned OFF/94, and a normal HA turn-on without an explicit brightness
-returned ON/94. The bulb was restored to its original OFF/129 state. All five
-bulbs' native-control options remained in the live configuration after restart.
 
 | Area | Dimmer | Bulb |
 | --- | --- | --- |
@@ -403,7 +377,7 @@ bulbs' native-control options remained in the live configuration after restart.
 
 Remove only the dimmer-to-bulb `genOnOff` and `genLevelCtrl` bindings, with
 `skip_disable_reporting: true`, before enabling each replacement automation.
-Retain coordinator bindings for button events and battery/status reports, and
+Keep coordinator bindings for button events and battery/status reports, and
 bulb-to-coordinator reporting. Battery dimmers may need a button press to wake
 for unbinding. The requested software controls depend on HA, Zigbee2MQTT and
 Mosquitto being available. Stairwell keeps its separate motion automation.
@@ -445,24 +419,13 @@ and humidity have no reference-instrument calibration. See the
 | Light sampling and reporting | Low preset | Low preset | Low preset |
 
 The sensor owns the absence delay, and the bathroom automation adds no further
-countdown. Desktop presence control is disabled; the PC uses a two-minute
-input-idle screen saver. The bedroom has no presence-driven light automation.
-The 30-second PIR interval allows less frequent PIR detection than the earlier
-2-second setting; it is not a
-guaranteed entry-to-light latency, and battery savings are not quantified.
+countdown. The bedroom has no presence-driven light automation.
 
 After final placement and range setup, run `spatial_learning: Start Learning`
 separately while the detection area stays empty for at least 30 seconds.
 Coordinate this with the occupants; profile replay never starts learning.
-The bedroom uses the FP300's maximum configurable range of 6 m; the owner
-confirmed that this setting provides satisfactory coverage.
-
-On September 27, before this simplification, the owner confirmed empty
-detection areas and learning was requested on each sensor. A 45-second
-observation found no sensor warnings or errors. All three reported clear
-afterward and retained their configured profiles.
-Spatial learning exposes no readable completion flag; these checks confirm
-the observation window and resulting state, not a readable learned-room model.
+Spatial learning exposes no readable completion flag. The bedroom uses the
+FP300's maximum configurable range of 6 m.
 
 ### Loft desk FP300
 
@@ -478,19 +441,15 @@ range `255` (the eight 0.25 m bands from 0 to 2 m). The absence delay is
 enabled for presence reporting in Home Assistant. PIR clearing alone does
 not mean the desk is empty.
 
-On September 30, AI interference-source identification was requested on this
-sensor after the owner reported presence persisting while away from the desk.
-Readback on October 2 confirmed it is on, with Medium sensitivity and adaptive
-sensitivity off. The owner still reported occupied state while away for an
-hour. Desktop presence control was therefore disabled in the Nix configuration
-and on the running desktop; the screen saver now follows 120 seconds of input
-inactivity. The sensor remains available for presence and climate reporting.
+Desktop presence control is disabled
+([idle.nix](../../../../../components/nix/funforgiven/window-manager/idle.nix));
+the screen saver uses 120 s input idle.
 
 Temperature, humidity and light use the shared Low presets above.
 
 Parmigiano's optional [presence reader](../../../../../components/nix/funforgiven/window-manager/desk-presence/README.md)
-uses the existing HA HTTPS endpoint with a dedicated local-only, read-only
-account. It is currently disabled.
+uses the HA HTTPS endpoint with a dedicated local-only, read-only account. It is
+disabled.
 The sensor configuration and HA device/area registry are included in the
 normal application backups; the desktop service and encrypted credential
 are recoverable from this repository.
@@ -498,25 +457,16 @@ are recoverable from this repository.
 ### Bedroom FP300
 
 The third FP300, `0x54ef44100172614d`, is **Fahrican Bedroom presence sensor**
-in the Fahrican Bedroom area. Its profile preserves the current high
-sensitivity, both PIR and radar, adaptive sensitivity off, radar range
+in the Fahrican Bedroom area. Its profile uses high sensitivity, both PIR and radar, adaptive sensitivity off, radar range
 `16777215`, absence delay 30 seconds, and PIR interval 30 seconds. Temperature,
 humidity and light use the shared Low presets above. Presence is used for
 dashboard status and history; it does not automatically control the bedroom
 light.
 
-Both new FP300s now have temperature/humidity chips and an occupancy status on
-Home, presence and motion cards plus a three-hour presence/motion/light history
-in their room views, and twelve-hour temperature/humidity histories in Climate.
-The loft occupancy label specifically describes the desk, matching its limited
-detection range. Dashboard status does not assert that the PC is awake; actual
-desktop status is available from the presence reader's Quickshell IPC.
-
 ### Bathroom FP300
 
 The Fahrican Bathroom FP300 (`0x54ef441001724e3e`, model PS-S04D) controls the
-SONOFF relay `switch.0xe456acfffe5cd047`. The relay was previously mislabeled
-as Fahrican Bedroom; its entity ID and Zigbee2MQTT friendly name stay stable.
+SONOFF relay `switch.0xe456acfffe5cd047`.
 `binary_sensor.0x54ef441001724e3e_pir_detection` turns the light on promptly
 when motion is reported. `binary_sensor.0x54ef441001724e3e_presence` also turns
 it on and keeps it on while radar detects a stationary occupant. Both readings
@@ -533,53 +483,20 @@ readings are clear, HA turns off immediately: the sensor's 30-second absence
 delay provides confirmation. Unknown/unavailable readings prevent turn-off
 and are never treated as vacant; either valid active reading can
 still turn the light on. HA startup, automation reload and relay availability
-recovery reconcile the light with current sensor states. The relay remains
+recovery reconcile the light with current sensor states. The relay stays
 manually operable between sensor state transitions.
 
-During initial placement, the owner reported intermittent, very short-range
-radar detection even after high sensitivity and empty-room spatial learning.
-On September 26, direct
-device reads returned PIR active with radar presence inactive; one earlier
-event had a 24-second gap between those reports. The owner subsequently
-confirmed near-contact-only detection persisted with fixed high sensitivity
-and the shorter PIR interval. Received motion reports switched the relay on
-within about half a second. A supported sensor restart was confirmed by its
-power-outage counter increasing, and standard device reconfiguration returned
-`status: ok`, with the tuned settings preserved. At that stage, detection from
-1–2 metres outside the bathroom remained to be tested to distinguish
-placement/interference from a sensor fault, and automatic lighting was not yet
-qualified as reliable. The sensor runs firmware `0.0.0_6542`; Zigbee2MQTT
-2.14.1 includes the upstream presence/PIR reporting fix, and both coordinator
-bindings and configured report entries are present. The owner later repositioned
-the sensor and confirmed satisfactory bathroom detection. Do not treat cached
-`target_distance: 0` as proof of a failed radar; distance tracking is a separate
-diagnostic function.
-
-Later on September 26, the owner clarified that detection was occurring with
-about four seconds of delay. Three recent PIR reports were followed by the
-relay reporting on within 0.11–0.34 seconds, confirming that HA adds no entry
-countdown. Two of those events had no radar presence confirmation. The sensor
-accepted `pir_detection_interval: 2` at 20:34 Istanbul time, reduced from 5;
-both MQTT and HA reported the new value. The owner reported no improvement
-in the roughly four-second entry delay after this change.
-
-A coordinated PIR-only comparison at 21:05–21:06 Istanbul time also produced
-the same owner-observed delay. The mode change was confirmed before the owner
-waited for the light to switch off and walked back into view. The PIR report
-arrived at 21:06:13.900 and the relay reported on at 21:06:14.223, about 0.32
-seconds later. Combined mode was restored and verified at 21:06:43.799. This
-shows that disabling radar does not eliminate the delay; it does not establish
-whether the remaining delay is in PIR detection/firmware or device-specific
-Zigbee reporting. Do not attribute it to a HA turn-on timer or to waiting for
-radar confirmation. These earlier tests did not establish reliable detection
-and stationary presence at 3–4 metres before the placement correction.
+Entry latency (about 4 s) comes from the sensor's PIR reporting, not HA; HA adds
+no delay. The sensor runs firmware `0.0.0_6542`; Zigbee2MQTT 2.14.1 includes the
+upstream presence/PIR reporting fix. Cached `target_distance: 0` does not mean
+the radar failed; distance tracking is a separate diagnostic function.
 
 ## Monitoring and backup
 
 Prometheus scrapes the backup sidecar through an internal ServiceMonitor. It
 checks process supervision, authenticated MQTT, Matter's HTTP API and the last
 verified archive time. Alerts cover missing readiness, stale backups, MQTT or
-Matter failures, repeated restarts and low PVC space. Existing HTTPS/TLS probes,
+Matter failures, repeated restarts and low PVC space. HTTPS/TLS probes,
 Velero failure/staleness alerts and infrastructure Telegram delivery apply too.
 HA's authenticated Prometheus integration is enabled for optional entity metrics;
 its owner token is not generated or stored as a default admin credential.
@@ -593,7 +510,7 @@ archive verification and offsite upload. Expect a short interruption during
 local snapshots; a growing recorder database can require a larger budget.
 
 Only the verified archive PVC is copied by Velero. Restoring filesystem copies
-of live databases is not the recovery procedure. The existing B2/Kopia policy
+of live databases is not the recovery procedure. The B2/Kopia policy
 provides encrypted offsite daily backups at 02:30 UTC (30 days) and weekly
 backups at 03:15 UTC Sunday (90 days). Local archive freshness is not proof of
 offsite coverage: check both the archive metric and Velero's completed backup
@@ -606,13 +523,13 @@ state, `dataset.txt`, a timestamp and SHA-256 checksums. Failed captures preserv
 the previous bundle. These files contain Thread keys and must stay private.
 The restricted metrics sidecar validates this bundle and reports Thread mesh
 attachment. Alerts cover detached Thread state and backups older than 28 hours.
-The liveness probe remains active during captures so a stuck backup cannot keep
+The liveness probe stays active during captures so a stuck backup cannot keep
 OTBR stopped indefinitely.
 
 The `backup-qualification/home-automation-restore` CronJob runs monthly on day 2
 at 05:30 Istanbul time. It uses the newest completed daily backup and restores
 both archives into new scratch PVCs in `home-automation-restore`. PVC modifiers
-clear original volume bindings and select the Delete storage class. Velero also
+clear the backed-up volume bindings and select the Delete storage class. Velero also
 discovers unmounted state-claim placeholders; the verifiers never mount them and
 the controller removes them after confirming they remain unbound. The pod
 transformation preserves Velero's injected restore helper and removes every
@@ -635,9 +552,9 @@ kubectl set env --local -f /tmp/automation-restore-job.yaml \
 kubectl -n backup-qualification logs -f job/home-automation-restore-<unique-name>
 ```
 
-The monthly CronJob always selects the newest daily backup. `BACKUP_NAME` is an
-explicit override for a scoped on-demand test; manual tests do not replace or
-mislabel the daily services backup.
+The monthly CronJob always selects the newest daily backup. `BACKUP_NAME`
+overrides it for a scoped on-demand test; manual tests do not replace or relabel
+the daily backup.
 
 For live recovery, first pass the isolated check, stop the main StatefulSet and
 OTBR, mount a **new** state PVC in a disposable non-networked restore pod, and
@@ -647,82 +564,8 @@ credentials and Git configuration, point `automation-state` at the recovered
 volume, and start exactly one instance. Unpack the verified Thread bundle, then
 restore its inner `thread.tar.gz` into OTBR's new `/data` volume before enabling
 its pod; `dataset.txt` is the native TLV fallback for replacement hardware. Verify HA login, MQTT discovery, coordinator identity
-and Matter devices before retiring the old volume. Never replay old fabric or
+and Matter devices before deleting the previous volume. Never replay old fabric or
 radio state while another copy is running.
-
-## Deployment qualification — 2026-09-15
-
-The live deployment passed these checks before handover:
-
-- The main pod had all five containers ready with zero restarts. The automation,
-  IoT network and backup-policy Flux Kustomizations were ready and healthy.
-- HTTPS certificate validation and HA WebSocket upgrade succeeded through Envoy.
-  IoT clients received HTTP 403 for onboarding; direct IoT access to ports 8123,
-  1883, 5580 and 9000 was blocked.
-- A temporary pod on another worker reached the HA IoT interface over IPv4 and
-  IPv6 link-local, received local IPv6 multicast replies, and reached an existing
-  Hue bridge. The temporary probe and its network attachment were removed.
-- Prometheus reported authenticated MQTT and the Matter API as healthy, and
-  recorded a successful local recovery archive.
-- `home-automation-qualification-20260915c` completed in the existing B2 location
-  with one PodVolumeBackup: the archive volume, 741,635 bytes. No application
-  state or runtime volume was copied directly.
-- `home-automation-restore-20260915e` completed at 19:02 UTC. Its PodVolumeRestore
-  downloaded all 741,635 bytes into a new scratch volume. The offline verifier
-  succeeded, the unmounted state placeholder was removed, and the monthly
-  CronJob recorded the successful qualification. Failed diagnostic attempts
-  were removed after this result.
-- All 15 native-platform flake checks and nine recovery tests passed. The checks
-  include archive corruption, SQLite integrity, backup failure recovery, restore
-  helper preservation and removal of production PVC bindings.
-
-This initial qualification covered the deployment before radio activation.
-The hardware qualification below extends it to the connected dongles.
-
-## Radio qualification — 2026-09-16
-
-- Both Dongle-M devices are configured over PoE/Ethernet, with unique encrypted
-  passwords, disabled setup hotspots, DHCP reservations and serial allowlists.
-- Zigbee2MQTT connected to Ember 7.4.5, generated its persistent coordinator
-  backup, and reported online through MQTT discovery. Pairing remains closed.
-  The HTTPS frontend works; an invalid frontend token is rejected with 4401.
-- MQTT, Matter, Thread and OTBR integrations are loaded in HA. `Rooftrollen`
-  on Thread channel 25 is preferred; HA discovery is limited to `net1`.
-- The original ipvlan attachment passed host-address tests but dropped routed
-  Thread traffic. Both attachments now use macvlan bridge mode. HA and a probe
-  on another prepared worker learned OTBR's IPv6 route and reached its Thread
-  address with three replies out of three. The Thread prefix and dataset
-  survived the network migration and the backup pause/resume cycle.
-- The main pod has five ready containers and OTBR has two, with zero restarts.
-  Prometheus scrapes both, reports MQTT/Matter/Thread healthy, and has no active
-  home-automation alerts after the backup pause clears.
-- From IoT, HA ports 8123/1883/5580/8080/9000 and OTBR's API are blocked.
-  Onboarding and Zigbee administration via HTTPS return 403. The temporary
-  network probes and attachments are removed.
-- B2 backup `home-automation-radios-20260916a` completed at 21:13 UTC on September
-  15 (00:13 Istanbul on September 16). Its two PodVolumeBackups contain
-  1,470,247 bytes for HA and 993 bytes for Thread, using the existing encrypted
-  `fahrican-cloud-recovery/services/kubernetes` destination.
-- Restore `home-automation-restore-20260916b` completed at 21:22 UTC September
-  15 (00:22 Istanbul September 16), downloading both archives in full. Both
-  restricted offline verifiers succeeded, including native Thread state and
-  dataset checks. Unmounted state placeholders were removed. The failed
-  diagnostic restore/job were removed after this successful rerun.
-- All cloud configuration checks and 12 recovery tests passed, including
-  corrupt/truncated Thread datasets, unsafe archives, and removal of OTBR's
-  privileges from Velero's filesystem restore helper.
-
-End-device Zigbee pairing and Matter-over-Thread commissioning remain to be
-performed when devices are available. Before Matter commissioning, connect the
-phone to `Rooftrollen_IoT` and sync the preferred Thread credentials:
-
-- Android: Companion app → Settings → Companion app → Troubleshooting →
-  **Sync Thread credentials**.
-- iPhone: Settings → Devices & services → Thread → Configure →
-  **Send credentials to phone** under the preferred network.
-
-Then use the Companion app to add a Matter device. These phone-side steps are
-required even though HA already stores and prefers the network.
 
 ## Sources
 

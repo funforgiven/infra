@@ -91,4 +91,4 @@ spec:
         severity: critical
       annotations:
         summary: The services cluster cannot reach the UniFi HTTPS origin
-        description: Check Neutron security rules, nginx and the private VM address.
+        description: Check the guest nftables rules, nginx and the private VM address.

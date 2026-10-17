@@ -22,18 +22,15 @@ page, choose ZITADEL; the matching verified email binds the OIDC identity to
 the owner. Verify the linked email and admin access before entering any
 financial data.
 
-The OIDC client is reconciled by the identity OpenTofu root. Its client ID and
-secret move directly from the undercloud output Secret to the services
-cluster's `wallos-runtime` Secret; neither value is committed to Git.
-The undercloud reconciler runs at minute 17 every two hours UTC; trigger an
-on-demand Job from `services-cluster-reconcile-v1` when an initial rollout
-cannot wait for that cadence. A rotated secret file is read on requests, but a
-recreated client ID is an environment value and requires a Wallos rollout after
-the runtime Secret is refreshed.
+The OIDC client is reconciled by the identity OpenTofu root. Refresh
+`wallos-runtime` with `render-cluster-credentials --identity-outputs-stdin`; the
+client ID and secret are committed only SOPS-encrypted. A rotated secret file is
+read on requests, but a new client ID is an environment value and needs a
+Wallos rollout.
 
 Wallos performs a local logout because its OIDC implementation does not send
 the client or ID-token hint ZITADEL requires for a reliable federated logout;
-ending the ZITADEL browser session remains a separate operation.
+ending the ZITADEL browser session is a separate operation.
 
 Automatic OIDC user creation is disabled. For another authorized user, the
 Wallos administrator must first create a local account with that person's
@@ -43,8 +40,8 @@ OIDC login then links the account.
 `OIDC_DISABLE_PASSWORD_LOGIN` hides the password form and registration link,
 but Wallos 5.4.5 still accepts a valid password submitted directly to
 `login.php`. The gateway confines that POST to the trusted administration
-workstation and administration WireGuard network. Treat the retained bootstrap
-password as a live recovery credential. If ZITADEL is unavailable or the
+workstation and administration WireGuard network. Treat the bootstrap password
+as a live recovery credential. If ZITADEL is unavailable or the
 client configuration is broken, connect from either trusted source,
 temporarily set the option to `"false"` in `wallos.yaml` to reveal the form,
 reconcile, and use that password; restore the UI restriction after recovery.

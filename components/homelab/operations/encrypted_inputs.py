@@ -1,4 +1,4 @@
-"""Small, offline helpers for encrypted migration inputs."""
+"""Small, offline helpers for encrypted inputs."""
 import base64
 import os
 from pathlib import Path

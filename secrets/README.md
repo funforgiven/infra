@@ -10,8 +10,8 @@ consumes them. The Nix modules, runtime credential schemas, and SOPS documents
 are the inventory; this README does not duplicate every key.
 
 Windows and WSL local accounts are kept in [`windows-gorgonzola.yaml`](windows-gorgonzola.yaml).
-[`local-recovery.yaml`](local-recovery.yaml) preserves legacy intake credentials
-by original filename, including retired Ricotta access and media-account passwords.
+[`local-recovery.yaml`](local-recovery.yaml) holds old intake credentials and
+Ricotta/media-account passwords.
 Both documents use the personal recovery recipient and are not deployed to hosts.
 
 ## Recovery keys
@@ -26,20 +26,26 @@ It can decrypt and rekey every current SOPS document. Store its backup outside
 the workstation and test that the backup is readable.
 
 NixOS also derives a recipient from `/etc/ssh/ssh_host_ed25519_key` for secrets
-needed during unattended activation. Backing up that host key preserves the
-machine identity and avoids a recipient migration. If the key is replaced, add
-the new recipient and update every host-consumed SOPS document before
-installation.
+needed during unattended activation. Backing up that host key keeps the
+machine identity and its recipient. If the key is replaced, add the new
+recipient and update every host-consumed SOPS document before installation.
 
-The old undercloud/management/services Flux identities and management kubeconfig
-remain source recovery archives. The target uses separate host and Flux age
-identities in the encrypted migration bootstrap; preserve them and the original
-SSH host keys. Rotate recipients only as a reviewed migration.
+Hosts and Flux use the age identities in `secrets/kubernetes.yaml` and host SSH
+keys in `deployments/homelab/hosts/secrets.sops.yaml`.
 
-The management kubeconfig, Backblaze restore readers, backup decryption
-identities, and the ZITADEL break-glass credential are administrator recovery
-material. They are not deployed by sops-nix or injected into application
-clusters.
+Backblaze restore readers, backup decryption identities, and the ZITADEL
+break-glass credential are administrator recovery material. They are not
+deployed by sops-nix or injected into the cluster.
+
+Recovery checkpoints in Backblaze decrypt with the age identity at
+`undercloud.etcd_recovery.age_identity` in [`backblaze.yaml`](backblaze.yaml);
+the scoped download credential is in
+`deployments/homelab/cluster/infrastructure/velero/credentials.sops.yaml`. Both
+decrypt with the personal age key, so they work without the cluster.
+
+Encrypted archives from the old deployment, kept for reference: `cloud-hosts.yaml`,
+`capi-management-kubeconfig.sops`, `migration-state.sops.yaml` and
+`source-certificates-and-state.sops.yaml`.
 
 ## Edit a secret
 
@@ -53,11 +59,10 @@ nix run .#sops --accept-flake-config -- path/to/workload-secrets.sops.yaml
 Generate a replacement account password hash with `mkpasswd -m yescrypt`, then
 update `users/funforgiven/password_hash` in `password-hashes.yaml`.
 
-The encrypted `cloud-hosts.yaml` document is retained for source console/sudo
-recovery. It is not the target host enrollment source. Target installation uses
-`deployments/homelab/hosts/secrets.sops.yaml`, preserving captured SSH identities
-and account password hashes. Password SSH login stays disabled. Host keys,
-console recovery and age bootstrap are described in the migration runbook.
+Server installation uses `deployments/homelab/hosts/secrets.sops.yaml` for SSH
+identities and account password hashes. Password SSH login stays disabled. Host
+key and age bootstrap are described in the
+[server README](../components/nix/servers/README.md).
 
 Replace the binary GitHub SSH private key without first copying it into the
 repository:
@@ -69,15 +74,6 @@ nix run .#sops --accept-flake-config -- encrypt \
   --filename-override secrets/github-ssh-key.sops \
   --output secrets/github-ssh-key.sops \
   /secure/path/github_ed25519
-```
-
-For source recovery only, use the archived CAPI management kubeconfig without
-creating a plaintext copy. Target access uses `matrix-access -- cluster`:
-
-```sh
-nix run .#sops --accept-flake-config -- exec-file \
-  secrets/capi-management-kubeconfig.sops \
-  'kubectl --kubeconfig={} get nodes'
 ```
 
 After changing a secret consumed by the NixOS controller, apply the host
@@ -172,12 +168,11 @@ RouterOS automation currently receives five files:
 | `/run/secrets/homelab-routeros-ccr2004-wireguard-parmigiano-preshared-key` | Workstation WireGuard peer |
 | `/run/secrets/homelab-routeros-ccr2004-mullvad-private-key` | Destination-scoped Mullvad tunnel |
 
-Other controller runtime files include the per-host Ubuntu console passwords,
-the Kubernetes API encryption token, and stable undercloud/management Flux and
-k3s bootstrap identities. Their exact declarations live in the Nix secret
-module and the cloud inventory.
+Other workstation runtime files include the cluster host and Flux age
+identities. Their declarations live in
+[`secrets.nix`](../components/nix/funforgiven/secrets.nix).
 
-PPPoE credentials remain encrypted recovery material because there is no
+PPPoE credentials are encrypted recovery material because there is no
 declarative runtime consumer. Omada credentials are decrypted only for a manual
 reconciliation stream on standard input. Neither is exported to an environment
 or written to a runtime file.
@@ -197,7 +192,7 @@ After editing `.sops.yaml`, update each affected encrypted document:
 nix run .#sops --accept-flake-config -- updatekeys PATH
 ```
 
-Review the recipient diff and verify that both the retained recovery identity
+Review the recipient diff and verify that both the personal recovery identity
 and every required host or cluster identity can still decrypt their documents.
 
 If a recipient is compromised, remove it and rotate the SOPS data key in every
@@ -225,12 +220,12 @@ Re-encryption cannot remove old ciphertext from Git history.
 ## UniFi AP controller
 
 `UNIFI_POLLER_USERNAME` and `UNIFI_POLLER_PASSWORD` are local read-only UniFi
-credentials enrolled into `deployments/homelab/cloud/host-runtime/unifi.sops.yaml`.
+credentials enrolled into `deployments/homelab/credentials/host-runtime/unifi.sops.yaml`.
 Use a 24+ character random password accepted by the host enrollment profile.
 `UNIFI_BACKUP_RESTIC_PASSWORD` is generated; the Backblaze reconciler owns
 `UNIFI_BACKUP_B2_APPLICATION_KEY_ID` and `UNIFI_BACKUP_B2_APPLICATION_KEY`.
 The writer is restricted to `services/hosts/unifi/`. Use the standard enrollment
 commands and the [UniFi recovery runbook](../deployments/homelab/cluster/apps/unifi/README.md).
 The origin CA private key stays on the VM and in its encrypted Restic backup;
-only the verified public certificate is committed. WLAN PSKs remain under
-`wireless.psks` in `secrets/omada.yaml` during the switch transition.
+only the verified public certificate is committed. WLAN PSKs are under
+`wireless.psks` in `secrets/omada.yaml`.

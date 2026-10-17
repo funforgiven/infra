@@ -92,7 +92,7 @@ class NetworkInventoryTests(unittest.TestCase):
             self.assertFalse(set(housemate["ports"]) & set(row["tagged"] + row["untagged"]))
             membership = row["untagged"] if vlan_id == 1 else row["tagged"]
             self.assertTrue(set(lan["trunk_ports"]) <= set(membership))
-            # Keep the already connected legacy hybrid port exactly as observed.
+            # ether16 is a hybrid port: tagged on every VLAN except 40.
             self.assertEqual(vlan_id != 40, "ether16" in membership)
         provider = self.router["routeros_provider_network"]
         self.assertEqual(
@@ -719,7 +719,7 @@ class NetworkInventoryTests(unittest.TestCase):
             self.assertEqual(expected, "Retire only the exact inventoried legacy bridge VLAN rows" in selected)
             self.assertEqual(expected, "Retire only the exact inventoried legacy API filter rules" in selected)
             if expected:
-                self.assertLess(selected.index("Require verified independent exports"),
+                self.assertLess(selected.index("Require verified backups"),
                                 selected.index("Retire only the exact inventoried legacy bridge VLAN rows"))
 
     def test_apply_tag_keeps_credentials_and_preflight_before_mutations(self) -> None:

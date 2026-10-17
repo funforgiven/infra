@@ -7,8 +7,8 @@ _: {
       ...
     }:
     let
-      # Reuse the existing Battle.net installation. This prefix can hold
-      # any Battle.net game, regardless of its original directory name.
+      # This prefix can hold any Battle.net game, regardless of its
+      # original directory name.
       prefix = "${config.home.homeDirectory}/Games/world-of-warcraft";
       executable = "${prefix}/drive_c/Program Files (x86)/Battle.net/Battle.net.exe";
       registryExecutable = "${prefix}/drive_c/windows/system32/reg.exe";

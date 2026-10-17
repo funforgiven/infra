@@ -54,8 +54,7 @@ switch:
     3: infra-trusted-access # gorgonzola, GMKtec NucBox K8 Plus
     4: infra-iot-access # Dongle-M Zigbee coordinator
     5: infra-iot-access # Dongle-M Thread RCP
-    # Physical speed is temporarily 1 Gb/s full duplex; the reconciler preserves
-    # it. See unifi-network.yaml and services/24-unifi/migration-validation.md.
+    # Pinned to 1 Gb/s full duplex; see unifi-network.yaml (u7-pro-max).
     6: infra-ap-trunk
     7: infra-management-access # PiKVM burrata
     8: infra-iot-access

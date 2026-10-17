@@ -34,7 +34,7 @@ in
         previousPackages.winbox4;
     };
 
-    # Retain the workstation container runtime for image build and qualification.
+    # Podman for local image builds and tests.
     virtualisation.podman.enable = true;
   };
 }

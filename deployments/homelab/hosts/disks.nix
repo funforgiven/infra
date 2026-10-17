@@ -31,7 +31,7 @@ let
   };
 in
 {
-  # Only the SATA pair is in disko. Ceph NVMes are deliberately excluded.
+  # Only the SATA pair is in disko. Ceph NVMes are excluded.
   disko.devices = {
     disk = builtins.listToAttrs (lib.imap0 makeDisk host.osDisks);
     mdadm = {

@@ -20,5 +20,5 @@ while IFS= read -r commit; do
   git --git-dir="$atollion" cat-file -e "$commit^{commit}"
 done < /restore/.atollion-required-commits
 cp /restore/.database-verified /restore/.qualified
-printf '%s\n' 'Restored Git object graphs, Atollion source/cutover ancestry, historical PR commits and qualification branch verified.'
+printf '%s\n' 'Restored Git object graphs, Atollion import ancestry, imported PR commits and runner-qualification main verified.'
 while :; do sleep 3600; done

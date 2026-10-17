@@ -25,7 +25,7 @@ def inline(schema, fetch, pins=PINNED):
     def rewrite(node, prefix=''):
         if isinstance(node, dict):
             # Identifiers affect JSON reference scope. All references in the
-            # derived copy are explicitly rewritten against the containing root.
+            # derived copy are rewritten against the containing root.
             for key in ('$id', 'id'):
                 if isinstance(node.get(key), str):
                     node.pop(key)
@@ -39,7 +39,7 @@ def inline(schema, fetch, pins=PINNED):
                     if url not in pins or (fragment and not fragment.startswith('/')):
                         raise ValueError('unrecognized external chart schema reference')
                     pin = pins[url]
-                    name = 'migration_external_' + pin['sha256']
+                    name = 'external_' + pin['sha256']
                     anchor = '#/definitions/' + name
                     node['$ref'] = anchor + fragment
                     if name not in external:

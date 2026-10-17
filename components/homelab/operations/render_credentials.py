@@ -56,7 +56,7 @@ def update_identity(root, outputs, update):
     update(path, documents)
 
     # NetBird owns its external identity-provider configuration through the
-    # preserved independent ToFu state, not through the server's local config.
+    # independent ToFu state, not through the server's local config.
     path = "deployments/homelab/credentials/netbird-policy/identity.sops.yaml"
     documents = decrypt(root / path)
     data = values(documents[0])

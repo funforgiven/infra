@@ -1,4 +1,4 @@
-# This table belongs to the pod network namespace, never the worker namespace.
+# This table belongs to the pod network namespace, never the host namespace.
 table inet automation {
   chain input {
     type filter hook input priority -10; policy accept;

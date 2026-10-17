@@ -82,7 +82,7 @@ in
       systemd.user.services.desk-presence = lib.mkIf deskPresenceEnabled {
         Unit = {
           Description = "Fahrican Loft desk presence screen control";
-          # This target also wants the reader. Ordering explicitly after it
+          # This target also wants the reader. Ordering after it
           # prevents its default ordering from putting us before the session,
           # while Quickshell and our graphical slice must start after it.
           After = [

@@ -164,7 +164,7 @@ def main():
     payload=fetch('https://codeload.github.com/kubevirt/kubevirt/tar.gz/refs/tags/v1.9.0')
     kv=unpack(payload,cache/'kubevirt-1.9.0')
     # Use KubeVirt's versioned API Swagger. Test fixtures with stale/minimal CRDs
-    # are deliberately excluded so they cannot override the actual API schema.
+    # are excluded so they cannot override the actual API schema.
     kv_swagger_path=kv/'api/openapi-spec/swagger.json'
     kv_swagger=json.loads(kv_swagger_path.read_text())
 

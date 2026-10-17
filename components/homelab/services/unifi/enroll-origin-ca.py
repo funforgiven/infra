@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Enroll only the PUBLIC origin CA over a previously pinned SSH identity."""
+"""Enroll only the PUBLIC origin CA over an already pinned SSH identity."""
 import argparse
 from pathlib import Path
 import subprocess

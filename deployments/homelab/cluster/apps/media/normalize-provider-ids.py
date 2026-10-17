@@ -48,9 +48,7 @@ def main():
             albums.add(item.album_id)
         if not clear_numeric(item, item_fields):
             continue
-        # These provider fields are already retained by Beets' Deezer plugin.
-        # Write them explicitly into FLACs because they are flexible database
-        # fields rather than MediaFile tags in the pinned Beets version.
+        # Beets' Deezer plugin stores these only in its DB; write them into the FLACs.
         item.write()
         if os.fsdecode(item.path).lower().endswith(".flac"):
             audio = FLAC(item.path)

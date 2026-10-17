@@ -3,9 +3,9 @@
 GMKtec K8 Plus on Burrata port `1.1`; wired Omada port 3, trusted VLAN 10.
 Run `configure-gorgonzola.ps1` as the local `funforgiven` administrator to apply
 always-on balanced power and privacy settings; `-VerifyOnly` checks them.
-Original values and verification records go to `C:\ProgramData\infra\gorgonzola`.
-Wi-Fi remains disabled. Defender local/cloud protection, sample submission and
-diagnostic services retain their existing configuration. Windows Update stays enabled.
+Previous values and verification records go to `C:\ProgramData\infra\gorgonzola`.
+Wi-Fi is disabled. The script leaves Defender local/cloud protection, sample
+submission and diagnostic services unchanged. Windows Update stays enabled.
 Optional diagnostics are disabled; Windows Pro still permits required diagnostics.
 
 Install stable WSL2 with `wsl --install --no-distribution --web-download`, restart,
@@ -15,7 +15,7 @@ Windows credentials and recovery answers are under `windows`, and the separate
 Ubuntu credentials under `wsl`, in SOPS-encrypted
 [`secrets/windows-gorgonzola.yaml`](../../../secrets/windows-gorgonzola.yaml).
 Ubuntu's optional platform metrics are declined during first-run setup.
-WSL services need an explicit startup mechanism to run after Windows boots;
+WSL services need a startup mechanism to run after Windows boots;
 disabling sleep alone does not start Linux services at boot.
 
 Run `prepare-workspace.ps1` with `prepare-ubuntu.sh` and the flake's current
@@ -28,10 +28,10 @@ The ChatGPT project `gorgonzola` attaches this Windows `dev` folder. Its agent
 stays native to Windows for desktop control.
 
 `prepare-workspace.ps1 -OpenAutologon` opens Microsoft's signature-checked
-Sysinternals utility. Enter the existing local account password in its masked
+Sysinternals utility. Enter the local account password in its masked
 field to enable automatic sign-in. It stores an encrypted LSA secret, which
 administrators can recover; no plaintext registry password is needed. Verify
-sign-in and ChatGPT startup with a reboot; both passed on 2026-10-15.
+sign-in and ChatGPT startup with a reboot.
 Windows and WSL data are disposable; no backups are configured.
 
 ChatGPT desktop opens at Windows sign-in through the user's `ChatGPT.lnk`
@@ -40,8 +40,7 @@ selector, then connect the dot from its profile under
 **Computers > Your computer > Allow access**. Keep the app running for
 local access; see the [connection guide](https://learn.chatgpt.com/docs/dots/computers-and-apps#connect-your-computer).
 In ChatGPT **Work**, select **Plugins > Computer Use** from the composer to use
-desktop apps on this computer. Calculator is the only saved app approval; a
-local task verified `37 * 13 = 481` through its GUI. Review other app approvals
+desktop apps on this computer. Calculator is the only saved app approval. Review other app approvals
 in **Settings > Computer use**. On Windows, desktop tasks use the active,
 unlocked session; see [Computer Use](https://learn.chatgpt.com/docs/computer-use).
 

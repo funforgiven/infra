@@ -136,7 +136,7 @@ resource "aws_instance" "mail" {
     aws_security_group.mail.id,
   ]
 
-  # Bootstrap and readiness use a temporary address. Move the retained EIP
+  # Bootstrap and readiness use a temporary address. Move the EIP
   # only after the replacement serves MTA-STS and JMAP and blocks public admin.
   associate_public_ip_address = true
   source_dest_check           = true
@@ -175,7 +175,7 @@ resource "aws_instance" "mail" {
   }
 
   lifecycle {
-    # Retain the enrolled mail appliance; deploy day-two NixOS changes in place.
+    # Never replace the instance; NixOS changes deploy in place.
     prevent_destroy = true
     ignore_changes  = [user_data]
   }
@@ -191,7 +191,7 @@ resource "aws_eip" "mail" {
   domain   = "vpc"
   instance = aws_instance.mail.id
 
-  # Reassociate the retained allocation in place after readiness. A separate
+  # Reassociate the allocation in place after readiness. A separate
   # ForceNew association can disassociate the live endpoint during cleanup.
   depends_on = [terraform_data.mail_ready]
 

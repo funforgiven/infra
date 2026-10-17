@@ -76,7 +76,4 @@ nix build .#checks.x86_64-linux.home-midi .#checks.x86_64-linux.audio-midi
 
 Tests cover pad filtering, independent debounce, stale events, unique-device
 selection, exact POST dispatch, no replay after failure, redirect rejection,
-credential endpoint validation and dry runs. On September 27 the real webhook
-path toggled the bulb in both directions and changed Comfort Airflow to Swing
-and back. Both starting states were restored; the AC's other settings matched
-their initial values.
+credential endpoint validation and dry runs.

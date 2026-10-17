@@ -25,11 +25,8 @@ accessPoints:
     address: 10.21.90.6
     switch: SG3210XHP-M2
     switchPort: 6
-    # Temporary workaround: factory firmware, 8.7.11 and the later 8.6.11
-    # comparison fail sustained 2.5 Gb/s on this Ethernet path.
-    # Omada's reconciler preserves physical speed/duplex settings; it owns
-    # the VLAN profile. See the 2026-10-05 PHY investigation in
-    # services/24-unifi/migration-validation.md.
+    # 2.5 Gb/s is unstable on this path (firmware 8.7.11); pinned to 1 Gb/s.
+    # Omada preserves speed/duplex; it owns only the VLAN profile.
     ethernetLink:
       speedMbps: 1000
       expectedSpeedMbps: 2500
@@ -59,9 +56,7 @@ accessPoints:
     routerPort: ether5
     power: UniFi 30W PoE+ adapter
     ethernetLink:
-      # Firmware/negotiation tests alone did not sustain gigabit. After the
-      # owner replaced this AP's cable, 8.7.11 held 1 Gb/s through five minutes
-      # of full-size probes, with zero loss, zero CRC errors and no link drops.
+      # Verified at 1 Gb/s after cable replacement.
       speedMbps: 1000
       expectedSpeedMbps: 1000
       duplex: full
@@ -101,7 +96,7 @@ wireless:
       pmf: optional
       multiLinkOperation: false
       fastRoaming: false
-      # Preserve the existing local automation discovery and communication.
+      # Local automation needs discovery and client-to-client traffic.
       clientIsolation: false
       pskSecretFile: secrets/omada.yaml
       pskSecretRef: wireless.psks.iot

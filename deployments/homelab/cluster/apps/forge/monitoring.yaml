@@ -57,8 +57,8 @@ spec:
         severity: warning
       annotations:
         summary: The online Forgejo backup has failed
-        description: Inspect snapshot/export controller logs and disposable volume cleanup. Existing archives
-          are retained and Forgejo stays online.
+        description: Inspect snapshot/export controller logs and disposable volume cleanup. Earlier archives
+          are kept and Forgejo stays online.
     - alert: ForgejoSnapshotControllerUnavailable
       expr: kube_deployment_status_replicas_available{namespace="kube-system",deployment="snapshot-controller"}
         < 1
@@ -67,8 +67,7 @@ spec:
         severity: critical
       annotations:
         summary: Storage snapshot controller is unavailable
-        description: Online Forgejo backups require this controller; existing offsite restores remain
-          independent of it.
+        description: Online Forgejo backups require this controller; offsite restores do not.
     - alert: ForgejoBackupStale
       expr: (time() - max(forge_backup_completed_timestamp_seconds{namespace="forge",service="forgejo"})
         > 28800) or max(absent(forge_backup_completed_timestamp_seconds{namespace="forge",service="forgejo"}))
@@ -87,9 +86,8 @@ spec:
       labels:
         severity: critical
       annotations:
-        summary: Forgejo offsite restore qualification failed
-        description: Inspect the qualification job and isolated forge-restore verifiers before retiring
-          recovery sources.
+        summary: Forgejo offsite restore test failed
+        description: Inspect the restore-test job and isolated forge-restore verifiers.
     - alert: ForgejoRestoreQualificationStale
       expr: (time() - kube_cronjob_status_last_successful_time{namespace="backup-qualification",cronjob="forge-restore-qualification"}
         > 3456000) or absent(kube_cronjob_status_last_successful_time{namespace="backup-qualification",cronjob="forge-restore-qualification"})
@@ -133,7 +131,7 @@ spec:
         severity: warning
       annotations:
         summary: A Forgejo Actions job has waited over 15 minutes
-        description: Check runner launchers, platform labels, image pulls and native guest availability.
+        description: Check runner launchers, platform labels and image pulls.
     - alert: ForgejoActionsMetricsUnavailable
       expr: (forge_actions_metrics_up == 0) or absent(forge_actions_metrics_up)
       for: 15m

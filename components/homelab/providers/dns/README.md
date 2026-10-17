@@ -5,7 +5,7 @@ services and mail.
 
 Application records resolve to the routed-LAN services Gateway at
 `10.21.40.122`; that address is not reachable from the public Internet. Mail
-records resolve to the retained public address produced by the AWS mail root and
+records resolve to the EIP output of the AWS mail root and
 include the Stalwart TLS, autoconfiguration, MX, SPF, DKIM, and DMARC records.
 
 The Cloudflare provider discovers the `fahrican.com` zone by name. Its token is

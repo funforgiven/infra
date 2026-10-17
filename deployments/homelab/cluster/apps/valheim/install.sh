@@ -5,7 +5,7 @@ umask 027
 # The game needs a resolvable non-root account, including in isolated restores.
 /bootstrap/prepare-identity.sh
 
-# Restore qualification must neither download nor start a second game server.
+# Restore checks must not download or start a second server.
 if [[ "$POD_NAMESPACE" != games ]]; then
   exit 0
 fi

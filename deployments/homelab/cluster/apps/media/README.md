@@ -97,15 +97,10 @@ The pinned AudioMuse 3.4.0 setup bootstrap can persist its internal
 `SetupManager.cast_value` does not deserialize tuples. After a restart this
 can generate invalid queue SQL by treating each character as a status.
 
-During the 2026-09-09 worker replacement, the affected rows contained exactly
-`('NEW', 'RUNNING')` and `('SUCCESS', 'FAIL', 'REVOKED')`. Preserving those rows
-and removing only these two malformed overrides restored the pinned code's
-defaults. No task, music, media-server or user configuration rows were changed.
-The frontend became Ready without an image upgrade or database restore.
-
-If this specific failure recurs, verify the image, traceback and both exact
-values first. Preserve the rows, remove only those verified internal overrides
-in a transaction, and require a successful `/api/health` response. Do not clear
+If this recurs, verify the image, traceback and both exact values first. The
+malformed rows are `('NEW', 'RUNNING')` and `('SUCCESS', 'FAIL', 'REVOKED')`;
+delete only those overrides in a transaction so the pinned code's defaults
+apply, and require a successful `/api/health` response. Do not clear
 `app_config` or change task-status data. A setup operation that writes all
 defaults may recreate the overrides; inspect the upstream tuple serialization
 before treating an upgrade as a fix.

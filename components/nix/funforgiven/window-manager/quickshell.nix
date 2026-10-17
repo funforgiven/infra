@@ -280,11 +280,11 @@ in
         }
         {
           assertion = !config.services.mako.enable;
-          message = "Mako must remain disabled; this desktop deliberately has no notification daemon.";
+          message = "Mako must remain disabled; this desktop has no notification daemon.";
         }
         {
           assertion = !config.services.swaync.enable;
-          message = "SwayNotificationCenter must remain disabled; this desktop deliberately has no notification daemon.";
+          message = "SwayNotificationCenter must remain disabled; this desktop has no notification daemon.";
         }
         {
           assertion = !(builtins.hasAttr "dank-material-shell" config.programs);

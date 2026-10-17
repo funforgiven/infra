@@ -14,17 +14,17 @@ in **Fahrican Bathroom** on the **6th floor**.
 - The Rooftrollen theme has both light and dark palettes. The owner's theme
   preference omits `dark`, which means follow the operating system, rather than
   forcing either mode. The same account's dashboard preference opens Rooftrollen.
-- Room colors remain consistent between the home page and detailed controls.
-  Light controls use amber when on so white bulbs remain visibly active.
+- Room colors match between the home page and detailed controls. Light
+  controls use amber when on so white bulbs stay visibly active.
 - Tap a light to switch it; use its slider for brightness. Open a room or the
-  Lights page for color and color-temperature controls. Existing Zigbee2MQTT
-  transition-zero/native Hue settings continue to govern these commands.
-- The light count includes the bathroom relay. The explicitly labeled group-off
-  button turns off the **five Hue bulbs**, keeping the bathroom presence workflow
-  independent. This button sends `light.turn_off` with `transition: 0`.
+  Lights page for color and color-temperature controls. Zigbee2MQTT
+  transition-zero/native Hue settings govern these commands.
+- The light count includes the bathroom relay. The labeled group-off button
+  turns off the **five Hue bulbs** and leaves the bathroom presence workflow
+  alone. This button sends `light.turn_off` with `transition: 0`.
 - Home shows occupancy and temperature/humidity chips for the loft desk,
   bedroom and bathroom FP300s. The loft label describes desk presence, since
-  that sensor deliberately covers the desk rather than the entire room.
+  that sensor covers the desk rather than the entire room.
 - Loft and Bedroom detail pages show separate presence and PIR motion readings,
   current temperature/humidity, and three-hour presence/motion/light histories.
   The loft presence card reports sensor state; it does not claim to measure
@@ -32,13 +32,13 @@ in **Fahrican Bathroom** on the **6th floor**.
 - Climate shows the three FP300s' temperature/humidity and twelve-hour histories,
   the loft Daikin thermostat, outdoor weather, and the AC's reported cooling
   electricity use. These cards do not change Onecta polling.
-- Door status comes from the existing Matter lock. Lock, unlock and unlatch are
+- Door status comes from the Matter lock. Lock, unlock and unlatch are
   distinct controls and all have confirmation prompts. The activity card uses
-  the existing Matter state and Nuki MQTT event; requested events do not prove
+  the Matter state and Nuki MQTT event; requested events do not prove
   that a physical operation completed. A locked state does not prove the door
   leaf is closed.
 - Automation cards open more-info; they do not invoke an automation action when
-  tapped. Existing dimmer, keypad and presence automations are unchanged.
+  tapped.
 
 The layout takes inspiration from
 [Mushroom](https://github.com/piitaya/lovelace-mushroom) and
@@ -48,10 +48,10 @@ HACS integration, external font service or remotely hosted runtime card is neede
 
 ## Ownership and backup
 
-`dashboard.yaml` is the reviewed recovery source. The live dashboard remains in
+`dashboard.yaml` is the reviewed recovery copy. The live dashboard stays in
 Home Assistant storage mode and can be edited in its UI. Export intentional UI
-edits back to this file before running the installer, which explicitly replaces
-this dashboard's live configuration with the recovery source. Flux does not
+edits back to this file before running the installer, which replaces this
+dashboard's live configuration with the recovery copy. Flux does not
 continually overwrite dashboard edits.
 
 `theme.yaml` is installed at `/config/themes/rooftrollen.yaml`. Frontend assets
@@ -62,7 +62,7 @@ before installation and checked again through Home Assistant's HTTPS endpoint.
 Assets are served locally after installation; normal operation and restarts do
 not download them again.
 
-The existing application backup already includes the dashboard's `.storage`
+The application backup includes the dashboard's `.storage`
 configuration, theme, local assets and user preferences. Installation also saves
 the previous frontend files/configuration under
 `/config/.dashboard-backups/<UTC timestamp>/`. These files live on the same state
@@ -70,57 +70,50 @@ PVC and are included in application recovery archives.
 
 ## Install or recover
 
-Run from the repository root with a services-cluster kubeconfig and Python that
+Run from the repository root with a cluster kubeconfig and Python that
 provides **PyYAML, requests and websocket-client**. `kubectl` and `sops` must be
 available on PATH (or supplied with `--kubectl` and `--sops`).
 
 ```sh
 python3 deployments/homelab/cluster/apps/home-automation/dashboard/install.py \
-  --kubeconfig /path/to/services-kubeconfig \
+  --kubeconfig /path/to/kubeconfig \
   --credentials secrets/home-assistant.yaml \
   --set-user-default
 ```
 
-The installer decrypts the existing HA token in memory, validates entity
+The installer decrypts the HA token in memory, validates entity
 references, checks downloaded assets, and saves a recovery copy before changing
 frontend files. It preserves unrelated dashboards/resources. If `frontend` is
 already customized with a different theme include, it stops rather than
-overwriting that configuration; merge the named theme into the existing include
+overwriting that configuration; merge the named theme into that include
 before proceeding.
 
 `--set-user-default` changes only the token owner's dashboard and theme
 preferences. Omit it to install the dashboard without changing preferences.
-The installer merges other preference fields and removes the explicit `dark`
+The installer merges other preference fields and removes the `dark`
 field to follow the system setting.
 
-On the first installation, if `/config/www` did not exist when HA started, HA
-must restart once to register the `/local` route. The installer reports this
-condition after writing the checked files. Restart **Home Assistant** through
-Settings → System, then rerun the installer. Later dashboard edits and theme
-reloads need no restart. The initial installation used one graceful HA restart;
-the MQTT, Zigbee, Matter and OTBR processes were not restarted.
+If `/config/www` did not exist when HA started, HA must restart once to register
+the `/local` route. The installer reports this condition after writing the
+checked files. Restart **Home Assistant** through Settings → System, then rerun
+the installer. Later dashboard edits and theme reloads need no restart.
 
 For dashboard-only edits, save parsed `dashboard.yaml` through the authenticated
 WebSocket command `lovelace/config/save` with
 `url_path: dashboard-rooftrollen`. For theme edits, update the theme file and call
 `frontend.reload_themes`. Do not edit live `.storage` files behind HA's back.
 
-## Verification
+## Verify a change
 
-Initial validation on 2026-09-26 covers:
+- Run the Home Assistant configuration check and compare the dashboard/theme API
+  readback with the files.
+- Confirm every referenced entity exists and local resource checksums match
+  their pins.
+- Render the changed views in authenticated Chromium at desktop and phone widths,
+  in light and dark modes, without error cards or horizontal overflow.
+- Intercept service calls in the test browser for light and lock controls; UI
+  tests never send a physical lock command. Check confirmation prompts and
+  cancellation separately.
 
-- Home Assistant configuration check and exact dashboard/theme API readback.
-- All referenced entities exist; local resource checksums match their pins.
-- Authenticated Chromium renders at desktop and phone widths in light and dark.
-- Live system color-mode changes, default-dashboard routing and room navigation.
-- Light dispatch and separate lock/unlock/unlatch mappings, with service calls
-  intercepted inside the test browser. No physical lock command is sent by UI
-  tests. Confirmation prompts and cancellation are checked independently.
-
-Keep validation screenshots and temporary browser credentials out of Git. Browser
-checks use the existing encrypted token in memory and do not record its value.
-
-The September 27 FP300 update also passed entity-reference checks, HA rendering
-of the changed templates, and exact API readback. Home, Climate, Bedroom and Loft
-rendered in authenticated Chromium at desktop/light and phone/dark settings,
-without error cards or horizontal overflow.
+Keep screenshots and temporary browser credentials out of Git. Browser checks
+decrypt the HA token in memory and never record its value.

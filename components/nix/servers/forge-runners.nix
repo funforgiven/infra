@@ -17,8 +17,7 @@ _: {
             runner = pkgs.runCommand "forgejo-runner-13.1.0" { } ''
               install -Dm755 ${runnerBinary} "$out/bin/forgejo-runner"
             '';
-            # Keep the existing Actions gzip archive format/cache version while
-            # using the pod's three CPUs to avoid minutes of serial compression.
+            # pigz keeps the gzip format and cache version.
             parallelGzip = pkgs.writeShellScriptBin "gzip" ''
               exec ${pkgs.pigz}/bin/pigz --processes 3 --fast "$@"
             '';

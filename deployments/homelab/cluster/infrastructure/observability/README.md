@@ -1,15 +1,15 @@
 # Homelab observability
 
-One stack monitors the three NixOS/K3s hosts, direct Rook-Ceph and every retained
+One stack monitors the three NixOS/K3s hosts, direct Rook-Ceph and every
 application. The `observability` Flux stage follows storage; database controllers
 follow observability so their PodMonitor/PrometheusRule APIs exist. The graph is
-declared in [waves.yaml](../../waves.yaml).
+declared in [waves/stages.yaml](../../waves/stages.yaml).
 
-| Component | Target state |
+| Component | Configuration |
 | --- | --- |
-| Prometheus | One replica, 15 days or 18 GiB retention, retained 20 GiB `ceph-block` claim |
-| Alertmanager | One replica, retained 2 GiB `ceph-block` claim; Telegram and encrypted Matrix delivery |
-| Grafana | Enabled, retained 10 GiB `ceph-block` claim, existing OIDC identity and management HTTPS route |
+| Prometheus | One replica, 15 days or 18 GiB retention, 20 GiB `ceph-block` claim |
+| Alertmanager | One replica, 2 GiB `ceph-block` claim; Telegram and encrypted Matrix delivery |
+| Grafana | Enabled, 10 GiB `ceph-block` claim, ZITADEL OIDC and management HTTPS route |
 | Loki | One monolithic replica, filesystem-backed index/chunks on a 50 GiB `ceph-block` claim |
 | Fluent Bit | Host/pod log collection into Loki |
 | Blackbox Exporter | Private/public application HTTP/TCP probes |
@@ -18,46 +18,30 @@ declared in [waves.yaml](../../waves.yaml).
 Prometheus discovers monitors, rules and probes in every namespace. Native
 K3s controller-manager/scheduler/etcd bundled endpoints are not assumed to be
 separate scrape targets. NixOS owns image garbage collection and bounded
-journald/container logs; no Ubuntu worker-policy DaemonSet remains.
+journald/container logs.
 
 The chart retries transient admission-webhook startup failures. cert-manager
-owns its webhook certificate/CA; patch Jobs remain disabled. Kubelet discovery
-uses the pinned operator's tested Endpoints workaround as a coordinated setting:
+owns its webhook certificate/CA; patch Jobs are disabled. Kubelet discovery
+uses the pinned operator's Endpoints workaround as a coordinated setting:
 `kubeletEndpointsEnabled=true`, `kubeletEndpointSliceEnabled=false` and
-`serviceDiscoveryRole=Endpoints`. Manually managed metric targets retain their
-matching Endpoints objects until an operator upgrade passes node replacement
-qualification.
+`serviceDiscoveryRole=Endpoints`; manually managed metric targets keep matching
+Endpoints objects. Keep these settings until an operator upgrade is tested.
 
 Alertmanager groups application/backup failures and clears a failed CronJob
-incident when a newer execution succeeds. Forge's deliberate OnDelete rollout
+incident when a newer execution succeeds. Forge's OnDelete rollout
 and long isolated restore verifier use their service-specific rules. UniFi AP
 telemetry distinguishes missing metrics/scrape failure from ordinary node
 targets. Runtime Telegram/Grafana/Matrix credentials stay SOPS-encrypted.
 
-During migration, keep this stage held until its four active data sources have
-restored. Continue the old workload Prometheus/Alertmanager data and restore
-physical Grafana/Loki data into `services-observability`. Preserve both old
-physical Prometheus replica histories as independent archives; do not merge
-them into the active 20 GiB TSDB. Preserve all old Alertmanager files and import
-still-active missing silences through its API. The complete procedure and
-ownership/size changes are in
-[DATA-MIGRATION.md](../../../../../docs/migration/DATA-MIGRATION.md).
-
 Restore observability first, verify its CRDs/readiness, then release database
 controllers and dependent apps. Single replicas mean Grafana/logs/recent metrics
 can be unavailable while a host or RWO volume relocates. Replica-3 Ceph protects
-against a host failure; it does not replace an independent history backup.
-The separate `observability-history` Velero schedule runs daily at 03:45 UTC,
-retaining 30 days in Backblaze. It exports all four RBD CSI snapshots through
-Kopia data movement; local Ceph snapshots are temporary and are removed after
-upload. Each volume is a crash-consistent point in time, with its database/WAL
-files captured together. Cross-service snapshots are not atomic. Recovery
-requires native SQLite integrity and Prometheus/Loki WAL replay checks before
-serving traffic. The application filesystem schedules continue separately.
-An alert reports missing or stale history uploads. Git preserves rules,
+against a host failure; it does not replace an off-cluster history backup.
+The `observability-history` schedule exports all four volumes to Backblaze; see
+the [backup runbook](../backups/README.md#schedules). Git holds rules,
 dashboards, routes and encrypted runtime inputs.
 
-With the explicit target cluster access:
+Check:
 
 ```sh
 nix run .#matrix-access -- cluster -- kubectl -n flux-system get kustomization observability
@@ -66,7 +50,7 @@ nix run .#matrix-access -- cluster -- kubectl get prometheusrules,servicemonitor
 ```
 
 Require the HelmReleases and Flux stage Ready, PVCs Bound, host/storage targets
-present, Grafana OIDC access, searchable restored logs and a delivered test alert.
+present, Grafana OIDC access, searchable logs and a delivered test alert.
 NixOS's off-server etcd backups export token/keys with the snapshot and report
 `homelab_etcd_backup_last_success_timestamp_seconds`; their schedule and restore
-qualification are separate from app/history storage recovery.
+checks are separate from app/history storage recovery.

@@ -5,35 +5,31 @@ Velero writes homelab backups to the private
 `services/kubernetes/`. Other recovery data shares the bucket but uses
 different prefixes and credentials.
 
-Flux applies this controller after services observability and before the backup
-policy. The dependency order is declared in [`../../waves.yaml`](../../waves.yaml).
+Flux applies this controller after observability and before the backup
+policy. The dependency order is declared in [`../../waves/stages.yaml`](../../waves/stages.yaml).
 
 ## Storage and credentials
 
-Concrete runtime objects are SOPS-encrypted in the target credential stage:
+Concrete runtime objects are SOPS-encrypted in this stage:
 
 - `velero/velero-object-storage` contains the scoped B2 key in AWS credentials-file format.
 - `velero/velero-runtime-values` contains bucket, endpoint, region and prefix.
 
 Refresh these from reviewed local enrollment inputs with
-`render-cluster-credentials`. The credential stage precedes the controller;
-an undercloud services reconciler is unnecessary. Follow the
-[credential procedure](../../../credentials/README.md) and preserve the existing B2
-repository identity and independent restore credentials.
+`render-cluster-credentials`. Follow the
+[credential procedure](../../../credentials/README.md); do not create a new
+repository, and keep the separate restore credentials outside the cluster.
 
-Velero uses Kopia filesystem backups and deploys a node agent on every node.
-Velero's application policy uses Kopia filesystem backups. Direct RBD CSI
-snapshots are available for Forgejo's temporary online export; local snapshots
-are not independent off-server backups. Forgejo separately
-uses temporary local CSI snapshots to export portable recovery archives while
-remaining online; Velero copies those archives. The `velero` namespace is
-privileged only because the node agents need kubelet host paths.
+Velero uses Kopia filesystem backups with a node agent on every node. Forgejo
+creates its own CSI-snapshot exports, which Velero copies. Two schedules also
+move CSI snapshot data to B2; see the [backup schedules](../backups/README.md#schedules). The namespace is
+privileged for kubelet host paths.
 
 The B2 bucket uses server-side encryption and a 30-day lifecycle for hidden
 versions under this prefix. Object Lock is disabled. The Velero key can list,
 read, write, and delete within its scope, so a compromised homelab
-credential can damage these backups. Keep the independent administrative and
-restore credentials outside the cluster.
+credential can damage these backups. Keep the administrative and restore
+credentials outside the cluster.
 
 ## Check the controller
 
@@ -65,14 +61,14 @@ The Helm release installs two critical alerts:
   within 26 hours, after a one-hour delay.
 
 Velero metrics, node-agent metrics, and these rules are selected by the
-services Prometheus stack.
+Prometheus stack.
 
 ## Recovery and known compatibility issue
 
 After rebuilding the homelab cluster, restore the reviewed concrete credentials
 and release the Velero Flux stage after its dependencies are ready. Do not initialize a
 new repository over the old prefix. Confirm that the BackupStorageLocation is
-Available, that the existing backups are listed, and that the Kopia repository
+Available, that the stored backups are listed, and that the Kopia repository
 is Ready before starting a restore.
 
 The AWS object-store plugin is pinned by digest to the upstream `main` image

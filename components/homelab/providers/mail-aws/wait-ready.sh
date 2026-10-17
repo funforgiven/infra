@@ -1,9 +1,9 @@
 #!/bin/sh
 set -eu
 
-# Check the replacement's temporary address before moving the retained EIP.
+# Check the replacement's temporary address before moving the EIP.
 # This unauthenticated probe uses the IP, so hostname validation is not possible.
-# The application probes validate the public hostname and TLS after cutover.
+# The application probes validate the public hostname and TLS after the EIP moves.
 case "$MAIL_READY_IP" in
   ''|*[!0-9.]*) echo 'Invalid mail readiness address' >&2; exit 1 ;;
 esac
@@ -27,12 +27,12 @@ while [ "$attempt" -lt 120 ]; do
       --header='Host: mail.fahrican.com' -O /dev/null \
       "https://$MAIL_READY_IP/admin/" 2> "$headers" || true
     if grep -Eq '^[[:space:]]*HTTP/[0-9.]+ 404([[:space:]]|$)' "$headers"; then
-      echo 'Replacement mail policy, public JMAP, and private admin boundary are ready for address cutover.'
+      echo 'Replacement mail policy, public JMAP, and private admin boundary are ready for the EIP move.'
       exit 0
     fi
   fi
   attempt=$((attempt + 1))
   sleep 10
 done
-echo 'Replacement mail server did not become ready; retained address stays on the previous host.' >&2
+echo 'Replacement mail server did not become ready; the EIP stays on the previous host.' >&2
 exit 1

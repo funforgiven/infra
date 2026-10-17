@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-"""Verify Atollion's migration evidence and restored Forgejo 15 database.
+"""Verify the Atollion import archive and restored Forgejo database.
 
-Called after archive extraction by verify-restore.py. This check is mandatory
-after cutover: a missing migration directory must never silently skip Atollion.
-Git object and ancestry checks are handed to verify-git.sh through validated,
-newline-only SHA files. This module alone does not qualify a restore.
+Called by verify-restore.py; fails if the import directory is missing. Git
+checks are in verify-git.sh.
 """
 
 from datetime import datetime, timezone
@@ -228,8 +226,7 @@ def verify_policy(db, repo_id, validation_policy=None):
     if local_enrolled and policy["enable_status_check"] == 0:
         require(not contexts, "local validation protection must have no Actions contexts")
     else:
-        # Historical Actions-protected archives remain recoverable after the
-        # explicit operator migration. Partial Actions protection never passes.
+        # Actions-protected archives must stay recoverable; partial protection fails.
         require(policy["enable_status_check"] == 1 and CONTEXTS <= contexts,
                 "required CI protection is incomplete; local validation needs operator enrollment")
     for column, names in (("merge_whitelist_user_i_ds", {"funforgiven", "atollion-coordinator"}),
@@ -253,8 +250,7 @@ def verify_database(database, issues, pulls, validation_policy=None):
                 "restored repository privacy or default branch differs")
         verify_merge_style(db, repo["id"])
         verify_policy(db, repo["id"], validation_policy)
-        # Titles, bodies, labels and issue states can legitimately change after
-        # cutover. The hashed original export retains their initial values.
+        # Titles, bodies, labels and states may change; only the hashed export is compared.
         for number, source in {**issues, **pulls}.items():
             rows = db.execute('SELECT id, is_pull, created_unix FROM issue WHERE repo_id = ? AND "index" = ?',
                               (repo["id"], number)).fetchall()
@@ -309,8 +305,7 @@ def verify_atollion(backup, target, *, validation_policy=None):
     require(lfs.get("source") == "GitHub complete advertised refs"
             and lfs.get("small_blobs_checked") == 148 and lfs.get("lfs_pointer_blobs") == 0,
             "original GitHub LFS inventory evidence differs")
-    # This is evidence for the original imported history only. It does not claim
-    # to verify LFS content that may be introduced by future development.
+    # Covers imported history only; later LFS content is not verified.
     safe_path(target, "data/git/repositories/funforgiven/atollion.git", directory=True)
     commits = verify_database(safe_path(target, "data/data/forgejo.db"), issues, pulls, validation_policy)
     commits.add(cutover)

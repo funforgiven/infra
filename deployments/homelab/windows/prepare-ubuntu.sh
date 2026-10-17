@@ -24,7 +24,7 @@ if [[ $(id -u) == 0 ]]; then
   install -d -o funforgiven -g funforgiven -m 0755 \
     /home/funforgiven/dev /home/funforgiven/dev/scratch \
     /home/funforgiven/Pictures/Wallpapers
-  # This public asset is the existing absolute-path input locked by infra.
+  # The flake locks this absolute path as its wallpaper input.
   install -o funforgiven -g funforgiven -m 0644 "$bootstrap_dir/wallpaper.png" \
     /home/funforgiven/Pictures/Wallpapers/current.png
   exec runuser -u funforgiven -- bash "$0" --user

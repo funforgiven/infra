@@ -1,12 +1,11 @@
 ---
-- name: Require verified independent exports before legacy network retirement
+- name: Require verified backups before removing old network rows
   ansible.builtin.assert:
     that:
       - migration_exports_verified | default(false) | bool
     fail_msg: >-
-      Legacy retirement requires the final independent data exports and
-      source recovery archives described in docs/migration/DATA-MIGRATION.md.
-      Run this separate phase only after verifying those exports.
+      Removing old network rows requires verified off-cluster backups.
+      Set migration_exports_verified=true only after checking them.
 
 - name: Retire only the exact inventoried legacy bridge VLAN rows
   community.routeros.command:

@@ -47,6 +47,6 @@ Enter nix develop --accept-flake-config there for the repository's pinned tools.
 '@ | Set-Content -Encoding UTF8 (Join-Path $workspace 'AGENTS.md')
 Write-Host 'Windows workspace and Ubuntu infrastructure checkout are ready.'
 if ($OpenAutologon) {
-    # Enter the existing account password only in the masked GUI field.
+    # Enter the account password only in the masked GUI field.
     Start-Process -FilePath $autologon
 }

@@ -214,7 +214,7 @@ def serve():
 
 
 if __name__ == '__main__':
-    # Python running as container PID 1 must explicitly handle termination.
+    # Python as container PID 1 must handle SIGTERM itself.
     # SystemExit also runs the backup's finally block and resumes writers.
     signal.signal(signal.SIGTERM, lambda *_args: sys.exit(0))
     os.umask(0o077)

@@ -11,23 +11,19 @@ in
 
     NixOS, Kubernetes, desktop and physical-network configuration for this
     homelab. Three NixOS/K3s servers run one Flux-managed cluster with direct
-    Rook-Ceph storage. Independent AWS mail and external provider resources
-    retain their declarative configuration and existing state.
-
-    The three physical hosts have been rebuilt and retained applications restored.
-    Live deployment and independent recovery results are recorded in
-    [the execution record](docs/migration/LIVE-RECOVERY.md).
+    Rook-Ceph storage. AWS mail and external provider resources (identity, DNS,
+    NetBird) are managed by separate OpenTofu roots run from the workstation.
 
     ## Repository map
 
     - `components/nix/`: NixOS/Home Manager modules, packages, checks and generated files.
     - `deployments/homelab/hosts/`: physical host inventory, declarative mirrored-SATA disko, NixOS networking, K3s and encrypted bootstrap.
-    - `deployments/homelab/cluster/`: one semantic Flux dependency graph, infrastructure and apps.
-    - `deployments/homelab/recovery/`: suspension overlay for restoring persistent data before applications start.
-    - `components/homelab/providers/`: independent identity, Cloudflare DNS, AWS mail and NetBird OpenTofu configurations.
-    - `components/homelab/operations/`: encrypted credential/state and migration inventory helpers.
+    - `deployments/homelab/cluster/`: Flux dependency graph (`waves/`), infrastructure and apps.
+    - `deployments/homelab/recovery/`: Flux overlay that holds Ceph and stateful apps while restoring a cluster from backup.
+    - `components/homelab/providers/`: identity, Cloudflare DNS, AWS mail and NetBird OpenTofu configurations.
+    - `components/homelab/operations/`: credential rendering and provider-state helpers.
     - `deployments/homelab/network/` and `components/homelab/network-automation/`: RouterOS/Omada/UniFi desired network state.
-    - `docs/migration/`: architecture, complete source/PVC mapping, owner inputs, console qualification and migration evidence.
+    - `docs/`: [architecture](docs/ARCHITECTURE.md).
     - `secrets/`: SOPS ciphertext and secret recovery instructions.
 
     `outputs.nix` loads every Nix module below `components/nix/`. Edit generated
@@ -49,10 +45,22 @@ in
     nix run .#repository-secret-scan --accept-flake-config
     ```
 
-    The homelab check combines strict native manifest validation, retained
-    service tests, OpenTofu formatting, RouterOS syntax and shell checks.
-    Full pinned Helm rendering and schema validation are documented in
-    [VALIDATION.md](docs/migration/VALIDATION.md).
+    The homelab check combines strict native manifest validation, service
+    tests, OpenTofu formatting, RouterOS syntax and shell checks. It uses the
+    committed schema bundle and needs no decryption or network access.
+
+    Full pinned Helm rendering and schema validation need Python with
+    PyYAML/requests, Helm, Kustomize and SOPS. Refresh the public schema and
+    chart cache, then validate with decrypted Helm values:
+
+    ```sh
+    python components/homelab/validation/refresh.py --cache /tmp/homelab-validation
+    python components/homelab/validation/validate.py --helm-cache /tmp/homelab-validation --decrypt
+    ```
+
+    The cache holds only public upstream data, never decrypted values.
+    Pinned sources are described in
+    [the validation README](deployments/homelab/validation/README.md).
 
     Read-only evaluations of host and disk configuration:
 
@@ -63,40 +71,24 @@ in
     nix eval .#homeConfigurations."${homeConfigurationName}".activationPackage.drvPath
     ```
 
-    ## Secrets and execution
+    ## Secrets
 
     The personal age identity at
     `${user.homeDirectory}/.config/sops/age/keys.txt` decrypts operator inputs.
     Keep its offline recovery copy. Cluster hosts use a dedicated age identity
-    seeded during installation; existing Ed25519 SSH host identities remain
-    encrypted in the host bootstrap. Flux has a separate age recipient.
+    seeded during installation, and Flux has a separate age recipient. Host SSH
+    identities are encrypted in `deployments/homelab/hosts/secrets.sops.yaml`.
 
-    `migration-source-capture` reads the frozen old deployment into a new private
-    directory outside Git and encrypts runtime/configuration/provider archives.
-    It does not update the target or export application-volume bytes.
+    `render-cluster-credentials` refreshes encrypted application Secrets from
+    local enrollment inputs; `provider-state` exports a provider's OpenTofu
+    state. Neither applies changes.
 
-    Export archived provider state locally with the
-    `migration-provider-state` app; never initialize an empty state for existing
-    external resources. `render-cluster-credentials` refreshes concrete encrypted
-    application Secrets from local enrollment inputs. Neither helper applies
-    cluster or provider resources. `migration-certificate-bundle` exports the
-    validated one-time TLS seed. `migration-volume-plan` renders claim transfer
-    resources, and `migration-database-bootstrap` exports a private PostgreSQL
-    bootstrap while application stages stay held.
+    See [secret recovery](secrets/README.md) and
+    [architecture](docs/ARCHITECTURE.md).
 
-    See [preparation acceptance](docs/migration/ACCEPTANCE.md),
-    [migration status](docs/migration/PROGRESS.md),
-    [architecture](docs/migration/ARCHITECTURE.md),
-    [data migration](docs/migration/DATA-MIGRATION.md),
-    [execution runbook](docs/migration/RUNBOOK.md),
-    [complete inventory](docs/migration/INVENTORY.md),
-    [owner execution inputs](docs/migration/DECISIONS-REQUIRED.md),
-    [PiKVM console access](docs/migration/CONSOLE-ACCESS.md) and
-    [secret recovery](secrets/README.md). Source disks, databases, certificates
-    and Ceph monitor state must have verified independent recovery before any
-    destructive installation. Keeping OSD disks alone is not a Ceph restore.
+    ## Wallpaper
 
-    The wallpaper remains at
+    The wallpaper is at
     `${user.homeDirectory}/Pictures/Wallpapers/current.png`; after replacing
     it, refresh the lock with `nix flake update wallpaper --accept-flake-config`.
 

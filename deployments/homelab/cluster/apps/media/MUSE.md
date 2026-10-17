@@ -11,7 +11,7 @@ ghcr.io/museofficial/muse:2.11.7-yt-dlp-2026.8.19@sha256:ffe4274041ff82d1ed0893b
 The `discord-music` Deployment has one replica in the `media` namespace and
 uses `Recreate` so two bot sessions never compete for the same Discord identity
 or SQLite database. Its database, guild configuration, and favorites live on
-the 5 GiB `rbd1` `discord-music-data` PVC. The 2 GB media cache uses a bounded
+the 5 GiB `ceph-block` `discord-music-data` PVC. The 2 GB media cache uses a bounded
 3 GiB ephemeral volume and is discarded when the pod is replaced; it is an
 optimization, not recovery data. It has no Service, ingress, or inbound public
 endpoint. The workload is not usable until both credentials have been enrolled,
@@ -36,7 +36,7 @@ and the
 
 Do not accept an image update that removes DAVE support or silently changes the
 voice dependency. The REST readiness probe does not test DAVE negotiation, so
-the live `/play` qualification below remains mandatory after every Muse image
+the live `/play` test below is mandatory after every Muse image
 or voice-library change.
 
 ## YouTube policy and reliability boundary
@@ -163,8 +163,8 @@ nix run .#enroll-services-credential -- \
 
 Enrollment writes each value to the declared SOPS document as ciphertext and
 truncates that intake file only after encryption succeeds. Review only the
-ciphertext structure and diff statistics, commit the encrypted result, and let
-the services-cluster reconciler create `discord-music-runtime` in `media`. Do
+ciphertext structure and diff statistics, run `nix run .#render-cluster-credentials`
+to refresh `discord-music-runtime` in `media`, and commit the encrypted result. Do
 not install the bot while the Deployment is failing because either credential
 is still absent.
 
@@ -225,7 +225,7 @@ The `/data/cache` and 1 GiB `/tmp` mounts are bounded ephemeral volumes and are
 not backed up. A restored cache starts empty and repopulates on demand; it must
 never be treated as application data or a recovery source.
 
-Qualify a recovery point through the
+Test a recovery point through the
 [isolated media restore procedure](../../infrastructure/backups/README.md#isolated-media-restore).
 Keep the restored namespace deny-all and do not allow a restored Muse pod to
 connect with the production token: two active sessions would compete for one
@@ -245,8 +245,8 @@ kubectl -n media get secret discord-music-runtime \
   -o jsonpath='{.metadata.resourceVersion}{"\n"}'
 ```
 
-Rotate through the same intake and SOPS path, then wait for the
-services-cluster reconciler to change that resource version. Restart the
+Rotate through the same intake and SOPS path, run `render-cluster-credentials`,
+commit, and wait for Flux to change that resource version. Restart the
 Deployment only after it changes so the new environment value is loaded:
 
 ```sh
@@ -262,7 +262,7 @@ does not require reinstalling the application in the guild because the bot
 identity and application ID stay the same.
 
 For the YouTube API key, create and restrict a replacement first. Enroll and
-reconcile `DISCORD_MUSIC_YOUTUBE_API_KEY`, restart and qualify playback, then
+reconcile `DISCORD_MUSIC_YOUTUBE_API_KEY`, restart and test playback, then
 disable and delete the old key in Google Cloud. If compromise is suspected,
 revoke the exposed key immediately and accept the outage rather than waiting
 for a no-downtime handoff.

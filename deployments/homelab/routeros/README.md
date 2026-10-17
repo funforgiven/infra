@@ -4,20 +4,19 @@ The CCR2004 is the routed edge and the CRS510 is the 25 Gb/s east-west
 fabric. The Omada-managed SG3210XHP-M2 connects copper endpoints and the
 CCR/CRS uplinks.
 
-There are two current-state inputs:
+There are two inputs:
 
 - `../network/network-inventory.yaml` is the RouterOS inventory: device
-  identity, current cloud bonds/VLANs, link policy, provider routing, declared
-  static DHCP leases, private cloud DNS forward, WireGuard administration
+  identity, server bonds/VLANs, link policy, provider routing, declared
+  static DHCP leases, cluster DNS forward, WireGuard administration
   routes, and destination-scoped Mullvad egress.
-- `components/homelab/network-automation/reconcile-routeros.yaml` is the
-  current convergence owner until the RouterOS Terraform import described
-  below is complete.
+- `components/homelab/network-automation/reconcile-routeros.yaml` applies it
+  until a RouterOS Terraform provider replaces the Ansible playbook.
 
 Device exports belong in encrypted backups, not in the desired-state tree.
 
-The cloud network and MTU design lives once in
-[the migration architecture](../../../docs/migration/ARCHITECTURE.md). Omada final state is documented by
+The cluster network and MTU design is in
+[the architecture](../../../docs/ARCHITECTURE.md). Omada state is documented by
 its compact desired-state file and reconciler.
 
 ## Physical map
@@ -29,8 +28,8 @@ its compact desired-state file and reconciler.
 | CCR2004 | `ether2` | prepared replacement for the SG3210XHP-M2 port 1 trunk |
 | CCR2004 | `ether3/4` | HOUSEMATE access, untagged VLAN 70 |
 | CCR2004 | `ether5` | second U7 Pro Max `A4:F8:FF:8E:53:5C` through a UniFi 30 W PoE+ adapter; untagged management VLAN 90, tagged WLAN VLANs 10/50; reserved `10.21.90.7` |
-| CCR2004 | `ether15` | current SG3210XHP-M2 port 1 routed trunk; retained during migration |
-| CCR2004 | `ether16` | existing legacy hybrid connection; retained until recabled |
+| CCR2004 | `ether15` | current SG3210XHP-M2 port 1 routed trunk (move to `ether2` when recabled) |
+| CCR2004 | `ether16` | hybrid connection (to be recabled) |
 | CRS510 | `sfp28-1` | SG3210XHP-M2 port 9 routed uplink |
 | CRS510 | `sfp28-2` | direct admin workstation; tagged VLANs 10 and 20 |
 | CRS510 | `sfp28-3/4` | `bond-server1`, `taleggio` |
@@ -42,68 +41,64 @@ its compact desired-state file and reconciler.
 | SG3210XHP-M2 | port 7 | PiKVM V4 Plus `burrata`, MAC `88:A2:9E:41:73:2C`; VLAN 90 DHCP reservation `10.21.90.8`; two PiKVM Switch units |
 
 CCR ports 2 and 15 both carry native VLAN 1 and tagged VLANs 10, 20, 40, 50,
-60, and 90. Move the existing Omada uplink cable from 15 to 2 when ready;
-port 15 stays configured during the transition. VLAN 40 bridge membership is
+60, and 90. Move the Omada uplink cable from 15 to 2 when ready; port 15 stays
+configured until then. VLAN 40 bridge membership is
 owned by the LAN port reconciler along with the other CCR bridge VLAN rows.
 
 Ports 3 and 4 share HOUSEMATE VLAN 70 (`10.21.70.0/24`), separate from GUEST
 VLAN 60. They accept untagged client traffic, use PVID 70 and ingress filtering,
 and reject VLAN-tagged client traffic. The gateway and DNS server are
 `10.21.70.1`; DHCP leases `10.21.70.100–199` for one day. Devices on these two
-ports can communicate with each other and reach the internet. Four explicit
+ports can communicate with each other and reach the internet. Four
 forward rules allow Steam traffic in both directions between HOUSEMATE
 (`10.21.70.0/24`) and TRUSTED (`10.21.10.0/24`): TCP 27040 for transfers and
 UDP 27031–27036 for discovery. Each rule matches both subnets and both VLAN
-interfaces. Other traffic retains its existing policy, and router administration
-is governed separately
-by the input firewall. The existing public game port reflections remain
-available through `INFRA-LAN`. Devices moved from the legacy
-LAN need a fresh DHCP lease. The still-connected legacy port 16 is preserved.
+interfaces. Other traffic follows the normal forward policy, and router
+administration is governed separately by the input firewall. The public game
+port reflections are available through `INFRA-LAN`.
 
 Steam local transfers use TCP 27040 and UDP 27031–27036 for discovery. Both
 clients must enable local transfers for friends (or any user), and their host
-firewalls must permit them. The workstation NixOS configuration already enables
+firewalls must permit them. The workstation NixOS configuration enables
 `programs.steam.localNetworkGameTransfers.openFirewall`. Routed access does not
 relay subnet broadcasts; Steam discovery and an actual transfer still need to
 be checked between the two running clients. See
 [Valve's local-transfer requirements](https://help.steampowered.com/en/faqs/view/46BD-6BA8-B012-CE43).
 
-All qualified server links use forced `25G-baseCR`, RS-FEC (`fec91`),
-active/fast 802.3ad, minimum links 1, layer-3+4 hashing, and MTU 9000. Every
-individual LACP member has passed supervised failure testing. Cable make/model
-is observation, not stable desired identity.
+All server links use forced `25G-baseCR`, RS-FEC (`fec91`), active/fast
+802.3ad, minimum links 1, layer-3+4 hashing, and MTU 9000. Cable make/model is
+not part of the desired state.
 
-Current reconciliation carries VLAN 20 to the routed/admin uplinks, keeps
-Ceph VLAN 30 on the CRS server bonds, and carries VLAN 40 through Omada ports
-1/9 to the CCR provider gateway. VLAN 40 passed every-direction host probes at
-MTU 1500, trusted routing, and provider-sourced WAN NAT at the 1492-byte PPPoE
-path MTU. The CCR's 1 Gb/s core uplink is not an east-west path.
+VLAN 20 goes to the routed/admin uplinks, Ceph VLAN 30 stays on the CRS server
+bonds, and VLAN 40 runs through Omada ports 1/9 to the CCR provider gateway at
+MTU 1500; WAN NAT uses the 1492-byte PPPoE path MTU. The CCR's 1 Gb/s core
+uplink is not an east-west path.
 
 The CCR desired state contains exactly one split-DNS row: a `FWD` entry for
 `cloud.fahrican.com` and all subdomains to the internal CoreDNS service at
 `10.21.20.129`. The read-only preflight requires
-`allow-remote-requests=yes`; the playbook deliberately does not own that
-router-wide setting. Mutation uses the same explicit `apply` tag as the other
+`allow-remote-requests=yes`; the playbook does not own that router-wide
+setting. Mutation uses the same `apply` tag as the other
 CCR resources and proves the row's unique comment, name, type, target,
 subdomain match, and enabled state afterward.
 
 Syncthing reaches the primary workstation through Git-owned TCP and QUIC
-destination-NAT rules on port `22000`. The target is the workstation's stable
+destination-NAT rules on port `22000`. They forward to the workstation's stable
 VLAN-10 reservation `10.21.10.20`; the Syncthing GUI is not exposed.
 
 Factorio reaches the services cluster through one Git-owned UDP destination-NAT
-rule. WAN port `34197` is forwarded without translation to the dedicated OVN
-load-balancer address `10.21.40.123:34197`. A matching destination-specific
+rule. WAN port `34197` is forwarded without translation to the dedicated MetalLB
+VIP `10.21.40.123:34197`. A matching destination-specific
 forward-filter rule admits only that translated flow; RCON is not forwarded.
 The server is published through Factorio's matching service and joining requires
 both a verified Factorio account and the shared game password. The automatic
-in-game administrator list is empty so privileged operations remain confined to
+in-game administrator list is empty so privileged operations stay confined to
 loopback-only RCON. One UDP-only NAT-reflection rule lets local LAN interfaces
 use the same public address and port as WAN players; it matches only a local
 non-LAN destination address and does not grant general inter-VLAN access.
 
 Valheim uses the same forwarding model at `10.21.40.124`, with UDP ports
-`2456-2457` preserved for game traffic and Steam queries. Its own LAN reflection
+`2456-2457` unchanged for game traffic and Steam queries. Its own LAN reflection
 rule lets local players use the public endpoint. Joining requires the Valheim
 game password; no administration ports are forwarded.
 
@@ -120,7 +115,7 @@ falling back to the direct ISP path.
 The Mullvad client private key is a user-owned `0400` sops-nix runtime secret;
 only its path, assigned tunnel address, server public key, and public endpoint
 are declared in inventory. If OTOTOY's public address changes, update the
-inventory destination and requalify DNS, the WireGuard handshake, HTTPS, and
+inventory destination and recheck DNS, the WireGuard handshake, HTTPS, and
 the observed Japanese exit before applying the new `/32`.
 
 ## Remote administration
@@ -130,7 +125,7 @@ configuration, direct management addresses and recovery credentials available
 without Kubernetes, ZITADEL or NetBird. Everyday private service access uses
 [NetBird](../cluster/apps/netbird/README.md); adding a normal service client
 does not add a RouterOS WireGuard peer. The router only forwards NetBird's public
-STUN port (UDP 3478) and the existing public HTTPS gateway traffic.
+STUN port (UDP 3478) and the public HTTPS gateway traffic.
 
 The CCR2004 terminates the split-tunnel `wg-admin` network at
 `10.21.91.1/24`, UDP port `51820`, MTU `1420`. It is not added to a trusted
@@ -155,10 +150,10 @@ interface at `10.21.91.3/32`. Only the three server management egress addresses
 VPN. Early input and forward drops prevent the mail peer from initiating any
 router or homelab connection, while established replies continue normally. Its
 preshared key is in `secrets/mail-vpn.yaml`, exposed by sops-nix at the declared
-runtime path. The private mail route uses the existing services Gateway and does
+runtime path. The private mail route uses the services Gateway and does
 not change administrator client routes.
 
-## Current reconciliation
+## Reconciliation
 
 Enter the repository shell and validate the standard Ansible/YAML/Python
 surfaces:
@@ -185,9 +180,9 @@ ansible-playbook reconcile-routeros.yaml --limit core_router --tags apply
 ```
 
 Use `--limit core_router --tags mullvad` to select only the destination-scoped
-Mullvad objects while retaining the standard read-only CCR preflight.
+Mullvad objects while keeping the standard read-only CCR preflight.
 Use `--limit core_router --tags lan-ports` to reconcile the CCR bridge VLANs,
-the current/replacement Omada trunks, direct AP ports, and the housemate network and access
+the Omada trunks (ports 15 and 2), direct AP ports, and the housemate network and access
 ports after the read-only preflight. This tag enables writes; omit it for
 inspection only.
 Use `--limit core_router --tags ap-ports` to reconcile the bridge VLAN table
@@ -206,13 +201,13 @@ options and reservations after the normal preflight. An extra-vars file can sele
 exact `routeros_static_leases` rows. VLAN 90 stays static-only.
 The second AP's reservation alone receives `infra-unifi-inform`, DHCP option
 43 with value `0x01040a15287f`, directing factory-default UniFi adoption to
-`10.21.40.127:8080`. Other management leases retain their existing options.
+`10.21.40.127:8080`. Other management leases keep their options.
 Use `--limit core_router --tags unifi-dns` to reconcile the exact local A record
 `unifi -> 10.21.40.127`. Native adoption assigns `http://unifi:8080/inform`;
-the router's existing LAN DNS service resolves that name after provisioning.
+the router's LAN DNS service resolves that name after provisioning.
 The preflight rejects a conflicting record owned by another service.
 Use `--limit core_router --tags private-access` to reconcile and verify routed
-access rules while retaining the read-only preflight. An `--extra-vars` file
+access rules while keeping the read-only preflight. An `--extra-vars` file
 containing `routeros_access_rules` can select the exact inventory rows for a
 service rollout.
 
@@ -229,14 +224,15 @@ distinct MAC `88:A2:9E:41:73:2C`. The SG3210XHP-M2 uses the same model at
 `ricotta` and `burrata`, respectively, so neither PiKVM needs host-side VLAN
 configuration. See the [PiKVM runbook](../pikvm/README.md) for access,
 credentials, and the two-switch setup on `burrata`.
-The switch's sole management interface uses VLAN 90 and DHCP; its previous
-management interface is disabled. If DHCP is unavailable, its direct-recovery
+The switch's sole management interface uses VLAN 90 and DHCP; other
+management interfaces are disabled. If DHCP is unavailable, its direct-recovery
 address is `192.168.90.5/24` with no gateway.
 
 RouterOS 7.21.5 sends terminal-position queries that the upstream Ansible
-terminal filter discards. The small source-local terminal adapter answers that
-observed negotiation while retaining `community.routeros.command`. Delete the
-adapter together with this Ansible owner after the REST provider import.
+terminal filter discards. The small local terminal adapter answers that
+negotiation and keeps `community.routeros.command`. Recheck on RouterOS or
+`community.routeros` upgrades; delete the adapter with the Ansible playbook
+once a REST provider replaces it.
 
 ## Omada reconciliation
 
@@ -252,9 +248,9 @@ nix run .#sops --accept-flake-config -- \
       --credentials-stdin
 ```
 
-After reviewing the plan, add `--apply`. The current input is switch-only;
-the adapter neither requires the old EAP to be online nor changes its WLANs.
-It never deletes controller objects. UniFi manages the replacement APs;
+After reviewing the plan, add `--apply`. The input is switch-only; the
+adapter does not touch APs/WLANs and never deletes controller objects. UniFi
+manages the APs;
 follow the [UniFi runbook](../cluster/apps/unifi/README.md).
 
 ## Secrets and identity
@@ -267,9 +263,8 @@ Ansible/libssh checks it and cannot auto-enrol a replacement key.
 
 Rotate a RouterOS login through direct console or WinBox, one device at a
 time, then update its SOPS value before running automation. PPPoE credential
-installation remains a supervised console/WinBox bootstrap step until the
-secure Terraform import wave; the encrypted values in Git are the recovery
-source. Do not pass them on a command line or add a bespoke credential helper.
+installation is a supervised console/WinBox step; the encrypted values in Git
+are the recovery copy. Do not pass them on a command line or add a bespoke credential helper.
 
 ## Recovery
 
@@ -277,7 +272,7 @@ source. Do not pass them on a command line or add a bespoke credential helper.
   `192.168.88.1`.
 - CRS: connect directly to `ether1`, use `192.168.89.3/24`, and reach
   `192.168.89.2`.
-- Do not use remote RouterOS Safe Mode as the only rollback path; the qualified
-  version can reset SSH and generate support output when it is entered.
+- Do not use remote RouterOS Safe Mode as the only rollback path; RouterOS
+  7.21.5 can reset SSH and generate support output when it is entered.
 - Keep a direct rescue or console path for every management, REST, bridge, or
   firewall change.

@@ -118,7 +118,7 @@ def prune_archives(destination, keep=2):
             print('Retention deferred while offsite readers may be active.', flush=True)
             return
         archives = completed_archives(destination)
-        # Do not retire the known-good format until online export has succeeded.
+        # Prune only after the newest archive is a snapshot export.
         if not archives or archives[-1][2].get('consistency') != 'volume-snapshot':
             return
         for _, marker, manifest in archives[:-keep]:

@@ -1,4 +1,4 @@
-# Upstream installation and validation provenance
+# Validation sources
 
 `deployments/homelab/validation/vendors.json` records each vendored installation
 manifest's source and local SHA-256. Both schema refresh and offline validation
@@ -22,7 +22,9 @@ its image references with verified multi-platform image-index digests:
 Multus v4.3.1-thick is also digest-pinned in its Kustomization. Cilium 1.20.2
 uses the official OCI chart pinned by manifest digest and 22 matching upstream
 CRDs. Each CRD source URL and checksum is recorded in `vendors.json`. Cilium
-bootstrap and Flux use identical values; see [ARCHITECTURE.md](ARCHITECTURE.md). KubeVirt uses its versioned 1.9.0 API Swagger;
+bootstrap and Flux use identical values; see
+[ARCHITECTURE.md](../../../docs/ARCHITECTURE.md). KubeVirt uses its versioned
+1.9.0 API Swagger;
 the single UniFi guest uses a restored raw disk in a filesystem PVC.
 
 The thirteen rendered chart archives and their dependencies are recorded in
@@ -46,25 +48,23 @@ derived offline charts, without decrypted values or rendered Secrets.
 | `rook-ceph/rook-ceph` | `sha256:df8ebccb66165ff92aedf035cac9cd07eda9a44b92cb8f7f7570a7d7b5f19d84` | `95bd3966bcf36b383b88e1996132642057e8fe4bc133b9681092c4ddec4dd0b2` |
 | `velero/velero` | `12.1.0` | `cd23589ad1b2d25cdd3220f6866b3f6f4c5683c4c09494e76a14700b33f81f83` |
 
-The independent snapshot controller and three v1 snapshot CRDs are vendored
+The snapshot controller and three v1 snapshot CRDs are vendored
 from `kubernetes-csi/external-snapshotter` v8.5.0 under the Rook stage. Their five
 source files and the controller's immutable image digest are recorded in
 `vendors.json`; Kustomize places the controller in `kube-system`. RBD's CSI
-`snapshotPolicy` is explicitly `volumeSnapshot`. Offline validation requires
+`snapshotPolicy` is `volumeSnapshot`. Offline validation requires
 the CRDs, controller and enabled RBD snapshot policy when snapshot classes exist.
-The CSI sidecar alone does not supply the cluster controller. The future live
-Ceph qualification must complete a snapshot and fresh-PVC restore before
-Forgejo's snapshot backup schedule is released.
+The CSI sidecar alone does not supply the cluster controller.
 
 The schema bundle incorporates official Kubernetes 1.36.4 OpenAPI, the exact
 charts' CRDs, the vendored snapshot CRDs and KubeVirt's versioned API. Its
 immutable source references and hashes are recorded alongside chart provenance.
 
 ZITADEL's external values-schema reference is localized in a derived chart.
-The approved source is commit `817113f21a2643311cbc3e992bb44ffe1c416c54` of
+Source: commit `817113f21a2643311cbc3e992bb44ffe1c416c54` of
 `yannh/kubernetes-json-schema`, SHA-256
 `428559f7d50d8624ce29ea144ba079309a025168e8bb7714e954dcb80d50cd9a`.
-Original dependency archives stay intact; original/derived schema hashes and
-the external source are recorded in `sources.json`. Helm schema validation
-remains enabled. See [VALIDATION.md](VALIDATION.md) for reproduction commands
-and the limits of offline checks.
+Dependency archives are unchanged; upstream/derived schema hashes and the
+external schema source are recorded in `sources.json`. Helm schema validation
+stays enabled. Refresh and validation commands are in the repository
+[README](../../../README.md#local-validation).
