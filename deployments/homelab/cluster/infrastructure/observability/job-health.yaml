@@ -5,20 +5,24 @@ metadata:
   namespace: services-observability
 spec:
   groups:
-  - name: homelab-job-health
+  - name: job-health
     rules:
-    - record: homelab_cronjob_last_failed_start_timestamp_seconds
+    - record: services_cronjob_last_failed_start_timestamp_seconds
       expr: "max by (namespace, cronjob) (\n  label_replace(\n    (kube_job_status_start_time\n     and\
         \ on (namespace, job_name) (kube_job_failed{condition=\"true\"} == 1))\n    * on (namespace, job_name)\
         \ group_left (owner_name)\n    max by (namespace, job_name, owner_name) (kube_job_owner{owner_kind=\"\
         CronJob\"}),\n    \"cronjob\", \"$1\", \"owner_name\", \"(.+)\"\n  )\n)"
-    - record: homelab_cronjob_unrecovered_failure
-      expr: "(\n  (homelab_cronjob_last_failed_start_timestamp_seconds\n   > on (namespace, cronjob)\n\
-        \   max by (namespace, cronjob) (kube_cronjob_status_last_successful_time))\n  or\n  (homelab_cronjob_last_failed_start_timestamp_seconds\n\
+    - record: services_cronjob_unrecovered_failure
+      expr: "(\n  (services_cronjob_last_failed_start_timestamp_seconds\n   > on (namespace, cronjob)\n\
+        \   max by (namespace, cronjob) (kube_cronjob_status_last_successful_time))\n  or\n  (services_cronjob_last_failed_start_timestamp_seconds\n\
         \   unless on (namespace, cronjob)\n   max by (namespace, cronjob) (kube_cronjob_status_last_successful_time))\n\
         ) and on (namespace, cronjob) (max by (namespace, cronjob) (kube_cronjob_spec_suspend) == 0)"
     - alert: KubeJobFailed
-      expr: homelab_cronjob_unrecovered_failure
+      expr: "services_cronjob_unrecovered_failure unless services_cronjob_unrecovered_failure{namespace=\"\
+        backup-qualification\",\n  cronjob=~\"restore-qualification|forge-restore-qualification\"}\nunless\
+        \ services_cronjob_unrecovered_failure{namespace=~\"forge|forge-ci|forge-control\",\n  cronjob=~\"\
+        forge-snapshot-backup|forge-linux-qualification|forge-linux-atollion-launcher|forge-(windows|macos)-qualification\"\
+        }"
       for: 15m
       labels:
         severity: warning

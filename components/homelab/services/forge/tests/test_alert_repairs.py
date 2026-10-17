@@ -111,7 +111,7 @@ class MetricsTests(unittest.TestCase):
 
 
 class AlertTests(unittest.TestCase):
-    def test_undercloud_recovered_history_and_terminal_failures(self):
+    def test_recovered_history_and_terminal_failures(self):
         document = yaml.safe_load((ROOT / 'deployments/homelab/cluster/infrastructure/observability/job-health.yaml').read_text())
         groups = document['spec']['groups']
         scheduled = next(r for g in groups for r in g['rules']
@@ -123,8 +123,8 @@ class AlertTests(unittest.TestCase):
                 (50, False, True, True), (None, False, True, True),
                 (None, True, True, True), (None, False, False, True),
                 (None, False, True, False)):
-            labels = 'namespace="openstack",job_name="reconcile-old"'
-            cj = 'namespace="openstack",cronjob="reconcile"'
+            labels = 'namespace="media",job_name="reconcile-old"'
+            cj = 'namespace="media",cronjob="reconcile"'
             series = [
                 {'series': f'kube_job_status_start_time{{{labels}}}', 'values': '100+0x20'},
                 {'series': f'kube_job_status_failed{{{labels}}}', 'values': '1+0x20'},
@@ -138,12 +138,12 @@ class AlertTests(unittest.TestCase):
             expected = []
             if terminal and (not owned or (not suspended and (success is None or success < 100))):
                 rule = scheduled if owned else standalone
-                expected = [{'exp_labels': {'namespace': 'openstack',
+                expected = [{'exp_labels': {'namespace': 'media',
                     ('cronjob' if owned else 'job_name'): ('reconcile' if owned else 'reconcile-old'),
                     'severity': 'warning'}, 'exp_annotations': {
                         **rule['annotations'], 'description': (
-                            'CronJob openstack/reconcile has no successful completion since its latest failed run.'
-                            if owned else 'Job openstack/reconcile-old failed to complete. Inspect its logs before removing it.')}}]
+                            'CronJob media/reconcile has no successful completion since its latest failed run.'
+                            if owned else 'Job media/reconcile-old failed to complete. Inspect its logs before removing it.')}}]
             tests.append({'interval': '1m', 'input_series': series,
                 'alert_rule_test': [{'eval_time': '16m', 'alertname': 'KubeJobFailed', 'exp_alerts': expected}]})
         with tempfile.TemporaryDirectory() as directory:
@@ -156,7 +156,8 @@ class AlertTests(unittest.TestCase):
 
     def test_recovered_jobs_and_duplicate_notifications(self):
         groups = []
-        for filename in ('infrastructure/observability/persistent-targets.yaml', 'apps/unifi/monitoring.yaml',
+        for filename in ('infrastructure/observability/persistent-targets.yaml',
+                         'infrastructure/observability/job-health.yaml', 'apps/unifi/monitoring.yaml',
                          'apps/forge/monitoring.yaml', 'infrastructure/backups/restore-qualification.yaml'):
             for document in yaml.safe_load_all((SERVICES / filename).read_text()):
                 if document['kind'] == 'PrometheusRule':
