@@ -20,7 +20,7 @@ spec:
         name: zitadel-secrets
   storage:
     storageClass: ceph-block
-    size: 10Gi
+    size: 32Gi
   resources:
     requests:
       cpu: 250m
@@ -39,6 +39,8 @@ spec:
       failoverQuorum: true
     parameters:
       max_connections: '200'
+      # Leave disk headroom when an offline replica retains WAL.
+      max_slot_wal_keep_size: 16GB
   monitoring:
     enablePodMonitor: true
   plugins:
