@@ -60,6 +60,7 @@ spec:
     crds:
       enabled: true
     currentNamespaceOnly: true
+    useOperatorHostNetwork: true
     allowLoopDevices: false
     enableDiscoveryDaemon: false
     revisionHistoryLimit: 3
