@@ -14,7 +14,7 @@ metadata:
 data:
   squid.conf: 'http_port 3128
 
-    pid_filename /tmp/squid.pid
+    pid_filename none
 
     cache_log /dev/stderr
 
