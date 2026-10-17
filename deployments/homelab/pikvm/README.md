@@ -66,8 +66,8 @@ DOWNLINK connectors. The web interface exposes ports `1.1`–`1.4` and
 | --- | --- | --- |
 | `1.1` | `gorgonzola`, GMKtec NucBox K8 Plus, Windows 11 Pro | Ryzen 7 8845HS |
 | `1.2` | `pecorino`, Kubernetes | Core i9-14900K |
-| `1.3` | `asiago`, Kubernetes | Ryzen 9 9900X |
-| `1.4` | `taleggio`, Kubernetes | Core i5-13600K |
+| `1.3` | `taleggio`, Kubernetes | Core i5-13600K |
+| `1.4` | `asiago`, Kubernetes | Ryzen 9 9900X |
 
 Unit 2 is unused. Check current HDMI and USB attachment through the switch API;
 the table describes the intended wiring. A detected HDMI connection alone does
