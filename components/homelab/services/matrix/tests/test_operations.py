@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import tempfile
@@ -6,6 +7,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 import sys
 
+ROOT = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import admin
 import outside_check
@@ -95,6 +97,41 @@ class CutoverTests(unittest.TestCase):
                             argparse.Namespace(phase="matrix", host=[])
                         )
                     decrypt.assert_not_called()
+
+
+class AlertingConfigurationTests(unittest.TestCase):
+    def test_alertmanager_mounts_follow_phase(self):
+        source = ROOT / admin.OBSERVABILITY / "kube-prometheus-stack.yaml"
+        with tempfile.TemporaryDirectory() as directory:
+            observability = Path(directory)
+            (observability / source.name).write_text(source.read_text())
+            with patch.object(admin, "OBSERVABILITY", observability):
+                admin.configure_alertmanager_mounts("matrix")
+                text = (observability / source.name).read_text()
+                self.assertIn("        secrets:\n        - matrix-alerting\n", text)
+                self.assertNotIn("- infrastructure-telegram", text)
+                admin.configure_alertmanager_mounts("dual")
+                self.assertIn("        - matrix-alerting\n        - infrastructure-telegram\n",
+                              (observability / source.name).read_text())
+
+    def test_runtime_save_records_ciphertext_digest(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(admin.Path, "cwd", return_value=Path(directory)):
+            deployment = Path("deployments/homelab/cluster/apps/matrix")
+            (Path(directory) / deployment).mkdir(parents=True)
+
+            def save(root, relative, documents):
+                (root / relative).write_bytes(b"ciphertext")
+                return True
+
+            with patch.object(admin, "DEPLOYMENT", Path(directory) / deployment), \
+                    patch.object(admin.encrypted_inputs, "save", side_effect=save) as encrypt:
+                target = admin.DEPLOYMENT / "runtime.sops.yaml"
+                admin.save_secret(target, {"stringData": {}}, rollout="matrix-relay")
+                encrypt.assert_called_once()
+                patch_document = (admin.DEPLOYMENT / "runtime-rollouts.yaml").read_text()
+                self.assertIn(hashlib.sha256(b"ciphertext").hexdigest(), patch_document)
+                with self.assertRaises(ValueError):
+                    admin.save_secret(admin.DEPLOYMENT / "email.sops.yaml", {}, rollout="matrix-relay")
 
 
 class EnrollmentTests(unittest.IsolatedAsyncioTestCase):

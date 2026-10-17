@@ -17,7 +17,16 @@ from pathlib import Path
 
 import yaml
 
+for operations in (Path(__file__).resolve().parents[2] / "operations",
+                   Path.cwd() / "components/homelab/operations"):
+    if operations.is_dir():
+        sys.path.insert(0, str(operations))
+        break
+import encrypted_inputs  # noqa: E402
+from provider_state import outputs as provider_outputs  # noqa: E402
+
 DEPLOYMENT = Path("deployments/homelab/cluster/apps/matrix")
+OBSERVABILITY = Path("deployments/homelab/cluster/infrastructure/observability")
 PROVIDER_ID = "01HFVBY12TMNTYTBV8W921M5FA"
 
 
@@ -39,7 +48,7 @@ def run(argv, data=None):
 
 
 def load_secret(path):
-    return yaml.safe_load(run(["sops", "decrypt", str(path)]))
+    return encrypted_inputs.decrypt(path)[0]
 
 
 def update_runtime_rollout(name, ciphertext):
@@ -71,43 +80,17 @@ def save_secret(path, document, *, rollout=None):
         raise ValueError("unsupported runtime workload")
     if rollout is not None and path != DEPLOYMENT / "runtime.sops.yaml":
         raise ValueError("runtime rollouts require the Matrix runtime Secret")
-    ciphertext = run(
-        [
-            "sops",
-            "encrypt",
-            "--filename-override",
-            str(path),
-            "--input-type",
-            "yaml",
-            "--output-type",
-            "yaml",
-            "/dev/stdin",
-        ],
-        yaml.safe_dump(document, sort_keys=False).encode(),
-    )
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_bytes(ciphertext)
-    temporary.replace(path)
+    encrypted_inputs.save(Path.cwd(), path, [document])
     if rollout is not None:
-        update_runtime_rollout(rollout, ciphertext)
+        update_runtime_rollout(rollout, (Path.cwd() / path).read_bytes())
 
 
 def secret(name, namespace, values, *, watch=False):
-    labels = {"velero.io/exclude-from-backup": "true"}
+    document = encrypted_inputs.secret(name, namespace, values)
+    document["metadata"]["labels"] = {"velero.io/exclude-from-backup": "true"}
     if watch:
-        labels["reconcile.fluxcd.io/watch"] = "Enabled"
-    return {
-        "apiVersion": "v1",
-        "kind": "Secret",
-        "metadata": {
-            "name": name,
-            "namespace": namespace,
-            "labels": labels,
-        },
-        "type": "Opaque",
-        "stringData": values,
-    }
+        document["metadata"]["labels"]["reconcile.fluxcd.io/watch"] = "Enabled"
+    return document
 
 
 def initialize():
@@ -252,17 +235,14 @@ def initialize():
     save_secret(target, secret("matrix-runtime", "matrix", values))
 
 
-def archived_outputs(provider):
-    sys.path.insert(0, str(Path.cwd() / "components/homelab/operations"))
-    from provider_state import outputs
-    return {key: base64.b64encode(str(item["value"]).encode()).decode()
-            for key, item in outputs(provider).items()}
+def provider_values(provider):
+    return {key: str(item["value"]) for key, item in provider_outputs(provider).items()}
 
 
 def sync_identity(args):
     target = DEPLOYMENT / "runtime.sops.yaml"
     document = load_secret(target)
-    outputs = archived_outputs("identity")
+    outputs = provider_values("identity")
     config = yaml.safe_load(document["stringData"]["mas.yaml"])
     config["upstream_oauth2"] = {
         "providers": [
@@ -270,10 +250,8 @@ def sync_identity(args):
                 "id": PROVIDER_ID,
                 "issuer": "https://auth.cloud.fahrican.com",
                 "human_name": "Fahrican",
-                "client_id": base64.b64decode(outputs["matrix_client_id"]).decode(),
-                "client_secret": base64.b64decode(
-                    outputs["matrix_client_secret"]
-                ).decode(),
+                "client_id": outputs["matrix_client_id"],
+                "client_secret": outputs["matrix_client_secret"],
                 "token_endpoint_auth_method": "client_secret_basic",
                 "scope": "openid email profile",
                 "claims_imports": {
@@ -409,9 +387,9 @@ def approve_device(args):
 def configure_alertmanager_mounts(phase):
     if phase not in ("dual", "matrix"):
         raise ValueError("invalid alerting phase")
-    path = DEPLOYMENT.parent / "infrastructure/observability/kube-prometheus-stack.yaml"
+    path = OBSERVABILITY / "kube-prometheus-stack.yaml"
     text = path.read_text()
-    pattern = r"(?m)^        secrets:\n(?:          - [^\n]+\n)+"
+    pattern = r"(?m)^        secrets:\n(?:        - [^\n]+\n)+"
     matches = list(re.finditer(pattern, text))
     if len(matches) != 1:
         raise ValueError("expected one inline Alertmanager credential mount list")
@@ -427,7 +405,7 @@ def configure_alertmanager_mounts(phase):
     # Inline Helm values take precedence over valuesFrom, including its arrays.
     # Keep this list aligned with the selected encrypted alert values.
     replacement = "        secrets:\n" + "".join(
-        "          - " + name + "\n" for name in names
+        "        - " + name + "\n" for name in names
     )
     path.write_text(text[: matches[0].start()] + replacement + text[matches[0].end() :])
 
@@ -449,8 +427,9 @@ def configure_alerting(args):
     target = DEPLOYMENT / "runtime.sops.yaml"
     document = load_secret(target)
     relay = json.loads(document["stringData"]["relay.json"])
-    resend = load_secret(DEPLOYMENT / "email.sops.yaml")["data"]
-    sending_key = base64.b64decode(resend["MATRIX_RESEND_API_KEY"]).decode()
+    sending_key = encrypted_inputs.values(load_secret(DEPLOYMENT / "email.sops.yaml"))[
+        "MATRIX_RESEND_API_KEY"
+    ]
     smtp = {
         "host": "smtp.resend.com",
         "port": 465,
@@ -518,12 +497,10 @@ def configure_alerting(args):
     }
     receivers = [{"name": "null"}, receiver, email_receiver]
     if args.phase == "dual":
-        telegram_doc = load_secret(
-            Path(
-                "secrets/service-runtime.sops.yaml"
-            )
-        )["data"]
-        chat_id = int(base64.b64decode(telegram_doc["INFRA_TELEGRAM_CHAT_ID"]).decode())
+        telegram = encrypted_inputs.values(
+            load_secret(Path("secrets/service-runtime.sops.yaml"))
+        )
+        chat_id = int(telegram["INFRA_TELEGRAM_CHAT_ID"])
         receivers.append(
             {
                 "name": "infrastructure-telegram",
@@ -554,7 +531,7 @@ def configure_alerting(args):
     }
     # Added last to Helm valuesFrom. No change occurs until this Secret exists.
     save_secret(
-        DEPLOYMENT / "alerting.sops.yaml",
+        OBSERVABILITY / "alerting.sops.yaml",
         secret(
             "matrix-alertmanager-values",
             "services-observability",
@@ -579,7 +556,7 @@ def configure_alerting(args):
         ),
     )
     save_secret(
-        DEPLOYMENT / "alerting-credentials.sops.yaml",
+        OBSERVABILITY / "alerting-credentials.sops.yaml",
         secret(
             "matrix-alerting",
             "services-observability",
@@ -589,12 +566,6 @@ def configure_alerting(args):
             },
         ),
     )
-    kustomization = DEPLOYMENT / "kustomization.yaml"
-    k = yaml.safe_load(kustomization.read_text())
-    for resource in ("alerting.sops.yaml", "alerting-credentials.sops.yaml"):
-        if resource not in k["resources"]:
-            k["resources"].append(resource)
-    kustomization.write_text(yaml.safe_dump(k, sort_keys=False))
     configure_alertmanager_mounts(args.phase)
     rollout["phase"] = args.phase
     if args.phase == "dual" and not rollout.get("dual_started_at"):
@@ -605,16 +576,14 @@ def configure_alerting(args):
 def aws_client(service):
     import boto3
 
-    source = load_secret(
-        Path("deployments/homelab/credentials/mail-aws/aws.sops.yaml")
-    )["data"]
+    source = encrypted_inputs.values(
+        load_secret(Path("deployments/homelab/credentials/mail-aws/aws.sops.yaml"))
+    )
     return boto3.client(
         service,
         region_name="eu-central-1",
-        aws_access_key_id=base64.b64decode(source["AWS_ACCESS_KEY_ID"]).decode(),
-        aws_secret_access_key=base64.b64decode(
-            source["AWS_SECRET_ACCESS_KEY"]
-        ).decode(),
+        aws_access_key_id=source["AWS_ACCESS_KEY_ID"],
+        aws_secret_access_key=source["AWS_SECRET_ACCESS_KEY"],
     )
 
 
@@ -671,9 +640,9 @@ def sync_monitoring_policy(args):
 
 
 def enroll_monitoring(args):
-    outputs = archived_outputs("mail-aws")
-    url = base64.b64decode(outputs["matrix_heartbeat_url"]).decode()
-    arn = base64.b64decode(outputs["matrix_heartbeat_secret_arn"]).decode()
+    outputs = provider_values("mail-aws")
+    url = outputs["matrix_heartbeat_url"]
+    arn = outputs["matrix_heartbeat_secret_arn"]
     if not re.fullmatch(r"https://[a-z0-9]+\.lambda-url\.eu-central-1\.on\.aws/", url):
         raise ValueError("monitoring URL is not enrolled")
     target = DEPLOYMENT / "runtime.sops.yaml"
@@ -703,7 +672,7 @@ def activate():
     )
     if not dns["data"]["matrix_wan_ipv4_address"]:
         raise ValueError("public DNS enrollment is incomplete")
-    print("Matrix configuration is ready. Restore data and release its recovery suspension through the migration runbook.")
+    print("Matrix configuration is ready. Restore data and release its recovery suspension.")
 
 
 def qualify(args):
@@ -790,7 +759,8 @@ def retire_telegram():
     )
     document = load_secret(target)
     for key in ("INFRA_TELEGRAM_BOT_TOKEN", "INFRA_TELEGRAM_CHAT_ID"):
-        document["data"].pop(key, None)
+        for field in ("stringData", "data"):
+            document.get(field, {}).pop(key, None)
     save_secret(target, document)
     contract_path = Path(
         "deployments/homelab/credentials/runtime-contract.yaml"
