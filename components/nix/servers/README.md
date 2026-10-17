@@ -20,14 +20,18 @@ Read [secret recovery](../../../secrets/README.md) before changing credentials.
 | --- | --- | --- | --- |
 | `taleggio` | Core i5-13600K | MSI PRO Z690-A WIFI (MS-7D25), revision 2.0 | 96 GiB: 2 × 48 GiB DDR5 at 5600 MT/s |
 | `asiago` | Ryzen 9 9900X | MSI PRO B650M-A WIFI (MS-7D77), revision 1.0 | 64 GiB: 2 × 32 GiB DDR5 at 4800 MT/s |
-| `pecorino` (recorded) | Core i9-14900K | Needs live verification | 64 GiB; DIMM layout and speed need live verification |
+| `pecorino` | Core i9-14900K | MSI MAG Z790 TOMAHAWK MAX WIFI (MS-7E25), revision 2.0 | 64 GiB: 4 × 16 GiB DDR5 at 4000 MT/s |
 
-Taleggio and Asiago match their live SSH hostnames, CPU and DMI data. Their
-DIMMs occupy A2/B2; the speeds above are firmware-reported configured speeds.
+All three match their live SSH hostnames, CPU and DMI data. The DIMMs in
+Taleggio and Asiago occupy A2/B2; Pecorino uses all four slots. The speeds
+above are firmware-reported configured speeds.
 Taleggio uses `F5-6400J3239F48G` modules and BIOS `A.H0`; Asiago uses
-`F5-6000J3040G32G` modules and BIOS `1.R5`. Pecorino's CPU comes from the
-recorded inventory and its RAM capacity from its last Kubernetes report;
-neither substitutes for a fresh hardware check.
+`F5-6000J3040G32G` modules and BIOS `1.R5`. Pecorino uses
+`F5-6000J3040F16G` modules and BIOS `A.80`.
+
+Pecorino uses automatic memory frequency and timings, with XMP and Memory
+Fast Boot disabled. After CMOS resets or RAM changes, check that Secure Boot
+remains disabled for the installed GRUB loader.
 
 Taleggio and Asiago each have two Kingston `SKC600256G` SATA boot disks and
 two `SKC3000D2048G` NVMe Ceph disks, plus a dual-port Intel 25 Gb/s NIC
