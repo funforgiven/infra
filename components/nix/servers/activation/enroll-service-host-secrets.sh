@@ -9,11 +9,8 @@ Usage: enroll-service-host-secrets SSH_TARGET PROFILE
 Install one SOPS-backed secret profile on a service host over SSH.
 
 Profiles:
-  monitoring             Infrastructure Telegram alerts
-  matrix-monitoring:ID   Matrix producer ID with independent email fallback
-  unifi-backup           UniFi Restic repository
-  unifi-poller           UniFi local read-only monitoring account
-  home-assistant-backup   Home Assistant Restic repository
+  unifi-backup   UniFi Restic repository
+  unifi-poller   UniFi local read-only monitoring account
 EOF
 }
 
@@ -89,34 +86,6 @@ install_stream() {
     "sudo install -o root -g root -m 0400 /dev/stdin '$destination'"
 }
 
-enroll_monitoring() {
-  local bot_token
-  local chat_id
-  read_sops_value bot_token INFRA_TELEGRAM_BOT_TOKEN \
-    '^[0-9]+:[A-Za-z0-9_-]+$' 32 256
-  read_sops_value chat_id INFRA_TELEGRAM_CHAT_ID '^-?[0-9]+$' 1 32
-  prepare_directory /var/lib/monitoring-bootstrap
-  printf '%s' "$bot_token" | \
-    install_stream /var/lib/monitoring-bootstrap/bot-token
-  printf '%s' "$chat_id" | \
-    install_stream /var/lib/monitoring-bootstrap/chat-id
-  unset bot_token chat_id
-}
-
-enroll_matrix_monitoring() {
-  local producer="${profile#matrix-monitoring:}"
-  local matrix_config
-  if [[ ! "$producer" =~ ^[a-z0-9-]+$ ]]; then
-    echo 'Invalid Matrix producer ID.' >&2
-    exit 64
-  fi
-  matrix_config="$(sops decrypt --extract '["stringData"]["config.json"]' \
-    "$repository_root/deployments/homelab/credentials/host-runtime/matrix-$producer.sops.yaml")"
-  prepare_directory /var/lib/monitoring-bootstrap
-  printf '%s' "$matrix_config" | install_stream /var/lib/monitoring-bootstrap/matrix.json
-  unset matrix_config
-}
-
 enroll_backup() {
   local prefix="$1"
   local password_key="$2"
@@ -144,12 +113,6 @@ enroll_backup() {
 }
 
 case "$profile" in
-  matrix-monitoring:*)
-    enroll_matrix_monitoring
-    ;;
-  monitoring)
-    enroll_monitoring
-    ;;
   unifi-poller)
     poller_user=
     poller_password=
@@ -166,13 +129,6 @@ case "$profile" in
   unifi-backup)
     enroll_backup services/hosts/unifi UNIFI_BACKUP_RESTIC_PASSWORD \
       UNIFI_BACKUP_B2_APPLICATION_KEY_ID UNIFI_BACKUP_B2_APPLICATION_KEY
-    ;;
-  home-assistant-backup)
-    enroll_backup \
-      services/hosts/home-assistant \
-      HOME_ASSISTANT_BACKUP_RESTIC_PASSWORD \
-      HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY_ID \
-      HOME_ASSISTANT_BACKUP_B2_APPLICATION_KEY
     ;;
   *)
     echo "Unknown host enrollment profile: $profile" >&2

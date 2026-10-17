@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export preserved independent provider states locally; never call a provider API."""
+"""Export independent provider states locally; never call a provider API."""
 import argparse
 import base64
 import gzip
@@ -13,7 +13,7 @@ STATE_NAMES={"identity":"tfstate-default-zitadel","dns":"tfstate-default-service
 def read_state(snapshot,provider):
     name=STATE_NAMES[provider]
     matches=[o for o in snapshot["objects"] if o["metadata"]["name"]==name]
-    if len(matches)!=1: raise ValueError("ambiguous archived state")
+    if len(matches)!=1: raise ValueError("ambiguous provider state")
     payload=base64.b64decode(matches[0]["data"]["tfstate"],validate=True)
     if payload.startswith(b"\x1f\x8b"): payload=gzip.decompress(payload)
     state=json.loads(payload)
@@ -21,8 +21,7 @@ def read_state(snapshot,provider):
     return state
 
 def current_snapshot():
-    current=Path("secrets/current-provider-state.sops.yaml")
-    return current if current.exists() else Path("secrets/migration-state.sops.yaml")
+    return Path("secrets/current-provider-state.sops.yaml")
 
 def outputs(provider):
     return read_state(decrypt(current_snapshot())[0],provider).get("outputs",{})

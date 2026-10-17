@@ -128,8 +128,6 @@ def validate(root,kustomize,helm_cache=None,decrypt=False,helm="helm"):
     def inspect(value):
         if isinstance(value,dict):
             for key,item in value.items():
-                if key == "key" and isinstance(item, str) and item.startswith("capi.stackhpc.com/"):
-                    failures.append("Workload retains retired CAPI scheduling constraint")
                 if key in ["storageClassName","storageClass"] and isinstance(item,str) and item and item not in storage:failures.append("Unknown direct storage class: "+item)
                 inspect(item)
         elif isinstance(value,list):

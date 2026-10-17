@@ -8,13 +8,11 @@ let
   user = config.users.funforgiven;
   atollionWorkspace = "${user.homeDirectory}/dev/atollion";
   hostIdentityPath = "/etc/ssh/ssh_host_ed25519_key";
-  # Verification-only: existing commits were signed by this public key before
-  # the SOPS migration. Keeping it does not invoke or depend on 1Password.
+  # Verification-only key for older signed commits.
   historicalSigningPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHj9lWCKgMOZg6K1QzZvNH0QYY4m0lA0l6A+E4wVdVMT historical-signing-key";
   apiTokensFile = ../../../secrets/api-tokens.yaml;
   githubSshKeyFile = ../../../secrets/github-ssh-key.sops;
   routerosSecretsFile = ../../../secrets/routeros.yaml;
-  cloudHostSecretsFile = ../../../secrets/cloud-hosts.yaml;
   kubernetesSecretsFile = ../../../secrets/kubernetes.yaml;
   passwordHashesFile = ../../../secrets/password-hashes.yaml;
   passwordHashSecretName = "${user.username}-password-hash";
@@ -55,18 +53,6 @@ let
     homelab-routeros-ccr2004-mullvad-private-key = {
       key = "routeros/ccr2004_mullvad_private_key";
       sopsFile = routerosSecretsFile;
-    };
-    cloud-host-taleggio-ubuntu-console-password = {
-      key = "cloud_hosts/taleggio/ubuntu_console_password";
-      sopsFile = cloudHostSecretsFile;
-    };
-    cloud-host-asiago-ubuntu-console-password = {
-      key = "cloud_hosts/asiago/ubuntu_console_password";
-      sopsFile = cloudHostSecretsFile;
-    };
-    cloud-host-pecorino-ubuntu-console-password = {
-      key = "cloud_hosts/pecorino/ubuntu_console_password";
-      sopsFile = cloudHostSecretsFile;
     };
     cluster-host-age-identity = {
       key = "cluster/host_age_identity";

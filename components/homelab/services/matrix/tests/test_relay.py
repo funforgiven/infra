@@ -6,7 +6,6 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from relay import Queue, authenticate, check_room, messages
-from notify_host import notify
 
 
 class QueueTests(unittest.TestCase):
@@ -213,28 +212,6 @@ class EncryptionTests(unittest.TestCase):
         client.verify_device.assert_called_once_with(device)
         with self.assertRaises(ValueError):
             check_room(client, "!room:local", [], {})
-
-
-class HostTests(unittest.TestCase):
-    def test_unavailable_relay_uses_independent_tls_email(self):
-        config = {
-            "url": "https://matrix.fahrican.com/internal/notify",
-            "token": "secret",
-            "producer_id": "host",
-            "smtp": {
-                "host": "mail.fahrican.com",
-                "username": "alerts",
-                "password": "secret",
-                "from": "alerts@fahrican.com",
-                "to": "owner@example.com",
-            },
-        }
-        with (
-            patch("urllib.request.urlopen", side_effect=OSError),
-            patch("smtplib.SMTP_SSL") as smtp,
-        ):
-            notify(config, "backup.service")
-            smtp.return_value.__enter__.return_value.send_message.assert_called_once()
 
 
 if __name__ == "__main__":
