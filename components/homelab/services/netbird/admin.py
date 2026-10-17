@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One-time NetBird enrollment; ordinary policy and routing are reconciled from Git."""
+"""NetBird enrollment and credential rotation; policy and routing are reconciled from Git."""
 
 import argparse
 import base64
@@ -10,11 +10,19 @@ import os
 import re
 import secrets
 import subprocess
+import sys
 import urllib.request
 from pathlib import Path
 
 import yaml
 from restore_check import restore_check
+
+for operations in (Path(__file__).resolve().parents[2] / "operations",
+                   Path.cwd() / "components/homelab/operations"):
+    if operations.is_dir():
+        sys.path.insert(0, str(operations))
+        break
+import encrypted_inputs  # noqa: E402
 
 DEPLOYMENT = Path("deployments/homelab/cluster/apps/netbird")
 POLICY = Path("deployments/homelab/credentials/netbird-policy")
@@ -26,26 +34,17 @@ def run(command, data=None):
 
 
 def decrypt(path):
-    return yaml.safe_load(run(["sops", "decrypt", str(path)]))
+    return encrypted_inputs.decrypt(path)[0]
 
 
 def encrypt(path, document):
-    content = run([
-        "sops", "encrypt", "--filename-override", str(path),
-        "--input-type", "yaml", "--output-type", "yaml", "/dev/stdin",
-    ], yaml.safe_dump(document, sort_keys=False).encode())
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_bytes(content)
-    temporary.replace(path)
+    encrypted_inputs.save(Path.cwd(), path, [document])
 
 
 def secret(name, namespace, values, secret_type="Opaque"):
-    return {
-        "apiVersion": "v1", "kind": "Secret",
-        "metadata": {"name": name, "namespace": namespace},
-        "type": secret_type, "stringData": values,
-    }
+    document = encrypted_inputs.secret(name, namespace, values)
+    document["type"] = secret_type
+    return document
 
 
 def add_resource(kustomization, filename):
@@ -133,18 +132,6 @@ def backup_credentials():
         "ACCESS_SECRET_KEY": parser["default"]["aws_secret_access_key"],
         "AWS_REGION": "us-west-004",
     }))
-
-
-def identity_credentials():
-    document = json.loads(run([
-        "kubectl", "-n", "tofu-system", "get", "secret", "zitadel-identity-outputs", "-o", "json",
-    ]))
-    keys = ("netbird_client_id", "netbird_client_secret")
-    values = {key: base64.b64decode(document["data"][key]).decode() for key in keys}
-    if not all(values.values()):
-        raise ValueError("ZITADEL enrollment is incomplete")
-    encrypt(POLICY / "identity.sops.yaml", secret("netbird-identity", "tofu-system", values))
-    add_resource(POLICY / "kustomization.yaml", "identity.sops.yaml")
 
 
 def api(base, path, token=None, body=None, method=None):
@@ -246,7 +233,6 @@ def bootstrap(base):
     encrypt(DEPLOYMENT / "operator/token.sops.yaml", secret("netbird-operator-token", "netbird-routing", {
         "NB_API_KEY": state["kubernetes-netbird"]["plain_token"],
     }))
-    add_resource(POLICY / "kustomization.yaml", "credentials.sops.yaml")
     add_resource(DEPLOYMENT / "operator/kustomization.yaml", "token.sops.yaml")
     token_alerts(state)
 
@@ -311,13 +297,12 @@ def close_bootstrap():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("prepare", "backup-credentials", "identity-credentials", "bootstrap", "close-bootstrap", "rotate-credentials", "restore-check"))
+    parser.add_argument("command", choices=("prepare", "backup-credentials", "bootstrap", "close-bootstrap", "rotate-credentials", "restore-check"))
     args = parser.parse_args()
     if not Path(".sops.yaml").exists():
         raise ValueError("run from the repository root")
     actions = {
         "prepare": prepare, "backup-credentials": backup_credentials,
-        "identity-credentials": identity_credentials,
         "bootstrap": lambda: bootstrap("http://127.0.0.1:18080"),
         "close-bootstrap": close_bootstrap,
         "rotate-credentials": rotate_credentials,

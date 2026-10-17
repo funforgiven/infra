@@ -146,7 +146,7 @@ def restore_check():
                 "name": "barman-cloud.cloudnative-pg.io",
                 "parameters": {"barmanObjectName": "source", "serverName": "netbird-postgres"},
             }}],
-            # Deliberately no spec.plugins: recovery can read the original
+            # No spec.plugins: recovery can read the production
             # archive but this cluster must never archive into it.
         }
         create({
