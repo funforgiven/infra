@@ -1,7 +1,6 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import json
-import os
 import subprocess
 import unittest
 from unittest.mock import patch
@@ -18,23 +17,11 @@ from aws_mail_credentials import (
     AwsMailCredentialError,
     AwsMailCredentials,
 )
+from fake_store import FakeStore
 from runtime_contract import CONTRACT_PATH
 
 
 AWS_FILE = Path("deployments/aws.sops.yaml")
-
-
-class FakeStore:
-    def __init__(self) -> None:
-        self.writes: list[tuple[Path, dict[str, str]]] = []
-        self.values: dict[tuple[Path, str], str] = {}
-
-    def write(self, path: Path, values: dict[str, str]) -> None:
-        self.writes.append((path, dict(values)))
-        self.values.update({(path, key): value for key, value in values.items()})
-
-    def read(self, path: Path, key: str) -> str | None:
-        return self.values.get((path, key))
 
 
 class AwsMailCredentialsTest(unittest.TestCase):

@@ -4,17 +4,15 @@
 from __future__ import annotations
 
 import argparse
-import json
 import subprocess
 import sys
-import urllib.error
-import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
 
-from runtime_contract import ContractError, RuntimeContract
+from reconcile_support import request_json, require_mapping, require_string
+from runtime_contract import ContractError, RuntimeContract, repository_root as resolve_repository_root
 from sops_credentials import SopsCredentialError, SopsCredentialStore
 
 
@@ -126,21 +124,15 @@ class TelegramClient:
         self.base_url = f"https://api.telegram.org/bot{token}/"
 
     def call(self, method: str, payload: dict | None = None) -> object:
-        request = urllib.request.Request(
+        document = request_json(
             self.base_url + method,
-            data=json.dumps(payload or {}).encode("utf-8"),
             method="POST",
             headers={"Content-Type": "application/json"},
+            payload=payload or {},
+            error=TelegramReconcileError,
+            rejected=f"Telegram rejected {method} with",
+            failed=f"Telegram request {method} failed",
         )
-        try:
-            with urllib.request.urlopen(request, timeout=30) as response:
-                document = json.load(response)
-        except urllib.error.HTTPError as error:
-            raise TelegramReconcileError(
-                f"Telegram rejected {method} with HTTP {error.code}"
-            ) from error
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
-            raise TelegramReconcileError(f"Telegram request {method} failed") from error
         if not isinstance(document, dict) or document.get("ok") is not True:
             raise TelegramReconcileError(f"Telegram request {method} was not accepted")
         return document.get("result")
@@ -245,15 +237,11 @@ def _select_activation(spec: BotSpec, updates: list[dict]) -> tuple[int, int, in
 
 
 def _mapping(value: object, label: str) -> dict:
-    if not isinstance(value, dict):
-        raise TelegramReconcileError(f"{label} must be a mapping")
-    return value
+    return require_mapping(value, label, TelegramReconcileError)
 
 
 def _string(value: object, label: str) -> str:
-    if not isinstance(value, str) or not value:
-        raise TelegramReconcileError(f"{label} must be a non-empty string")
-    return value
+    return require_string(value, label, TelegramReconcileError)
 
 
 def _bounded_string(value: object, label: str, maximum: int) -> str:
@@ -292,18 +280,7 @@ def argument_parser() -> argparse.ArgumentParser:
 def main() -> int:
     arguments = argument_parser().parse_args()
     try:
-        repository_root = (
-            arguments.repository_root.resolve()
-            if arguments.repository_root
-            else Path(
-                subprocess.run(
-                    ["git", "rev-parse", "--show-toplevel"],
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                ).stdout.strip()
-            )
-        )
+        repository_root = resolve_repository_root(arguments.repository_root)
         contract = TelegramContract.load(repository_root)
         reports = TelegramReconciler(
             contract, SopsCredentialStore(repository_root)

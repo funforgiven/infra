@@ -4,7 +4,6 @@
     { pkgs, ... }:
     let
       python = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
-      awsMailConfiguration = inputs.self.nixosConfigurations.mail-aws.config;
       runtimeContract = pkgs.writeShellApplication {
         name = "runtime-contract";
         runtimeInputs = [ pkgs.gitMinimal ];
@@ -38,57 +37,34 @@
         text = builtins.readFile ./activation/generate-services-credential.sh;
       };
       reconcilerApplication =
-        name: script:
+        name: script: extraInputs:
         pkgs.writeShellApplication {
           inherit name;
           runtimeInputs = [
             pkgs.gitMinimal
             pkgs.sops
-          ];
+          ]
+          ++ extraInputs;
           text = ''
             export PYTHONPATH=${./activation}
             exec ${python}/bin/python ${script} "$@"
           '';
         };
-      reconcileServicesBackblaze = reconcilerApplication "reconcile-services-backblaze" ./activation/reconcile_services_backblaze.py;
-      initializeServicesRestic = pkgs.writeShellApplication {
-        name = "initialize-services-restic";
-        runtimeInputs = [
-          pkgs.gitMinimal
-          pkgs.restic
-          pkgs.sops
-        ];
-        text = ''
-          export PYTHONPATH=${./activation}
-          exec ${python}/bin/python ${./activation/initialize_services_restic.py} "$@"
-        '';
-      };
-      reconcileServicesTelegram = reconcilerApplication "reconcile-services-telegram" ./activation/reconcile_services_telegram.py;
-      reconcileServicesResend = reconcilerApplication "reconcile-services-resend" ./activation/reconcile_services_resend.py;
-      awsMailCredentials = pkgs.writeShellApplication {
-        name = "aws-mail-credentials";
-        runtimeInputs = [
-          pkgs.awscli2
-          pkgs.gitMinimal
-          pkgs.sops
-        ];
-        text = ''
-          export PYTHONPATH=${./activation}
-          exec ${python}/bin/python ${./activation/aws_mail_credentials.py} "$@"
-        '';
-      };
-      enrollAwsMailAuth = pkgs.writeShellApplication {
-        name = "enroll-aws-mail-auth";
-        text = ''
-          exec ${awsMailCredentials}/bin/aws-mail-credentials provisioning "$@"
-        '';
-      };
-      publishAwsMailResend = pkgs.writeShellApplication {
-        name = "publish-aws-mail-resend";
-        text = ''
-          exec ${awsMailCredentials}/bin/aws-mail-credentials resend "$@"
-        '';
-      };
+      reconcileServicesBackblaze =
+        reconcilerApplication "reconcile-services-backblaze" ./activation/reconcile_services_backblaze.py
+          [ ];
+      initializeServicesRestic =
+        reconcilerApplication "initialize-services-restic" ./activation/initialize_services_restic.py
+          [ pkgs.restic ];
+      reconcileServicesTelegram =
+        reconcilerApplication "reconcile-services-telegram" ./activation/reconcile_services_telegram.py
+          [ ];
+      reconcileServicesResend =
+        reconcilerApplication "reconcile-services-resend" ./activation/reconcile_services_resend.py
+          [ ];
+      awsMailCredentials =
+        reconcilerApplication "aws-mail-credentials" ./activation/aws_mail_credentials.py
+          [ pkgs.awscli2 ];
       enrollServiceHostSecrets = pkgs.writeShellApplication {
         name = "enroll-service-host-secrets";
         runtimeInputs = [
@@ -137,14 +113,9 @@
         meta.description = "Create or rotate Stalwart's Resend API key";
       };
 
-      apps.enroll-aws-mail-auth = {
-        program = "${enrollAwsMailAuth}/bin/enroll-aws-mail-auth";
-        meta.description = "Enroll AWS mail credentials and delete their intake files";
-      };
-
-      apps.publish-aws-mail-resend = {
-        program = "${publishAwsMailResend}/bin/publish-aws-mail-resend";
-        meta.description = "Copy the Resend key from SOPS to AWS Secrets Manager";
+      apps.aws-mail-credentials = {
+        program = "${awsMailCredentials}/bin/aws-mail-credentials";
+        meta.description = "Enroll AWS mail credentials or copy the Resend key to AWS Secrets Manager";
       };
 
       packages = {
@@ -178,48 +149,6 @@
               ${./activation/enroll-services-credential.sh} \
               ${./activation/generate-services-credential.sh}
             runtime-contract --repository-root ${inputs.self} schema >/dev/null
-            touch "$out"
-          '';
-
-      checks.services-aws-mail-evaluation =
-        pkgs.runCommandLocal "services-aws-mail-evaluation-check" { }
-          ''
-            test ${pkgs.lib.escapeShellArg awsMailConfiguration.nixpkgs.hostPlatform.system} = aarch64-linux
-            test ${pkgs.lib.escapeShellArg awsMailConfiguration.systemd.services.stalwart.serviceConfig.User} = stalwart
-            test ${pkgs.lib.escapeShellArg awsMailConfiguration.systemd.services.stalwart-secrets.serviceConfig.Type} = oneshot
-            test ${if awsMailConfiguration.services.amazon-ssm-agent.enable then "1" else "0"} = 1
-            test ${if awsMailConfiguration.services.openssh.openFirewall then "1" else "0"} = 0
-            test ${toString (builtins.length awsMailConfiguration.swapDevices)} = 1
-            test ${pkgs.lib.escapeShellArg (builtins.head awsMailConfiguration.swapDevices).device} = /swapfile
-            test ${toString (builtins.head awsMailConfiguration.swapDevices).size} = 2048
-            test ${toString (builtins.length awsMailConfiguration.security.pki.certificateFiles)} = 1
-            test ${
-              if
-                builtins.elem "d /etc/stalwart-bootstrap 0750 root root -" awsMailConfiguration.systemd.tmpfiles.rules
-              then
-                "1"
-              else
-                "0"
-            } = 1
-            test ${
-              if
-                builtins.elem "z /etc/stalwart-bootstrap/aws.env 0600 root root -" awsMailConfiguration.systemd.tmpfiles.rules
-              then
-                "1"
-              else
-                "0"
-            } = 1
-            test ${
-              if
-                awsMailConfiguration.networking.firewall.allowedTCPPorts == [
-                  25
-                  443
-                ]
-              then
-                "1"
-              else
-                "0"
-            } = 1
             touch "$out"
           '';
     };

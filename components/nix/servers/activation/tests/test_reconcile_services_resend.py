@@ -2,6 +2,7 @@ from dataclasses import replace
 from pathlib import Path
 import unittest
 
+from fake_store import FakeStore
 from reconcile_services_resend import (
     ResendKeyReconciler,
     ResendKeySpec,
@@ -18,17 +19,6 @@ SPEC = ResendKeySpec(
     output_file=Path("resend.sops.yaml"),
     output_credential="STALWART_RESEND_API_KEY",
 )
-
-
-class FakeStore:
-    def __init__(self) -> None:
-        self.value = None
-
-    def read(self, secret_file: Path, credential: str) -> str | None:
-        return self.value
-
-    def write(self, secret_file: Path, values: dict[str, str]) -> None:
-        self.value = next(iter(values.values()))
 
 
 class FakeClient:
@@ -61,7 +51,9 @@ class ResendKeyReconcilerTest(unittest.TestCase):
             client.created,
             ("fahrican-stalwart-smtp", "sending_access", "domain-id"),
         )
-        self.assertEqual(store.value, "new-secret")
+        self.assertEqual(
+            store.read(SPEC.output_file, SPEC.output_credential), "new-secret"
+        )
         self.assertNotIn("new-secret", report)
         self.assertNotIn("new-id", report)
 
@@ -90,9 +82,11 @@ class ResendKeyReconcilerTest(unittest.TestCase):
         client = FakeClient()
         client.inventory = [{"id": "old-id", "name": SPEC.name}]
         store = FakeStore()
-        store.value = "old-secret"
+        store.values[(SPEC.output_file, SPEC.output_credential)] = "old-secret"
         ResendKeyReconciler(SPEC, client, store).reconcile(apply=True, rotate=True)
-        self.assertEqual(store.value, "new-secret")
+        self.assertEqual(
+            store.read(SPEC.output_file, SPEC.output_credential), "new-secret"
+        )
         self.assertEqual(client.deleted, ["old-id"])
 
 

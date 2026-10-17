@@ -247,8 +247,8 @@ _: {
           start_server
 
           if [[ "$restore_existing" == true ]]; then
-            # Existing RDS registries need new listeners and access restrictions
-            # before the normal server starts. Preserve passwords and MFA.
+            # Restored RDS registries need listeners and access restrictions
+            # before the server starts.
             jq --compact-output --null-input '
               {"@type":"upsert","object":"NetworkListener","matchOn":["name"],"value":{
                 "management":{"name":"management","protocol":"http","bind":{"127.0.0.1:8081":true},"useTls":false}
@@ -641,6 +641,14 @@ _: {
         {
           assertion = !config.services.openssh.openFirewall;
           message = "AWS mail administration must not expose SSH.";
+        }
+        {
+          assertion =
+            config.networking.firewall.allowedTCPPorts == [
+              25
+              443
+            ];
+          message = "The AWS mail appliance exposes only SMTP and HTTPS.";
         }
       ];
     };

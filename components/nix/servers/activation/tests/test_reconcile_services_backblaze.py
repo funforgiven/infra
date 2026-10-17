@@ -14,6 +14,7 @@ from reconcile_services_backblaze import (
     ServicesBackblazeReconciler,
     _bucket_policy_matches,
 )
+from fake_store import FakeStore
 from initialize_services_restic import ResticRunner, ServicesResticInitializer
 from runtime_contract import CONTRACT_PATH
 from sops_credentials import SopsCredentialError
@@ -105,31 +106,6 @@ def backup_document() -> dict:
             "hostCapabilities": capabilities,
         },
     }
-
-
-class FakeStore:
-    def __init__(
-        self,
-        *,
-        events: list[str] | None = None,
-        fail_writes: bool = False,
-    ) -> None:
-        self.values: dict[tuple[Path, str], str] = {}
-        self.writes: list[tuple[str, str, str]] = []
-        self.events = events
-        self.fail_writes = fail_writes
-
-    def read(self, secret_file: Path, credential: str) -> str | None:
-        return self.values.get((secret_file, credential))
-
-    def write(self, secret_file: Path, values: dict[str, str]) -> None:
-        if self.events is not None:
-            self.events.append("sops:write-and-verify")
-        if self.fail_writes:
-            raise SopsCredentialError("simulated SOPS write failure")
-        for credential, value in values.items():
-            self.values[(secret_file, credential)] = value
-        self.writes.append((str(secret_file), *values.values()))
 
 
 class FakeClient:

@@ -4,17 +4,15 @@
 from __future__ import annotations
 
 import argparse
-import json
 import subprocess
 import sys
-import urllib.error
-import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
 
-from runtime_contract import ContractError, RuntimeContract
+from reconcile_support import request_json, require_string
+from runtime_contract import ContractError, RuntimeContract, repository_root as resolve_repository_root
 from sops_credentials import SopsCredentialError, SopsCredentialStore
 
 
@@ -83,26 +81,20 @@ class ResendClient:
         self.authorization = f"Bearer {administration_key}"
 
     def request(self, method: str, path: str, payload: dict | None = None) -> dict:
-        request = urllib.request.Request(
+        document = request_json(
             API_BASE + path,
-            data=None if payload is None else json.dumps(payload).encode("utf-8"),
             method=method,
             headers={
                 "Authorization": self.authorization,
                 "Content-Type": "application/json",
                 "User-Agent": "fahrican-infra-resend-key-reconciler/1.0",
             },
+            payload=payload,
+            error=ResendReconcileError,
+            rejected=f"Resend {method} {path} returned",
+            failed=f"Resend request {method} {path} failed",
+            allow_empty=True,
         )
-        try:
-            with urllib.request.urlopen(request, timeout=30) as response:
-                body = response.read()
-                document = {} if not body else json.loads(body)
-        except urllib.error.HTTPError as error:
-            raise ResendReconcileError(
-                f"Resend {method} {path} returned HTTP {error.code}"
-            ) from error
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
-            raise ResendReconcileError(f"Resend request {method} {path} failed") from error
         if not isinstance(document, dict):
             raise ResendReconcileError("Resend returned an invalid response")
         return document
@@ -188,9 +180,7 @@ class ResendKeyReconciler:
 
 
 def _string(value: object, label: str) -> str:
-    if not isinstance(value, str) or not value:
-        raise ResendReconcileError(f"{label} must be a non-empty string")
-    return value
+    return require_string(value, label, ResendReconcileError)
 
 
 def argument_parser() -> argparse.ArgumentParser:
@@ -209,18 +199,7 @@ def argument_parser() -> argparse.ArgumentParser:
 def main() -> int:
     arguments = argument_parser().parse_args()
     try:
-        repository_root = (
-            arguments.repository_root.resolve()
-            if arguments.repository_root
-            else Path(
-                subprocess.run(
-                    ["git", "rev-parse", "--show-toplevel"],
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                ).stdout.strip()
-            )
-        )
+        repository_root = resolve_repository_root(arguments.repository_root)
         spec = ResendKeySpec.load(repository_root, arguments.key)
         store = SopsCredentialStore(repository_root)
         administration_key = store.read(

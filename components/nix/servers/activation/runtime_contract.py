@@ -259,9 +259,9 @@ class RuntimeContract:
                 )
 
 
-def repository_root(argument: str | None) -> Path:
+def repository_root(argument: str | Path | None) -> Path:
     if argument:
-        return Path(argument)
+        return Path(argument).resolve()
     result = subprocess.run(
         ["git", "rev-parse", "--show-toplevel"],
         check=True,

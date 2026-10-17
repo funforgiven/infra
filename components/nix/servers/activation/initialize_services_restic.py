@@ -18,7 +18,7 @@ from reconcile_services_backblaze import (
     KeySpec,
     ReconcileError,
 )
-from runtime_contract import ContractError
+from runtime_contract import ContractError, repository_root as resolve_repository_root
 from sops_credentials import SopsCredentialError, SopsCredentialStore
 
 
@@ -211,18 +211,7 @@ def argument_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     arguments = argument_parser().parse_args()
-    repository_root = (
-        arguments.repository_root.resolve()
-        if arguments.repository_root
-        else Path(
-            subprocess.run(
-                ["git", "rev-parse", "--show-toplevel"],
-                check=True,
-                capture_output=True,
-                text=True,
-            ).stdout.strip()
-        )
-    )
+    repository_root = resolve_repository_root(arguments.repository_root)
     try:
         contract = BackupContract.load(repository_root)
         initializer = ServicesResticInitializer(

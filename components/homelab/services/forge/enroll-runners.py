@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Enroll a private Actions qualification repository and least-scope CI credentials.
+"""Enroll the private Actions test repository and least-scope CI credentials.
 
 Requires the infrastructure development shell. API responses and plaintext
 credentials stay in memory; only encrypted Kubernetes Secrets are persisted.
@@ -10,27 +10,15 @@ import json
 from pathlib import Path
 import secrets
 import subprocess
+import sys
 
 import requests
-import yaml
 
+sys.path.insert(0, str(Path.cwd() / "components/homelab/operations"))
+from encrypted_inputs import decrypt, save  # noqa: E402
 
 ROOT = Path("deployments/homelab/cluster/apps/forge")
 BASE = "https://git.fahrican.com/api/v1"
-
-
-def run(argv, data=None):
-    return subprocess.run(argv, input=data, capture_output=True, check=True).stdout
-
-
-def read(path):
-    return yaml.safe_load(run(["sops", "decrypt", str(path)]))
-
-
-def save(path, document):
-    ciphertext = run(["sops", "encrypt", "--filename-override", str(path), "--input-type", "yaml",
-                      "--output-type", "yaml", "/dev/stdin"], yaml.safe_dump(document, sort_keys=False).encode())
-    path.write_bytes(ciphertext)
 
 
 def call(session, method, path, body=None, expected=(200, 201, 204)):
@@ -41,14 +29,14 @@ def call(session, method, path, body=None, expected=(200, 201, 204)):
 
 
 def main():
-    runtime = read(ROOT / "runtime.sops.yaml")
+    runtime = decrypt(ROOT / "runtime.sops.yaml")[0]
     values = runtime["stringData"]
     admin = requests.Session()
     admin.auth = ("forge-admin", values["forgejo-admin-password"])
     account = call(admin, "GET", "/users/forge-runner", expected=(200, 404))
     if account.get("login") != "forge-runner":
         values.setdefault("forgejo-runner-password", secrets.token_hex(32))
-        save(ROOT / "runtime.sops.yaml", runtime)
+        save(Path.cwd(), ROOT / "runtime.sops.yaml", [runtime])
         call(admin, "POST", "/admin/users", {"username": "forge-runner", "email": "forge-runner@fahrican.com",
             "password": values["forgejo-runner-password"], "must_change_password": False,
             "send_notify": False, "visibility": "private"})
@@ -82,12 +70,12 @@ def main():
             document["stringData"] = {".dockerconfigjson": json.dumps({"auths": {
                 "git.fahrican.com": {"auth": authentication}}})}
         try:
-            save(target, document)
+            save(Path.cwd(), target, [document])
         except Exception:
             call(owner, "DELETE", f'/users/forge-runner/tokens/{token["id"]}')
             raise
         print(f"{name}: created and encrypted")
-    print("Private qualification repository and scoped CI credentials are enrolled.")
+    print("Private runner-qualification repository and scoped CI credentials are enrolled.")
 
 
 if __name__ == "__main__":
