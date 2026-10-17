@@ -503,7 +503,7 @@ spec:
           - name: matrix-registry
           containers:
           - name: controller
-            image: git.fahrican.com/forge-runner/matrix-runtime:1.0.0@sha256:9a2085fccc6c24252b545f0a1899542cf315d02c91d78171d389594753e8ddcc
+            image: git.fahrican.com/forge-runner/matrix-runtime
             command:
             - python
             - /scripts/restore_controller.py

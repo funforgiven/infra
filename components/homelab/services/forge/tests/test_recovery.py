@@ -1,10 +1,10 @@
-import importlib.util
 import hashlib
 import shutil
 from unittest.mock import patch
 import json
 import os
 from pathlib import Path
+import signal
 import sqlite3
 import subprocess
 import sys
@@ -24,11 +24,11 @@ class RecoveryTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
-        for name in ("data", "backups", "control"):
+        for name in ("data", "backups"):
             (self.root / name).mkdir()
         self.environment = {**os.environ, "BACKUP_SERVICE": "forgejo", "BACKUP_DATABASE": "data/forgejo.db",
                             **{"BACKUP_" + key.upper(): str(self.root / value) for key, value in
-                               (("data", "data"), ("destination", "backups"), ("control", "control"))}}
+                               (("data", "data"), ("destination", "backups"))}}
         # Each transaction refers to an already-written repository object. The
         # restore must contain both the committed row and its exact file bytes.
         (self.root / "data/data").mkdir()
@@ -55,13 +55,13 @@ while True:
     db.commit()
     time.sleep(.05)
 ''')
-        self.service = subprocess.Popen(["sh", str(SCRIPTS / "run-service.sh"), sys.executable, str(self.app)],
-                                        env=self.environment, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.service = subprocess.Popen([sys.executable, str(self.app)], env=self.environment, start_new_session=True,
+                                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.await_condition(lambda: (self.root / "data/data/forgejo.db").exists())
 
     def tearDown(self):
-        self.service.terminate()
-        self.service.wait(timeout=55)
+        os.killpg(self.service.pid, signal.SIGKILL)
+        self.service.wait(timeout=5)
         self.temp.cleanup()
 
     def await_condition(self, condition, timeout=15):
@@ -72,15 +72,15 @@ while True:
             time.sleep(.05)
 
     def capture_fixture(self):
-        # Simulate an atomic storage snapshot. Production uses Cinder/CSI;
-        # this fixture's supervisor makes the frozen clone deterministic.
-        request = self.root / 'control/request'
-        request.write_text(f"{int(time.time()) + 15} fixture-snapshot\n")
-        self.await_condition(lambda: (self.root / 'control/paused').exists())
-        snapshot = self.root / 'snapshot'
-        shutil.copytree(self.root / 'data', snapshot)
-        request.unlink()
-        self.await_condition(lambda: not (self.root / 'control/paused').exists())
+        # Simulate an atomic storage snapshot. Production uses a Ceph RBD CSI
+        # snapshot; freezing the process group makes the copy deterministic.
+        self.await_condition(lambda: len(list((self.root / 'data').iterdir())) > 4)
+        os.killpg(self.service.pid, signal.SIGSTOP)
+        try:
+            snapshot = self.root / 'snapshot'
+            shutil.copytree(self.root / 'data', snapshot)
+        finally:
+            os.killpg(self.service.pid, signal.SIGCONT)
         return snapshot
 
     def test_concurrent_exports_restore_database_and_objects_while_service_runs(self):
@@ -95,7 +95,6 @@ while True:
         for process in backups:
             self.assertEqual(process.wait(timeout=30), 0)
         self.await_condition(lambda: len(list((self.root / 'data').iterdir())) > before)
-        self.assertFalse((self.root / 'control/request').exists())
         markers = list((self.root / 'backups').glob('*.tar.json'))
         self.assertEqual(len(markers), 2)
         for number, marker in enumerate(markers):
@@ -113,11 +112,10 @@ while True:
                 self.assertTrue(rows)
                 for identity, content in rows:
                     self.assertEqual((target / 'data' / str(identity)).read_text(), content)
-        # The Velero hook now only checks freshness: no application pause.
+        # The Velero hook only checks freshness: no application pause.
         hook = subprocess.run([sys.executable, str(SCRIPTS / 'backup.py'), '--once'],
                               env=self.environment, capture_output=True, timeout=5)
         self.assertEqual(hook.returncode, 0, hook.stderr)
-        self.assertFalse((self.root / 'control/request').exists())
         self.assertIsNone(self.service.poll())
 
     def test_failed_export_keeps_recovery_history_and_cleans_partial_files(self):
@@ -154,37 +152,6 @@ while True:
                 recovery_archive.require_recent_archive(destination)
         with self.assertRaises(ValueError):
             recovery_archive.export_snapshot(Path('/data'), destination, 'fixture', int(time.time()))
-
-    def test_legacy_metrics_bridge_cannot_be_selected_as_a_recovery_archive(self):
-        snapshot = self.capture_fixture()
-        destination = self.root / 'backups'
-        original = recovery_archive.export_snapshot(snapshot, destination, 'fixture', int(time.time()))
-        spec = importlib.util.spec_from_file_location('legacy_bridge', SCRIPTS / 'legacy-backup-bridge.py')
-        bridge = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(bridge)
-        bridge.publish_status(destination)
-        marker = destination / 'forgejo-online-status.tar.gz.json'
-        self.assertEqual(json.loads(marker.read_text())['completed_at'], original['completed_at'])
-        self.assertEqual(len(recovery_archive.completed_archives(destination)), 1)
-        self.assertEqual(recovery_archive.require_recent_archive(destination)['archive'], original['archive'])
-
-    def test_abandoned_backup_cannot_leave_service_paused(self):
-        (self.root / "control/request").write_text(f"{int(time.time()) + 3} abandoned\n")
-        self.await_condition(lambda: (self.root / "control/paused").exists())
-        self.await_condition(lambda: not (self.root / "control/paused").exists())
-        before = len(list((self.root / "data").iterdir()))
-        self.await_condition(lambda: len(list((self.root / "data").iterdir())) > before)
-        self.assertIsNone(self.service.poll())
-
-    def test_quiescence_stops_subprocesses_that_ignore_term(self):
-        self.await_condition(lambda: (self.root / "data/child").exists())
-        (self.root / "control/request").write_text(f"{int(time.time()) + 10} subprocess-check\n")
-        self.await_condition(lambda: (self.root / "control/paused").exists())
-        before = (self.root / "data/child").read_text()
-        time.sleep(.2)
-        self.assertEqual((self.root / "data/child").read_text(), before)
-        (self.root / "control/request").unlink()
-        self.await_condition(lambda: not (self.root / "control/paused").exists())
 
 
 if __name__ == "__main__":

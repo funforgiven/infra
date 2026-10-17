@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Validate an offsite-restored archive before the Git verifier can mark it ready."""
 
-import argparse
 import hashlib
 import json
 from pathlib import Path
@@ -10,11 +9,6 @@ import tarfile
 import time
 from recovery_archive import completed_archives
 from verify_atollion import verify_atollion
-
-parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("--application-only", action="store_true",
-                    help="Compatibility flag: application data is the complete retained restore scope")
-arguments = parser.parse_args()
 
 backup = Path("/backups")
 target = Path("/restore")
@@ -58,7 +52,7 @@ if legacy_marker.exists():
         raise RuntimeError("Invalid legacy archive path")
     with legacy_archive.open("rb") as source:
         if hashlib.file_digest(source, "sha256").hexdigest() != legacy["sha256"]:
-            raise RuntimeError("Retained GitLab archive checksum mismatch")
+            raise RuntimeError("Archived GitLab archive checksum mismatch")
     with tarfile.open(legacy_archive) as source:
         checksums = source.extractfile("current/SHA256SUMS").read().decode()
         for line in checksums.splitlines():
@@ -67,41 +61,40 @@ if legacy_marker.exists():
             with source.extractfile("current/" + filename) as member:
                 if hashlib.file_digest(member, "sha256").hexdigest() != expected:
                     raise RuntimeError("Native GitLab backup or recovery secrets failed verification")
-    print("Retained native GitLab archive and recovery secrets verified.", flush=True)
+    print("Archived native GitLab archive and recovery secrets verified.", flush=True)
 legacy_infrastructure = backup / "legacy-gitlab-infrastructure"
 if legacy_infrastructure.exists():
     infrastructure = json.loads((legacy_infrastructure / "manifest.json").read_text())
     expected_files = {"backend.qcow2", "image-properties.json",
                       "retired-gitlab-state.sops.json", "retired-gitlab-foundation-state.sops.json"}
     if infrastructure.get("schema") != 1 or set(infrastructure["files"]) != expected_files:
-        raise RuntimeError("Invalid retained GitLab infrastructure manifest")
+        raise RuntimeError("Invalid archived GitLab infrastructure manifest")
     for name, expected in infrastructure["files"].items():
         path = legacy_infrastructure / name
         if path.is_symlink() or path.stat().st_size != expected["size"]:
-            raise RuntimeError("Retained GitLab infrastructure file size mismatch")
+            raise RuntimeError("Archived GitLab infrastructure file size mismatch")
         with path.open("rb") as source:
             if hashlib.file_digest(source, "sha256").hexdigest() != expected["sha256"]:
-                raise RuntimeError("Retained GitLab infrastructure checksum mismatch")
+                raise RuntimeError("Archived GitLab infrastructure checksum mismatch")
     print("Retired GitLab boot image and encrypted cloud state checkpoints verified.", flush=True)
 legacy_objects = backup / "legacy-gitlab-object-store"
 if legacy_objects.exists():
     objects = json.loads((legacy_objects / "manifest.json").read_text())
     name = "objects.tar.gz.sops.json"
     if objects.get("schema") != 1 or set(objects["files"]) != {name}:
-        raise RuntimeError("Invalid retained GitLab object-store manifest")
+        raise RuntimeError("Invalid archived GitLab object-store manifest")
     expected = objects["files"][name]
     path = legacy_objects / name
     if path.is_symlink() or path.stat().st_size != expected["size"]:
-        raise RuntimeError("Retained GitLab object-store file size mismatch")
+        raise RuntimeError("Archived GitLab object-store file size mismatch")
     with path.open("rb") as source:
         if hashlib.file_digest(source, "sha256").hexdigest() != expected["sha256"]:
-            raise RuntimeError("Retained GitLab object-store checksum mismatch")
-    # Age recovery keys stay with operators; retirement also required a separate
-    # offsite restore, decryption and verification of every object in this bundle.
+            raise RuntimeError("Archived GitLab object-store checksum mismatch")
+    # Age recovery keys stay with operators; only size and checksum are verified here.
     print("Encrypted final GitLab object-store export verified.", flush=True)
 verify_atollion(backup, target, validation_policy=json.loads(
     Path(__file__).with_name("atollion-agent-policy.json").read_text()))
-# Windows/macOS images are excluded by the migration scope.
+# Windows/macOS images are not backed up.
 (target / ".database-verified").write_text(manifest["sha256"] + "\n")
 print("Offsite archive checksum, SQLite, OIDC, repository metadata, Actions history and artifact bytes verified.", flush=True)
 while True:

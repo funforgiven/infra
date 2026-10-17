@@ -11,36 +11,11 @@ quarantine=$media_root/quarantine
 
 mkdir -p "$inbox" "$library" "$quarantine" "$state/cache"
 
-# Unmatched music and uncertain duplicates need review. Keep them until an
-# operator resolves them instead of deleting music files after one day.
+# Keep unmatched music and uncertain duplicates for operator review.
 
-# The pre-Beets library was written directly by SFTPGo. Catalog it once without
-# changing its tags so duplicate detection also covers music from that workflow.
-if [ ! -e "$state/library-cataloged" ]; then
-  "$beet" import --noautotag "$library"
-  touch "$state/library-cataloged"
-fi
-
-# Preserve the matched release's title and edition disambiguation. A release
-# group title alone cannot distinguish expanded editions or live recordings.
-
-# ReplayGain was enabled after the original library had already been cataloged.
-# Re-analyze the existing catalog once so every album gets coherent track and
-# album gain/peak values and every standalone track gets track values. The
-# ffmpeg backend writes metadata tags only; it never re-encodes the audio. Force
-# this versioned migration so database-only or partial values cannot cause an
-# on-disk file to be skipped. A failed pass leaves the marker absent and is
-# safely retried by the next CronJob run.
-replaygain_backfill="$state/replaygain-album-track-v1"
-if [ ! -e "$replaygain_backfill" ]; then
-  "$beet" replaygain -a -f -w
-  "$beet" replaygain -f -w "singleton:true"
-  touch "$replaygain_backfill"
-fi
-
-# Normalize only genres already present in the library. The acceptance script
-# replaces LastGenre's network client with a hard failure first, proving this
-# exact cleanup path makes zero Last.fm requests in the deployed Beets image.
+# Normalize only genres already present in the library. The verification script
+# first replaces LastGenre's network client with a hard failure, so this cleanup
+# makes no Last.fm requests.
 lastgenre_maintenance="$state/lastgenre-offline-maintenance"
 if [ ! -e "$lastgenre_maintenance" ] || \
   find "$lastgenre_maintenance" -mmin +1440 -print -quit | grep -q .; then

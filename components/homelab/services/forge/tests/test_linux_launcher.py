@@ -53,10 +53,8 @@ class QueueBounds(unittest.TestCase):
         return {'id': number, 'attempt': attempt, 'status': 'waiting',
                 'runs_on': ['linux-x86_64'] if labels is None else labels}
 
-    def existing(self, number, conditions=None, attempt=None):
-        annotations = {launcher.JOB_ID_ANNOTATION: str(number)}
-        if attempt is not None:
-            annotations[launcher.ATTEMPT_ANNOTATION] = str(attempt)
+    def existing(self, number, conditions=None, attempt=1):
+        annotations = {launcher.JOB_ID_ANNOTATION: str(number), launcher.ATTEMPT_ANNOTATION: str(attempt)}
         return {'metadata': {'annotations': annotations},
                 'status': {'conditions': conditions or []}}
 
@@ -82,10 +80,9 @@ class QueueBounds(unittest.TestCase):
                          [self.job(1, attempt=2)])
         self.assertEqual(launcher.select_jobs([completed], [self.job(1, attempt=1)]), [])
 
-    def test_attempt_tracking_preserves_active_capacity_and_legacy_claims(self):
+    def test_attempt_tracking_preserves_active_capacity(self):
         active = [self.existing(1, attempt=1), self.existing(2, attempt=1)]
         self.assertEqual(launcher.select_jobs(active, [self.job(1, attempt=2)]), [])
-        self.assertEqual(launcher.select_jobs([self.existing(1)], [self.job(1, attempt=2)]), [])
 
     def test_invalid_queue_attempt_never_launches(self):
         for attempt in (None, 0, True, '2'):

@@ -13,7 +13,6 @@ from recovery_archive import completed_archives, prepare_offsite
 os.umask(0o077)
 data = Path(os.environ.get("BACKUP_DATA", "/data"))
 destination = Path(os.environ.get("BACKUP_DESTINATION", "/backups"))
-control = Path(os.environ.get("BACKUP_CONTROL", "/control"))
 database = os.environ["BACKUP_DATABASE"]
 service = os.environ["BACKUP_SERVICE"]
 last_error = 0

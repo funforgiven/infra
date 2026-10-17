@@ -40,25 +40,14 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       initContainers:
-      - name: migrate-database
+      - name: install-cli
         image: docker.io/deluan/navidrome:0.63.2@sha256:9012939114fbb1bb641b81cf96dec5ded15f0aafefe8d47a511d7cb919658e40
         command:
-        - /bin/sh
-        - /config/migrate-navidrome-database.sh
-        env:
-        - name: ND_BACKUP_SCHEDULE
-          value: ''
-        - name: ND_MUSICFOLDER
-          value: /music
-        - name: ND_PASSWORDENCRYPTIONKEY
-          valueFrom:
-            secretKeyRef:
-              name: media-runtime
-              key: ND_PASSWORDENCRYPTIONKEY
-        - name: ND_PLUGINS_ENABLED
-          value: 'false'
-        - name: ND_SCANNER_ENABLED
-          value: 'false'
+        - install
+        - -m
+        - '0555'
+        - /app/navidrome
+        - /bootstrap-bin/navidrome
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -68,36 +57,8 @@ spec:
           runAsNonRoot: true
           runAsUser: 1000
         volumeMounts:
-        - name: data
-          mountPath: /data
-        - name: media
-          mountPath: /music
-          subPath: library
-          readOnly: true
-        - name: config
-          mountPath: /config
-          readOnly: true
         - name: bootstrap-bin
           mountPath: /bootstrap-bin
-      - name: migrate-user
-        image: docker.io/deluan/navidrome:0.63.2@sha256:9012939114fbb1bb641b81cf96dec5ded15f0aafefe8d47a511d7cb919658e40
-        command:
-        - /bin/sh
-        - /config/migrate-navidrome-user.sh
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          runAsGroup: 1000
-          runAsNonRoot: true
-          runAsUser: 1000
-        volumeMounts:
-        - name: data
-          mountPath: /data
-        - name: config
-          mountPath: /config
-          readOnly: true
       - name: reconcile-service-account
         image: lscr.io/linuxserver/beets:2.13.1-ls348@sha256:90b1404e962dfc09c1926f4d8dca8920fc90d71369df5398340a12eb8ce7328c
         command:

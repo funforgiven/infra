@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Seed a new installation; preserve user settings and network identities."""
+"""Seed missing state files and render runtime MQTT credentials."""
 import datetime
 import json
 import os
@@ -19,8 +19,7 @@ for source, destination in [('configuration.yaml', ha / 'configuration.yaml'),
     if not destination.exists():
         shutil.copyfile(Path('/bootstrap') / source, destination)
 
-# HTTP settings moved from YAML to versioned storage in HA 2026.8. Seed once,
-# using the pinned 2026.9.2 schema; subsequent changes belong to HA's UI.
+# Seed HTTP settings once in HA's 2026.9 storage schema; later changes belong to HA's UI.
 (ha / '.storage').mkdir(exist_ok=True)
 http = ha / '.storage/http'
 if not http.exists():
@@ -39,23 +38,6 @@ if not http.exists():
             'pending': None, 'yaml_migration_done': True,
         },
     }))
-
-# Replace the known former workload pod range on restored HTTP storage, while
-# preserving custom proxies, pending settings and every unrelated user value.
-http_settings = json.loads(http.read_text())
-proxy_changed = False
-for phase in ('stable', 'pending'):
-    settings = http_settings.get('data', {}).get(phase)
-    if not isinstance(settings, dict):
-        continue
-    proxies = settings.get('trusted_proxies')
-    if isinstance(proxies, list) and '172.16.0.0/13' in proxies:
-        settings['trusted_proxies'] = list(dict.fromkeys(
-            '10.100.0.0/16' if value == '172.16.0.0/13' else value
-            for value in proxies))
-        proxy_changed = True
-if proxy_changed:
-    http.write_text(json.dumps(http_settings))
 
 credentials = Path('/credentials')
 runtime = Path('/runtime')

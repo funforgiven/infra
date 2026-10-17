@@ -3,4 +3,4 @@ kind: Kustomization
 resources:
 - operator.yaml
 - snapshots
-- qualified-nodes.yaml
+- nodes.yaml

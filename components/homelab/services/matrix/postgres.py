@@ -19,11 +19,9 @@ def command(argv, data=None):
     return result.stdout
 
 
-
-def migrate_hba(path):
-    """Move only our two managed application rules to the target pod range."""
-    old = {f"host {name} {name} 172.16.0.0/12 scram-sha-256" for name in ("synapse", "mas")}
-    lines = [line for line in path.read_text().splitlines() if line not in old]
+def ensure_hba(path):
+    """Admit the two application roles from the pod range, keeping other rules."""
+    lines = path.read_text().splitlines()
     for name in ("synapse", "mas"):
         entry = f"host {name} {name} 10.100.0.0/16 scram-sha-256"
         if entry not in lines:
@@ -53,9 +51,9 @@ def main():
             ]
         )
     # initdb permits only loopback TCP by default. Admit the two application
-    # roles from the services pod range with password authentication; PostgreSQL
-    # administration remains on the local socket.
-    migrate_hba(DATA / "pg_hba.conf")
+    # roles from the pod range with password authentication; PostgreSQL
+    # administration stays on the local socket.
+    ensure_hba(DATA / "pg_hba.conf")
     command(
         [
             "pg_ctl",

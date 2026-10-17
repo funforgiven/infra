@@ -42,20 +42,13 @@ def select_jobs(existing, waiting):
     active = [job for job in existing if not any(
         condition.get("status") == "True" and condition.get("type") in {"Complete", "Failed"}
         for condition in job.get("status", {}).get("conditions", []))]
-    claimed, legacy_claimed = set(), set()
+    claimed = set()
     for job in existing:
         annotations = job["metadata"].get("annotations", {})
-        identity, attempt = annotations.get(JOB_ID_ANNOTATION), annotations.get(ATTEMPT_ANNOTATION)
-        if attempt is None:
-            # Existing jobs created before attempt annotations remain conservative
-            # claims until Kubernetes cleans them up.
-            legacy_claimed.add(identity)
-        else:
-            claimed.add((identity, attempt))
+        claimed.add((annotations.get(JOB_ID_ANNOTATION), annotations.get(ATTEMPT_ANNOTATION)))
     eligible = [job for job in waiting if job.get("status") == "waiting" and job.get("runs_on")
         and type(job.get("attempt")) is int and job["attempt"] > 0
         and set(job["runs_on"]) <= {"linux", "linux-x86_64"}
-        and str(job["id"]) not in legacy_claimed
         and (str(job["id"]), str(job["attempt"])) not in claimed]
     return sorted(eligible, key=lambda job: job["id"])[:max(0, CAPACITY - len(active))]
 
