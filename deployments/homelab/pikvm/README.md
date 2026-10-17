@@ -69,7 +69,11 @@ DOWNLINK connectors. The web interface exposes ports `1.1`–`1.4` and
 | `1.3` | `asiago`, Kubernetes | Ryzen 9 9900X |
 | `1.4` | `taleggio`, Kubernetes | Core i5-13600K |
 
-Unit 2 is unused. Port `1.2` (pecorino) is disconnected. There are no ATX
+Unit 2 is unused. Check current HDMI and USB attachment through the switch API;
+the table describes the intended wiring. A detected HDMI connection alone does
+not establish that a host is running or producing video. The
+[server hardware inventory](../../../components/nix/servers/README.md#hardware-identity)
+distinguishes verified hardware from recorded values. There are no ATX
 connections, so PiKVM cannot physically power-cycle these PCs. Check the active
 port and visible hardware identity before attaching media or sending input.
 For each computer, the official switch guide specifies:

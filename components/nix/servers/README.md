@@ -14,6 +14,33 @@ token, TLS/bootstrap state and host identities.
 `enroll-service-host-secrets` delivers the UniFi backup/monitoring profiles.
 Read [secret recovery](../../../secrets/README.md) before changing credentials.
 
+## Hardware identity
+
+| Host | CPU | Motherboard | Installed RAM |
+| --- | --- | --- | --- |
+| `taleggio` | Core i5-13600K | MSI PRO Z690-A WIFI (MS-7D25), revision 2.0 | 96 GiB: 2 × 48 GiB DDR5 at 5600 MT/s |
+| `asiago` | Ryzen 9 9900X | MSI PRO B650M-A WIFI (MS-7D77), revision 1.0 | 64 GiB: 2 × 32 GiB DDR5 at 4800 MT/s |
+| `pecorino` (recorded) | Core i9-14900K | Needs live verification | 64 GiB; DIMM layout and speed need live verification |
+
+Taleggio and Asiago match their live SSH hostnames, CPU and DMI data. Their
+DIMMs occupy A2/B2; the speeds above are firmware-reported configured speeds.
+Taleggio uses `F5-6400J3239F48G` modules and BIOS `A.H0`; Asiago uses
+`F5-6000J3040G32G` modules and BIOS `1.R5`. Pecorino's CPU comes from the
+recorded inventory and its RAM capacity from its last Kubernetes report;
+neither substitutes for a fresh hardware check.
+
+Taleggio and Asiago each have two Kingston `SKC600256G` SATA boot disks and
+two `SKC3000D2048G` NVMe Ceph disks, plus a dual-port Intel 25 Gb/s NIC
+(`8086:159b`, driver `ice`). Both enumerate integrated graphics without an
+NVIDIA GPU.
+
+Their live LACP partners confirm Taleggio on CRS510 ports `sfp28-3/4` and
+Asiago on `sfp28-5/6`, matching the [network map](../../../deployments/homelab/routeros/README.md#physical-map).
+Use the hostname and hardware together to identify a chassis; link lights and
+switch port labels alone do not establish which server is attached. The
+[PiKVM map](../../../deployments/homelab/pikvm/README.md#two-switch-chain)
+lists console ports.
+
 ## Reinstall a host / rebuild the cluster
 
 Boot an installer through [PiKVM](../../../deployments/homelab/pikvm/README.md)
