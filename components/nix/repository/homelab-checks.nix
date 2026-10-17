@@ -1,9 +1,15 @@
-{ inputs, ... }:
+{ lib, ... }:
 {
   perSystem =
     { pkgs, ... }:
     let
-      source = inputs.self;
+      source = lib.fileset.toSource {
+        root = ../../..;
+        fileset = lib.fileset.unions [
+          ../../homelab
+          ../../../deployments/homelab
+        ];
+      };
       python = pkgs.python3.withPackages (ps: [
         ps.ansible
         ps.ansible-core
@@ -17,9 +23,6 @@
       prepare = ''
         cp -R ${source}/components ./components
         cp -R ${source}/deployments ./deployments
-        mkdir -p secrets docs/migration
-        cp ${source}/docs/migration/inventory-map.json ${source}/docs/migration/live-volume-inventory.json docs/migration/
-        cp ${source}/secrets/github-ssh-key.pub secrets/
         chmod -R u+w components deployments
         export ANSIBLE_HOME="$TMPDIR/ansible-home"
         export ANSIBLE_LOCAL_TEMP="$TMPDIR/ansible-local"

@@ -14,8 +14,10 @@ let
           homeConfigurationName = "${user.username}@${hostname}";
         in
         {
-          "${hostname}-home" = config.flake.homeConfigurations.${homeConfigurationName}.activationPackage;
           "${hostname}-toplevel" = config.flake.nixosConfigurations.${hostname}.config.system.build.toplevel;
+        }
+        // lib.optionalAttrs (host.homeProfiles != [ ]) {
+          "${hostname}-home" = config.flake.homeConfigurations.${homeConfigurationName}.activationPackage;
         }
       ) (lib.filterAttrs (_: host: host.system == system) config.dendritic.hosts)
     );

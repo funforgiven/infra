@@ -490,7 +490,7 @@ in
             name = "${user.username}@${hostname}";
             value = mkHomeConfiguration hostname host;
           }
-        ) cfg.dendritic.hosts
+        ) (lib.filterAttrs (_: host: host.homeProfiles != [ ]) cfg.dendritic.hosts)
       );
     };
   };

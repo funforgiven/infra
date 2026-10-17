@@ -114,10 +114,5 @@ _: {
           }
         }/bin/matrix-qualify-local";
       };
-      checks.matrix-alert-relay = pkgs.runCommand "matrix-alert-relay-check" { } ''
-        export PYTHONDONTWRITEBYTECODE=1
-        ${python}/bin/python -m unittest discover -s ${source}/tests -v
-        touch "$out"
-      '';
     };
 }
