@@ -39,3 +39,12 @@ class AccessTests(unittest.TestCase):
         with patch.object(access, "cluster_config") as config:
             with self.assertRaises(ValueError): access.execute("retired", ["kubectl", "get", "nodes"])
             config.assert_not_called()
+    def test_unreachable_server_falls_back_to_the_next(self):
+        calls = []
+        def capture(command, **kwargs):
+            calls.append(command[-2])
+            if len(calls) == 1: raise subprocess.CalledProcessError(255, command)
+            return b"config"
+        with patch.object(access, "capture", side_effect=capture):
+            self.assertEqual(access.read_admin_config(), b"config")
+        self.assertEqual(calls, ["funforgiven@10.21.20.10", "funforgiven@10.21.20.11"])

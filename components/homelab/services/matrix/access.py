@@ -10,13 +10,21 @@ import yaml
 def capture(command, timeout=45, **kwargs):
     return subprocess.run(command, capture_output=True, check=True, timeout=timeout, **kwargs).stdout
 
+SERVERS = ("10.21.20.10", "10.21.20.11", "10.21.20.12")
+
+def read_admin_config():
+    for index, server in enumerate(SERVERS):
+        command = ["ssh", "-F", "/dev/null", "-i", "/run/secrets/github-ssh-key",
+                   "-o", "IdentitiesOnly=yes", "-o", "IdentityAgent=none",
+                   "-o", "UserKnownHostsFile=/dev/null", "-o", "GlobalKnownHostsFile=/etc/ssh/ssh_known_hosts",
+                   "-o", "StrictHostKeyChecking=yes", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8",
+                   f"funforgiven@{server}", "sudo -n cat /etc/rancher/k3s/k3s.yaml"]
+        try: return capture(command)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            if index == len(SERVERS) - 1: raise
+
 def cluster_config():
-    command = ["ssh", "-F", "/dev/null", "-i", "/run/secrets/github-ssh-key",
-               "-o", "IdentitiesOnly=yes", "-o", "IdentityAgent=none",
-               "-o", "UserKnownHostsFile=/dev/null", "-o", "GlobalKnownHostsFile=/etc/ssh/ssh_known_hosts",
-               "-o", "StrictHostKeyChecking=yes", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8",
-               "funforgiven@10.21.20.10", "sudo -n cat /etc/rancher/k3s/k3s.yaml"]
-    document = yaml.safe_load(capture(command))
+    document = yaml.safe_load(read_admin_config())
     document["clusters"][0]["cluster"]["server"] = "https://10.21.20.128:6443"
     fd = os.memfd_create("homelab-kubeconfig")
     try:
