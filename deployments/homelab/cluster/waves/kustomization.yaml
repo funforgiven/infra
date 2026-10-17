@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- stages.yaml
+patches:
+- target:
+    group: kustomize.toolkit.fluxcd.io
+    kind: Kustomization
+  patch: |
+    apiVersion: kustomize.toolkit.fluxcd.io/v1
+    kind: Kustomization
+    metadata:
+      name: all
+    spec:
+      interval: 10m
+      retryInterval: 1m
+      timeout: 20m
+      prune: true
+      sourceRef:
+        kind: GitRepository
+        name: flux-system
+      decryption:
+        provider: sops
+        secretRef:
+          name: sops-age
