@@ -73,9 +73,10 @@ Unit 2 is unused. Check current HDMI and USB attachment through the switch API;
 the table describes the intended wiring. A detected HDMI connection alone does
 not establish that a host is running or producing video. The
 [server hardware inventory](../../../components/nix/servers/README.md#hardware-identity)
-distinguishes verified hardware from recorded values. There are no ATX
-connections, so PiKVM cannot physically power-cycle these PCs. Check the active
-port and visible hardware identity before attaching media or sending input.
+distinguishes verified hardware from recorded values. Pecorino on `1.2` has ATX
+power-button control and power-LED feedback. Use physical power buttons for the
+other hosts. Check the active port and visible hardware identity before
+attaching media or sending input.
 For each computer, the official switch guide specifies:
 
 - One HDMI 2.0 cable, at least 50 cm long.
@@ -97,6 +98,10 @@ credentials; keep them out of command arguments and output.
 - `POST /api/switch/set_active?port=N` selects a switch port. `N` is zero-based
   and continuous across units (`1.1` is 0, `2.1` is 4). Switching ports also
   moves USB and virtual media, so stay on a host while it boots from media.
+- `GET /api/switch` reports Pecorino's power LED at `atx.leds.power[1]`.
+  `POST /api/switch/atx/power?port=1&action=on` powers it on; `off` presses
+  Power briefly and `off_hard` holds it. Shut running hosts down through SSH;
+  reserve ATX power-off for unresponsive hosts.
 - `GET /api/streamer/snapshot` returns a fresh screenshot. Wait for the switch
   and USB devices to settle after changing ports.
 - `/api/hid/events/send_key`, `/api/hid/events/send_shortcut` and
@@ -105,7 +110,8 @@ credentials; keep them out of command arguments and output.
 - `/api/msd/write` uploads an ISO, `/api/msd/set_params` selects it and
   `/api/msd/set_connected` attaches it. Verify the ISO checksum first.
 
-Without ATX wiring, a powered-off or frozen host needs a physical button press.
+ATX operates the case buttons. Disconnecting AC power still requires physical
+access.
 
 ## Maintenance
 
