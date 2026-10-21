@@ -51,6 +51,7 @@ locals {
     "mail-admin",
     "matrix-alerts",
     "music",
+    "netbird-api",
     "upload",
     "unifi",
   ])

@@ -8,16 +8,6 @@ resource "cloudflare_dns_record" "netbird" {
   comment = "Homelab NetBird coordination and relay; services remain private"
 }
 
-resource "cloudflare_dns_record" "netbird_api" {
-  zone_id = data.cloudflare_zone.fahrican.zone_id
-  name    = "netbird-api.fahrican.com"
-  type    = "A"
-  content = local.services_gateway_address
-  ttl     = 300
-  proxied = false
-  comment = "Private NetBird API for declarative administration"
-}
-
 resource "cloudflare_dns_record" "netbird_stun" {
   zone_id = data.cloudflare_zone.fahrican.zone_id
   name    = "netbird-stun.fahrican.com"
@@ -26,4 +16,9 @@ resource "cloudflare_dns_record" "netbird_stun" {
   ttl     = 300
   proxied = false
   comment = "Stateless homelab NetBird STUN workers"
+}
+
+moved {
+  from = cloudflare_dns_record.netbird_api
+  to   = cloudflare_dns_record.private_services["netbird-api"]
 }
