@@ -58,6 +58,9 @@ _: {
           export PROTONPATH=${lib.escapeShellArg settings.proton}
           export GAMEID=${lib.escapeShellArg settings.game_id}
           export STORE=${lib.escapeShellArg settings.store}
+          # Xwayland cannot move Battle.net's client-drawn windows and
+          # misplaces its dialogs. Its games inherit native Wayland too.
+          export PROTON_ENABLE_WAYLAND=1
 
           # Initialize a fresh prefix before applying its declared DPI.
           if [ ! -f ${lib.escapeShellArg registryExecutable} ]; then

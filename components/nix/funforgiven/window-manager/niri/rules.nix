@@ -94,7 +94,11 @@ _: {
           matches = [
             { app-id = "^steam_app_.*"; }
             { app-id = "^gamescope$"; }
+            # Wine's Wayland driver uses the executable name as the app ID.
+            { app-id = "\\.exe$"; }
           ];
+          # The launcher's uneven redraws must not drive VRR.
+          excludes = [ { app-id = "^battle\\.net\\.exe$"; } ];
           variable-refresh-rate = true;
         }
       ];
