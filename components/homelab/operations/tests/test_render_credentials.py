@@ -59,5 +59,30 @@ class CredentialRefresh(unittest.TestCase):
             with self.assertRaises(ValueError):
                 credentials.update_identity(Path("/test"), outputs, lambda path, docs: None)
 
+    def test_netbird_archive_uses_the_velero_writer_and_declared_region(self):
+        root = Path(__file__).resolve().parents[4]
+        runtime = {"B2_APPLICATION_KEY_ID": "key-id", "B2_APPLICATION_KEY": "key", "INFRA_TELEGRAM_BOT_TOKEN": "bot",
+                   "INFRA_TELEGRAM_CHAT_ID": "1", "DISCORD_MUSIC_BOT_TOKEN": "d", "DISCORD_MUSIC_YOUTUBE_API_KEY": "y"}
+        alertmanager = {"alertmanager": {"config": {"receivers": [{"name": "infrastructure-telegram", "telegram_configs": [{}]}]}}}
+        def decrypt(path):
+            if "service-runtime" in str(path):
+                return [{"stringData": dict(runtime, **{key: "x" for key in [
+                    "ND_LASTFM_APIKEY", "ND_LASTFM_SECRET", "ND_PASSWORDENCRYPTIONKEY", "SFTPGO_ADMIN_PASSWORD",
+                    "AUDIOMUSE_NAVIDROME_PASSWORD", "AUDIOMUSE_POSTGRES_PASSWORD",
+                    "NAVIDROME_OAUTH2_COOKIE_SECRET", "AUDIOMUSE_OAUTH2_COOKIE_SECRET"]})}]
+            if "observability" in str(path):
+                return [{"metadata": {"name": "infrastructure-telegram"}, "stringData": {}},
+                        {"metadata": {"name": "alertmanager-runtime-values"},
+                         "stringData": {"values.yaml": yaml.safe_dump(alertmanager)}}]
+            return [{"stringData": {}}]
+        written = {}
+        with patch.object(credentials, "decrypt", side_effect=decrypt), \
+             patch.object(credentials, "save", side_effect=lambda root, path, docs: written.update({path: docs}) or True):
+            credentials.render(root)
+        region = yaml.safe_load((root / "deployments/homelab/credentials/backup-destination.yaml").read_text())["bucket"]["region"]
+        backup = written["deployments/homelab/cluster/apps/netbird/server/backup.sops.yaml"][0]
+        self.assertEqual(backup["metadata"], {"name": "netbird-backup", "namespace": "netbird"})
+        self.assertEqual(backup["stringData"], {"ACCESS_KEY_ID": "key-id", "ACCESS_SECRET_KEY": "key", "AWS_REGION": region})
+
 
 if __name__ == "__main__": unittest.main()

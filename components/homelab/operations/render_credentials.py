@@ -92,6 +92,9 @@ def render(root,outputs=None):
     for app,prefix in [("factorio","FACTORIO_"),("valheim","VALHEIM_")]:
         update(f"deployments/homelab/cluster/apps/{app}/runtime.sops.yaml",[secret(app+"-runtime","games",{k:v for k,v in runtime.items() if k.startswith(prefix)})])
     update("deployments/homelab/cluster/infrastructure/velero/credentials.sops.yaml",[secret("velero-object-storage","velero",{"cloud":"[default]\naws_access_key_id="+runtime["B2_APPLICATION_KEY_ID"]+"\naws_secret_access_key="+runtime["B2_APPLICATION_KEY"]+"\n"})])
+    # NetBird's Barman archive lives under Velero's services/kubernetes/ prefix
+    # and uses the same B2 writer.
+    update("deployments/homelab/cluster/apps/netbird/server/backup.sops.yaml",[secret("netbird-backup","netbird",{"ACCESS_KEY_ID":runtime["B2_APPLICATION_KEY_ID"],"ACCESS_SECRET_KEY":runtime["B2_APPLICATION_KEY"],"AWS_REGION":region})])
     path="deployments/homelab/cluster/infrastructure/observability/runtime.sops.yaml"
     documents=decrypt(root/path)
     telegram=next(d for d in documents if d["metadata"]["name"]=="infrastructure-telegram")

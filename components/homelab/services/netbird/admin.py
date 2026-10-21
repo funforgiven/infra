@@ -3,26 +3,19 @@
 
 import argparse
 import base64
-import configparser
 import datetime
 import json
 import os
 import re
 import secrets
 import subprocess
-import sys
 import urllib.request
 from pathlib import Path
 
 import yaml
-from restore_check import restore_check
-
-for operations in (Path(__file__).resolve().parents[2] / "operations",
-                   Path.cwd() / "components/homelab/operations"):
-    if operations.is_dir():
-        sys.path.insert(0, str(operations))
-        break
-import encrypted_inputs  # noqa: E402
+import restore_check
+# components/homelab/operations, on PYTHONPATH from the netbird-admin wrapper.
+from encrypted_inputs import decrypt_one as decrypt, save_one as encrypt, secret
 
 DEPLOYMENT = Path("deployments/homelab/cluster/apps/netbird")
 POLICY = Path("deployments/homelab/credentials/netbird-policy")
@@ -31,20 +24,6 @@ BOOTSTRAP = Path("secrets/netbird-bootstrap.yaml")
 
 def run(command, data=None):
     return subprocess.run(command, input=data, capture_output=True, check=True).stdout
-
-
-def decrypt(path):
-    return encrypted_inputs.decrypt(path)[0]
-
-
-def encrypt(path, document):
-    encrypted_inputs.save(Path.cwd(), path, [document])
-
-
-def secret(name, namespace, values, secret_type="Opaque"):
-    document = encrypted_inputs.secret(name, namespace, values)
-    document["type"] = secret_type
-    return document
 
 
 def add_resource(kustomization, filename):
@@ -121,19 +100,6 @@ def prepare():
         })
 
 
-def backup_credentials():
-    document = json.loads(run([
-        "kubectl", "-n", "velero", "get", "secret", "velero-object-storage", "-o", "json",
-    ]))
-    parser = configparser.ConfigParser()
-    parser.read_string(base64.b64decode(document["data"]["cloud"]).decode())
-    encrypt(DEPLOYMENT / "server/backup.sops.yaml", secret("netbird-backup", "netbird", {
-        "ACCESS_KEY_ID": parser["default"]["aws_access_key_id"],
-        "ACCESS_SECRET_KEY": parser["default"]["aws_secret_access_key"],
-        "AWS_REGION": "us-west-004",
-    }))
-
-
 def api(base, path, token=None, body=None, method=None):
     headers = {"Content-Type": "application/json"}
     if token:
@@ -152,9 +118,7 @@ def bind_bootstrap_account(account_id):
     """Bind /setup's domain-less account before the first external SSO login."""
     if not re.fullmatch(r"[a-z0-9]{20}", account_id):
         raise ValueError("unexpected NetBird account identifier")
-    cluster = json.loads(run([
-        "kubectl", "-n", "netbird", "get", "cluster", "netbird-postgres", "-o", "json",
-    ]))
+    cluster = restore_check.get("netbird", "cluster", "netbird-postgres")
     # Combined server 0.80.0 groups SSO users under DefaultSelfHostedDomain,
     # but /setup creates an account without that domain. A PAT cannot fill it.
     # Refuse to bind if SSO has already created a second account.
@@ -297,16 +261,16 @@ def close_bootstrap():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("prepare", "backup-credentials", "bootstrap", "close-bootstrap", "rotate-credentials", "restore-check"))
+    parser.add_argument("command", choices=("prepare", "bootstrap", "close-bootstrap", "rotate-credentials", "restore-check"))
     args = parser.parse_args()
     if not Path(".sops.yaml").exists():
         raise ValueError("run from the repository root")
     actions = {
-        "prepare": prepare, "backup-credentials": backup_credentials,
+        "prepare": prepare,
         "bootstrap": lambda: bootstrap("http://127.0.0.1:18080"),
         "close-bootstrap": close_bootstrap,
         "rotate-credentials": rotate_credentials,
-        "restore-check": restore_check,
+        "restore-check": restore_check.restore_check,
     }
     actions[args.command]()
     print(f"NetBird {args.command} complete; credentials were not printed.")

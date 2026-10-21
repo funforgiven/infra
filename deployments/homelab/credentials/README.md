@@ -25,7 +25,8 @@ nix run .#render-cluster-credentials
 
 Enrollment reads secret values through the supported private input mechanism;
 do not put values in arguments, tracing or terminal output. The renderer updates
-encrypted concrete B2, monitoring, game and media inputs from local enrollment.
+encrypted concrete B2 (Velero and NetBird Barman), monitoring, game and media
+inputs from local enrollment.
 It keeps unrelated app keys and does not contact Kubernetes or a provider.
 Review the resulting ciphertext/file changes before publishing a deployment.
 
@@ -40,8 +41,8 @@ tofu -chdir=components/homelab/providers/identity output -json | \
 Set up the provider backend as described in the
 [providers README](../../../components/homelab/providers/README.md). That
 pipeline does not apply provider changes.
-The renderer requires all eight client ID/secret pairs and updates Forgejo,
-Grafana, media, Wallos, MAS's matching ZITADEL upstream and NetBird's policy
+The renderer requires all seven client ID/secret pairs and updates Forgejo,
+Grafana, media, MAS's matching ZITADEL upstream and NetBird's policy
 inputs. App signing/session material and other MAS upstreams are left
 unchanged. Incomplete outputs fail before decryption or writes.
 

@@ -1,6 +1,5 @@
 """Small, offline helpers for encrypted inputs."""
 import base64
-import os
 from pathlib import Path
 import subprocess
 import yaml
@@ -22,5 +21,13 @@ def save(root,relative,documents):
     temporary.replace(path)
     return True
 
-def secret(name,namespace,data):
-    return {"apiVersion":"v1","kind":"Secret","metadata":{"name":name,"namespace":namespace},"type":"Opaque","stringData":data}
+def decrypt_one(path):
+    """The single document of an encrypted file."""
+    return decrypt(path)[0]
+
+def save_one(relative,document,root=None):
+    """Encrypt one document at a repository-relative path (default: cwd)."""
+    return save(Path.cwd() if root is None else root,relative,[document])
+
+def secret(name,namespace,data,secret_type="Opaque"):
+    return {"apiVersion":"v1","kind":"Secret","metadata":{"name":name,"namespace":namespace},"type":secret_type,"stringData":data}

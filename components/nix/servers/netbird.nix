@@ -4,6 +4,7 @@ _: {
     let
       python = pkgs.python3.withPackages (ps: [ ps.pyyaml ]);
       source = ../../homelab/services/netbird;
+      operations = ../../homelab/operations;
     in
     {
       apps.netbird-admin = {
@@ -15,7 +16,10 @@ _: {
               pkgs.kubectl
               pkgs.sops
             ];
-            text = ''exec ${python}/bin/python ${source}/admin.py "$@"'';
+            text = ''
+              export PYTHONPATH=${operations}
+              exec ${python}/bin/python ${source}/admin.py "$@"
+            '';
           }
         }/bin/netbird-admin";
       };

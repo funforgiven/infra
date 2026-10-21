@@ -97,8 +97,10 @@ kubeconfig; its kubeconfig lives only in memory.
 
 1. Run `nix run .#netbird-admin -- prepare`. This creates SOPS-encrypted runtime
    keys and a local bootstrap credential, keeping existing keys on rerun.
-2. Run `nix run .#matrix-access -- cluster -- nix run .#netbird-admin -- backup-credentials`.
-   It uses the cluster B2 writer only inside its `services/kubernetes/` prefix.
+2. Run `nix run .#render-cluster-credentials`. It writes `server/backup.sops.yaml`
+   from the same B2 writer as Velero (region from
+   `deployments/homelab/credentials/backup-destination.yaml`), used only inside
+   its `services/kubernetes/` prefix.
    NetBird uses the auxiliary `plugins/netbird/postgresql/` child prefix accepted
    by Velero's storage layout; an arbitrary top-level child makes Velero reject
    the entire backup location. It does not use AWS mail credentials.
