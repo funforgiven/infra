@@ -7,8 +7,10 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 
-import yaml
+sys.path.insert(0, str(Path.cwd() / "components/homelab/operations"))
+from encrypted_inputs import decrypt, values  # noqa: E402
 
 
 def main():
@@ -19,9 +21,7 @@ def main():
         "libvirt-tpm:2026.1-swtpm-0.10.1", "cache:13.1.0-isolation.1"])
     args = parser.parse_args()
     destination = "git.fahrican.com/forge-runner/" + args.destination
-    secret = yaml.safe_load(subprocess.run(["sops", "decrypt",
-        "deployments/homelab/cluster/apps/forge/runtime.sops.yaml"],
-        capture_output=True, check=True).stdout)["stringData"]
+    secret = values(decrypt("deployments/homelab/cluster/apps/forge/runtime.sops.yaml")[0])
     authentication = base64.b64encode(("forge-runner:" + secret["forgejo-runner-password"]).encode()).decode()
     descriptor = os.memfd_create("forge-registry-auth", os.MFD_CLOEXEC)
     try:

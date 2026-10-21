@@ -11,11 +11,13 @@ from html.parser import HTMLParser
 import json
 import os
 from pathlib import Path
-import subprocess
+import sys
 import tempfile
 
 import requests
-import yaml
+
+sys.path.insert(0, str(Path.cwd() / "components/homelab/operations"))
+from encrypted_inputs import decrypt, values  # noqa: E402
 
 URL = "https://git.fahrican.com"
 REPOSITORY = "funforgiven/atollion"
@@ -41,8 +43,7 @@ def main():
                         default=Path.home() / ".local/state/atollion-forge")
     args = parser.parse_args()
     os.umask(0o077)
-    encrypted = subprocess.run(["sops", "decrypt", str(RECOVERY)], capture_output=True, check=True).stdout
-    identities = json.loads(yaml.safe_load(encrypted)["stringData"]["identities.json"])
+    identities = json.loads(values(decrypt(RECOVERY)[0])["identities.json"])
     for name in args.identity or IDENTITIES:
         entry = identities[name]
         directory = args.state_directory / name

@@ -34,6 +34,10 @@ python3 components/homelab/services/forge/enroll.py
 python3 components/homelab/services/forge/enroll-runners.py
 ```
 
+`enroll.py` only generates Forgejo's local secrets. The ZITADEL OIDC client
+(`forgejo-oidc-client-{id,secret}`) is written by
+`render-cluster-credentials --identity-outputs-stdin`, with the other OIDC clients.
+
 `runtime.sops.yaml` is excluded from Velero object metadata. Recover it from
 SOPS and the cluster Flux age identity. Application secrets inside native
 recovery archives are protected by Kopia encryption.

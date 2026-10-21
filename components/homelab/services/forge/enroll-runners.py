@@ -15,7 +15,7 @@ import sys
 import requests
 
 sys.path.insert(0, str(Path.cwd() / "components/homelab/operations"))
-from encrypted_inputs import decrypt, save  # noqa: E402
+from encrypted_inputs import decrypt, save, secret  # noqa: E402
 
 ROOT = Path("deployments/homelab/cluster/apps/forge")
 BASE = "https://git.fahrican.com/api/v1"
@@ -61,9 +61,8 @@ def main():
         if repositories:
             options["repositories"] = repositories
         token = call(owner, "POST", "/users/forge-runner/tokens", options)
-        document = {"apiVersion": "v1", "kind": "Secret", "metadata": {"name": name, "namespace": namespace,
-                    "labels": {"velero.io/exclude-from-backup": "true"}},
-                    "type": "Opaque", "stringData": {"token": token["sha1"]}}
+        document = secret(name, namespace, {"token": token["sha1"]})
+        document["metadata"]["labels"] = {"velero.io/exclude-from-backup": "true"}
         if name == "runner-registry":
             document["type"] = "kubernetes.io/dockerconfigjson"
             authentication = base64.b64encode(("forge-runner:" + token["sha1"]).encode()).decode()
