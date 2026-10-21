@@ -11,10 +11,29 @@ import time
 
 import websocket
 
+# Quickshell expires presence after a 45-second lease (PresencePolicy.qml).
+# Refresh well inside it: a renewal waits for the next 10-second pong.
+LEASE_REFRESH = 25
+
 
 def state_value(state):
     value = state.get("state") if isinstance(state, dict) else None
     return value if value in ("on", "off") else "unknown"
+
+
+def entity_update(event, entity):
+    """Return the entity's new state from a subscribe_entities event, if any."""
+    if not isinstance(event, dict):
+        return None
+    if entity in event.get("r", ()):
+        return "unknown"
+    added = event.get("a", {}).get(entity)
+    if isinstance(added, dict):
+        return state_value({"state": added.get("s")})
+    changed = event.get("c", {}).get(entity)
+    if isinstance(changed, dict) and "s" in changed.get("+", {}):
+        return state_value({"state": changed["+"]["s"]})
+    return None
 
 
 def relay(args, publish):
@@ -28,15 +47,23 @@ def relay(args, publish):
         del token
         if json.loads(connection.recv()).get("type") != "auth_ok":
             raise ValueError("Authentication failed")
-        # Subscribe before taking the initial snapshot, so changes during
-        # connection setup cannot be missed. Process messages in wire order.
-        connection.send(json.dumps({"id": 1, "type": "subscribe_events", "event_type": "state_changed"}))
-        connection.send(json.dumps({"id": 2, "type": "get_states"}))
+        # subscribe_entities delivers the entity's current state first and then
+        # only its changes, so no separate snapshot is needed and the startup
+        # race between subscribing and reading cannot drop an update.
+        connection.send(json.dumps({"id": 1, "type": "subscribe_entities", "entity_ids": [args.entity]}))
         state = "unknown"
-        ping_id = 2
+        ping_id = 1
         next_ping = time.monotonic()
         pending_ping = None
+        next_refresh = None
         logging.info("Home Assistant connected")
+
+        def update(value):
+            nonlocal state, next_refresh
+            state = value
+            publish(state)
+            next_refresh = time.monotonic() + LEASE_REFRESH
+
         while True:
             now = time.monotonic()
             if pending_ping is not None and now - pending_ping > 10:
@@ -53,18 +80,20 @@ def relay(args, publish):
             if kind == "result":
                 if not message.get("success"):
                     raise ValueError("Home Assistant request rejected")
-                if message.get("id") == 2:
-                    state = state_value(next((s for s in message["result"] if s["entity_id"] == args.entity), None))
-                    publish(state)
-            elif kind == "event":
-                data = message.get("event", {}).get("data", {})
-                if data.get("entity_id") == args.entity:
-                    state = state_value(data.get("new_state"))
-                    publish(state)
+            elif kind == "event" and message.get("id") == 1:
+                value = entity_update(message.get("event"), args.entity)
+                if value is None and next_refresh is None:
+                    # The first event is the snapshot; a missing entity is unknown.
+                    value = state
+                if value is not None:
+                    update(value)
             elif kind == "pong" and message.get("id") == ping_id:
                 pending_ping = None
                 next_ping = time.monotonic() + 10
-                publish(state)
+                # Only a healthy connection renews Quickshell's presence lease;
+                # changes are published as soon as they arrive.
+                if next_refresh is not None and time.monotonic() >= next_refresh:
+                    update(state)
 
 
 def main():

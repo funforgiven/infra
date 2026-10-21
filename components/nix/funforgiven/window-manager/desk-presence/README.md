@@ -27,8 +27,10 @@ it sends no Home Assistant service commands.
   it, allowing 30 seconds for the presence sensor to catch up.
 - If HA disconnects or the entity becomes unavailable, the ordinary
   120-second input-idle timer takes over. A 45-second lease also expires
-  stale presence if the reader crashes. Healthy connections renew the lease
-  every 10 seconds and resynchronize after Quickshell restarts.
+  stale presence if the reader crashes. The reader subscribes to the one
+  entity, publishes changes immediately and, while the 10-second HA heartbeat
+  is healthy, renews the lease every 25 seconds, which also resynchronizes
+  Quickshell after it restarts.
 
 The one-second swayidle timeout only listens for input resume; it does not
 blank the display. The 120-second timeout tracks the input-idle state.
