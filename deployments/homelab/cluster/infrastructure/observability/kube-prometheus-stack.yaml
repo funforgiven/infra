@@ -108,7 +108,7 @@ spec:
       prometheusSpec:
         replicas: 1
         retention: 15d
-        retentionSize: 18GiB
+        retentionSize: 16GiB
         image:
           sha: 64f71bb84e03c855948418b0fc5dea53e9543d8e3fc9931598f583805507f05e
         externalLabels:

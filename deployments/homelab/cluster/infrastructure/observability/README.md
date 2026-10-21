@@ -7,7 +7,7 @@ declared in [waves/stages.yaml](../../waves/stages.yaml).
 
 | Component | Configuration |
 | --- | --- |
-| Prometheus | One replica, 15 days or 18 GiB retention, 20 GiB `ceph-block` claim |
+| Prometheus | One replica, 15 days or 16 GiB retention, 20 GiB `ceph-block` claim |
 | Alertmanager | One replica, 2 GiB `ceph-block` claim; Telegram and encrypted Matrix delivery |
 | Grafana | Enabled, 10 GiB `ceph-block` claim, ZITADEL OIDC and management HTTPS route |
 | Loki | One monolithic replica, filesystem-backed index/chunks on a 50 GiB `ceph-block` claim |
