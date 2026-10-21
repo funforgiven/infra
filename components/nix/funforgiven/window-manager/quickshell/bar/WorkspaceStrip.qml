@@ -220,11 +220,15 @@ Item {
                                 Accessible.role: Accessible.Button
                                 Accessible.onPressAction: Services.NiriService.focusWindow(windowModel.id)
 
-                                Rectangle {
+                                Components.Surface {
                                     anchors.fill: parent
                                     anchors.margins: 2
-                                    color: windowPointer.pressed ? Shell.Theme.pressedSurface : (windowPointer.containsMouse ? Shell.Theme.hoverSurface : "transparent")
                                     radius: Shell.Theme.radiusSmall
+                                    interactive: true
+                                    hovered: windowPointer.containsMouse
+                                    pressed: windowPointer.pressed
+                                    surfaceColor: "transparent"
+                                    outlineWidth: 0
                                 }
 
                                 Components.AppIcon {

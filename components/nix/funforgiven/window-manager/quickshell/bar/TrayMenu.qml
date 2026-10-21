@@ -419,11 +419,14 @@ PanelWindow { // qmllint disable uncreatable-type
                     implicitHeight: root.headerHeight
                     visible: root.menuStack.length > 0
 
-                    Rectangle {
+                    Components.Surface {
                         anchors.fill: parent
                         anchors.margins: root.visualInset
-                        color: backPointer.containsMouse ? Shell.Theme.hoverSurface : "transparent"
                         radius: Shell.Theme.radiusSmall
+                        interactive: true
+                        hovered: backPointer.containsMouse
+                        surfaceColor: "transparent"
+                        outlineWidth: 0
 
                         RowLayout {
                             anchors.fill: parent
@@ -518,12 +521,16 @@ PanelWindow { // qmllint disable uncreatable-type
                             color: Shell.Theme.border
                         }
 
-                        Rectangle {
+                        Components.Surface {
                             visible: !menuEntryDelegate.modelData.isSeparator
                             anchors.fill: parent
                             anchors.margins: root.visualInset
-                            color: entryPointer.pressed ? Shell.Theme.pressedSurface : ((entryPointer.containsMouse || root.selectedIndex === menuEntryDelegate.index) ? Shell.Theme.hoverSurface : "transparent")
                             radius: Shell.Theme.radiusSmall
+                            interactive: true
+                            hovered: entryPointer.containsMouse || root.selectedIndex === menuEntryDelegate.index
+                            pressed: entryPointer.pressed
+                            surfaceColor: "transparent"
+                            outlineWidth: 0
 
                             RowLayout {
                                 anchors.fill: parent

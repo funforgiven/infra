@@ -19,8 +19,8 @@ Item {
     readonly property bool hovered: dockPointer.containsMouse
     readonly property bool pressed: !pending && dockPointer.pressed
     readonly property int instanceCount: appGroup.windows.length
-    readonly property color stateColor: errorText.length > 0 || urgent ? Shell.Theme.error : Shell.Theme.systemAccent
-    readonly property color tileColor: errorText.length > 0 || urgent ? Shell.Theme.errorSurface : (focused ? Shell.Theme.selectedSurface : (pressed ? Shell.Theme.pressedSurface : (hovered ? Shell.Theme.hoverSurface : "transparent")))
+    readonly property bool alerting: errorText.length > 0 || urgent
+    readonly property color stateColor: alerting ? Shell.Theme.error : Shell.Theme.systemAccent
 
     implicitWidth: 56
     implicitHeight: 56
@@ -50,19 +50,16 @@ Item {
             }
         }
 
-        Rectangle {
+        Components.Surface {
             anchors.fill: parent
-            color: root.tileColor
-            radius: Shell.Theme.radiusMedium
-            border.color: root.errorText.length > 0 || root.urgent || root.focused ? root.stateColor : "transparent"
-            border.width: root.errorText.length > 0 || root.urgent || root.focused ? Shell.Theme.outlineWidth : 0
-
-            Behavior on color {
-                ColorAnimation {
-                    duration: Shell.Theme.animationFast
-                    easing.type: Shell.Theme.easingStandard
-                }
-            }
+            interactive: !root.alerting
+            hovered: root.hovered
+            pressed: root.pressed
+            selected: root.focused
+            accent: root.stateColor
+            surfaceColor: root.alerting ? Shell.Theme.errorSurface : "transparent"
+            outlineColor: root.alerting ? root.stateColor : "transparent"
+            outlineWidth: root.alerting || root.focused ? Shell.Theme.outlineWidth : 0
         }
 
         Components.AppIcon {
@@ -130,7 +127,7 @@ Item {
         }
 
         Rectangle {
-            visible: root.errorText.length > 0 || root.urgent
+            visible: root.alerting
             anchors.left: parent.left
             anchors.top: parent.top
             anchors.margins: 5

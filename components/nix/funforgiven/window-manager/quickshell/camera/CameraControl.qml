@@ -96,12 +96,15 @@ ColumnLayout {
         spacing: Shell.Theme.spacingXSmall
         Repeater {
             model: root.control.options || []
-            delegate: CameraAction {
+            delegate: Components.ActionButton {
                 id: optionButton
                 required property var modelData
                 Layout.fillWidth: true
                 Layout.preferredWidth: 1
-                implicitHeight: Shell.Theme.controlCompactSize
+                compact: true
+                variant: "text"
+                radius: Shell.Theme.radiusSmall
+                checkable: true
                 text: root.optionLabel(optionButton.modelData)
                 checked: root.control.value === optionButton.modelData.value
                 tooltipText: optionButton.modelData.label

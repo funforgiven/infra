@@ -8,7 +8,10 @@ Item {
     id: root
 
     property string text: ""
-    property string symbol: ""
+    property string subtitle: ""
+    property url iconSource
+    property string tooltipText: ""
+    property real radius: Shell.Theme.radiusPill
     property color accent: Shell.Theme.systemAccent
     property string variant: "tonal"
     property bool compact: false
@@ -38,7 +41,7 @@ Item {
     signal clicked
 
     implicitWidth: Math.max(compact ? Shell.Theme.controlCompactSize : 64, content.implicitWidth + Shell.Theme.spacingMedium * 2)
-    implicitHeight: compact ? Shell.Theme.controlCompactSize : Shell.Theme.controlSize
+    implicitHeight: subtitle.length > 0 ? 66 : (compact ? Shell.Theme.controlCompactSize : Shell.Theme.controlSize)
     activeFocusOnTab: enabled
     scale: pressed ? Shell.Theme.pressedScale : 1
     opacity: enabled ? 1 : Shell.Theme.disabledOpacity
@@ -98,7 +101,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: Shell.Theme.radiusPill
+        radius: root.radius
         color: root.backgroundColor
         border.width: root.checked && root.variant !== "filled" ? Shell.Theme.outlineWidth : 0
         border.color: root.accent
@@ -117,29 +120,40 @@ Item {
         anchors.centerIn: parent
         spacing: Shell.Theme.spacingSmall
 
-        Text {
-            visible: root.symbol.length > 0
-            text: root.symbol
-            color: root.contentColor
-            font.family: Shell.Theme.sansFont
-            font.pixelSize: Shell.Theme.iconMediumSize
-            font.weight: Font.DemiBold
+        SemanticIcon {
+            visible: root.iconSource.toString().length > 0
+            source: root.iconSource
+            Layout.preferredWidth: Shell.Theme.iconMediumSize
+            Layout.preferredHeight: Shell.Theme.iconMediumSize
+            checked: root.checked
         }
 
-        Text {
+        ColumnLayout {
             visible: root.text.length > 0
-            text: root.text
-            color: root.contentColor
-            font.family: Shell.Theme.sansFont
-            font.pixelSize: Shell.Theme.labelFontSize
-            font.weight: Font.DemiBold
+            spacing: Shell.Theme.spacingXSmall
+
+            Text {
+                text: root.text
+                color: root.contentColor
+                font.family: Shell.Theme.sansFont
+                font.pixelSize: Shell.Theme.labelFontSize
+                font.weight: Font.DemiBold
+            }
+
+            Text {
+                visible: root.subtitle.length > 0
+                text: root.subtitle
+                color: Shell.Theme.secondaryText
+                font.family: Shell.Theme.sansFont
+                font.pixelSize: Shell.Theme.captionFontSize
+            }
         }
     }
 
     FocusRing {
         active: root.activeFocus
         accent: root.variant === "danger" ? Shell.Theme.error : root.accent
-        ringRadius: Shell.Theme.radiusPill
+        ringRadius: root.radius
     }
 
     MouseArea {
@@ -151,5 +165,10 @@ Item {
         cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
         acceptedButtons: Qt.LeftButton
         onClicked: root.clicked()
+    }
+
+    Tooltip {
+        visible: root.hovered && root.tooltipText.length > 0
+        text: root.tooltipText
     }
 }

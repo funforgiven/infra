@@ -225,16 +225,18 @@ Scope {
                         spacing: Shell.Theme.spacingXSmall
                         Repeater {
                             model: root.sections
-                            delegate: CameraAction {
+                            delegate: Components.ActionButton {
                                 id: tab
                                 required property var modelData
                                 required property int index
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 1
+                                variant: "text"
+                                radius: Shell.Theme.radiusSmall
                                 text: tab.modelData.label
-                                icon: tab.modelData.icon
+                                iconSource: root.icon(tab.modelData.icon)
+                                checkable: true
                                 checked: root.section === tab.index
-                                tooltipText: ""
                                 onClicked: root.section = tab.index
                             }
                         }
@@ -245,7 +247,7 @@ Scope {
                     Layout.fillWidth: true
                     visible: text.length > 0
                     text: root.camera.error || root.camera.state.error || root.camera.state.profileError || root.camera.state.settingsError || ""
-                    color: Shell.Theme.error
+                    color: Shell.Theme.errorText
                     font.family: Shell.Theme.sansFont
                     font.pixelSize: Shell.Theme.captionFontSize
                     wrapMode: Text.WordWrap
@@ -273,11 +275,11 @@ Scope {
                             Layout.fillWidth: true
                             visible: !root.camera.awake
                             implicitHeight: 80
-                            CameraAction {
+                            Components.ActionButton {
                                 anchors.centerIn: parent
+                                radius: Shell.Theme.radiusSmall
                                 text: root.camera.state.connected === true ? "Wake camera" : "Camera disconnected"
-                                icon: root.camera.state.connected === true ? "power" : "webcam"
-                                filled: true
+                                iconSource: root.icon(root.camera.state.connected === true ? "power" : "webcam")
                                 enabled: root.camera.state.connected === true && !root.camera.busy
                                 onClicked: root.camera.request("wake")
                             }
@@ -421,19 +423,21 @@ Scope {
                                             anchors.fill: parent
                                             anchors.rightMargin: Shell.Theme.spacingXSmall
                                             spacing: 0
-                                            CameraAction {
+                                            Components.ActionButton {
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
+                                                variant: "text"
+                                                radius: Shell.Theme.radiusSmall
                                                 text: ({
                                                         call: "Normal call",
                                                         close: "Close-up",
                                                         standing: "Wide standing"
                                                     })[preset.modelData.id] || preset.modelData.label
-                                                icon: ({
+                                                iconSource: root.icon(({
                                                         call: "video",
                                                         close: "user-round",
                                                         standing: "person-standing"
-                                                    })[preset.modelData.id] || "video"
+                                                    })[preset.modelData.id] || "video")
                                                 subtitle: preset.modelData.saved ? "Recall" : "Not saved"
                                                 tooltipText: "Recall framing and image settings"
                                                 enabled: root.camera.awake && preset.modelData.saved === true && !root.camera.busy

@@ -9,7 +9,6 @@ Item {
 
     readonly property bool hovered: pointer.containsMouse
     readonly property bool pressed: pointer.pressed
-    readonly property color tileColor: Launcher.Launcher.opened ? Shell.Theme.selectedSurface : (pressed ? Shell.Theme.pressedSurface : (hovered ? Shell.Theme.hoverSurface : "transparent"))
 
     implicitWidth: 56
     implicitHeight: 56
@@ -34,19 +33,15 @@ Item {
             }
         }
 
-        Rectangle {
+        Components.Surface {
             anchors.fill: parent
-            radius: Shell.Theme.radiusMedium
-            color: root.tileColor
-            border.width: Launcher.Launcher.opened ? Shell.Theme.outlineWidth : 0
-            border.color: Shell.Theme.systemAccent
-
-            Behavior on color {
-                ColorAnimation {
-                    duration: Shell.Theme.animationFast
-                    easing.type: Shell.Theme.easingStandard
-                }
-            }
+            interactive: true
+            hovered: root.hovered
+            pressed: root.pressed
+            selected: Launcher.Launcher.opened
+            surfaceColor: "transparent"
+            outlineColor: "transparent"
+            outlineWidth: Launcher.Launcher.opened ? Shell.Theme.outlineWidth : 0
         }
 
         Components.SemanticIcon {

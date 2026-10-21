@@ -12,7 +12,6 @@ Item {
     required property var parentWindow
 
     readonly property var menuItem: trayMenu.currentItem
-    readonly property Item menuAnchorItem: trayMenu.anchorItem
 
     implicitWidth: trayRow.implicitWidth
     implicitHeight: Shell.Theme.controlCompactSize
@@ -29,10 +28,6 @@ Item {
 
     function clearMenuForAnchor(anchorItem) {
         trayMenu.dismissForAnchor(anchorItem);
-    }
-
-    function dismissMenu() {
-        trayMenu.dismiss();
     }
 
     TrayMenu {
@@ -86,19 +81,15 @@ Item {
                         trayDelegate.trayItem.activate();
                 }
 
-                Rectangle {
+                Components.Surface {
                     anchors.fill: parent
-                    color: trayDelegate.needsAttention ? Shell.Theme.errorSurface : (trayPointer.pressed ? Shell.Theme.pressedSurface : (trayPointer.containsMouse ? Shell.Theme.hoverSurface : "transparent"))
                     radius: Shell.Theme.radiusSmall
-                    border.color: trayDelegate.needsAttention ? Shell.Theme.error : "transparent"
-                    border.width: trayDelegate.needsAttention ? Shell.Theme.outlineWidth : 0
-
-                    Behavior on color {
-                        ColorAnimation {
-                            duration: Shell.Theme.animationFast
-                            easing.type: Shell.Theme.easingStandard
-                        }
-                    }
+                    interactive: !trayDelegate.needsAttention
+                    hovered: trayPointer.containsMouse
+                    pressed: trayPointer.pressed
+                    surfaceColor: trayDelegate.needsAttention ? Shell.Theme.errorSurface : "transparent"
+                    outlineColor: trayDelegate.needsAttention ? Shell.Theme.error : "transparent"
+                    outlineWidth: trayDelegate.needsAttention ? Shell.Theme.outlineWidth : 0
                 }
 
                 IconImage {
