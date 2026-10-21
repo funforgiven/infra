@@ -105,6 +105,9 @@ spec:
     - podSelector:
         matchLabels:
           app.kubernetes.io/name: matrix-postgres
+    - podSelector:
+        matchLabels:
+          cnpg.io/cluster: matrix-postgres
     ports:
     - protocol: TCP
       port: 5432
@@ -151,6 +154,9 @@ spec:
     - podSelector:
         matchLabels:
           app.kubernetes.io/name: matrix-postgres
+    - podSelector:
+        matchLabels:
+          cnpg.io/cluster: matrix-postgres
     ports:
     - protocol: TCP
       port: 5432
@@ -207,6 +213,9 @@ spec:
     - podSelector:
         matchLabels:
           app.kubernetes.io/name: matrix-postgres
+    - podSelector:
+        matchLabels:
+          cnpg.io/cluster: matrix-postgres
     ports:
     - protocol: TCP
       port: 5432
@@ -287,6 +296,9 @@ spec:
     - podSelector:
         matchLabels:
           app.kubernetes.io/name: matrix-postgres
+    - podSelector:
+        matchLabels:
+          cnpg.io/cluster: matrix-postgres
     ports:
     - protocol: TCP
       port: 5432
@@ -346,3 +358,65 @@ spec:
     ports:
     - protocol: TCP
       port: 9000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: matrix-database
+  namespace: matrix
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: matrix-postgres
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-synapse
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-mas
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-backup
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: matrix-postgres
+    - podSelector:
+        matchLabels:
+          cnpg.io/cluster: matrix-postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: cnpg-system
+    ports:
+    - protocol: TCP
+      port: 8000
+    - protocol: TCP
+      port: 5432
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: services-observability
+    ports:
+    - protocol: TCP
+      port: 9187
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          cnpg.io/cluster: matrix-postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  - ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 6443

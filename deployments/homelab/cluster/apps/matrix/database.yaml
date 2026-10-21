@@ -1,0 +1,71 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: matrix-postgres
+  namespace: matrix
+spec:
+  instances: 3
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.4-standard-trixie@sha256:f0cc49632b5cc1e51f65ba03658c89bd31d64ea2672b14843a808a8d281417e1
+  primaryUpdateStrategy: unsupervised
+  inheritedMetadata:
+    labels:
+      app.kubernetes.io/part-of: matrix
+      # The logical dumps are the backup; Velero skips the live data directories.
+      velero.io/exclude-from-backup: "true"
+  bootstrap:
+    initdb:
+      database: synapse
+      owner: synapse
+      secret:
+        name: matrix-postgres-synapse
+      encoding: UTF8
+      localeCollate: C
+      localeCType: C
+  managed:
+    roles:
+    - name: synapse
+      login: true
+      passwordSecret:
+        name: matrix-postgres-synapse
+    - name: mas
+      login: true
+      passwordSecret:
+        name: matrix-postgres-mas
+  storage:
+    storageClass: ceph-block
+    size: 20Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 2Gi
+  affinity:
+    enablePodAntiAffinity: true
+    podAntiAffinityType: required
+    topologyKey: kubernetes.io/hostname
+  postgresql:
+    synchronous:
+      method: any
+      number: 1
+      dataDurability: required
+      failoverQuorum: true
+    parameters:
+      # Leave disk headroom when an offline replica retains WAL.
+      max_slot_wal_keep_size: 4GB
+  monitoring:
+    enablePodMonitor: true
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: matrix-mas
+  namespace: matrix
+spec:
+  name: mas
+  owner: mas
+  cluster:
+    name: matrix-postgres
+  encoding: UTF8
+  localeCollate: C
+  localeCType: C

@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: matrix-postgres-synapse
+    namespace: matrix
+    labels:
+        velero.io/exclude-from-backup: "true"
+        cnpg.io/reload: "true"
+type: kubernetes.io/basic-auth
+stringData:
+    username: ENC[AES256_GCM,data:TnZBeJRT0w==,iv:vBD2mxIYZiOWFKEZgKlsZWr7ezM/pYIGPyHMhk9lkbU=,tag:QVibJSgEGK9qUho2WrGgSw==,type:str]
+    password: ENC[AES256_GCM,data:uz0ACmLs/XbX3N5seO+95EuPRBVoP7ZorjYlxQYn3pOF2YVkMI/FUBp8DnkOgphb7CPOksiw/sc8dn537H2CJQ==,iv:2dYBPky44tPK3Cd2xpXENwAarySjVPueP0LyGBUoUPM=,tag:vqyxuLZJLzr+ia0DoSUK1Q==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA3TEtUc3RZaTUraEhwNXhm
+            OWhKbVdPYndTalZvcXltUmZDb0plVVdBWTNZCk4vUEtMYTFERUdrNWxVQVRXV3Yw
+            alNuTzdhWUJ0VVloWTF4WDBZVzhCZm8KLS0tIEpZQlE3TWhYUElMMjU0NlRUVGNO
+            d2hkeFJteHVJWnJraVc3c1hkQzEwaDgKDkEtbMikr3FlN4QAw/WaR8WTVjZ9u1T+
+            tKDerk+SdherfVsS1vs5LuSGPzdRWl491RsnvLplqVL2oFvW2+AvtQ==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA5bDRZZWJEUEFnUmVmRmcr
+            MHdMaEUva2dJbjY1WC8wdTQ3MUc4SEZJUDJjCjhhTjl6b2M3bU9MT0pNdTEyZnIv
+            UGZieWU2UzlMMmJxeW8zVjB0dHF4amsKLS0tIGtwbEc1YVZBZWRNem1vYTcxUitO
+            M1lVY3VFMlNXYldqL1drcGRhaXNHeVkKzW6V7+Pnbvd4v8Mim/xKFIMK7vf7RVDo
+            r9vmK7aw76y1y9A0Jgwe+UMQjkONFGHCmm/dIJ/S4OYD7dsPzLwA8g==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age10n9tyln0hwpdmxpe90af6kwtzrplgp9kq6qy58mnak4mugjcwy6s8w4es7
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-10-21T21:37:14Z"
+    mac: ENC[AES256_GCM,data:uKMRHzQG9tUo2qxk8a6l2x7mMT+VdJ7VBmijy/rnRUAeqwMoMXkKt+1nBz6R6yIypQGLpB8oEAHp+3h+j0qa/JyCoJGK8grgVfby4bmexdHnSEIGdOHGRJ3F5X/35QNtJtnCSaX/f5VoLfv1gcQ8veuf7G95lSS3gLNTn3P63X4=,iv:1PTQBlUvZYnUmPgCLtsMtl8IAxjc6nBWF4EsxlvaPYY=,tag:ENg117LYVDnBOQ3yH8RjOA==,type:str]
+    version: 3.13.3
+---
+apiVersion: v1
+kind: Secret
+metadata:
+    name: matrix-postgres-mas
+    namespace: matrix
+    labels:
+        velero.io/exclude-from-backup: "true"
+        cnpg.io/reload: "true"
+type: kubernetes.io/basic-auth
+stringData:
+    username: ENC[AES256_GCM,data:UY9h,iv:xbr0KpDFXUcJJ5GlOx6GaDlzXy01ro1Fnu0pMOHNUNs=,tag:MlJUDxxsDpAQw2yo21VgHA==,type:str]
+    password: ENC[AES256_GCM,data:fVq5H2W4XJATRMaQBaDIVGUJMR7WOVb7/OgRs3PWme+0PvUNHC2/Kx3hI/vqeyp1WAnSo/2CcB2qaVyZBnNRCQ==,iv:hGjOE4pElCeoEFTV/DTR4ZvVltgdm30acRGaDv2Kh/Q=,tag:5YyJHMVwp5INuZzEdPlXig==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA3TEtUc3RZaTUraEhwNXhm
+            OWhKbVdPYndTalZvcXltUmZDb0plVVdBWTNZCk4vUEtMYTFERUdrNWxVQVRXV3Yw
+            alNuTzdhWUJ0VVloWTF4WDBZVzhCZm8KLS0tIEpZQlE3TWhYUElMMjU0NlRUVGNO
+            d2hkeFJteHVJWnJraVc3c1hkQzEwaDgKDkEtbMikr3FlN4QAw/WaR8WTVjZ9u1T+
+            tKDerk+SdherfVsS1vs5LuSGPzdRWl491RsnvLplqVL2oFvW2+AvtQ==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age14xx2n9unst4zc02lt26fxez8hg9ke44hrwefm3c9w79fap29mpuqu26eea
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA5bDRZZWJEUEFnUmVmRmcr
+            MHdMaEUva2dJbjY1WC8wdTQ3MUc4SEZJUDJjCjhhTjl6b2M3bU9MT0pNdTEyZnIv
+            UGZieWU2UzlMMmJxeW8zVjB0dHF4amsKLS0tIGtwbEc1YVZBZWRNem1vYTcxUitO
+            M1lVY3VFMlNXYldqL1drcGRhaXNHeVkKzW6V7+Pnbvd4v8Mim/xKFIMK7vf7RVDo
+            r9vmK7aw76y1y9A0Jgwe+UMQjkONFGHCmm/dIJ/S4OYD7dsPzLwA8g==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age10n9tyln0hwpdmxpe90af6kwtzrplgp9kq6qy58mnak4mugjcwy6s8w4es7
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-10-21T21:37:14Z"
+    mac: ENC[AES256_GCM,data:uKMRHzQG9tUo2qxk8a6l2x7mMT+VdJ7VBmijy/rnRUAeqwMoMXkKt+1nBz6R6yIypQGLpB8oEAHp+3h+j0qa/JyCoJGK8grgVfby4bmexdHnSEIGdOHGRJ3F5X/35QNtJtnCSaX/f5VoLfv1gcQ8veuf7G95lSS3gLNTn3P63X4=,iv:1PTQBlUvZYnUmPgCLtsMtl8IAxjc6nBWF4EsxlvaPYY=,tag:ENg117LYVDnBOQ3yH8RjOA==,type:str]
+    version: 3.13.3

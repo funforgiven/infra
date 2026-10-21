@@ -10,6 +10,8 @@ resources:
 - restore-policy.yaml
 - monitoring.yaml
 - runtime.sops.yaml
+- database.sops.yaml
+- database.yaml
 - email.sops.yaml
 - restore.yaml
 - registry.sops.yaml
