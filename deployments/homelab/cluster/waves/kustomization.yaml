@@ -23,17 +23,8 @@ patches:
         provider: sops
         secretRef:
           name: sops-age
-# Health means serving with one node lost: replicated workloads may run one
-# replica short, Ceph may warn, and single-replica workloads must be up.
-- target:
-    group: kustomize.toolkit.fluxcd.io
-    kind: Kustomization
-  patch: |
-    apiVersion: kustomize.toolkit.fluxcd.io/v1
-    kind: Kustomization
-    metadata:
-      name: all
-    spec:
+      # Health means serving with one node lost: replicated workloads may run one
+      # replica short, Ceph may warn, and single-replica workloads must be up.
       healthCheckExprs:
       # Stages only label nodes; a node being down is not a deployment failure.
       - apiVersion: v1
