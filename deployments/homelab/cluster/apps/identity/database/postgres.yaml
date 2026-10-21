@@ -9,11 +9,7 @@ spec:
   primaryUpdateStrategy: unsupervised
   bootstrap:
     recovery:
-      source: migration-source
-      recoveryTarget:
-        backupID: 20261012T192825
-        targetLSN: 48/F741A818
-        targetTLI: '2'
+      source: backup
       database: zitadel
       owner: zitadel
       secret:
@@ -49,10 +45,13 @@ spec:
     isWALArchiver: true
     parameters:
       barmanObjectName: zitadel-postgres-backup
+      # A rebuilt cluster cannot archive into a non-empty folder: bump this name
+      # and point the backup cluster below at the previous one.
+      serverName: zitadel-postgres
   externalClusters:
-  - name: migration-source
+  - name: backup
     plugin:
       name: barman-cloud.cloudnative-pg.io
       parameters:
-        barmanObjectName: zitadel-migration-source
+        barmanObjectName: zitadel-postgres-backup
         serverName: zitadel-postgres
