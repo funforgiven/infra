@@ -29,7 +29,8 @@ Scope {
 
     readonly property int appRevision: Services.AppService.revision
     readonly property var applications: Services.AppService.launcherApplications(appRevision)
-    readonly property var results: LauncherModel.filterApplications(applications, query)
+    readonly property var searchIndex: LauncherModel.prepareApplications(applications)
+    readonly property var results: LauncherModel.filterApplications(searchIndex, query)
     readonly property var selectedScreen: configuredScreen()
     readonly property var pendingDesktopIds: Services.AppService.pendingDesktopIds
     readonly property string pendingDesktopId: pendingDesktopIds.length > 0 ? pendingDesktopIds[0] : ""

@@ -68,3 +68,14 @@ test("pointer selection requires deliberate movement", () => {
     assert.equal(LauncherModel.pointerMovedEnough({ x: 10, y: 10 }, { x: 14, y: 13 }, 5), true);
     assert.equal(LauncherModel.pointerMovedEnough(null, { x: 20, y: 20 }, 5), false);
 });
+
+test("prepared search indexes rank exactly like raw application lists", () => {
+    const index = LauncherModel.prepareApplications(applications);
+    for (const query of ["", "fire", "studio code", "vsc", "network", "  FOOT ", "zzz"]) {
+        assert.deepEqual(
+            LauncherModel.filterApplications(index, query),
+            LauncherModel.filterApplications(applications, query)
+        );
+    }
+    assert.deepEqual(LauncherModel.filterApplications(index, "f", 2).map(entry => entry.name), ["Files", "Firefox"]);
+});
