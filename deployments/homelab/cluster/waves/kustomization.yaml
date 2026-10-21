@@ -30,19 +30,25 @@ patches:
       - apiVersion: v1
         kind: Node
         current: 'true'
+      # Rollouts must finish (every replica on the new template, no old pods
+      # left); only availability may run one replica short.
       - apiVersion: apps/v1
         kind: Deployment
         current: >-
           has(status.observedGeneration) && status.observedGeneration == metadata.generation &&
-          (spec.replicas == 0 || (has(status.updatedReplicas) && has(status.availableReplicas) &&
-          status.updatedReplicas >= (spec.replicas > 1 ? spec.replicas - 1 : 1) &&
+          (spec.replicas == 0 || (has(status.replicas) && has(status.updatedReplicas) && has(status.availableReplicas) &&
+          status.updatedReplicas == spec.replicas && status.replicas == status.updatedReplicas &&
           status.availableReplicas >= (spec.replicas > 1 ? spec.replicas - 1 : 1)))
+      # OnDelete StatefulSets (Forgejo) roll only when an operator deletes the pod.
       - apiVersion: apps/v1
         kind: StatefulSet
         current: >-
           has(status.observedGeneration) && status.observedGeneration == metadata.generation &&
           (spec.replicas == 0 || (has(status.availableReplicas) &&
-          status.availableReplicas >= (spec.replicas > 1 ? spec.replicas - 1 : 1)))
+          status.availableReplicas >= (spec.replicas > 1 ? spec.replicas - 1 : 1) &&
+          (spec.updateStrategy.type == 'OnDelete' || (has(status.updatedReplicas) &&
+          has(status.currentRevision) && has(status.updateRevision) &&
+          status.updatedReplicas == spec.replicas && status.currentRevision == status.updateRevision))))
       - apiVersion: apps/v1
         kind: DaemonSet
         current: >-
