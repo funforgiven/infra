@@ -110,7 +110,7 @@ def run(api, job_name, template):
         # creation. UID and owner checks make the eventual cleanup fail closed.
         resources.append((API_PREFIX, name))
         api.request('POST', API_PREFIX, {'apiVersion': 'snapshot.storage.k8s.io/v1', 'kind': 'VolumeSnapshot',
-                    'metadata': metadata, 'spec': {'volumeSnapshotClassName': 'forge-online-backup',
+                    'metadata': metadata, 'spec': {'volumeSnapshotClassName': 'ceph-block-snapshot',
                     'source': {'persistentVolumeClaimName': 'forgejo-data'}}})
         snapshot = wait_for(api, API_PREFIX + '/' + name, lambda s: s.get('status', {}).get('readyToUse') is True)
         captured = int(datetime.datetime.fromisoformat(snapshot['status']['creationTime'].replace('Z', '+00:00')).timestamp())

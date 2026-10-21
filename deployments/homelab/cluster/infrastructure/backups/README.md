@@ -4,8 +4,11 @@ Velero backs up the single homelab cluster with Kopia filesystem backups. The po
 covers the `backup-qualification`, `forge`, `games`, `home-automation`, `matrix`, `media`, and
 `services-databases` namespaces. The application backup policy uses filesystem copies. Forgejo separately uses
 temporary local direct-CSI snapshots to create portable recovery archives.
-Separate daily CSI data-movement schedules export monitoring history and the
-Beets/AudioMuse dump claims to Backblaze, including claims with no running Pod.
+Separate daily CSI data-movement schedules in `data-movement.yaml` export
+monitoring history, the Beets/AudioMuse dump claims and the trial Forgejo and
+home automation volumes to Backblaze, including claims with no running Pod.
+They snapshot through `ceph-block-snapshot`, the RBD class Velero selects by its
+`velero.io/csi-volumesnapshot-class` label.
 
 ## Schedules
 
@@ -158,14 +161,14 @@ velero restore create <restore-name> \
   --include-cluster-resources=false \
   --namespace-mappings media:media-restore \
   --exclude-resources httproutes.gateway.networking.k8s.io,services,cronjobs.batch,jobs.batch \
-  --resource-modifier-configmap media-restore-modifiers \
+  --resource-modifier-configmap isolated-restore-modifiers \
   --wait
 velero restore describe <restore-name> --details
 velero restore logs <restore-name>
 kubectl -n media-restore get pvc,pods
 ```
 
-`media-restore-modifiers` removes every media PVC's production
+`isolated-restore-modifiers` removes every restored PVC's production
 `spec.volumeName`, allowing direct Ceph CSI to provision isolated volumes.
 Inspect representative audio and application files. Mount the restored
 `audiomuse-postgres-dumps` PVC in a disposable PostgreSQL 15 environment, run
@@ -180,8 +183,8 @@ order, and reopen routes only after application-native integrity checks pass.
 
 ## Alerts and limits
 
-The backup controller alerts on a failed scheduled backup and on the absence of
-a successful daily backup for 26 hours. This policy adds:
+The backup controller alerts on a failed scheduled backup and on any schedule
+without a recent success (`VeleroScheduleBackupStale`). This policy adds:
 
 - `ServicesRestoreQualificationFailed`, after a restore-check Job has failed
   for 15 minutes;

@@ -105,11 +105,16 @@ spec:
           for: 15m
           labels:
             severity: critical
-        - alert: VeleroNoRecentBackup
+        # Every schedule is daily except *-weekly ones; both get a two-hour
+        # grace. A schedule that never succeeded since Velero started has
+        # attempt counters but no success timestamp.
+        - alert: VeleroScheduleBackupStale
           annotations:
-            summary: No successful daily services-cluster backup exists within 26 hours.
-          expr: ((time() - velero_backup_last_successful_timestamp{ schedule="services-daily"}) > (26
-            * 3600)) or absent(velero_backup_last_successful_timestamp{ schedule="services-daily"})
+            summary: Velero schedule {{ $labels.schedule }} has no successful backup within its interval.
+          expr: >-
+            (time() - velero_backup_last_successful_timestamp{schedule!="", schedule!~".+-weekly"} > 26 * 3600)
+            or (time() - velero_backup_last_successful_timestamp{schedule=~".+-weekly"} > (7 * 24 + 2) * 3600)
+            or (velero_backup_attempt_total{schedule!=""} unless on (schedule) velero_backup_last_successful_timestamp)
           for: 1h
           labels:
             severity: critical

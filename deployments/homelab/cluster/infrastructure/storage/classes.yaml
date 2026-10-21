@@ -39,3 +39,18 @@ parameters:
 allowVolumeExpansion: true
 reclaimPolicy: Retain
 volumeBindingMode: Immediate
+---
+# Default RBD snapshot class for Velero CSI data movement; Velero selects it by
+# the label for every rook-ceph.rbd.csi.ceph.com volume.
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: ceph-block-snapshot
+  labels:
+    velero.io/csi-volumesnapshot-class: "true"
+driver: rook-ceph.rbd.csi.ceph.com
+deletionPolicy: Delete
+parameters:
+  clusterID: rook-ceph
+  csi.storage.k8s.io/snapshotter-secret-name: rook-csi-rbd-provisioner
+  csi.storage.k8s.io/snapshotter-secret-namespace: rook-ceph

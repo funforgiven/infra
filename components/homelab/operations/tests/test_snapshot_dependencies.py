@@ -8,7 +8,7 @@ from validate import require_snapshot_support
 
 class SnapshotDependencies(unittest.TestCase):
     def objects(self):
-        result = {("VolumeSnapshotClass", "", "forge-online-backup"): {"kind": "VolumeSnapshotClass"},
+        result = {("VolumeSnapshotClass", "", "ceph-block-snapshot"): {"kind": "VolumeSnapshotClass"},
                   ("Deployment", "kube-system", "snapshot-controller"): {"kind": "Deployment"},
                   ("HelmRelease", "rook-ceph", "ceph-csi-drivers"): {"kind": "HelmRelease", "spec": {"values": {"drivers": {"rbd": {"snapshotPolicy": "volumeSnapshot"}}}}}}
         for kind in ["volumesnapshots", "volumesnapshotcontents", "volumesnapshotclasses"]:

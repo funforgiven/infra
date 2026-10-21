@@ -57,8 +57,9 @@ The Helm release installs two critical alerts:
 
 - `VeleroBackupFailed` fires when a scheduled backup reports a non-success
   status for 15 minutes.
-- `VeleroNoRecentBackup` fires when `services-daily` has no successful backup
-  within 26 hours, after a one-hour delay.
+- `VeleroScheduleBackupStale` fires, after a one-hour delay, when any schedule
+  has no successful backup within 26 hours (8 days for `*-weekly` schedules),
+  or has attempted backups without a success since Velero started.
 
 Velero metrics, node-agent metrics, and these rules are selected by the
 Prometheus stack.
