@@ -72,7 +72,7 @@ PVC and are included in application recovery archives.
 
 Run from the repository root with a cluster kubeconfig and Python that
 provides **PyYAML, requests and websocket-client**. `kubectl` and `sops` must be
-available on PATH (or supplied with `--kubectl` and `--sops`).
+available on PATH (`kubectl` may instead be supplied with `--kubectl`).
 
 ```sh
 python3 deployments/homelab/cluster/apps/home-automation/dashboard/install.py \

@@ -5,25 +5,24 @@ import argparse
 import json
 from pathlib import Path
 import re
-import subprocess
+import sys
 from urllib.parse import urlsplit
 
 import requests
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[5] / 'components/homelab/operations'))
+from encrypted_inputs import decrypt  # noqa: E402
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--sops', default='sops')
     parser.add_argument('--ha-credentials', default='secrets/home-assistant.yaml')
     parser.add_argument('--midi-credentials', default='secrets/home-assistant-midi.yaml')
     args = parser.parse_args()
 
-    def decrypt(path):
-        return yaml.safe_load(subprocess.check_output([args.sops, '-d', path]))
-
-    ha = decrypt(args.ha_credentials)['home_assistant']
-    webhooks = json.loads(decrypt(args.midi_credentials)['home_midi']['webhooks'])
+    ha = decrypt(args.ha_credentials)[0]['home_assistant']
+    webhooks = json.loads(decrypt(args.midi_credentials)[0]['home_midi']['webhooks'])
     replacements = {}
     for action, marker in [('loft-light', '__LOFT_LIGHT_WEBHOOK_ID__'),
                            ('loft-airflow', '__LOFT_AIRFLOW_WEBHOOK_ID__')]:

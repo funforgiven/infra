@@ -14,12 +14,16 @@ import json
 from pathlib import Path
 import re
 import subprocess
+import sys
 
 import requests
 import websocket
 import yaml
 
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT.parents[5] / 'components/homelab/operations'))
+from encrypted_inputs import decrypt  # noqa: E402
+
 URL_PATH = 'dashboard-rooftrollen'
 
 
@@ -28,15 +32,13 @@ def main():
     parser.add_argument('--kubeconfig', required=True)
     parser.add_argument('--credentials', default='secrets/home-assistant.yaml')
     parser.add_argument('--kubectl', default='kubectl')
-    parser.add_argument('--sops', default='sops')
     parser.add_argument('--set-user-default', action='store_true', help='Open Rooftrollen by default for this user and follow system light/dark mode')
     args = parser.parse_args()
 
     config = yaml.safe_load((ROOT / 'dashboard.yaml').read_text())
     theme = yaml.safe_load((ROOT / 'theme.yaml').read_text())
     assets = json.loads((ROOT / 'assets.json').read_text())
-    credentials = yaml.safe_load(subprocess.check_output(
-        [args.sops, '-d', args.credentials]))['home_assistant']
+    credentials = decrypt(args.credentials)[0]['home_assistant']
     url = credentials['url'].rstrip('/')
     http = requests.Session()
     http.headers['Authorization'] = 'Bearer ' + credentials['long_lived_token']
