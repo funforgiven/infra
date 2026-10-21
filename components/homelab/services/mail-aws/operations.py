@@ -9,6 +9,7 @@ import datetime as dt
 import email
 from email import policy
 import fcntl
+import functools
 import hashlib
 import json
 import os
@@ -102,6 +103,7 @@ class JmapClient:
         return self.request(url)
 
 
+@functools.cache
 def client(service):
     import boto3
     from botocore.config import Config
