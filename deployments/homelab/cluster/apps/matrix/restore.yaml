@@ -16,321 +16,73 @@ data:
         path: /spec/volumeName
     - conditions:
         groupResource: pods
-        resourceNameRegex: ^matrix-dumps-0$
+        resourceNameRegex: ^matrix-(dumps|synapse|relay)-0$
         namespaces:
         - matrix
       patches:
       - operation: test
         path: /spec/initContainers/0/name
         value: restore-wait
-      - operation: move
-        from: /spec/initContainers/0
-        path: /matrixRestoreHelper
-      - operation: replace
-        path: /spec
-        value: |-
-          {
-            "automountServiceAccountToken": false,
-            "restartPolicy": "Never",
-            "imagePullSecrets": [
-              {
-                "name": "matrix-registry"
-              }
-            ],
-            "affinity": {
-              "podAffinity": {
-                "requiredDuringSchedulingIgnoredDuringExecution": [
-                  {
-                    "topologyKey": "kubernetes.io/hostname",
-                    "labelSelector": {
-                      "matchLabels": {
-                        "matrix.fahrican.com/restore-cohort": "matrix"
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            "securityContext": {
-              "fsGroup": 1000,
-              "seccompProfile": {
-                "type": "RuntimeDefault"
-              }
-            },
-            "containers": [
-              {
-                "name": "restore-sleeper",
-                "image": "git.fahrican.com/forge-runner/matrix-runtime:1.0.0@sha256:9a2085fccc6c24252b545f0a1899542cf315d02c91d78171d389594753e8ddcc",
-                "command": [
-                  "sleep",
-                  "infinity"
-                ],
-                "securityContext": {
-                  "runAsNonRoot": true,
-                  "runAsUser": 1000,
-                  "runAsGroup": 1000,
-                  "allowPrivilegeEscalation": false,
-                  "readOnlyRootFilesystem": true,
-                  "capabilities": {
-                    "drop": [
-                      "ALL"
-                    ]
-                  }
-                },
-                "resources": {
-                  "requests": {
-                    "cpu": "10m",
-                    "memory": "32Mi"
-                  },
-                  "limits": {
-                    "memory": "128Mi"
-                  }
-                },
-                "volumeMounts": [
-                  {
-                    "name": "dumps",
-                    "mountPath": "/recovery"
-                  }
-                ]
-              }
-            ],
-            "volumes": [
-              {
-                "name": "dumps",
-                "persistentVolumeClaim": {
-                  "claimName": "matrix-dumps"
-                }
-              },
-              {
-                "name": "tmp",
-                "emptyDir": {}
-              }
-            ],
-            "initContainers": []
-          }
-      - operation: move
-        from: /matrixRestoreHelper
-        path: /spec/initContainers/0
-      - operation: add
-        path: /metadata/labels/matrix.fahrican.com~1restore-cohort
-        value: '"matrix"'
-      - operation: add
-        path: /metadata/annotations
-        value: '{}'
-      - operation: add
-        path: /metadata/ownerReferences
-        value: '[]'
-      - operation: add
-        path: /spec/initContainers/0/securityContext
-        value: '{"runAsNonRoot": true, "runAsUser": 1000, "runAsGroup": 1000, "allowPrivilegeEscalation":
-          false, "readOnlyRootFilesystem": true, "capabilities": {"drop": ["ALL"]}}'
-    - conditions:
-        groupResource: pods
-        resourceNameRegex: ^matrix-synapse-0$
-        namespaces:
-        - matrix
-      patches:
       - operation: test
-        path: /spec/initContainers/0/name
-        value: restore-wait
-      - operation: move
-        from: /spec/initContainers/0
-        path: /matrixRestoreHelper
-      - operation: replace
-        path: /spec
-        value: |-
-          {
-            "automountServiceAccountToken": false,
-            "restartPolicy": "Never",
-            "imagePullSecrets": [
-              {
-                "name": "matrix-registry"
-              }
-            ],
-            "affinity": {
-              "podAffinity": {
-                "requiredDuringSchedulingIgnoredDuringExecution": [
-                  {
-                    "topologyKey": "kubernetes.io/hostname",
-                    "labelSelector": {
-                      "matchLabels": {
-                        "matrix.fahrican.com/restore-cohort": "matrix"
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            "securityContext": {
-              "fsGroup": 1000,
-              "seccompProfile": {
-                "type": "RuntimeDefault"
-              }
-            },
-            "containers": [
-              {
-                "name": "restore-sleeper",
-                "image": "git.fahrican.com/forge-runner/matrix-runtime:1.0.0@sha256:9a2085fccc6c24252b545f0a1899542cf315d02c91d78171d389594753e8ddcc",
-                "command": [
-                  "sleep",
-                  "infinity"
-                ],
-                "securityContext": {
-                  "runAsNonRoot": true,
-                  "runAsUser": 1000,
-                  "runAsGroup": 1000,
-                  "allowPrivilegeEscalation": false,
-                  "readOnlyRootFilesystem": true,
-                  "capabilities": {
-                    "drop": [
-                      "ALL"
-                    ]
-                  }
-                },
-                "resources": {
-                  "requests": {
-                    "cpu": "10m",
-                    "memory": "32Mi"
-                  },
-                  "limits": {
-                    "memory": "128Mi"
-                  }
-                },
-                "volumeMounts": [
-                  {
-                    "name": "media",
-                    "mountPath": "/recovery"
-                  }
-                ]
-              }
-            ],
-            "volumes": [
-              {
-                "name": "media",
-                "persistentVolumeClaim": {
-                  "claimName": "matrix-media"
-                }
-              },
-              {
-                "name": "tmp",
-                "emptyDir": {}
-              }
-            ],
-            "initContainers": []
-          }
-      - operation: move
-        from: /matrixRestoreHelper
-        path: /spec/initContainers/0
-      - operation: add
-        path: /metadata/labels/matrix.fahrican.com~1restore-cohort
-        value: '"matrix"'
-      - operation: add
-        path: /metadata/annotations
-        value: '{}'
-      - operation: add
-        path: /metadata/ownerReferences
-        value: '[]'
-      - operation: add
-        path: /spec/initContainers/0/securityContext
-        value: '{"runAsNonRoot": true, "runAsUser": 1000, "runAsGroup": 1000, "allowPrivilegeEscalation":
-          false, "readOnlyRootFilesystem": true, "capabilities": {"drop": ["ALL"]}}'
-    - conditions:
-        groupResource: pods
-        resourceNameRegex: ^matrix-relay-0$
-        namespaces:
-        - matrix
-      patches:
+        path: /spec/volumes/1/name
+        value: runtime
       - operation: test
-        path: /spec/initContainers/0/name
-        value: restore-wait
-      - operation: move
-        from: /spec/initContainers/0
-        path: /matrixRestoreHelper
+        path: /spec/volumes/2/name
+        value: scripts
+      - operation: remove
+        path: /spec/volumes/2
+      - operation: remove
+        path: /spec/volumes/1
       - operation: replace
-        path: /spec
+        path: /spec/containers
         value: |-
-          {
-            "automountServiceAccountToken": false,
-            "restartPolicy": "Never",
-            "imagePullSecrets": [
-              {
-                "name": "matrix-registry"
-              }
-            ],
-            "affinity": {
-              "podAffinity": {
-                "requiredDuringSchedulingIgnoredDuringExecution": [
-                  {
-                    "topologyKey": "kubernetes.io/hostname",
-                    "labelSelector": {
-                      "matchLabels": {
-                        "matrix.fahrican.com/restore-cohort": "matrix"
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            "securityContext": {
-              "fsGroup": 1000,
-              "seccompProfile": {
-                "type": "RuntimeDefault"
-              }
-            },
-            "containers": [
-              {
-                "name": "restore-sleeper",
-                "image": "git.fahrican.com/forge-runner/matrix-runtime:1.0.0@sha256:9a2085fccc6c24252b545f0a1899542cf315d02c91d78171d389594753e8ddcc",
-                "command": [
-                  "sleep",
-                  "infinity"
-                ],
-                "securityContext": {
-                  "runAsNonRoot": true,
-                  "runAsUser": 1000,
-                  "runAsGroup": 1000,
-                  "allowPrivilegeEscalation": false,
-                  "readOnlyRootFilesystem": true,
-                  "capabilities": {
-                    "drop": [
-                      "ALL"
-                    ]
-                  }
-                },
-                "resources": {
-                  "requests": {
-                    "cpu": "10m",
-                    "memory": "32Mi"
-                  },
-                  "limits": {
-                    "memory": "128Mi"
-                  }
-                },
-                "volumeMounts": [
-                  {
-                    "name": "state",
-                    "mountPath": "/recovery"
-                  }
-                ]
-              }
-            ],
-            "volumes": [
-              {
-                "name": "state",
-                "persistentVolumeClaim": {
-                  "claimName": "matrix-relay"
+          [
+            {
+              "name": "restore-sleeper",
+              "image": "git.fahrican.com/forge-runner/matrix-runtime:1.0.0@sha256:9a2085fccc6c24252b545f0a1899542cf315d02c91d78171d389594753e8ddcc",
+              "command": [
+                "sleep",
+                "infinity"
+              ],
+              "securityContext": {
+                "runAsNonRoot": true,
+                "runAsUser": 1000,
+                "runAsGroup": 1000,
+                "allowPrivilegeEscalation": false,
+                "readOnlyRootFilesystem": true,
+                "capabilities": {
+                  "drop": [
+                    "ALL"
+                  ]
                 }
               },
-              {
-                "name": "tmp",
-                "emptyDir": {}
-              }
-            ],
-            "initContainers": []
-          }
-      - operation: move
-        from: /matrixRestoreHelper
-        path: /spec/initContainers/0
+              "resources": {
+                "requests": {
+                  "cpu": "10m",
+                  "memory": "32Mi"
+                },
+                "limits": {
+                  "memory": "128Mi"
+                }
+              },
+              "volumeMounts": [
+                {
+                  "mountPath": "/recovery"
+                }
+              ]
+            }
+          ]
+      - operation: copy
+        from: /spec/volumes/1/name
+        path: /spec/containers/0/volumeMounts/0/name
+      - operation: add
+        path: /spec/restartPolicy
+        value: Never
+      - operation: add
+        path: /spec/affinity
+        value: '{"podAffinity": {"requiredDuringSchedulingIgnoredDuringExecution": [{"topologyKey":
+          "kubernetes.io/hostname", "labelSelector": {"matchLabels": {"matrix.fahrican.com/restore-cohort":
+          "matrix"}}}]}}'
       - operation: add
         path: /metadata/labels/matrix.fahrican.com~1restore-cohort
         value: '"matrix"'

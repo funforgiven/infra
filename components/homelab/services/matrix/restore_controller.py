@@ -8,6 +8,14 @@ import time
 import uuid
 from pathlib import Path
 
+# Restored workloads, the claims they mount and where the verifier reads them.
+WORKLOADS = {
+    "matrix-dumps": ("matrix-dumps", "dumps", "/var/lib/matrix/dumps"),
+    "matrix-synapse": ("matrix-media", "media", "/var/lib/matrix/media"),
+    "matrix-relay": ("matrix-relay", "state", "/var/lib/matrix/relay"),
+}
+PODS = [workload + "-0" for workload in WORKLOADS]
+
 
 def run(argv, data=None):
     return subprocess.run(
@@ -89,8 +97,8 @@ def main():
         ]
     )
     for resource, names in (
-        ("pods", ["matrix-dumps-0", "matrix-synapse-0", "matrix-relay-0"]),
-        ("pvc", ["matrix-dumps", "matrix-media", "matrix-relay"]),
+        ("pods", PODS),
+        ("pvc", [claim for claim, _, _ in WORKLOADS.values()]),
     ):
         run(
             ["-n", "matrix-restore", "delete", resource]
@@ -115,11 +123,7 @@ def main():
                         {
                             "key": "app.kubernetes.io/name",
                             "operator": "In",
-                            "values": [
-                                "matrix-dumps",
-                                "matrix-synapse",
-                                "matrix-relay",
-                            ],
+                            "values": list(WORKLOADS),
                         }
                     ]
                 },
@@ -146,16 +150,8 @@ def main():
         raise ValueError("isolated restore timed out")
     # All restored sleepers co-locate so RWO attachments are shared safely.
     run(
-        [
-            "-n",
-            "matrix-restore",
-            "wait",
-            "--for=condition=Ready",
-            "pod/matrix-dumps-0",
-            "pod/matrix-synapse-0",
-            "pod/matrix-relay-0",
-            "--timeout=15m",
-        ]
+        ["-n", "matrix-restore", "wait", "--for=condition=Ready", "--timeout=15m"]
+        + ["pod/" + pod for pod in PODS]
     )
     source_pod = get("matrix", "pod", "matrix-synapse-0")
     image = source_pod["spec"]["containers"][0]["image"]
@@ -215,23 +211,21 @@ def main():
                             },
                             "volumeMounts": [
                                 {"name": name, "mountPath": path, "readOnly": True}
-                                for name, path in (
-                                    ("dumps", "/var/lib/matrix/dumps"),
-                                    ("media", "/var/lib/matrix/media"),
-                                    ("state", "/var/lib/matrix/relay"),
-                                    ("scripts", "/scripts"),
-                                )
+                                for _, name, path in WORKLOADS.values()
+                            ]
+                            + [
+                                {
+                                    "name": "scripts",
+                                    "mountPath": "/scripts",
+                                    "readOnly": True,
+                                }
                             ]
                             + [{"name": "tmp", "mountPath": "/tmp"}],
                         }
                     ],
                     "volumes": [
                         {"name": name, "persistentVolumeClaim": {"claimName": claim}}
-                        for name, claim in (
-                            ("dumps", "matrix-dumps"),
-                            ("media", "matrix-media"),
-                            ("state", "matrix-relay"),
-                        )
+                        for claim, name, _ in WORKLOADS.values()
                     ]
                     + [
                         {

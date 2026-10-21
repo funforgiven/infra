@@ -2,6 +2,7 @@ import copy
 import datetime
 import importlib.util
 import json
+import re
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -18,7 +19,7 @@ class RestoreContractTests(unittest.TestCase):
     def test_inert_verifiers_preserve_all_filesystem_helper_mounts(self):
         docs=list(yaml.safe_load_all((MATRIX/'restore.yaml').read_text()))
         rules=yaml.safe_load(docs[0]['data']['resource-modifiers.yaml'])['resourceModifierRules']
-        workloads=[x for x in yaml.safe_load_all((MATRIX/'workloads.yaml').read_text()) if x and x['kind']=='StatefulSet' and x['metadata']['name'] in ['matrix-dumps','matrix-synapse','matrix-relay']]
+        workloads=[x for x in yaml.safe_load_all((MATRIX/'workloads.yaml').read_text()) if x and x['kind']=='StatefulSet' and x['metadata']['name'] in controller.WORKLOADS]
         self.assertEqual(len(workloads),3)
         for workload in workloads:
             name=workload['metadata']['name']+'-0'
@@ -29,7 +30,7 @@ class RestoreContractTests(unittest.TestCase):
                 self.assertIn('tmp',selected)
                 helper={'name':'restore-wait','image':'velero/velero:v1.18.2','args':['restore-helper'],'env':[{'name':'POD_UID','value':'disposable-test-uid'}],'volumeMounts':[{'name':v,'mountPath':'/restores/'+v} for v in selected]}
                 pod['spec']['initContainers']=[copy.deepcopy(helper)]+pod['spec'].get('initContainers',[])
-                rule=next(x for x in rules if x['conditions'].get('resourceNameRegex')=='^'+name+'$')
+                rule=next(x for x in rules if x['conditions'].get('resourceNameRegex') and re.fullmatch(x['conditions']['resourceNameRegex'],name))
                 patches=[]
                 for item in rule['patches']:
                     operation={'op':item['operation'],'path':item['path']}
@@ -45,6 +46,13 @@ class RestoreContractTests(unittest.TestCase):
                 actual=copy.deepcopy(restored['spec']['initContainers'][0]);actual.pop('securityContext',None)
                 self.assertEqual(actual,helper)
                 self.assertEqual([c['command'] for c in restored['spec']['containers']],[['sleep','infinity']])
+                self.assertEqual(restored['spec']['restartPolicy'],'Never')
+                claims={x['persistentVolumeClaim']['claimName'] for x in restored['spec']['volumes'] if 'persistentVolumeClaim' in x}
+                self.assertEqual(claims,{controller.WORKLOADS[workload['metadata']['name']][0]})
+                self.assertFalse(any(set(x).intersection({'secret','configMap','projected'}) for x in restored['spec']['volumes']))
+                recovery=restored['spec']['containers'][0]['volumeMounts']
+                self.assertEqual([x['mountPath'] for x in recovery],['/recovery'])
+                self.assertEqual(next(x for x in restored['spec']['volumes'] if x['name']==recovery[0]['name'])['persistentVolumeClaim']['claimName'],controller.WORKLOADS[workload['metadata']['name']][0])
                 self.assertFalse(restored['spec']['automountServiceAccountToken'])
                 self.assertFalse(restored['spec'].get('hostNetwork',False))
                 self.assertEqual(restored['spec']['initContainers'][0]['securityContext']['runAsUser'],1000)
