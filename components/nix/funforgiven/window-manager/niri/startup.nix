@@ -1,7 +1,6 @@
 _: {
   home.gui =
     {
-      config,
       lib,
       pkgs,
       ...
@@ -10,8 +9,7 @@ _: {
       chatLayout = pkgs.writeShellApplication {
         name = "niri-chat-layout";
         text = ''
-          exec ${lib.getExe pkgs.python3} ${./chat-layout.py} \
-            --niri ${lib.getExe config.programs.niri.package} "$@"
+          exec ${lib.getExe pkgs.python3} ${./chat-layout.py} "$@"
         '';
       };
 

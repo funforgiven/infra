@@ -72,5 +72,50 @@ class StartupWindowsTest(unittest.TestCase):
             self.wait([], timeout=0)
 
 
+def placed(window_id, column, row, focused=False):
+    return {"id": window_id, "workspace_id": 7, "is_focused": focused,
+            "layout": {"pos_in_scrolling_layout": [column, row]}}
+
+
+class ArrangeTest(unittest.TestCase):
+    def test_arranges_through_one_connection_and_restores_focus(self):
+        windows = [placed(4, 1, 2), placed(3, 1, 1), placed(8, 2, 1, focused=True)]
+        sent = []
+
+        def request(message):
+            sent.append(message)
+            if message == "Workspaces":
+                return {"Workspaces": [{"name": "chat", "is_focused": True, "output": "DP-1", "idx": 2}]}
+            if message == "Windows":
+                return {"Windows": windows}
+            return "Handled"
+
+        layout.arrange(request, "chat", 4, 3)
+        actions = [next(iter(m["Action"].items())) for m in sent if isinstance(m, dict)]
+        self.assertEqual(actions, [
+            ("MoveWindowToWorkspace", {"window_id": 4, "reference": {"Name": "chat"}, "focus": False}),
+            ("MoveWindowToTiling", {"id": 4}),
+            ("MoveWindowToWorkspace", {"window_id": 3, "reference": {"Name": "chat"}, "focus": False}),
+            ("MoveWindowToTiling", {"id": 3}),
+            ("FocusWindow", {"id": 4}),
+            ("MoveWindowUp", {}),
+            ("SetColumnDisplay", {"display": "Normal"}),
+            ("SetColumnWidth", {"change": {"SetProportion": 100.0}}),
+            ("ResetWindowHeight", {"id": 4}),
+            ("ResetWindowHeight", {"id": 3}),
+            ("FocusWindow", {"id": 8}),
+        ])
+
+    def test_missing_workspace_and_errors_are_reported(self):
+        with self.assertRaisesRegex(RuntimeError, "missing"):
+            layout.arrange(lambda _: {"Workspaces": []}, "chat", 4, 3)
+        niri = layout.Niri.__new__(layout.Niri)
+        niri.stream = io.StringIO('{"Err":"No such window"}\n')
+        niri.stream.flush = lambda: None
+        with patch.object(niri.stream, "write"):
+            with self.assertRaisesRegex(RuntimeError, "No such window"):
+                niri.request({"Action": {"FocusWindow": {"id": 1}}})
+
+
 if __name__ == "__main__":
     unittest.main()
