@@ -3,6 +3,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: forgejo-data
   namespace: forge
+  labels:
+    backup.fahrican.com/forge-volume: "true"
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 spec:

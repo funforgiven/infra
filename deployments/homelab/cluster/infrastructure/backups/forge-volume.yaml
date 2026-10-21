@@ -1,0 +1,43 @@
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: forge-volume
+  namespace: velero
+  annotations:
+    velero.io/csi-volumesnapshot-class_rook-ceph.rbd.csi.ceph.com: observability-history
+spec:
+  paused: false
+  schedule: 0 5 * * *
+  useOwnerReferencesInBackup: false
+  template:
+    storageLocation: default
+    ttl: 720h
+    includedNamespaces:
+    - forge
+    includedResources:
+    - persistentvolumeclaims
+    - persistentvolumes
+    labelSelector:
+      matchLabels:
+        backup.fahrican.com/forge-volume: "true"
+    snapshotVolumes: true
+    snapshotMoveData: true
+    defaultVolumesToFsBackup: false
+    itemOperationTimeout: 4h
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: forge-volume-backup
+  namespace: services-observability
+spec:
+  groups:
+  - name: forge-volume-backup
+    rules:
+    - alert: ForgeVolumeBackupStale
+      expr: (time() - velero_backup_last_successful_timestamp{schedule="forge-volume"} > 93600) or absent(velero_backup_last_successful_timestamp{schedule="forge-volume"})
+      for: 1h
+      labels:
+        severity: critical
+      annotations:
+        summary: No successful offsite Forgejo volume backup within 26 hours.

@@ -15,6 +15,7 @@ Beets/AudioMuse dump claims to Backblaze, including claims with no running Pod.
 | `services-weekly` | 03:15 UTC every Sunday (`15 3 * * 0`) | 2160 hours (90 days) | Weekly application backup |
 | `observability-history` | 03:45 UTC every day (`45 3 * * *`) | 720 hours (30 days) | CSI snapshots exported to B2 for Prometheus, Loki, Grafana and Alertmanager |
 | `media-passive-state` | 04:15 UTC every day (`15 4 * * *`) | 720 hours (30 days) | CSI snapshots exported to B2 for the Beets catalog and native AudioMuse dumps |
+| `forge-volume` | 05:00 UTC every day (`0 5 * * *`) | 720 hours (30 days) | CSI snapshot of the live Forgejo data volume exported to B2; on trial alongside the archive exports |
 | `restore-qualification` | `0 7 1 * *`, `Europe/Istanbul` | Latest restored namespace remains until the next run | Monthly B2 restore test |
 
 The Velero controller runs the backup schedules in UTC.
