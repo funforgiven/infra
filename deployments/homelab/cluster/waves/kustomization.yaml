@@ -23,3 +23,18 @@ patches:
         provider: sops
         secretRef:
           name: sops-age
+# Degraded mode while pecorino is offline: stages count as ready once applied,
+# because full rollouts and three-way quorum cannot be reached. Delete this patch
+# when all three nodes are back.
+- target:
+    group: kustomize.toolkit.fluxcd.io
+    kind: Kustomization
+  patch: |
+    apiVersion: kustomize.toolkit.fluxcd.io/v1
+    kind: Kustomization
+    metadata:
+      name: all
+    spec:
+      wait: false
+      healthChecks: null
+      healthCheckExprs: null
