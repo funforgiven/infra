@@ -10,12 +10,11 @@ import gzip
 import json
 import re
 from pathlib import Path
-import subprocess
-import sys
 
 import jsonschema
 import yaml
-yaml.SafeLoader.add_constructor("tag:yaml.org,2002:value", lambda loader, node: loader.construct_scalar(node))
+
+from manifests import decrypted_objects, entrypoints as rendered_entrypoints, helm_template, key, release_values, render, verify_vendors
 
 def strict(schema):
     if not isinstance(schema,dict):return
@@ -42,16 +41,6 @@ def omit_null_fields(value):
     if isinstance(value, list):
         return [omit_null_fields(item) for item in value]
     return value
-
-def merge(left,right):
-    for key,value in right.items():
-        if isinstance(value,dict) and isinstance(left.get(key),dict):merge(left[key],value)
-        else:left[key]=value
-
-def render(kustomize,path):
-    result=subprocess.run([kustomize,"build","--load-restrictor","LoadRestrictionsNone",str(path)],capture_output=True)
-    if result.returncode:raise ValueError("Kustomize build failed: "+str(path))
-    return [d for d in yaml.safe_load_all(result.stdout) if d]
 
 def require_bounded_postgres_wal(objects):
     """Keep an offline replica's WAL budget within half its storage volume."""
@@ -90,11 +79,7 @@ def validate(root,kustomize,helm_cache=None,decrypt=False,helm="helm"):
     for definition in bundle["definitions"].values():strict(definition)
     for schema in bundle["schemas"].values():strict(schema)
     validators={key:jsonschema.Draft7Validator({"allOf":[schema],"definitions":bundle["definitions"]}) for key,schema in bundle["schemas"].items()}
-    import hashlib
-    vendors = json.loads((root/'deployments/homelab/validation/vendors.json').read_text())
-    for entry in vendors['files']:
-        if hashlib.sha256((root/entry['file']).read_bytes()).hexdigest() != entry['localSHA256']:
-            raise ValueError('vendored manifest checksum mismatch: ' + entry['file'])
+    verify_vendors(root)
     failures=[]
     checked=0
     def check(document,source):
@@ -122,14 +107,11 @@ def validate(root,kustomize,helm_cache=None,decrypt=False,helm="helm"):
                     if isinstance(item,dict) and all(key in item for key in ["apiVersion","kind","metadata"]):check(item,source+" embedded "+name)
     all_objects={}
     entrypoints=[]
-    for path in sorted((root/"deployments/homelab").rglob("kustomization.yaml")):
-        if "routeros" in path.parts:continue
-        source=str(path.parent.relative_to(root))
-        objects=render(kustomize,path.parent)
+    for source,objects in rendered_entrypoints(root,kustomize):
         entrypoints.append(source)
         for document in objects:
             check(document,source)
-            all_objects[(document["kind"],document["metadata"].get("namespace",""),document["metadata"]["name"])]=document
+            all_objects[key(document)]=document
     waves=[document for document in render(kustomize,root/"deployments/homelab/cluster") if document["kind"]=="Kustomization" and document["metadata"]["name"]!="flux-system"]
     graph={d["metadata"]["name"]:[dep["name"] for dep in d["spec"].get("dependsOn",[])] for d in waves}
     def visit(name,ancestors=()):
@@ -159,37 +141,12 @@ def validate(root,kustomize,helm_cache=None,decrypt=False,helm="helm"):
     helm_count=0
     if helm_cache:
         charts=json.loads((helm_cache/"charts.json").read_text())
-        secrets={}
-        if decrypt:
-            sys.path.insert(0,str(root/"components/homelab/operations"))
-            from encrypted_inputs import decrypt as open_encrypted,values
-            for path in (root/"deployments/homelab/cluster").rglob("*.sops.yaml"):
-                for d in open_encrypted(path):
-                    if d.get("kind") in ["Secret","ConfigMap"]:secrets[(d["kind"],d["metadata"].get("namespace",""),d["metadata"]["name"])]=d
-        releases=[d for d in all_objects.values() if d["kind"]=="HelmRelease"]
-        for release in releases:
-            namespace=release["metadata"]["namespace"]
+        secrets=decrypted_objects(root) if decrypt else None
+        for release in [d for d in all_objects.values() if d["kind"]=="HelmRelease"]:
             name=release["metadata"]["name"]
-            chart=charts[namespace+"/"+name]
-            config={}
-            for reference in release["spec"].get("valuesFrom",[]):
-                key=(reference["kind"],namespace,reference["name"])
-                d=secrets.get(key,all_objects.get(key))
-                if d is None and reference.get("optional"):continue
-                if d is None:raise ValueError("Missing valuesFrom resource for "+name)
-                if d.get("sops"):raise ValueError("Use --decrypt to validate encrypted Helm values")
-                if d["kind"]=="Secret":
-                    if not decrypt:raise ValueError("Use --decrypt to validate Secret Helm values")
-                    payload=values(d)[reference.get("valuesKey","values.yaml")]
-                else:payload=d["data"][reference.get("valuesKey","values.yaml")]
-                if reference.get("targetPath"):raise ValueError("Explicit targetPath support required")
-                merge(config,yaml.safe_load(payload) or {})
-            merge(config,release["spec"].get("values",{}))
-            cmd=[helm,"template",release["spec"].get("releaseName",name),chart["path"],"--namespace",namespace,"--kube-version","1.36.4","--include-crds","--values","/dev/stdin","--api-versions","monitoring.coreos.com/v1","--api-versions","monitoring.coreos.com/v1/ServiceMonitor","--api-versions","monitoring.coreos.com/v1/PodMonitor"]
-            result=subprocess.run(cmd,input=yaml.safe_dump(config).encode(),capture_output=True)
-            if result.returncode:raise ValueError("Helm render failed for "+name+"; diagnostics suppressed")
-            for document in yaml.safe_load_all(result.stdout):
-                if document:check(document,"Helm "+name);helm_count+=1
+            chart=charts[release["metadata"]["namespace"]+"/"+name]
+            for document in helm_template(helm,release,chart["path"],release_values(release,all_objects,secrets)):
+                check(document,"Helm "+name);helm_count+=1
     for failure in sorted(set(failures)):print(failure)
     print(json.dumps({"entrypoints":len(entrypoints),"fluxStages":len(graph),"validatedResources":checked,"helmResources":helm_count,"failures":len(failures)}))
     return 1 if failures else 0

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Fetch only public pinned upstream sources; decrypted Helm values stay in memory."""
 from pathlib import Path
-import argparse, concurrent.futures, gzip, hashlib, io, json, os, re, subprocess, sys, tarfile
+import argparse, concurrent.futures, gzip, hashlib, io, json, re, subprocess, tarfile
 import requests, yaml
 from helm_values_schema import derived_chart
-yaml.SafeLoader.add_constructor('tag:yaml.org,2002:value', lambda loader, node: loader.construct_scalar(node))
+from manifests import KUBE_VERSION, decrypted_objects, entrypoints as rendered_entrypoints, helm_template, key, release_values, verify_vendors
 
 
 def main():
@@ -19,8 +19,6 @@ def main():
     cache.mkdir(parents=True, exist_ok=True)
     kustomize=args.kustomize
     helm=args.helm
-    sys.path.insert(0,str(root/'components/homelab/operations'))
-    from encrypted_inputs import decrypt, values
 
     def fetch(url):
         digest=hashlib.sha256(url.encode()).hexdigest()
@@ -62,25 +60,16 @@ def main():
         assert 'sha256:'+hashlib.sha256(payload).hexdigest()==layer['digest']
         return unpack(payload,cache/(layer['digest'].removeprefix('sha256:')+'.chart')), {'url':source['spec']['url'],'ref':digest,'archiveSHA256':hashlib.sha256(payload).hexdigest()}
 
-    vendors = json.loads((root/'deployments/homelab/validation/vendors.json').read_text())
-    for entry in vendors['files']:
-        if hashlib.sha256((root/entry['file']).read_bytes()).hexdigest() != entry['localSHA256']:
-            raise ValueError('vendored manifest checksum mismatch: ' + entry['file'])
+    vendors=verify_vendors(root)
 
     native=[]
     entrypoints=[]
-    for path in sorted((root/'deployments/homelab').rglob('kustomization.yaml')):
-        if 'routeros' in path.parts: continue
-        result=subprocess.run([kustomize,'build','--load-restrictor','LoadRestrictionsNone',str(path.parent)],capture_output=True,check=True)
-        documents=[d for d in yaml.safe_load_all(result.stdout) if d]
-        entrypoints.append({'path':str(path.parent.relative_to(root)),'resources':len(documents)})
+    for path,documents in rendered_entrypoints(root,kustomize):
+        entrypoints.append({'path':path,'resources':len(documents)})
         native.extend(documents)
-    objects={(d['kind'],d['metadata'].get('namespace',''),d['metadata']['name']):d for d in native}
+    objects={key(d):d for d in native}
     releases=[d for d in objects.values() if d['kind']=='HelmRelease']
-    decrypted={}
-    for path in (root/'deployments/homelab/cluster').rglob('*.sops.yaml'):
-        for d in decrypt(path):
-            if d.get('kind') in ['Secret','ConfigMap']: decrypted[(d['kind'],d['metadata'].get('namespace',''),d['metadata']['name'])]=d
+    decrypted=decrypted_objects(root)
 
     def chart(release):
         spec=release['spec'];namespace=release['metadata']['namespace']
@@ -130,31 +119,13 @@ def main():
             charts.append((release,path,provenance))
             print('Fetched pinned chart '+release['metadata']['name'],flush=True)
 
-    def merge(left,right):
-        for k,v in right.items():
-            if isinstance(v,dict) and isinstance(left.get(k),dict): merge(left[k],v)
-            else:left[k]=v
-
     rendered=[]
     chart_map={}
     for release,path,provenance in charts:
         path, schema_changes = derived_chart(path, cache, fetch)
         if schema_changes:
             provenance["offlineValuesSchemas"] = schema_changes
-        config={}
-        for reference in release['spec'].get('valuesFrom',[]):
-            key=(reference['kind'],release['metadata']['namespace'],reference['name'])
-            d=decrypted.get(key,objects.get(key))
-            if d is None and reference.get('optional'):continue
-            if d is None:raise ValueError('Missing valuesFrom object: '+str(key))
-            payload=values(d)[reference.get('valuesKey','values.yaml')] if d['kind']=='Secret' else d['data'][reference.get('valuesKey','values.yaml')]
-            if reference.get('targetPath'):raise ValueError('Explicit targetPath support required')
-            merge(config,yaml.safe_load(payload) or {})
-        merge(config,release['spec'].get('values',{}))
-        cmd=[helm,'template',release['spec'].get('releaseName',release['metadata']['name']),str(path),'--namespace',release['metadata']['namespace'],'--kube-version','1.36.4','--include-crds','--values','/dev/stdin','--api-versions','monitoring.coreos.com/v1','--api-versions','monitoring.coreos.com/v1/ServiceMonitor','--api-versions','monitoring.coreos.com/v1/PodMonitor']
-        result=subprocess.run(cmd,input=yaml.safe_dump(config).encode(),capture_output=True)
-        if result.returncode:raise RuntimeError('Helm render failed for '+release['metadata']['name']+' (diagnostics suppressed)')
-        documents=[d for d in yaml.safe_load_all(result.stdout) if d]
+        documents=helm_template(helm,release,path,release_values(release,objects,decrypted))
         rendered.extend(documents)
         chart_map[release['metadata']['namespace']+'/'+release['metadata']['name']]={'path':str(path),'source':provenance,'renderedResources':len(documents)}
         print('Rendered '+release['metadata']['name']+': '+str(len(documents))+' resources',flush=True)
@@ -168,7 +139,7 @@ def main():
     kv_swagger_path=kv/'api/openapi-spec/swagger.json'
     kv_swagger=json.loads(kv_swagger_path.read_text())
 
-    swagger_url='https://raw.githubusercontent.com/kubernetes/kubernetes/v1.36.4/api/openapi-spec/swagger.json'
+    swagger_url='https://raw.githubusercontent.com/kubernetes/kubernetes/v'+KUBE_VERSION+'/api/openapi-spec/swagger.json'
     swagger=json.loads(fetch(swagger_url))
     schemas={}
     for name,definition in swagger['definitions'].items():
