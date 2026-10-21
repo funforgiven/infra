@@ -255,6 +255,43 @@ class GatewayTests(unittest.TestCase):
             self.store.prune(6)
         self.assertFalse(self.store.archive(identity).exists()); self.assertEqual(outside.read_text(), "preserve")
 
+    def test_upload_streams_outside_store_lock_and_keeps_its_range_exclusive(self):
+        identity = self.reserve()
+        connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=5)
+        connection.putrequest("PATCH", "/" + self.cap + gateway.API + f"/caches/{identity}")
+        connection.putheader("Transfer-Encoding", "chunked"); connection.putheader("Content-Range", "bytes 0-5/*")
+        connection.endheaders(); connection.send(b"3\r\nabc\r\n")
+        deadline = time.monotonic() + 5
+        while not self.store.uploading and time.monotonic() < deadline: time.sleep(0.01)
+        self.assertEqual(self.store.uploading, {(identity, 0)})
+        self.assertTrue(self.store.lock.acquire(timeout=1)); self.store.lock.release()
+        self.assertEqual(self.request("PATCH", f"/caches/{identity}", b"abcdef", {"Content-Range": "bytes 0-5/*"})[0], 409)
+        self.assertEqual(self.request("POST", f"/caches/{identity}", {"size": 6})[0], 409)
+        connection.send(b"3\r\ndef\r\n0\r\n\r\n")
+        self.assertEqual(connection.getresponse().status, 200); connection.close()
+        self.assertEqual(self.store.uploading, set())
+        self.assertEqual(self.request("POST", f"/caches/{identity}", {"size": 6})[0], 200)
+        self.assertEqual(self.request("GET", f"/artifacts/{identity}"), (200, b"abcdef"))
+
+    def test_backend_health_reflects_loopback_listener(self):
+        def health():
+            connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=5)
+            connection.request("GET", "/healthz/backend"); status = connection.getresponse().status
+            connection.close(); return status
+        self.assertEqual(health(), 200)
+        self.backend.shutdown(); self.backend.server_close()
+        self.assertEqual(health(), 503)
+        self.backend.shutdown = lambda: None
+
+    def test_quota_pruning_stops_once_the_reservation_fits(self):
+        first, second = self.complete(b"first!"), self.complete(b"second")
+        with self.store.lock:
+            for identity, age in ((first, 900), (second, 600)):
+                self.store.db.execute("UPDATE entries SET used=? WHERE id=?", (int(time.time()) - age, identity))
+            self.store.db.commit(); self.store.config["quota_bytes"] = 12
+            self.store.prune(6)
+        self.assertFalse(self.store.archive(first).exists()); self.assertTrue(self.store.archive(second).exists())
+
     def test_idle_maintenance_expires_archives_without_new_uploads(self):
         identity = self.complete()
         outside = self.root / "unrelated"; outside.write_text("preserve")
@@ -279,15 +316,15 @@ class GatewayTests(unittest.TestCase):
             self.store.maintain(stop)
         self.assertTrue(self.store.archive(identity).exists())
         del self.store.reading[identity]
-        prune = self.store.prune
+        sweep = self.store.sweep
         attempts = 0
         def fail_once():
             nonlocal attempts
             attempts += 1
             if attempts == 1:
                 raise sqlite3.OperationalError("injected")
-            prune()
-        with patch.object(self.store, "prune", side_effect=fail_once), patch.object(stop, "wait", side_effect=[False, True]):
+            sweep()
+        with patch.object(self.store, "sweep", side_effect=fail_once), patch.object(stop, "wait", side_effect=[False, True]):
             self.store.maintain(stop)
         self.assertEqual(attempts, 2)
         self.assertFalse(self.store.archive(identity).exists())

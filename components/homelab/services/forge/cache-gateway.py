@@ -9,7 +9,7 @@ import argparse
 import hashlib
 import hmac
 import http.client
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
 import json
 import os
 from pathlib import Path
@@ -18,9 +18,13 @@ import secrets
 import shutil
 import socket
 import sqlite3
+import sys
 import threading
 import time
 from urllib.parse import parse_qs, urlsplit
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from bounded_http import BoundedServer, Refused, require
 
 MAX_ARCHIVE = 10 * 1024**3
 MAX_CHUNK = 32 * 1024**2
@@ -32,16 +36,6 @@ MAX_RANGES_PER_ENTRY = 512
 MAX_RANGES = 32768
 LANES = {"linux-quality", "windows-build"}
 API = "/_apis/artifactcache"
-
-
-class Refused(Exception):
-    def __init__(self, status=403):
-        self.status = status
-
-
-def require(ok, status=403):
-    if not ok:
-        raise Refused(status)
 
 
 def canonical(value):
@@ -138,6 +132,11 @@ class Store:
         require(self.root.is_dir() and self.root.resolve() == self.root, 500)
         self.lock = threading.RLock()
         self.reading = {}
+        # Streams run outside the lock; these keep their ranges and entries exclusive.
+        self.uploading, self.committing = set(), set()
+        # Lease expiry by identity, kept in step with every issue/revoke so
+        # streaming checks need neither the lock nor SQLite.
+        self.expiry = {}
         self.db = sqlite3.connect(configuration["state_path"], check_same_thread=False)
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.executescript("""
@@ -171,6 +170,7 @@ class Store:
         with self.lock:
             self.db.execute("DELETE FROM leases WHERE CAST(json_extract(value,'$.expires_unix') AS INTEGER) < ?",
                             (int(time.time()) - 86400,))
+            self.expiry = {key: expires for key, expires in self.expiry.items() if expires > time.time()}
             previous = self.db.execute("SELECT id,value FROM leases WHERE job_id=? AND attempt=?",
                                        (approved["job_id"], approved["attempt"])).fetchone()
             if previous:
@@ -183,6 +183,7 @@ class Store:
                 self.db.execute("INSERT INTO leases (id,value,capability_hash,job_id,attempt) VALUES (?,?,?,?,?)",
                                 (identity, canonical(approved), cap_hash, approved["job_id"], approved["attempt"]))
             self.db.commit()
+            self.expiry[identity] = approved["expires_unix"]
         return {"lease_id": identity, "actions_cache_url": self.public + "/" + self.capability(identity) + "/",
                 "cache_mode": "broker-scoped-v1", "expires_unix": approved["expires_unix"]}
 
@@ -198,22 +199,22 @@ class Store:
                 value["expires_unix"] = 0
                 self.db.execute("UPDATE leases SET value=? WHERE id=?", (canonical(value), identity))
                 self.db.commit()
+                self.expiry[identity] = 0
 
     def lease(self, cap):
         with self.lock:
             row = self.db.execute("SELECT id,value FROM leases WHERE capability_hash=?",
                                   (hashlib.sha256(cap.encode()).hexdigest(),)).fetchone()
-        require(row is not None)
-        identity, raw = row
-        require(hmac.compare_digest(self.capability(identity), cap))
-        value = json.loads(raw)
+            require(row is not None)
+            identity, raw = row
+            require(hmac.compare_digest(self.capability(identity), cap))
+            value = json.loads(raw)
+            self.expiry[identity] = value["expires_unix"]
         require(value["expires_unix"] > time.time())
         return identity, value
 
     def alive(self, identity):
-        with self.lock:
-            row = self.db.execute("SELECT value FROM leases WHERE id=?", (identity,)).fetchone()
-            require(row is not None and json.loads(row[0])["expires_unix"] > time.time())
+        require(self.expiry.get(identity, 0) > time.time())
 
     def headers(self, cap, value):
         stamp = str(int(time.time()))
@@ -230,40 +231,62 @@ class Store:
         require(path.parent.resolve() == path.parent and not path.is_symlink(), 500)
         return path
 
+    def fits(self, charged, free, needed):
+        return charged + needed <= self.config["quota_bytes"] and free >= needed + self.config["minimum_free_bytes"]
+
     def prune(self, needed=0):
-        # Called under the same lock as reserves, commits and chunk writes.
+        # Called under the same lock as reserves, commits and chunk bookkeeping.
         now = int(time.time())
-        for row in self.db.execute("SELECT id,complete,created,used FROM entries").fetchall():
-            identity, complete, created, used = row
-            if not complete and now - used > 300:
-                temporary = self.root / "tmp" / str(identity)
-                require(temporary.parent.resolve() == temporary.parent and not temporary.is_symlink(), 500)
-                if temporary.exists():
-                    shutil.rmtree(temporary)
-                self.archive(identity).unlink(missing_ok=True)
-                self.db.execute("DELETE FROM chunks WHERE id=?", (identity,))
-                self.db.execute("DELETE FROM entries WHERE id=?", (identity,))
-            if complete and not self.archive(identity).exists():
-                self.db.execute("DELETE FROM entries WHERE id=?", (identity,))
-        self.db.commit()
-        def charged():
-            return self.db.execute("SELECT COALESCE(SUM(size*(CASE complete WHEN 1 THEN 1 ELSE 2 END)),0) FROM entries").fetchone()[0]
-        candidates = self.db.execute("SELECT id,created,used FROM entries WHERE complete=1 ORDER BY used,id").fetchall()
-        for identity, created, used in candidates:
-            space_ok = charged() + needed <= self.config["quota_bytes"] and shutil.disk_usage(self.root).free >= needed + self.config["minimum_free_bytes"]
-            expired = now - used > 7 * 86400 or now - created > 30 * 86400
-            if space_ok and not expired:
+        busy = self.committing | {identity for identity, _ in self.uploading}
+        for (identity,) in self.db.execute("SELECT id FROM entries WHERE complete=0 AND used<?",
+                                           (now - 300,)).fetchall():
+            if identity in busy:
                 continue
+            temporary = self.root / "tmp" / str(identity)
+            require(temporary.parent.resolve() == temporary.parent and not temporary.is_symlink(), 500)
+            if temporary.exists():
+                shutil.rmtree(temporary)
+            self.archive(identity).unlink(missing_ok=True)
+            self.db.execute("DELETE FROM chunks WHERE id=?", (identity,))
+            self.db.execute("DELETE FROM entries WHERE id=?", (identity,))
+        self.db.commit()
+        charged = self.db.execute("SELECT COALESCE(SUM(size*(CASE complete WHEN 1 THEN 1 ELSE 2 END)),0) FROM entries").fetchone()[0]
+        free = shutil.disk_usage(self.root).free
+        for identity, size, used in self.db.execute(
+                "SELECT id,size,used FROM entries WHERE complete=1 ORDER BY used,id").fetchall():
+            if self.fits(charged, free, needed):
+                break
             if identity in self.reading or now - used < 300:
                 continue
             # Only completed archives known to this gateway are removed. Backend
             # find() prunes its stale index when it sees an absent archive.
-            self.archive(identity).unlink(missing_ok=True)
+            path = self.archive(identity)
+            try:
+                free += path.stat().st_size
+            except FileNotFoundError:
+                pass
+            path.unlink(missing_ok=True)
             self.db.execute("DELETE FROM entries WHERE id=?", (identity,))
             self.db.execute("DELETE FROM chunks WHERE id=?", (identity,))
             self.db.commit()
-        require(charged() + needed <= self.config["quota_bytes"] and
-                shutil.disk_usage(self.root).free >= needed + self.config["minimum_free_bytes"], 507)
+            charged -= size
+        require(self.fits(charged, shutil.disk_usage(self.root).free, needed), 507)
+
+    def sweep(self):
+        # Idle-time pass: forget archives the backend lost and expire old ones,
+        # then apply the quota as prune() does for a reservation.
+        now = int(time.time())
+        for identity, created, used in self.db.execute("SELECT id,created,used FROM entries WHERE complete=1").fetchall():
+            path = self.archive(identity)
+            if not path.exists():
+                self.db.execute("DELETE FROM entries WHERE id=?", (identity,))
+            elif ((now - used > 7 * 86400 or now - created > 30 * 86400)
+                  and identity not in self.reading and now - used >= 300):
+                path.unlink(missing_ok=True)
+                self.db.execute("DELETE FROM entries WHERE id=?", (identity,))
+                self.db.execute("DELETE FROM chunks WHERE id=?", (identity,))
+        self.db.commit()
+        self.prune()
 
     def entry(self, identity, lease_id, value, write=False):
         row = self.db.execute("SELECT namespace,isolation,size,complete,owner FROM entries WHERE id=?", (identity,)).fetchone()
@@ -281,7 +304,7 @@ class Store:
         while not stop.is_set():
             try:
                 with self.lock:
-                    self.prune()
+                    self.sweep()
             except (Refused, OSError, sqlite3.Error):
                 print("Cache maintenance deferred; upload quotas remain enforced", flush=True)
             if stop.wait(interval):
@@ -424,27 +447,30 @@ class Handler(BaseHTTPRequestHandler):
                     store.reading[identity] -= 1
                     if not store.reading[identity]: del store.reading[identity]
             return
-        with store.lock:
-            self.active(lease_id)
-            row = store.entry(identity, lease_id, value, write=True)
-            if self.command == "PATCH":
+        if self.command == "PATCH":
+            with store.lock:
+                self.active(lease_id)
+                row = store.entry(identity, lease_id, value, write=True)
                 match = re.fullmatch(r"bytes ([0-9]+)-([0-9]+)/\*", self.headers.get("Content-Range", ""))
                 require(match is not None, 400)
                 start, finish = map(int, match.groups())
                 length = finish - start + 1
                 require(0 < length <= MAX_CHUNK and 0 <= start <= finish < row[2], 400)
                 mode = upload_mode(self.headers, length)
+                require(identity not in store.committing and (identity, start) not in store.uploading, 409)
                 chunks = store.db.execute("SELECT start,finish FROM chunks WHERE id=?", (identity,)).fetchall()
                 require(all((start, finish) == part or finish < part[0] or start > part[1] for part in chunks), 409)
                 if (start, finish) not in chunks:
                     require(len(chunks) < MAX_RANGES_PER_ENTRY and
                             store.db.execute("SELECT COUNT(*) FROM chunks").fetchone()[0] < MAX_RANGES, 429)
-                self.active(lease_id)
                 # Reserve the full range before any backend bytes can exist.
                 # An aborted upload remains pending and counted; only an exact
                 # retry may replace it, so partial files cannot multiply via overlaps.
                 store.db.execute("INSERT OR REPLACE INTO chunks VALUES (?,?,?,0)", (identity, start, finish))
                 store.db.execute("UPDATE entries SET used=? WHERE id=?", (int(time.time()), identity)); store.db.commit()
+                store.uploading.add((identity, start))
+            try:
+                # Stream without the store lock; the reservation keeps this range exclusive.
                 headers.update({"Content-Range": self.headers["Content-Range"], "Content-Length": str(length)})
                 connection = http.client.HTTPConnection("127.0.0.1", store.config.get("backend_port", 8081), timeout=30)
                 try:
@@ -458,27 +484,45 @@ class Handler(BaseHTTPRequestHandler):
                     require(200 <= response.status < 300, 503)
                 finally:
                     connection.close()
-                store.db.execute("UPDATE chunks SET complete=1 WHERE id=? AND start=?", (identity, start))
-                store.db.execute("UPDATE entries SET used=? WHERE id=?", (int(time.time()), identity)); store.db.commit()
-            else:
-                body = json.loads(self.body(MAX_JSON))
+                with store.lock:
+                    store.db.execute("UPDATE chunks SET complete=1 WHERE id=? AND start=? AND finish=?", (identity, start, finish))
+                    store.db.execute("UPDATE entries SET used=? WHERE id=?", (int(time.time()), identity)); store.db.commit()
+            finally:
+                with store.lock:
+                    store.uploading.discard((identity, start))
+        else:
+            body = json.loads(self.body(MAX_JSON))
+            with store.lock:
+                self.active(lease_id)
+                row = store.entry(identity, lease_id, value, write=True)
                 require(body == {"size": row[2]}, 400)
+                require(identity not in store.committing, 409)
                 position = 0
                 for start, finish, complete in store.db.execute("SELECT start,finish,complete FROM chunks WHERE id=? ORDER BY start", (identity,)):
                     require(complete == 1, 409)
                     require(start == position, 409); position = finish + 1
                 require(position == row[2], 409)
-                self.active(lease_id)
+                store.committing.add(identity)
+            try:
+                # Uploads into a committing entry are refused, so its ranges stay complete.
                 self.small("POST", path, headers, canonical(body).encode())
-                require(store.archive(identity).stat().st_size == row[2], 502)
-                store.db.execute("UPDATE entries SET complete=1,used=? WHERE id=?", (int(time.time()), identity))
-                store.db.execute("DELETE FROM chunks WHERE id=?", (identity,)); store.db.commit()
+                with store.lock:
+                    require(store.archive(identity).stat().st_size == row[2], 502)
+                    store.db.execute("UPDATE entries SET complete=1,used=? WHERE id=?", (int(time.time()), identity))
+                    store.db.execute("DELETE FROM chunks WHERE id=?", (identity,)); store.db.commit()
+            finally:
+                with store.lock:
+                    store.committing.discard(identity)
         self.answer(200)
 
     def dispatch(self):
         self.replied = False
         try:
             if self.command == "GET" and self.path == "/healthz":
+                return self.answer(200, {"status": "ready"})
+            if self.command == "GET" and self.path == "/healthz/backend":
+                # Readiness for the loopback-only backend container, without a probe process.
+                socket.create_connection(("127.0.0.1", self.server.store.config.get("backend_port", 8081)), 2).close()
                 return self.answer(200, {"status": "ready"})
             if self.server.control:
                 self.control()
@@ -491,41 +535,10 @@ class Handler(BaseHTTPRequestHandler):
     do_GET = do_POST = do_PATCH = do_DELETE = dispatch
 
 
-class Server(ThreadingHTTPServer):
-    daemon_threads = True
+class Server(BoundedServer):
     def __init__(self, address, store, control):
-        super().__init__(address, Handler)
+        super().__init__(address, Handler, slots=8 if control else 32, socket_timeout=30, deadline=120)
         self.store, self.control = store, control
-        self.slots = threading.BoundedSemaphore(8 if control else 32)
-
-    def process_request(self, request, address):
-        if not self.slots.acquire(blocking=False):
-            request.close()
-            return
-        try:
-            super().process_request(request, address)
-        except BaseException:
-            self.slots.release()
-            raise
-
-    def process_request_thread(self, request, address):
-        # Bound headers as well as bodies: a slow header sender must not occupy
-        # a slot forever before Handler.dispatch starts.
-        request.settimeout(30)
-        def close_request():
-            try: request.shutdown(socket.SHUT_RDWR)
-            except OSError: pass
-        deadline = threading.Timer(120, close_request)
-        deadline.daemon = True
-        deadline.start()
-        try:
-            super().process_request_thread(request, address)
-        finally:
-            deadline.cancel()
-            self.slots.release()
-
-    def handle_error(self, *_):
-        pass  # Do not print request objects, capability URLs or broker headers.
 
 
 def main():
