@@ -6,12 +6,10 @@ import json
 import os
 from pathlib import Path
 import re
-import ssl
 import sys
 import time
-import urllib.error
-import urllib.request
 
+from cluster_http import Kubernetes
 from recovery_archive import export_snapshot, prune_archives
 
 NAMESPACE = 'forge'
@@ -20,32 +18,6 @@ API_PREFIX = '/apis/snapshot.storage.k8s.io/v1/namespaces/forge/volumesnapshots'
 PVC_PREFIX = '/api/v1/namespaces/forge/persistentvolumeclaims'
 JOB_PREFIX = '/apis/batch/v1/namespaces/forge/jobs'
 LABEL = 'app.kubernetes.io/managed-by'
-
-
-class NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, *args, **kwargs):
-        return None
-
-
-class Kubernetes:
-    def __init__(self):
-        service_account = Path('/var/run/secrets/kubernetes.io/serviceaccount')
-        self.token = (service_account / 'token').read_text().strip()
-        self.base = 'https://' + os.environ['KUBERNETES_SERVICE_HOST'] + ':' + os.environ['KUBERNETES_SERVICE_PORT']
-        context = ssl.create_default_context(cafile=str(service_account / 'ca.crt'))
-        self.opener = urllib.request.build_opener(NoRedirect(), urllib.request.HTTPSHandler(context=context))
-
-    def request(self, method, path, body=None, missing=False):
-        request = urllib.request.Request(self.base + path, method=method,
-            headers={'Authorization': 'Bearer ' + self.token, 'Content-Type': 'application/json'},
-            data=json.dumps(body).encode() if body is not None else None)
-        try:
-            with self.opener.open(request, timeout=30) as response:
-                return json.load(response)
-        except urllib.error.HTTPError as error:
-            if missing and error.code == 404:
-                return None
-            raise RuntimeError(f'Kubernetes {method} {path.split("?")[0]}: HTTP {error.code}') from None
 
 
 def active_offsite(api):

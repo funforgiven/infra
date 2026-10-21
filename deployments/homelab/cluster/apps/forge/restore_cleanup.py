@@ -9,7 +9,7 @@ def cleanup(api):
     resources = []
     for name in ('forgejo-data', 'forgejo-backups'):
         path = TARGET + 'persistentvolumeclaims/' + name
-        pvc = api('GET', path, missing_ok=True)
+        pvc = api('GET', path, missing=True)
         if pvc is None:
             continue
         metadata, spec = pvc['metadata'], pvc['spec']
@@ -37,24 +37,24 @@ def cleanup(api):
 
     def wait_absent(path):
         deadline = time.monotonic() + 300
-        while api('GET', path, missing_ok=True) is not None:
+        while api('GET', path, missing=True) is not None:
             if time.monotonic() > deadline:
                 raise TimeoutError('Disposable restore resource is still terminating: ' + path)
             time.sleep(5)
 
     pod_path = TARGET + 'pods/forgejo-0'
-    pod = api('GET', pod_path, missing_ok=True)
+    pod = api('GET', pod_path, missing=True)
     if pod is not None:
         if pod['metadata'].get('labels', {}).get('app.kubernetes.io/name') != 'forge-restore':
             raise RuntimeError('Refusing cleanup of a non-verifier pod')
         api('DELETE', pod_path, {'propagationPolicy': 'Foreground',
-            'preconditions': {'uid': pod['metadata']['uid']}}, missing_ok=True)
+            'preconditions': {'uid': pod['metadata']['uid']}}, missing=True)
         wait_absent(pod_path)
     for path, uid, pv_path, patch in resources:
         if pv_path:
             api('PATCH', pv_path, patch)
         api('DELETE', path, {'propagationPolicy': 'Foreground',
-            'preconditions': {'uid': uid}}, missing_ok=True)
+            'preconditions': {'uid': uid}}, missing=True)
         wait_absent(path)
         if pv_path:
             wait_absent(pv_path)

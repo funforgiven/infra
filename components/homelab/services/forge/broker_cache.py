@@ -6,6 +6,8 @@ import re
 import time
 import urllib.request
 
+from cluster_http import NoRedirect
+
 CONTROL = 'http://forge-cache.forge-cache.svc:8082'
 DESCRIPTOR = 'http://forgejo.forge.svc:8083'
 TOKEN = Path('/run/cache/broker-token')
@@ -13,11 +15,6 @@ REPOSITORY = 'funforgiven/atollion'
 LANES = {'linux-quality': {'linux', 'linux-x86_64'},
          'windows-build': {'linux', 'linux-x86_64'}}
 LEASE_ANNOTATION = 'forge.fahrican.com/cache-lease'
-
-
-class NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, *args, **kwargs):
-        return None
 
 
 def require(value):

@@ -29,6 +29,7 @@ configMapGenerator:
   - cache-config.json
   - cache-runner.yaml
   - cache-gateway.py=../../../../../components/homelab/services/forge/cache-gateway.py
+  - bounded_http.py=../../../../../components/homelab/services/forge/bounded_http.py
 - name: forge-bootstrap
   namespace: forge
   files:
@@ -38,10 +39,12 @@ configMapGenerator:
   - forgejo.ini
   - bootstrap-forgejo.sh
   - cache-descriptors.py=../../../../../components/homelab/services/forge/cache-descriptors.py
+  - bounded_http.py=../../../../../components/homelab/services/forge/bounded_http.py
 - name: forge-runner-bootstrap
   namespace: forge-ci
   files:
   - register-job.py
+  - cluster_http.py=../../../../../components/homelab/services/forge/cluster_http.py
   - run-job.sh
   - run-one-job.py=../../../../../components/homelab/services/forge/run-one-job.py
   - runner.yaml
@@ -60,14 +63,17 @@ configMapGenerator:
   files:
   - qualify-restore.py
   - restore_cleanup.py
+  - cluster_http.py=../../../../../components/homelab/services/forge/cluster_http.py
 - name: forge-linux-launcher
   namespace: forge-control
   files:
   - linux-launcher.py=../../../../../components/homelab/services/forge/linux-launcher.py
   - broker_cache.py=../../../../../components/homelab/services/forge/broker_cache.py
+  - cluster_http.py=../../../../../components/homelab/services/forge/cluster_http.py
 - name: forge-snapshot-tools
   namespace: forge
   files:
   - snapshot-backup.py
   - recovery_archive.py
+  - cluster_http.py=../../../../../components/homelab/services/forge/cluster_http.py
   - export-job.json

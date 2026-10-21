@@ -6,7 +6,6 @@ import io
 import json
 from pathlib import Path
 import sys
-import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
@@ -138,19 +137,22 @@ class CacheAuthority(unittest.TestCase):
         broker.issue.return_value = self.lease
         calls = []
 
-        def request(method, url, token, body=None, context=None):
+        def kube(method, path, body=None):
             if method == 'POST':
                 calls.append(body)
                 raise RuntimeError('Kubernetes create failed')
-            if '/cronjobs/' in url:
+            if '/cronjobs/' in path:
                 return template
-            if '/actions/runners/jobs' in url:
-                return [assignment]
             return {'items': [completed]}
 
-        with patch.object(launcher, 'Path'), patch.object(launcher.ssl, 'create_default_context'), \
+        def forgejo(path, token):
+            self.assertIn('/actions/runners/jobs', path)
+            return [assignment]
+
+        with patch.object(launcher, 'Path'), \
+                patch.object(launcher, 'Kubernetes', return_value=Mock(request=kube)), \
                 patch.object(launcher, 'CacheBroker', return_value=broker), \
-                patch.object(launcher, 'request', side_effect=request), \
+                patch.object(launcher, 'forgejo', side_effect=forgejo), \
                 patch.object(launcher.time, 'time', return_value=1000):
             with self.assertRaisesRegex(RuntimeError, 'Kubernetes create failed'):
                 launcher.main()

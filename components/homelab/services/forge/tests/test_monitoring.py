@@ -1,5 +1,4 @@
 """Evaluate deployed PromQL across retry, recovery and suspension histories."""
-import os
 from pathlib import Path
 import shutil
 import subprocess

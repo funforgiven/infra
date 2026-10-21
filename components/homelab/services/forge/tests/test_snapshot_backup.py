@@ -11,6 +11,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[5]
 SCRIPTS = ROOT / 'deployments/homelab/cluster/apps/forge'
 sys.path.insert(0, str(SCRIPTS))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 spec = importlib.util.spec_from_file_location('snapshot_backup', SCRIPTS / 'snapshot-backup.py')
 backup = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(backup)

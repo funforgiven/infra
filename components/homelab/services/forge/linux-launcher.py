@@ -4,7 +4,6 @@
 import copy
 import json
 from pathlib import Path
-import ssl
 import sys
 import time
 import urllib.error
@@ -12,6 +11,7 @@ import urllib.request
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from broker_cache import CacheBroker, LEASE_ANNOTATION, carrier
+from cluster_http import Kubernetes, NoRedirect
 
 REPOSITORY = "funforgiven/atollion"
 JOBS = "/apis/batch/v1/namespaces/forge-ci/jobs"
@@ -21,21 +21,14 @@ JOB_ID_ANNOTATION = "forge.fahrican.com/job-id"
 ATTEMPT_ANNOTATION = "forge.fahrican.com/job-attempt"
 
 
-class NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, *args, **kwargs):
-        return None
-
-
-def request(method, url, token, body=None, context=None):
-    req = urllib.request.Request(url, method=method,
-        headers={"Authorization": "Bearer " + token.strip(), "Content-Type": "application/json"},
-        data=json.dumps(body).encode() if body is not None else None)
+def forgejo(path, token):
+    request = urllib.request.Request("https://git.fahrican.com/api/v1" + path,
+        headers={"Authorization": "Bearer " + token.strip(), "Content-Type": "application/json"})
     try:
-        opener = urllib.request.build_opener(NoRedirect, urllib.request.HTTPSHandler(context=context))
-        with opener.open(req, timeout=30) as response:
+        with urllib.request.build_opener(NoRedirect).open(request, timeout=30) as response:
             return json.load(response)
     except urllib.error.HTTPError as error:
-        raise RuntimeError(f"Launcher {method}: HTTP {error.code}") from None
+        raise RuntimeError(f"Launcher GET: HTTP {error.code}") from None
 
 
 def select_jobs(existing, waiting):
@@ -54,19 +47,15 @@ def select_jobs(existing, waiting):
 
 
 def main():
-    credentials = Path("/var/run/secrets/kubernetes.io/serviceaccount")
-    context = ssl.create_default_context(cafile=str(credentials / "ca.crt"))
-    kube_token = (credentials / "token").read_text()
-    def kube(method, path, body=None):
-        return request(method, "https://kubernetes.default.svc" + path, kube_token, body, context)
+    kube = Kubernetes().request
     existing = kube("GET", JOBS + "?labelSelector=" + LABEL)["items"]
     cache = CacheBroker()
     for job in existing:
         if any(condition.get('status') == 'True' and condition.get('type') in {'Complete', 'Failed'}
                for condition in job.get('status', {}).get('conditions', [])):
             cache.revoke(job['metadata'].get('annotations', {}).get(LEASE_ANNOTATION))
-    waiting = request("GET", "https://git.fahrican.com/api/v1/repos/" + REPOSITORY
-                      + "/actions/runners/jobs?labels=linux-x86_64", Path("/run/enrollment/token").read_text())
+    waiting = forgejo("/repos/" + REPOSITORY + "/actions/runners/jobs?labels=linux-x86_64",
+                      Path("/run/enrollment/token").read_text())
     # Kustomize rewrites this suspended template's ConfigMap references. Read
     # the reconciled spec so newly created jobs use the exact deployed scripts.
     suspended = kube("GET", "/apis/batch/v1/namespaces/forge-ci/cronjobs/forge-linux-atollion-template")

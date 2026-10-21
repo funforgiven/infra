@@ -34,7 +34,7 @@ class CleanupTests(unittest.TestCase):
                 'spec': {'storageClassName': 'forge-restore', 'persistentVolumeReclaimPolicy': 'Retain',
                          'claimRef': {'namespace': 'forge-restore', 'name': name, 'uid': name}}}
 
-    def api(self, method, path, body=None, missing_ok=False):
+    def api(self, method, path, body=None, missing=False):
         if method == 'GET':
             return copy.deepcopy(self.objects.get(path))
         self.writes.append((method, path, body))

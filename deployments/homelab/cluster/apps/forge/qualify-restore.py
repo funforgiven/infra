@@ -2,32 +2,12 @@
 """Restore offsite data into disposable volumes, never start the application."""
 
 import datetime
-import json
 import os
-from pathlib import Path
-import ssl
 import time
-import urllib.error
-import urllib.request
+from cluster_http import Kubernetes
 from restore_cleanup import cleanup
 
-credentials = Path("/var/run/secrets/kubernetes.io/serviceaccount")
-context = ssl.create_default_context(cafile=str(credentials / "ca.crt"))
-base = "https://kubernetes.default.svc"
-
-
-def api(method, path, body=None, missing_ok=False):
-    request = urllib.request.Request(base + path, method=method,
-        headers={"Authorization": "Bearer " + (credentials / "token").read_text(),
-                 "Content-Type": "application/json-patch+json" if method == "PATCH" else "application/json"},
-        data=json.dumps(body).encode() if body is not None else None)
-    try:
-        with urllib.request.urlopen(request, context=context, timeout=30) as response:
-            return json.load(response)
-    except urllib.error.HTTPError as error:
-        if error.code == 404 and missing_ok:
-            return None
-        raise RuntimeError(f"Kubernetes {method} {path}: HTTP {error.code}") from None
+api = Kubernetes().request
 
 
 velero = "/apis/velero.io/v1/namespaces/velero"
@@ -73,7 +53,7 @@ while time.monotonic() < deadline:
     phase = api("GET", velero + "/restores/" + name).get("status", {}).get("phase")
     if phase in ("Failed", "PartiallyFailed", "FailedValidation"):
         raise RuntimeError(f"Offsite restore entered {phase}")
-    pod = api("GET", target + "pods/forgejo-0", missing_ok=True)
+    pod = api("GET", target + "pods/forgejo-0", missing=True)
     if phase == "Completed" and pod:
         if any(item["type"] == "Ready" and item["status"] == "True"
                for item in pod.get("status", {}).get("conditions", [])):

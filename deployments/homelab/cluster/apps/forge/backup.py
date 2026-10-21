@@ -6,7 +6,6 @@ import os
 from pathlib import Path
 import sqlite3
 import sys
-import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from recovery_archive import completed_archives, prepare_offsite
 

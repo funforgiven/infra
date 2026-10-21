@@ -5,12 +5,14 @@ import io
 import json
 from pathlib import Path
 import ssl
+import sys
 import unittest
 from unittest.mock import Mock, patch
 import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 spec = importlib.util.spec_from_file_location('registration_recovery',
     ROOT.parents[3] / 'deployments/homelab/cluster/apps/forge/register-job.py')
 register = importlib.util.module_from_spec(spec)

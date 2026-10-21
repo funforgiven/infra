@@ -6,14 +6,16 @@ is returned to trusted platform brokers; workflow bodies and credentials are nev
 selected. Keep the existing database/WAL/SHM volume mounted read-only.
 """
 import hmac
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
 import json
 from pathlib import Path
 import re
-import socket
 import sqlite3
-import threading
+import sys
 import time
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from bounded_http import BoundedServer, Refused, require
 
 DATABASE = Path('/data/data/forgejo.db')
 SECRET_ROOT = Path('/run/cache-descriptors')
@@ -38,16 +40,6 @@ READ_COLUMNS = {
     'action_run': {'id', 'repo_id', 'owner_id', 'commit_sha', 'trigger_event', 'ref', 'status', 'need_approval'},
     'repository': {'id', 'owner_id', 'owner_name', 'lower_name'},
 }
-
-
-class Refused(Exception):
-    def __init__(self, status):
-        self.status = status
-
-
-def require(ok, status=404):
-    if not ok:
-        raise Refused(status)
 
 
 def authorize_sql(operation, table, column, _database, _trigger):
@@ -93,18 +85,18 @@ class Descriptors:
             row = connection.execute(QUERY, (job_id, attempt)).fetchone()
         finally:
             connection.close()
-        require(row is not None)
+        require(row is not None, 404)
         identity, current, run_id, head, event, ref, name, labels_raw, workflow_job = row
         require(type(run_id) is int and run_id > 0 and isinstance(head, str)
-                and re.fullmatch(r'[0-9a-f]{40}', head))
-        require(isinstance(labels_raw, str) and len(labels_raw) <= 2048)
+                and re.fullmatch(r'[0-9a-f]{40}', head), 404)
+        require(isinstance(labels_raw, str) and len(labels_raw) <= 2048, 404)
         labels = json.loads(labels_raw)
         names, label = POLICIES[platform]
         require(name in names and workflow_job == name and labels == [label], 403)
         require((event == 'pull_request' and isinstance(ref, str)
                  and re.fullmatch(r'refs/pull/[1-9][0-9]*/(?:head|merge)', ref)) or
                 (event in {'push', 'workflow_dispatch'} and isinstance(ref, str)
-                 and re.fullmatch(r'refs/heads/[A-Za-z0-9_./-]{1,240}', ref)))
+                 and re.fullmatch(r'refs/heads/[A-Za-z0-9_./-]{1,240}', ref)), 404)
         return {'repository': 'funforgiven/atollion', 'job_id': identity, 'attempt': current,
                 'run_id': run_id, 'head': head, 'event_name': event, 'ref': ref,
                 'name': name, 'runs_on': labels}
@@ -144,41 +136,10 @@ class Handler(BaseHTTPRequestHandler):
     do_PUT = do_PATCH = do_DELETE = do_POST
 
 
-class Server(ThreadingHTTPServer):
-    daemon_threads = True
+class Server(BoundedServer):
     def __init__(self, address, descriptors):
-        super().__init__(address, Handler)
+        super().__init__(address, Handler, slots=16, socket_timeout=5, deadline=10)
         self.descriptors = descriptors
-        self.slots = threading.BoundedSemaphore(16)
-
-    def process_request(self, request, address):
-        if not self.slots.acquire(blocking=False):
-            request.close()
-            return
-        try:
-            super().process_request(request, address)
-        except BaseException:
-            self.slots.release()
-            raise
-
-    def process_request_thread(self, request, address):
-        request.settimeout(5)
-        def close():
-            try:
-                request.shutdown(socket.SHUT_RDWR)
-            except OSError:
-                pass
-        deadline = threading.Timer(10, close)
-        deadline.daemon = True
-        deadline.start()
-        try:
-            super().process_request_thread(request, address)
-        finally:
-            deadline.cancel()
-            self.slots.release()
-
-    def handle_error(self, *_):
-        pass
 
 
 if __name__ == '__main__':
