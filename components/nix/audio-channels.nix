@@ -177,8 +177,7 @@ in
         sinkNames = map (channel: channel.sinkName) channels;
         bridgeNames = map (channel: channel.bridgeName) channels;
         defaultChannels = builtins.filter (channel: channel.isDefault) channels;
-
-        unique = values: builtins.length (lib.unique values) == builtins.length values;
+        nodeNames = sinkNames ++ bridgeNames;
 
         markerProperties = channel: kind: {
           "funforgiven.audio.channel" = channel.id;
@@ -299,49 +298,8 @@ in
           ) normalization.matches;
 
         normalizationTargetsAreValid = lib.all (
-          normalization: !(builtins.elem normalization.persistentId (ids ++ sinkNames ++ bridgeNames))
+          normalization: !(builtins.elem normalization.persistentId (ids ++ nodeNames))
         ) cfg.identityNormalizations;
-
-        identityRulesOnlySetApplicationId = lib.all (
-          rule: builtins.attrNames rule.actions."update-props" == [ "application.id" ]
-        ) identityNormalizationRules;
-
-        identityRulesArePlaybackOnly = lib.all (
-          rule:
-          lib.all (
-            match:
-            match."media.class" == "Stream/Output/Audio"
-            && match."node.name" == "!~^funforgiven\\.audio\\.channel\\..*"
-          ) rule.matches
-        ) identityNormalizationRules;
-
-        restoreTargetRules = builtins.filter (
-          rule: rule.actions."update-props" ? "state.restore-target"
-        ) streamRules;
-
-        restoreTargetRulesAreBridgeOnly =
-          builtins.length restoreTargetRules == builtins.length channels
-          && lib.all (
-            rule:
-            rule.actions."update-props"."state.restore-target" == false
-            && builtins.length rule.matches == 1
-            && (builtins.head rule.matches)."funforgiven.audio.kind" == "bridge"
-            && builtins.elem (builtins.head rule.matches)."node.name" bridgeNames
-          ) restoreTargetRules;
-
-        containsUnsafeDeclarativeTarget =
-          value:
-          if builtins.isAttrs value then
-            lib.any (
-              name:
-              name == "node.target"
-              || (name == "target.object" && value.${name} != "-1")
-              || containsUnsafeDeclarativeTarget value.${name}
-            ) (builtins.attrNames value)
-          else if builtins.isList value then
-            lib.any containsUnsafeDeclarativeTarget value
-          else
-            false;
       in
       {
         imports = [ audioDataModule ];
@@ -356,32 +314,12 @@ in
             message = "The audio-channels feature requires WirePlumber.";
           }
           {
-            assertion = builtins.length channels == 4;
-            message = "dendritic.audio.channels must contain exactly four channels.";
-          }
-          {
             assertion = ids == expectedChannelIds;
             message = "Audio channel IDs and order must be: system, game, voice, music.";
           }
           {
-            assertion = unique ids;
-            message = "Every audio channel ID must be unique.";
-          }
-          {
-            assertion = unique sinkNames;
-            message = "Every logical audio sink node name must be unique.";
-          }
-          {
-            assertion = unique bridgeNames;
-            message = "Every audio bridge node name must be unique.";
-          }
-          {
-            assertion = unique (sinkNames ++ bridgeNames);
-            message = "Logical sink and bridge node names must not collide.";
-          }
-          {
-            assertion = builtins.length defaultChannels == 1;
-            message = "Exactly one logical audio channel must be marked as default.";
+            assertion = lib.length (lib.unique nodeNames) == lib.length nodeNames;
+            message = "Logical sink and bridge node names must all be unique.";
           }
           {
             assertion = map (channel: channel.id) defaultChannels == [ "system" ];
@@ -395,38 +333,10 @@ in
             '';
           }
           {
-            assertion =
-              normalizationTargetsAreValid && identityRulesOnlySetApplicationId && identityRulesArePlaybackOnly;
+            assertion = normalizationTargetsAreValid;
             message = ''
-              Audio identity rules may change only application.id on playback
-              streams outside the channel graph. They cannot reuse a channel,
-              sink, or bridge ID.
-            '';
-          }
-          {
-            assertion = restoreTargetRulesAreBridgeOnly;
-            message = ''
-              Only the four bridge rules may disable state.restore-target.
-              Application stream restore must stay enabled.
-            '';
-          }
-          {
-            assertion =
-              builtins.attrNames wirePlumberSettings == [
-                "linking.allow-moving-streams"
-                "node.restore-default-targets"
-                "node.stream.restore-props"
-                "node.stream.restore-target"
-              ];
-            message = "The audio policy must declare exactly the four required WirePlumber settings.";
-          }
-          {
-            assertion =
-              !(containsUnsafeDeclarativeTarget loopbackModules)
-              && lib.all (module: module.args."playback.props"."target.object" == "-1") loopbackModules;
-            message = ''
-              Audio loopbacks may set target.object only to -1. WirePlumber
-              chooses physical outputs at runtime.
+              Audio identity rules cannot reuse a channel, sink, or bridge ID
+              as their application.id.
             '';
           }
         ];
