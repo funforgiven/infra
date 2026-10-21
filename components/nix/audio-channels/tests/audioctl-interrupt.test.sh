@@ -9,24 +9,11 @@ set -euo pipefail
 
 source "$AUDIOCTL_SOURCE"
 
-load_graph_definition=$(declare -f load_graph)
-eval "${load_graph_definition/#load_graph/original_load_graph}"
-load_graph_count=0
-
 pause_audioctl() {
   : >"$AUDIOCTL_PAUSE_MARKER"
   while [[ ! -e $AUDIOCTL_PAUSE_RELEASE ]]; do
     sleep 0.01
   done
-}
-
-load_graph() {
-  load_graph_count=$((load_graph_count + 1))
-  if [[ $AUDIOCTL_PAUSE_PHASE == post-request-validation ]] \
-    && ((load_graph_count == 3)); then
-    pause_audioctl
-  fi
-  original_load_graph
 }
 
 pw-metadata() {
@@ -45,8 +32,10 @@ pw-metadata() {
   if ! command pw-metadata "$@"; then
     return 1
   fi
-  if [[ $AUDIOCTL_PAUSE_PHASE == publication \
-    && $deleting == false \
+  # Both phases pause right after the request is published: "publication"
+  # interrupts the controller there, while "post-request-validation" lets the
+  # graph change before the controller revalidates it.
+  if [[ $deleting == false \
     && $transaction_request == true ]]; then
     pause_audioctl
   fi

@@ -41,17 +41,16 @@ fixture() {
 
 load_fixture() {
   graph_json=$(fixture "$1" "$2")
-  node_json=$(jq -c '.[] | select(.id == 20)' <<<"$graph_json")
 }
 
 expect_available() {
   load_fixture "$1" "$2"
-  target_has_available_routes 30
+  target_has_available_routes 20 30
 }
 
 expect_unavailable() {
   load_fixture "$1" "$2"
-  if target_has_available_routes 30; then
+  if target_has_available_routes 20 30; then
     printf '%s\n' "expected hardware route to be unavailable" >&2
     exit 1
   fi
@@ -164,9 +163,43 @@ pw-metadata() {
     )
   ' <<<"$graph_json")
 }
-clear_owned_move_control_metadata 10 "$second_nonce" "$second_request"
+prepare_transaction move 10 "$second_nonce" "$second_request"
+try_clear_owned_transaction_controls
 grep -Fq "funforgiven.audio.move-output-target-error" "$pw_metadata_calls"
 if grep -Eq 'move-output-target($| )|move-output-target-ack' "$pw_metadata_calls"; then
   printf '%s\n' "busy move cleanup deleted another transaction's control metadata" >&2
+  exit 1
+fi
+
+# A reset owns its request, commit, acknowledgement, and error; cleanup must
+# leave another transaction's controls alone.
+reset_nonce="42:102:202:302"
+graph_json=$(jq -nc --arg nonce "$reset_nonce" --arg other "$first_nonce" '
+  [
+    {
+      id: 60,
+      type: "PipeWire:Interface:Metadata",
+      props: { "metadata.name": "default" },
+      metadata: [
+        { subject: 10, key: "funforgiven.audio.reset-output-target",
+          type: "Spa:String", value: $nonce },
+        { subject: 10, key: "funforgiven.audio.reset-output-target-commit",
+          type: "Spa:String", value: $nonce },
+        { subject: 10, key: "funforgiven.audio.reset-output-target-ack",
+          type: "Spa:String", value: $nonce },
+        { subject: 10, key: "funforgiven.audio.move-output-target",
+          type: "Spa:String", value: ($other + ":500") }
+      ]
+    }
+  ]
+')
+: >"$pw_metadata_calls"
+prepare_transaction reset 10 "$reset_nonce" "$reset_nonce"
+try_clear_owned_transaction_controls
+for key in reset-output-target reset-output-target-commit reset-output-target-ack; do
+  grep -Eq "funforgiven[.]audio[.]$key\$" "$pw_metadata_calls"
+done
+if grep -Fq "move-output-target" "$pw_metadata_calls"; then
+  printf '%s\n' "reset cleanup deleted move control metadata" >&2
   exit 1
 fi
