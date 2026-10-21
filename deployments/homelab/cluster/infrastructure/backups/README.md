@@ -1,7 +1,7 @@
 # Backup and restore
 
 Velero backs up the single homelab cluster with Kopia filesystem backups. The policy
-covers the `backup-qualification`, `finance`, `forge`, `games`, `home-automation`, `matrix`, `media`, and
+covers the `backup-qualification`, `forge`, `games`, `home-automation`, `matrix`, `media`, and
 `services-databases` namespaces. The application backup policy uses filesystem copies. Forgejo separately uses
 temporary local direct-CSI snapshots to create portable recovery archives.
 Separate daily CSI data-movement schedules export monitoring history and the
@@ -36,17 +36,6 @@ AudioMuse's live PostgreSQL volume is excluded from filesystem backup. Its
 three newest dumps. The passive-state schedule backs up that dump volume even
 when the dump Job has completed. Recover AudioMuse from a
 dump, not from the empty restored live-data PVC.
-
-Wallos creates an integrity-checked SQLite native backup every six hours. Its
-Velero pre-backup hook refreshes that backup before Kopia copies the database
-and uploaded-logo PVCs. Recover the database from `backups/wallos.db`, not from
-the filesystem copy of the live `wallos.db`; see the
-[Wallos runbook](../../apps/wallos/README.md).
-
-`finance-restore-modifiers` removes the production volume bindings from both
-Wallos PVCs during an isolated namespace-mapped restore. Exclude the live route,
-workload, Secret, and NetworkPolicy resources so the restored financial data
-cannot start a writer, receive traffic, contact ZITADEL, or send notifications.
 
 Home automation uses a coordinated recovery archive instead of live database
 copies. The backup hook gracefully stops its writers, archives their complete

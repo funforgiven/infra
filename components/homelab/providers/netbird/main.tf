@@ -116,7 +116,7 @@ resource "netbird_dns_zone" "operator" {
 
 locals {
   service_hosts = toset([
-    "audiomuse", "cache", "git", "home", "mail-admin", "music", "unifi", "upload", "wallos",
+    "audiomuse", "cache", "git", "home", "mail-admin", "music", "unifi", "upload",
   ])
 }
 

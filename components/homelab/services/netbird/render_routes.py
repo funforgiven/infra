@@ -20,7 +20,7 @@ HOSTS = frozenset(
     f"{name}.fahrican.com"
     for name in (
         "audiomuse", "cache", "git", "home", "mail-admin", "music",
-        "unifi", "upload", "wallos",
+        "unifi", "upload",
     )
 )
 SOURCES = (
@@ -30,7 +30,6 @@ SOURCES = (
     "apps/media/routes.yaml",
     "apps/forge/routes.yaml",
     "apps/forge/cache.yaml",
-    "apps/wallos/route.yaml",
 )
 TARGET = SERVICES / "apps/netbird/access/routes.generated.yaml"
 

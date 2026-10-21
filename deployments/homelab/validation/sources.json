@@ -342,7 +342,7 @@
     },
     {
       "path": "deployments/homelab/cluster/apps/netbird/access",
-      "resources": 24
+      "resources": 19
     },
     {
       "path": "deployments/homelab/cluster/apps/netbird/operator",
@@ -359,10 +359,6 @@
     {
       "path": "deployments/homelab/cluster/apps/valheim",
       "resources": 6
-    },
-    {
-      "path": "deployments/homelab/cluster/apps/wallos",
-      "resources": 18
     },
     {
       "path": "deployments/homelab/cluster/bootstrap/flux",
@@ -438,11 +434,11 @@
     },
     {
       "path": "deployments/homelab/cluster",
-      "resources": 92
+      "resources": 90
     },
     {
       "path": "deployments/homelab/recovery",
-      "resources": 92
+      "resources": 90
     }
   ],
   "schemaCount": 480

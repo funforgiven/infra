@@ -142,7 +142,7 @@ def validate(root,kustomize,helm_cache=None,decrypt=False,helm="helm"):
         if not path.is_relative_to(root.resolve()) or not (path/"kustomization.yaml").is_file():raise ValueError("Invalid Flux path")
     recovery=render(kustomize,root/"deployments/homelab/recovery")
     paused={d["metadata"]["name"] for d in recovery if d["kind"]=="Kustomization" and d["spec"].get("suspend")}
-    required={"ceph","observability","identity-database","identity","unifi","home-automation","media","wallos","forge","matrix","factorio","valheim","netbird"}
+    required={"ceph","observability","identity-database","identity","unifi","home-automation","media","forge","matrix","factorio","valheim","netbird"}
     if not required<=paused:raise ValueError("Recovery overlay releases Ceph or stateful applications prematurely")
     storage={d["metadata"]["name"] for d in all_objects.values() if d["kind"]=="StorageClass"}
     def inspect(value):

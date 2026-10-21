@@ -161,43 +161,6 @@ resource "zitadel_application_oidc" "web" {
   skip_native_app_success_page = false
 }
 
-# Keep Wallos separate from the shared BASIC-auth clients: it requires
-# client_secret_post and may need credentials rotated independently.
-moved {
-  from = zitadel_application_oidc.web["wallos"]
-  to   = zitadel_application_oidc.wallos
-}
-
-resource "terraform_data" "wallos_oidc_credential_generation" {
-  input = 1
-}
-
-resource "zitadel_application_oidc" "wallos" {
-  org_id                       = local.org_id
-  project_id                   = zitadel_project.infrastructure.id
-  name                         = "Wallos"
-  redirect_uris                = ["https://wallos.fahrican.com/index.php"]
-  post_logout_redirect_uris    = ["https://wallos.fahrican.com/"]
-  response_types               = ["OIDC_RESPONSE_TYPE_CODE"]
-  grant_types                  = ["OIDC_GRANT_TYPE_AUTHORIZATION_CODE", "OIDC_GRANT_TYPE_REFRESH_TOKEN"]
-  app_type                     = "OIDC_APP_TYPE_WEB"
-  auth_method_type             = "OIDC_AUTH_METHOD_TYPE_POST"
-  version                      = "OIDC_VERSION_1_0"
-  access_token_type            = "OIDC_TOKEN_TYPE_BEARER"
-  access_token_role_assertion  = true
-  id_token_role_assertion      = true
-  id_token_userinfo_assertion  = true
-  dev_mode                     = false
-  additional_origins           = []
-  skip_native_app_success_page = false
-
-  lifecycle {
-    replace_triggered_by = [terraform_data.wallos_oidc_credential_generation]
-  }
-
-  depends_on = [zitadel_project_member.identity_controller]
-}
-
 resource "zitadel_application_oidc" "kubernetes" {
   for_each = toset(["homelab"])
 
@@ -281,16 +244,6 @@ output "audiomuse_client_id" {
 
 output "audiomuse_client_secret" {
   value     = zitadel_application_oidc.web["audiomuse"].client_secret
-  sensitive = true
-}
-
-output "wallos_client_id" {
-  value     = zitadel_application_oidc.wallos.client_id
-  sensitive = true
-}
-
-output "wallos_client_secret" {
-  value     = zitadel_application_oidc.wallos.client_secret
   sensitive = true
 }
 

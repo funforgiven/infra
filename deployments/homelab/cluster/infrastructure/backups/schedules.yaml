@@ -12,7 +12,6 @@ spec:
     ttl: 720h
     includedNamespaces:
     - backup-qualification
-    - finance
     - forge
     - games
     - home-automation
@@ -36,7 +35,6 @@ spec:
     ttl: 2160h
     includedNamespaces:
     - backup-qualification
-    - finance
     - forge
     - games
     - home-automation

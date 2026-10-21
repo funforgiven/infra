@@ -247,19 +247,6 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: wallos
-  namespace: flux-system
-spec:
-  path: ./deployments/homelab/cluster/apps/wallos
-  wait: true
-  dependsOn:
-  - name: gateway
-  - name: backups
-  - name: identity
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
   name: forge
   namespace: flux-system
 spec:
@@ -359,6 +346,5 @@ spec:
   dependsOn:
   - name: home-automation
   - name: media
-  - name: wallos
   - name: factorio
   - name: valheim

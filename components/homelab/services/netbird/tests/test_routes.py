@@ -32,10 +32,6 @@ class RouteBoundaryTests(unittest.TestCase):
             self.assertEqual(document["spec"]["parentRefs"][0]["name"], "netbird-services")
         self.assertEqual(self.documents, original)
 
-    def test_wallos_database_remains_denied(self):
-        policy = next(doc for doc in self.rendered if doc["metadata"]["name"] == "netbird-wallos-database-deny")
-        self.assertEqual(policy["spec"]["authorization"], {"defaultAction": "Deny"})
-
     def test_new_authorization_conditions_fail_closed(self):
         policy = next(doc for doc in self.documents if doc["metadata"]["name"] == "mail-admin-vpn")
         policy["spec"]["authorization"]["rules"][0]["principal"]["jwt"] = {"provider": "example"}

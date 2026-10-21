@@ -8,7 +8,7 @@ import sys
 import yaml
 from encrypted_inputs import decrypt,values,save,secret
 
-OIDC_APPS = ("forgejo", "grafana", "sftpgo", "navidrome", "audiomuse", "wallos", "matrix", "netbird")
+OIDC_APPS = ("forgejo", "grafana", "sftpgo", "navidrome", "audiomuse", "matrix", "netbird")
 
 
 def identity_values(outputs):
@@ -91,8 +91,6 @@ def render(root,outputs=None):
     update(media_path,[secret("media-runtime","media",media),secret("discord-music-runtime","media",{"DISCORD_TOKEN":runtime["DISCORD_MUSIC_BOT_TOKEN"],"YOUTUBE_API_KEY":runtime["DISCORD_MUSIC_YOUTUBE_API_KEY"]})])
     for app,prefix in [("factorio","FACTORIO_"),("valheim","VALHEIM_")]:
         update(f"deployments/homelab/cluster/apps/{app}/runtime.sops.yaml",[secret(app+"-runtime","games",{k:v for k,v in runtime.items() if k.startswith(prefix)})])
-    if outputs is not None:
-        update("deployments/homelab/cluster/apps/wallos/runtime.sops.yaml",[secret("wallos-runtime","finance",{"OIDC_CLIENT_ID":outputs["wallos_client_id"]["value"],"OIDC_CLIENT_SECRET":outputs["wallos_client_secret"]["value"]})])
     update("deployments/homelab/cluster/infrastructure/velero/credentials.sops.yaml",[secret("velero-object-storage","velero",{"cloud":"[default]\naws_access_key_id="+runtime["B2_APPLICATION_KEY_ID"]+"\naws_secret_access_key="+runtime["B2_APPLICATION_KEY"]+"\n"})])
     path="deployments/homelab/cluster/infrastructure/observability/runtime.sops.yaml"
     documents=decrypt(root/path)
