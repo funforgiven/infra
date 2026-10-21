@@ -9,11 +9,7 @@ spec:
   primaryUpdateStrategy: unsupervised
   bootstrap:
     recovery:
-      source: migration-source
-      recoveryTarget:
-        backupID: 20261012T193100
-        targetLSN: 11/2B011EF8
-        targetTLI: '5'
+      source: backup
       database: netbird
       owner: netbird
       secret:
@@ -50,12 +46,15 @@ spec:
     isWALArchiver: true
     parameters:
       barmanObjectName: netbird-postgres-backup
+      # A rebuilt cluster cannot archive into a non-empty folder: bump this name
+      # and point the backup cluster below at the previous one.
+      serverName: netbird-postgres
   externalClusters:
-  - name: migration-source
+  - name: backup
     plugin:
       name: barman-cloud.cloudnative-pg.io
       parameters:
-        barmanObjectName: netbird-migration-source
+        barmanObjectName: netbird-postgres-backup
         serverName: netbird-postgres
 ---
 apiVersion: postgresql.cnpg.io/v1
