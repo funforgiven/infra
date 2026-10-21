@@ -3,11 +3,13 @@ kind: Kustomization
 resources:
 - ../cluster
 patches:
+# Ceph and stateful stages carry homelab.fahrican.com/recovery=hold in
+# cluster/waves/stages.yaml; they stay suspended until restored data is checked.
 - target:
     group: kustomize.toolkit.fluxcd.io
     version: v1
     kind: Kustomization
-    name: ceph|observability|identity-database|identity|unifi|home-automation|media|forge|matrix|factorio|valheim|netbird|netbird-operator|netbird-access|synthetic-monitoring
+    labelSelector: homelab.fahrican.com/recovery=hold
   patch: '[{"op":"add","path":"/spec/suspend","value":true}]'
 - target:
     group: kustomize.toolkit.fluxcd.io

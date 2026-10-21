@@ -14,7 +14,7 @@ from pathlib import Path
 import jsonschema
 import yaml
 
-from manifests import decrypted_objects, entrypoints as rendered_entrypoints, helm_template, key, release_values, render, verify_vendors
+from manifests import RECOVERY_HOLD, decrypted_objects, entrypoints as rendered_entrypoints, helm_template, key, release_values, render, verify_vendors
 
 def strict(schema):
     if not isinstance(schema,dict):return
@@ -73,6 +73,15 @@ def require_snapshot_support(objects):
         if drivers["spec"]["values"]["drivers"]["rbd"]["snapshotPolicy"] != "volumeSnapshot":
             raise ValueError("Forgejo snapshot backup requires enabled RBD CSI snapshots")
 
+def require_recovery_hold(waves,recovery):
+    """Every stage labelled for recovery hold must be suspended by the overlay."""
+    label,value=RECOVERY_HOLD
+    held={d["metadata"]["name"] for d in waves if d["metadata"].get("labels",{}).get(label)==value}
+    if "ceph" not in held:raise ValueError("Ceph must stay held in the recovery overlay")
+    paused={d["metadata"]["name"] for d in recovery if d["kind"]=="Kustomization" and d["spec"].get("suspend")}
+    if not held<=paused:raise ValueError("Recovery overlay releases Ceph or stateful applications prematurely")
+    if paused-held:raise ValueError("Recovery overlay suspends stages without the hold label")
+
 def validate(root,kustomize,helm_cache=None,decrypt=False,helm="helm"):
     bundle=json.loads(gzip.decompress((root/"deployments/homelab/validation/schemas.json.gz").read_bytes()))
     strict(bundle["definitions"])
@@ -122,10 +131,7 @@ def validate(root,kustomize,helm_cache=None,decrypt=False,helm="helm"):
     for wave in waves:
         path=(root/wave["spec"]["path"]).resolve()
         if not path.is_relative_to(root.resolve()) or not (path/"kustomization.yaml").is_file():raise ValueError("Invalid Flux path")
-    recovery=render(kustomize,root/"deployments/homelab/recovery")
-    paused={d["metadata"]["name"] for d in recovery if d["kind"]=="Kustomization" and d["spec"].get("suspend")}
-    required={"ceph","observability","identity-database","identity","unifi","home-automation","media","forge","matrix","factorio","valheim","netbird"}
-    if not required<=paused:raise ValueError("Recovery overlay releases Ceph or stateful applications prematurely")
+    require_recovery_hold(waves,render(kustomize,root/"deployments/homelab/recovery"))
     storage={d["metadata"]["name"] for d in all_objects.values() if d["kind"]=="StorageClass"}
     def inspect(value):
         if isinstance(value,dict):

@@ -16,6 +16,9 @@ yaml.SafeLoader.add_constructor("tag:yaml.org,2002:value", lambda loader, node: 
 KUBE_VERSION = "1.36.4"
 API_VERSIONS = ("monitoring.coreos.com/v1", "monitoring.coreos.com/v1/ServiceMonitor", "monitoring.coreos.com/v1/PodMonitor")
 # Flux stages labelled with this stay suspended in the recovery overlay.
+RECOVERY_HOLD = ("homelab.fahrican.com/recovery", "hold")
+
+
 def key(document):
     return (document["kind"], document["metadata"].get("namespace", ""), document["metadata"]["name"])
 
