@@ -7,10 +7,7 @@ _: {
       ...
     }:
     let
-      python = pkgs.python3.withPackages (ps: [
-        ps.mido
-        ps.python-rtmidi
-      ]);
+      python = config.dendritic.midiPython;
       package = pkgs.writeShellApplication {
         name = "funforgiven-audio-midi";
         runtimeInputs = [
@@ -25,6 +22,13 @@ _: {
       };
     in
     {
+      options.dendritic.midiPython = lib.mkOption {
+        type = lib.types.package;
+        readOnly = true;
+        internal = true;
+        description = "Python with the MIDI libraries shared by the Duo controllers.";
+      };
+
       options.dendritic.audioMidiPackage = lib.mkOption {
         type = lib.types.package;
         readOnly = true;
@@ -33,6 +37,10 @@ _: {
       };
 
       config = {
+        dendritic.midiPython = pkgs.python3.withPackages (ps: [
+          ps.mido
+          ps.python-rtmidi
+        ]);
         dendritic.audioMidiPackage = package;
         home.packages = [ package ];
 

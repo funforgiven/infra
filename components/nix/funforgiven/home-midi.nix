@@ -1,11 +1,13 @@
 _: {
   home.gui =
-    { lib, pkgs, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     let
-      python = pkgs.python3.withPackages (ps: [
-        ps.mido
-        ps.python-rtmidi
-      ]);
+      python = config.dendritic.midiPython;
       package = pkgs.writeShellApplication {
         name = "funforgiven-home-midi";
         text = ''
