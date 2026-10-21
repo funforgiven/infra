@@ -18,6 +18,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: thread-state
   namespace: home-automation
+  labels:
+    backup.fahrican.com/automation-volume: "true"
 spec:
   accessModes:
   - ReadWriteOnce

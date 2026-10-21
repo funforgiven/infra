@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
 - observability-history.yaml
 - forge-volume.yaml
+- home-automation-volume.yaml
 - finance-restore-modifiers.yaml
 - media-restore-modifiers.yaml
 - restore-qualification.yaml
