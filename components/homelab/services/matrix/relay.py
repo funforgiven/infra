@@ -107,6 +107,9 @@ class Queue:
                 "UPDATE events SET delivered=?, body='' WHERE id=?",
                 (time.time(), event_id),
             )
+
+    def checkpoint(self):
+        # Fold erased bodies into the main database so the WAL keeps no plaintext.
         self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
 
     def stats(self):
@@ -226,10 +229,18 @@ async def serve(config_file, state):
     last_delivery = 0
     unapproved_devices = 0
     stopping = asyncio.Event()
+    wake = asyncio.Event()
     state_lock = asyncio.Lock()
+    loaded = (None, None)
 
     def config():
-        return json.loads(config_path.read_text())
+        nonlocal loaded
+        # Secret volume updates swap the file, so its identity changes with content.
+        status = config_path.stat()
+        version = (status.st_ino, status.st_mtime_ns)
+        if loaded[0] != version:
+            loaded = (version, json.loads(config_path.read_text()))
+        return loaded[1]
 
     async def intake(request):
         settings = config()
@@ -249,6 +260,7 @@ async def serve(config_file, state):
             raise web.HTTPBadRequest(text="Invalid notification") from None
         except sqlite3.Error:
             raise web.HTTPServiceUnavailable(text="Durable queue unavailable") from None
+        wake.set()
         return web.json_response({"accepted": len(batch)}, status=202)
 
     async def health(_request):
@@ -269,9 +281,84 @@ async def serve(config_file, state):
             snapshot_crypto(client, state, state / "backups")
         return web.Response(text="ok")
 
+    async def drain(settings, refresh_members):
+        nonlocal last_delivery, unapproved_devices
+        rooms = (settings["room_id"], settings["canary_room_id"])
+        if refresh_members:
+            for room_id in rooms:
+                if not isinstance(
+                    await client.joined_members(room_id), JoinedMembersResponse
+                ):
+                    raise ValueError("member refresh failed")
+        if client.should_upload_keys:
+            if not isinstance(await client.keys_upload(), KeysUploadResponse):
+                raise ValueError("key upload failed")
+        if client.should_query_keys:
+            if not isinstance(await client.keys_query(), KeysQueryResponse):
+                raise ValueError("device refresh failed")
+        # Every intended recipient needs an approved active device.
+        # Additional unapproved devices receive no room keys and
+        # do not interrupt delivery to existing approved devices.
+        unapproved_devices = check_room(
+            client,
+            settings["room_id"],
+            settings["allowed_users"],
+            settings["trusted_devices"],
+        )
+        delivered = False
+        try:
+            while pending := queue.pending():
+                response = await client.room_send(
+                    settings["room_id"],
+                    "m.room.message",
+                    {"msgtype": "m.text", "body": pending[1]},
+                    tx_id=pending[0],
+                    ignore_unverified_devices=False,
+                )
+                if not isinstance(response, RoomSendResponse):
+                    raise ValueError("encrypted send failed")
+                queue.delivered(pending[0])
+                delivered = True
+                last_delivery = time.time()
+        finally:
+            if delivered:
+                queue.checkpoint()
+
+    async def heartbeat(settings):
+        room = settings["canary_room_id"]
+        check_room(client, room, [client.user_id], {})
+        response = await client.room_send(
+            room,
+            "m.room.message",
+            {"msgtype": "m.notice", "body": "Delivery canary"},
+            tx_id="canary-" + str(int(time.time() // 60)),
+        )
+        if not isinstance(response, RoomSendResponse):
+            raise ValueError("encrypted canary failed")
+        from aiohttp import ClientSession
+
+        target = settings.get("heartbeat")
+        if not target:
+            raise ValueError("independent heartbeat not enrolled")
+        async with ClientSession() as session:
+            async with session.post(
+                target["url"],
+                headers={"Authorization": "Bearer " + target["token"]},
+            ) as response:
+                if response.status != 202:
+                    raise ValueError("independent heartbeat rejected")
+
+    def members(settings):
+        return {
+            room_id: set(client.rooms[room_id].users) if room_id in client.rooms else None
+            for room_id in (settings["room_id"], settings["canary_room_id"])
+        }
+
     async def deliver():
-        nonlocal client, failures, last_delivery, unapproved_devices
+        nonlocal client, failures
         heartbeat_at = 0
+        syncing = None
+        members_stale = True
         while not stopping.is_set():
             try:
                 settings = config()
@@ -288,6 +375,9 @@ async def serve(config_file, state):
                     client.device_id,
                     client.access_token,
                 ):
+                    if syncing:
+                        syncing.cancel()
+                        syncing = None
                     if client:
                         await client.close()
                     client = AsyncClient(
@@ -300,74 +390,38 @@ async def serve(config_file, state):
                         ),
                     )
                     client.restore_login(*identity)
+                    members_stale = True
                 async with state_lock:
-                    synced = await client.sync(
-                        timeout=1000, full_state=not client.rooms
-                    )
+                    # Long-poll for room and device changes; intake wakes delivery
+                    # while the poll stays open, as nio allows sends during a sync.
+                    if syncing is None:
+                        before = members(settings)
+                        syncing = asyncio.create_task(
+                            client.sync(timeout=30000, full_state=not client.rooms)
+                        )
+                    while True:
+                        woken = asyncio.create_task(wake.wait())
+                        await asyncio.wait(
+                            (syncing, woken), return_when=asyncio.FIRST_COMPLETED
+                        )
+                        woken.cancel()
+                        if syncing.done():
+                            break
+                        wake.clear()
+                        if client.rooms:
+                            await drain(settings, members_stale)
+                            members_stale = False
+                    finished, syncing = syncing, None
+                    synced = finished.result()
                     if not isinstance(synced, SyncResponse):
                         raise ValueError("sync failed")
-                    # Refresh all members and device keys before deciding which devices receive keys.
-                    for room_id in (settings["room_id"], settings["canary_room_id"]):
-                        if not isinstance(
-                            await client.joined_members(room_id), JoinedMembersResponse
-                        ):
-                            raise ValueError("member refresh failed")
-                    if client.should_upload_keys:
-                        if not isinstance(
-                            await client.keys_upload(), KeysUploadResponse
-                        ):
-                            raise ValueError("key upload failed")
-                    if client.should_query_keys:
-                        if not isinstance(await client.keys_query(), KeysQueryResponse):
-                            raise ValueError("device refresh failed")
-                    # Every intended recipient needs an approved active device.
-                    # Additional unapproved devices receive no room keys and
-                    # do not interrupt delivery to existing approved devices.
-                    unapproved_devices = check_room(
-                        client,
-                        settings["room_id"],
-                        settings["allowed_users"],
-                        settings["trusted_devices"],
-                    )
-                    pending = queue.pending()
-                    if pending:
-                        room = settings["room_id"]
-                        response = await client.room_send(
-                            room,
-                            "m.room.message",
-                            {"msgtype": "m.text", "body": pending[1]},
-                            tx_id=pending[0],
-                            ignore_unverified_devices=False,
-                        )
-                        if not isinstance(response, RoomSendResponse):
-                            raise ValueError("encrypted send failed")
-                        queue.delivered(pending[0])
-                        last_delivery = time.time()
+                    wake.clear()
+                    # Refresh members before deciding which devices receive keys.
+                    members_stale = members_stale or members(settings) != before
+                    await drain(settings, members_stale)
+                    members_stale = False
                     if time.time() - heartbeat_at >= 60:
-                        room = settings["canary_room_id"]
-                        check_room(client, room, [client.user_id], {})
-                        response = await client.room_send(
-                            room,
-                            "m.room.message",
-                            {"msgtype": "m.notice", "body": "Delivery canary"},
-                            tx_id="canary-" + str(int(time.time() // 60)),
-                        )
-                        if not isinstance(response, RoomSendResponse):
-                            raise ValueError("encrypted canary failed")
-                        from aiohttp import ClientSession
-
-                        heartbeat = settings.get("heartbeat")
-                        if not heartbeat:
-                            raise ValueError("independent heartbeat not enrolled")
-                        async with ClientSession() as session:
-                            async with session.post(
-                                heartbeat["url"],
-                                headers={
-                                    "Authorization": "Bearer " + heartbeat["token"]
-                                },
-                            ) as response:
-                                if response.status != 202:
-                                    raise ValueError("independent heartbeat rejected")
+                        await heartbeat(settings)
                         heartbeat_at = time.time()
 
             except Exception as error:
