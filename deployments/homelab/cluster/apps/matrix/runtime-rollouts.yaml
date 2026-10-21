@@ -8,3 +8,25 @@ spec:
     metadata:
       annotations:
         matrix.fahrican.com/runtime-config: 3c08792b5ee8da2f0092c5efd75a5bbbe2ac6bb6b860b6a5a3dd8a24a87410c0
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: matrix-synapse
+  namespace: matrix
+spec:
+  template:
+    metadata:
+      annotations:
+        matrix.fahrican.com/runtime-config: 54c5bd3aa53e2f1743e49dba21f6f31c858b7b66aec3da045075ebcb9bef74f1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: matrix-mas
+  namespace: matrix
+spec:
+  template:
+    metadata:
+      annotations:
+        matrix.fahrican.com/runtime-config: 54c5bd3aa53e2f1743e49dba21f6f31c858b7b66aec3da045075ebcb9bef74f1

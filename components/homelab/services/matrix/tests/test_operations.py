@@ -7,8 +7,11 @@ import unittest
 from unittest.mock import MagicMock, patch
 import sys
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(ROOT / "components/homelab/operations"))
 import admin
 import outside_check
 
@@ -114,24 +117,42 @@ class AlertingConfigurationTests(unittest.TestCase):
                 self.assertIn("        - matrix-alerting\n        - infrastructure-telegram\n",
                               (observability / source.name).read_text())
 
-    def test_runtime_save_records_ciphertext_digest(self):
+    def test_runtime_save_restarts_only_consumers_of_changed_keys(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(admin.Path, "cwd", return_value=Path(directory)):
-            deployment = Path("deployments/homelab/cluster/apps/matrix")
-            (Path(directory) / deployment).mkdir(parents=True)
+            deployment = Path(directory) / "deployments/homelab/cluster/apps/matrix"
+            deployment.mkdir(parents=True)
+            (deployment / "workloads.yaml").write_text(
+                (ROOT / admin.DEPLOYMENT / "workloads.yaml").read_text()
+            )
+            stored = {}
 
             def save(root, relative, documents):
-                (root / relative).write_bytes(b"ciphertext")
+                if stored.get(relative) == documents[0]:
+                    return False
+                stored[relative] = documents[0]
+                (root / relative).write_bytes(json.dumps(documents[0]).encode())
                 return True
 
-            with patch.object(admin, "DEPLOYMENT", Path(directory) / deployment), \
-                    patch.object(admin.encrypted_inputs, "save", side_effect=save) as encrypt:
+            with patch.object(admin, "DEPLOYMENT", deployment), \
+                    patch.object(admin, "load_secret", side_effect=lambda path: stored[path]), \
+                    patch.object(admin.encrypted_inputs, "save", side_effect=save):
                 target = admin.DEPLOYMENT / "runtime.sops.yaml"
-                admin.save_secret(target, {"stringData": {}}, rollout="matrix-relay")
-                encrypt.assert_called_once()
-                patch_document = (admin.DEPLOYMENT / "runtime-rollouts.yaml").read_text()
-                self.assertIn(hashlib.sha256(b"ciphertext").hexdigest(), patch_document)
-                with self.assertRaises(ValueError):
-                    admin.save_secret(admin.DEPLOYMENT / "email.sops.yaml", {}, rollout="matrix-relay")
+                rollouts = admin.DEPLOYMENT / "runtime-rollouts.yaml"
+                values = {"relay.json": "{}", "mas.yaml": "a", "synapse.yaml": "b", "signing.key": "c"}
+                admin.save_secret(target, {"stringData": dict(values)})
+                self.assertEqual(
+                    {(p["kind"], p["metadata"]["name"]) for p in yaml.safe_load_all(rollouts.read_text())},
+                    {("StatefulSet", "matrix-relay"), ("Deployment", "matrix-mas"), ("StatefulSet", "matrix-synapse")},
+                )
+                before = {p["metadata"]["name"]: p for p in yaml.safe_load_all(rollouts.read_text())}
+                admin.save_secret(target, {"stringData": dict(values, **{"relay.json": "[]"})})
+                after = {p["metadata"]["name"]: p for p in yaml.safe_load_all(rollouts.read_text())}
+                self.assertNotEqual(after["matrix-relay"], before["matrix-relay"])
+                self.assertIn(hashlib.sha256(target.read_bytes()).hexdigest(), str(after["matrix-relay"]))
+                self.assertEqual(after["matrix-mas"], before["matrix-mas"])
+                self.assertEqual(after["matrix-synapse"], before["matrix-synapse"])
+                admin.save_secret(admin.DEPLOYMENT / "email.sops.yaml", {"stringData": {"relay.json": "x"}})
+                self.assertEqual({p["metadata"]["name"]: p for p in yaml.safe_load_all(rollouts.read_text())}, after)
 
 
 class EnrollmentTests(unittest.IsolatedAsyncioTestCase):

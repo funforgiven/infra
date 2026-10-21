@@ -28,10 +28,15 @@ public resolvers for DNS-01 checks; see its
 
 The `matrix-postgres` CloudNativePG cluster runs three instances with
 synchronous replication and holds the `synapse` and `mas` databases. Their
-roles take passwords from `database.sops.yaml`, which must match the
-`synapse-password` and `mas-password` in `runtime.sops.yaml`. The
-`matrix-postgres` Service points at the primary; the encrypted Synapse and MAS
-configs use that host name.
+role passwords live in the `matrix-postgres-synapse` and `matrix-postgres-mas`
+Secrets in `database.sops.yaml`; the encrypted Synapse and MAS configs in
+`runtime.sops.yaml` embed the same passwords and connect to CloudNativePG's
+`matrix-postgres-rw` Service. Rotate a password in both files together.
+
+The Velero pre-backup hook on `matrix-dumps` writes checksummed logical dumps
+of both databases before each scheduled backup copies the dump volume, reading
+the role passwords from the CloudNativePG Secrets. A failed dump fails the
+backup, which the Velero backup alerts report.
 
 ## Recovery
 
@@ -40,8 +45,8 @@ local media and relay state are restored and verified. Restore logical dumps of
 Synapse and MAS into the `matrix-postgres` cluster; a filesystem copy of live
 PostgreSQL is insufficient. Use both databases from the **same completed dump generation**.
 
-Restore the encrypted `runtime.sops.yaml` and `email.sops.yaml`, the media PVC
-and the relay PVC. The relay snapshot under `relay/backups` holds its SQLite
+Restore the encrypted `runtime.sops.yaml`, `database.sops.yaml` and
+`email.sops.yaml`, the media PVC and the relay PVC. The relay snapshot under `relay/backups` holds its SQLite
 queue, crypto store, bot device `INFRA_ALERTS` and encrypted Megolm canary;
 place the recovered crypto databases and queue at the root of the relay state
 directory. Verify the queue, bot/device identity and canary offline before
@@ -83,9 +88,13 @@ Publish and pin a replacement image with `matrix-admin publish-image` only after
 review and a passing local test. The `images:` entry in `kustomization.yaml`
 pins the digest for every workload; the restore modifiers in `restore.yaml`
 carry their own pinned reference, which `publish-image` updates. Deployment
-Secrets contain the enrolled identity and session material. For OIDC
-configuration changes, refresh the provider outputs through
-`render-cluster-credentials` rather than generating new client identities.
+Secrets contain the enrolled identity and session material. `matrix-admin
+initialize` writes the MAS upstream provider without a client; fill it, and
+later refresh it, through `render-cluster-credentials --identity-outputs-stdin`
+rather than generating new client identities. Every `matrix-admin` change to
+`runtime.sops.yaml` restamps `runtime-rollouts.yaml` for the workloads whose
+mounted keys changed; after changing that Secret by other means, restart the
+affected workloads.
 
 ## Membership
 
@@ -137,8 +146,6 @@ delivery. From outside the LAN, trigger a database backup and isolated restore,
 test Element decryption and recovery, and test push with the phone locked:
 
 ```sh
-nix run .#matrix-access -- cluster -- kubectl -n matrix create job \
-  --from=cronjob/matrix-database-backup matrix-dump-check
 nix run .#matrix-access -- cluster -- velero backup create matrix-check \
   --from-schedule services-daily --wait
 nix run .#matrix-access -- cluster -- kubectl -n backup-qualification create job \

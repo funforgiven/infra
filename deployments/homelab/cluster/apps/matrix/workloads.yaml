@@ -1,19 +1,3 @@
-apiVersion: v1
-kind: Service
-metadata:
-  name: matrix-postgres
-  namespace: matrix
-  labels:
-    app.kubernetes.io/name: matrix-postgres
-spec:
-  selector:
-    cnpg.io/cluster: matrix-postgres
-    cnpg.io/instanceRole: primary
-  ports:
-  - name: postgres
-    port: 5432
-    targetPort: 5432
----
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -44,15 +28,6 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/os
-                operator: In
-                values:
-                - linux
       containers:
       - name: dumps
         image: git.fahrican.com/forge-runner/matrix-runtime
@@ -60,7 +35,6 @@ spec:
         - bash
         - -c
         - while true; do sleep 3600; done
-        ports: []
         securityContext:
           allowPrivilegeEscalation: false
           runAsNonRoot: true
@@ -93,13 +67,18 @@ spec:
       - name: tmp
         emptyDir: {}
       - name: runtime
-        secret:
-          secretName: matrix-runtime
-          items:
-          - key: synapse-password
-            path: synapse-password
-          - key: mas-password
-            path: mas-password
+        projected:
+          sources:
+          - secret:
+              name: matrix-postgres-synapse
+              items:
+              - key: password
+                path: synapse-password
+          - secret:
+              name: matrix-postgres-mas
+              items:
+              - key: password
+                path: mas-password
           defaultMode: 416
       - name: scripts
         configMap:
@@ -156,15 +135,6 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/os
-                operator: In
-                values:
-                - linux
       containers:
       - name: synapse
         image: git.fahrican.com/forge-runner/matrix-runtime
@@ -275,7 +245,6 @@ spec:
       labels:
         app.kubernetes.io/name: matrix-mas
         app.kubernetes.io/part-of: matrix
-      annotations: {}
     spec:
       automountServiceAccountToken: false
       imagePullSecrets:
@@ -285,15 +254,6 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/os
-                operator: In
-                values:
-                - linux
       containers:
       - name: mas
         image: git.fahrican.com/forge-runner/matrix-runtime
@@ -395,7 +355,6 @@ spec:
       labels:
         app.kubernetes.io/name: matrix-client
         app.kubernetes.io/part-of: matrix
-      annotations: {}
     spec:
       automountServiceAccountToken: false
       imagePullSecrets:
@@ -405,15 +364,6 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/os
-                operator: In
-                values:
-                - linux
       containers:
       - name: proxy
         image: git.fahrican.com/forge-runner/matrix-runtime
@@ -519,15 +469,6 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/os
-                operator: In
-                values:
-                - linux
       containers:
       - name: relay
         image: git.fahrican.com/forge-runner/matrix-runtime
@@ -633,7 +574,6 @@ spec:
       labels:
         app.kubernetes.io/name: matrix-egress
         app.kubernetes.io/part-of: matrix
-      annotations: {}
     spec:
       automountServiceAccountToken: false
       imagePullSecrets:
@@ -643,15 +583,6 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/os
-                operator: In
-                values:
-                - linux
       containers:
       - name: egress
         image: git.fahrican.com/forge-runner/matrix-runtime
@@ -693,103 +624,3 @@ spec:
           name: matrix-egress
   strategy:
     type: Recreate
----
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: matrix-database-backup
-  namespace: matrix
-spec:
-  schedule: 15 1 * * *
-  timeZone: Europe/Istanbul
-  concurrencyPolicy: Forbid
-  successfulJobsHistoryLimit: 1
-  failedJobsHistoryLimit: 2
-  jobTemplate:
-    spec:
-      backoffLimit: 2
-      activeDeadlineSeconds: 900
-      template:
-        metadata:
-          labels:
-            app.kubernetes.io/name: matrix-backup
-            app.kubernetes.io/part-of: matrix
-          annotations: {}
-        spec:
-          automountServiceAccountToken: false
-          imagePullSecrets:
-          - name: matrix-registry
-          securityContext:
-            fsGroup: 1000
-            fsGroupChangePolicy: OnRootMismatch
-            seccompProfile:
-              type: RuntimeDefault
-          affinity:
-            nodeAffinity:
-              requiredDuringSchedulingIgnoredDuringExecution:
-                nodeSelectorTerms:
-                - matchExpressions:
-                  - key: kubernetes.io/os
-                    operator: In
-                    values:
-                    - linux
-            podAffinity:
-              requiredDuringSchedulingIgnoredDuringExecution:
-              - topologyKey: kubernetes.io/hostname
-                labelSelector:
-                  matchLabels:
-                    app.kubernetes.io/name: matrix-dumps
-          containers:
-          - name: backup
-            image: git.fahrican.com/forge-runner/matrix-runtime
-            command:
-            - python
-            - /scripts/backup.py
-            ports: []
-            securityContext:
-              allowPrivilegeEscalation: false
-              runAsNonRoot: true
-              runAsUser: 1000
-              runAsGroup: 1000
-              capabilities:
-                drop:
-                - ALL
-              readOnlyRootFilesystem: true
-            resources:
-              requests:
-                cpu: 100m
-                memory: 256Mi
-              limits:
-                memory: 2Gi
-            volumeMounts:
-            - name: tmp
-              mountPath: /tmp
-              readOnly: false
-            - name: runtime
-              mountPath: /run/matrix
-              readOnly: true
-            - name: scripts
-              mountPath: /scripts
-              readOnly: true
-            - name: dumps
-              mountPath: /var/lib/matrix/dumps
-              readOnly: false
-          volumes:
-          - name: tmp
-            emptyDir: {}
-          - name: runtime
-            secret:
-              secretName: matrix-runtime
-              items:
-              - key: synapse-password
-                path: synapse-password
-              - key: mas-password
-                path: mas-password
-              defaultMode: 416
-          - name: scripts
-            configMap:
-              name: matrix-scripts
-          - name: dumps
-            persistentVolumeClaim:
-              claimName: matrix-dumps
-          restartPolicy: OnFailure

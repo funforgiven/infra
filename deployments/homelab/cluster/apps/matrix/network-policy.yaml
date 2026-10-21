@@ -260,28 +260,6 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: matrix-backup
-  namespace: matrix
-spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/name: matrix-backup
-  policyTypes:
-  - Ingress
-  - Egress
-  egress:
-  - to:
-    - podSelector:
-        matchLabels:
-          cnpg.io/cluster: matrix-postgres
-    ports:
-    - protocol: TCP
-      port: 5432
-  ingress: []
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
   name: matrix-egress
   namespace: matrix
 spec:
@@ -354,9 +332,6 @@ spec:
     - podSelector:
         matchLabels:
           app.kubernetes.io/name: matrix-mas
-    - podSelector:
-        matchLabels:
-          app.kubernetes.io/name: matrix-backup
     - podSelector:
         matchLabels:
           app.kubernetes.io/name: matrix-dumps

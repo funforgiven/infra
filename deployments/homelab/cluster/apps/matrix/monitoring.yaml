@@ -58,14 +58,6 @@ spec:
         severity: warning
       annotations:
         summary: Matrix persistent storage has less than 20% free
-    - alert: MatrixDatabaseBackupStale
-      expr: time() - (kube_cronjob_status_last_successful_time{namespace="matrix",cronjob="matrix-database-backup"}
-        or kube_cronjob_created{namespace="matrix",cronjob="matrix-database-backup"}) > 93600
-      for: 1h
-      labels:
-        severity: critical
-      annotations:
-        summary: Matrix has no successful scheduled database dump within 26 hours
     - alert: MatrixRestoreQualificationFailed
       expr: kube_job_status_failed{namespace="backup-qualification",job_name=~"matrix-restore-qualification.*"}
         > 0

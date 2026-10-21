@@ -11,23 +11,18 @@ import os
 import re
 import secrets
 import subprocess
-import sys
 import time
 from pathlib import Path
 
 import yaml
 
-for operations in (Path(__file__).resolve().parents[2] / "operations",
-                   Path.cwd() / "components/homelab/operations"):
-    if operations.is_dir():
-        sys.path.insert(0, str(operations))
-        break
-import encrypted_inputs  # noqa: E402
-from provider_state import outputs as provider_outputs  # noqa: E402
+import encrypted_inputs
+from provider_state import outputs as provider_outputs
 
 DEPLOYMENT = Path("deployments/homelab/cluster/apps/matrix")
 OBSERVABILITY = Path("deployments/homelab/cluster/infrastructure/observability")
 PROVIDER_ID = "01HFVBY12TMNTYTBV8W921M5FA"
+DATABASE_HOST = "matrix-postgres-rw"
 
 
 class LiteralDumper(yaml.SafeDumper):
@@ -51,38 +46,63 @@ def load_secret(path):
     return encrypted_inputs.decrypt(path)[0]
 
 
-def update_runtime_rollout(name, ciphertext):
-    kinds = {"matrix-relay": "StatefulSet", "matrix-mas": "Deployment"}
+def runtime_consumers():
+    """Map each workload that mounts the runtime Secret to the keys it reads."""
+    consumers = {}
+    for document in yaml.safe_load_all((DEPLOYMENT / "workloads.yaml").read_text()):
+        if document and document["kind"] in ("Deployment", "StatefulSet"):
+            for volume in document["spec"]["template"]["spec"].get("volumes", []):
+                if volume.get("secret", {}).get("secretName") == "matrix-runtime":
+                    consumers[(document["kind"], document["metadata"]["name"])] = {
+                        item["key"] for item in volume["secret"]["items"]
+                    }
+    return consumers
+
+
+def update_runtime_rollouts(workloads, ciphertext):
     patch_path = DEPLOYMENT / "runtime-rollouts.yaml"
     patches = (
         list(yaml.safe_load_all(patch_path.read_text())) if patch_path.exists() else []
     )
-    patch = next((item for item in patches if item["metadata"]["name"] == name), None)
-    if patch is None:
-        patch = {
-            "apiVersion": "apps/v1",
-            "kind": kinds[name],
-            "metadata": {"name": name, "namespace": "matrix"},
-            "spec": {"template": {"metadata": {"annotations": {}}}},
-        }
-        patches.append(patch)
-    # This is a digest of the already-public ciphertext, never of a credential.
-    patch["spec"]["template"]["metadata"]["annotations"][
-        "matrix.fahrican.com/runtime-config"
-    ] = hashlib.sha256(ciphertext).hexdigest()
+    for kind, name in workloads:
+        patch = next(
+            (item for item in patches if item["metadata"]["name"] == name), None
+        )
+        if patch is None:
+            patch = {
+                "apiVersion": "apps/v1",
+                "kind": kind,
+                "metadata": {"name": name, "namespace": "matrix"},
+                "spec": {"template": {"metadata": {"annotations": {}}}},
+            }
+            patches.append(patch)
+        # This is a digest of the already-public ciphertext, never of a credential.
+        patch["spec"]["template"]["metadata"]["annotations"][
+            "matrix.fahrican.com/runtime-config"
+        ] = hashlib.sha256(ciphertext).hexdigest()
     temporary = patch_path.with_suffix(".yaml.tmp")
     temporary.write_text(yaml.safe_dump_all(patches, sort_keys=False))
     temporary.replace(patch_path)
 
 
-def save_secret(path, document, *, rollout=None):
-    if rollout not in (None, "matrix-relay", "matrix-mas"):
-        raise ValueError("unsupported runtime workload")
-    if rollout is not None and path != DEPLOYMENT / "runtime.sops.yaml":
-        raise ValueError("runtime rollouts require the Matrix runtime Secret")
-    encrypted_inputs.save(Path.cwd(), path, [document])
-    if rollout is not None:
-        update_runtime_rollout(rollout, (Path.cwd() / path).read_bytes())
+def save_secret(path, document):
+    runtime = path == DEPLOYMENT / "runtime.sops.yaml"
+    previous = (
+        encrypted_inputs.values(load_secret(path))
+        if runtime and (Path.cwd() / path).exists()
+        else {}
+    )
+    if not encrypted_inputs.save(Path.cwd(), path, [document]) or not runtime:
+        return
+    # Secret volume updates do not restart processes that read config at start.
+    current = encrypted_inputs.values(document)
+    changed = [
+        workload
+        for workload, keys in runtime_consumers().items()
+        if any(previous.get(key) != current.get(key) for key in keys)
+    ]
+    if changed:
+        update_runtime_rollouts(changed, (Path.cwd() / path).read_bytes())
 
 
 def secret(name, namespace, values, *, watch=False):
@@ -100,10 +120,7 @@ def initialize():
     # Capture generated MAS keys; plaintext never leaves this process's memory.
     mas = yaml.safe_load(run(["mas-cli", "config", "generate"]))
     shared = secrets.token_hex(32)
-    passwords = {
-        name: secrets.token_hex(32)
-        for name in ("postgres-password", "synapse-password", "mas-password")
-    }
+    passwords = {name: secrets.token_hex(32) for name in ("synapse", "mas")}
     mas["http"] = {
         "public_base": "https://matrix-auth.fahrican.com/",
         "issuer": "https://matrix-auth.fahrican.com/",
@@ -131,10 +148,10 @@ def initialize():
         ],
     }
     mas["database"] = {
-        "host": "matrix-postgres",
+        "host": DATABASE_HOST,
         "port": 5432,
         "username": "mas",
-        "password": passwords["mas-password"],
+        "password": passwords["mas"],
         "database": "mas",
         "ssl_mode": "disable",
     }
@@ -146,7 +163,28 @@ def initialize():
     }
     mas["passwords"]["enabled"] = False
     mas.setdefault("account", {})["password_registration_enabled"] = False
-    mas["upstream_oauth2"] = {"providers": []}
+    # render-cluster-credentials fills the client from the identity provider outputs.
+    mas["upstream_oauth2"] = {
+        "providers": [
+            {
+                "id": PROVIDER_ID,
+                "issuer": "https://auth.cloud.fahrican.com",
+                "human_name": "Fahrican",
+                "client_id": "",
+                "client_secret": "",
+                "token_endpoint_auth_method": "client_secret_basic",
+                "scope": "openid email profile",
+                "claims_imports": {
+                    "localpart": {
+                        "action": "suggest",
+                        "template": "{{ user.preferred_username }}",
+                    },
+                    "displayname": {"action": "suggest", "template": "{{ user.name }}"},
+                    "email": {"action": "suggest", "template": "{{ user.email }}"},
+                },
+            }
+        ]
+    }
     synapse = {
         "server_name": "matrix.fahrican.com",
         "public_baseurl": "https://matrix.fahrican.com/",
@@ -195,9 +233,9 @@ def initialize():
         "database": {
             "name": "psycopg2",
             "args": {
-                "host": "matrix-postgres",
+                "host": DATABASE_HOST,
                 "user": "synapse",
-                "password": passwords["synapse-password"],
+                "password": passwords["synapse"],
                 "database": "synapse",
                 "cp_min": 5,
                 "cp_max": 10,
@@ -220,53 +258,32 @@ def initialize():
             }
         },
     }
-    values = dict(
-        passwords,
-        **{
-            "synapse.yaml": yaml.safe_dump(synapse),
-            "mas.yaml": yaml.safe_dump(mas),
-            "signing.key": "ed25519 matrix1 "
-            + base64.b64encode(secrets.token_bytes(32)).decode().rstrip("=")
-            + "\n",
-            "relay.json": json.dumps(relay),
-            "alertmanager-token": relay["producers"]["alertmanager"]["token"],
-        },
-    )
+    # CloudNativePG owns the role passwords; the dumps pod reads the same Secrets.
+    database = []
+    for name, password in passwords.items():
+        document = secret(
+            "matrix-postgres-" + name,
+            "matrix",
+            {"username": name, "password": password},
+        )
+        document["metadata"]["labels"]["cnpg.io/reload"] = "true"
+        document["type"] = "kubernetes.io/basic-auth"
+        database.append(document)
+    encrypted_inputs.save(Path.cwd(), DEPLOYMENT / "database.sops.yaml", database)
+    values = {
+        "synapse.yaml": yaml.safe_dump(synapse),
+        "mas.yaml": yaml.safe_dump(mas),
+        "signing.key": "ed25519 matrix1 "
+        + base64.b64encode(secrets.token_bytes(32)).decode().rstrip("=")
+        + "\n",
+        "relay.json": json.dumps(relay),
+        "alertmanager-token": relay["producers"]["alertmanager"]["token"],
+    }
     save_secret(target, secret("matrix-runtime", "matrix", values))
 
 
 def provider_values(provider):
     return {key: str(item["value"]) for key, item in provider_outputs(provider).items()}
-
-
-def sync_identity(args):
-    target = DEPLOYMENT / "runtime.sops.yaml"
-    document = load_secret(target)
-    outputs = provider_values("identity")
-    config = yaml.safe_load(document["stringData"]["mas.yaml"])
-    config["upstream_oauth2"] = {
-        "providers": [
-            {
-                "id": PROVIDER_ID,
-                "issuer": "https://auth.cloud.fahrican.com",
-                "human_name": "Fahrican",
-                "client_id": outputs["matrix_client_id"],
-                "client_secret": outputs["matrix_client_secret"],
-                "token_endpoint_auth_method": "client_secret_basic",
-                "scope": "openid email profile",
-                "claims_imports": {
-                    "localpart": {
-                        "action": "suggest",
-                        "template": "{{ user.preferred_username }}",
-                    },
-                    "displayname": {"action": "suggest", "template": "{{ user.name }}"},
-                    "email": {"action": "suggest", "template": "{{ user.email }}"},
-                },
-            }
-        ]
-    }
-    document["stringData"]["mas.yaml"] = yaml.safe_dump(config)
-    save_secret(target, document, rollout="matrix-mas")
 
 
 async def enroll_bot(args):
@@ -332,7 +349,7 @@ async def enroll_bot(args):
         config["access_token"] = token.group()
         # Persist the credential before any room creation, so retries retain identity.
         document["stringData"]["relay.json"] = json.dumps(config)
-        save_secret(target, document, rollout="matrix-relay")
+        save_secret(target, document)
     client = AsyncClient(
         args.homeserver,
         config["user_id"],
@@ -365,7 +382,7 @@ async def enroll_bot(args):
             config[key] = response.room_id
             config["allowed_users"] = [config["user_id"], args.owner]
             document["stringData"]["relay.json"] = json.dumps(config)
-            save_secret(target, document, rollout="matrix-relay")
+            save_secret(target, document)
     finally:
         await client.close()
 
@@ -381,7 +398,7 @@ def approve_device(args):
         raise ValueError("fingerprint must be the device's 43-character Ed25519 key")
     relay["trusted_devices"].setdefault(args.user, {})[args.device] = fingerprint
     document["stringData"]["relay.json"] = json.dumps(relay)
-    save_secret(target, document, rollout="matrix-relay")
+    save_secret(target, document)
 
 
 def configure_alertmanager_mounts(phase):
@@ -458,7 +475,7 @@ def configure_alerting(args):
             ),
         )
     document["stringData"]["relay.json"] = json.dumps(relay)
-    save_secret(target, document, rollout="matrix-relay")
+    save_secret(target, document)
     receiver = {
         "name": "infrastructure-matrix",
         "webhook_configs": [
@@ -653,14 +670,15 @@ def enroll_monitoring(args):
     aws_client("secretsmanager").put_secret_value(SecretId=arn, SecretString=token)
     relay["heartbeat"] = {"url": url + "heartbeat", "token": token}
     document["stringData"]["relay.json"] = json.dumps(relay)
-    save_secret(target, document, rollout="matrix-relay")
+    save_secret(target, document)
 
 
 def activate():
     document = load_secret(DEPLOYMENT / "runtime.sops.yaml")
-    if not yaml.safe_load(document["stringData"]["mas.yaml"])["upstream_oauth2"][
+    providers = yaml.safe_load(document["stringData"]["mas.yaml"])["upstream_oauth2"][
         "providers"
-    ]:
+    ]
+    if not providers or not all(provider["client_id"] for provider in providers):
         raise ValueError("ZITADEL enrollment is incomplete")
     k = yaml.safe_load((DEPLOYMENT / "kustomization.yaml").read_text())
     if not k.get("images") or "registry.sops.yaml" not in k["resources"]:
@@ -872,7 +890,6 @@ def main():
     sub.add_parser("initialize")
     sub.add_parser("activate")
     sub.add_parser("retire-telegram")
-    identity = sub.add_parser("sync-identity")
     bot = sub.add_parser("enroll-bot")
     bot.add_argument("--kubeconfig", dest="cluster_kubeconfig", default=os.environ.get("KUBECONFIG"))
     bot.add_argument("--owner", required=True)
@@ -887,7 +904,7 @@ def main():
     publication.add_argument("image", type=Path)
     dns = sub.add_parser("configure-dns")
     dns.add_argument("--wan-ipv4", required=True)
-    monitoring = sub.add_parser("enroll-monitoring")
+    sub.add_parser("enroll-monitoring")
     monitoring_policy = sub.add_parser("sync-monitoring-policy")
     monitoring_policy.add_argument("--aws-profile", default="default")
     qualification = sub.add_parser("qualify")
@@ -905,8 +922,6 @@ def main():
         raise ValueError("run from the infrastructure repository root")
     if args.command == "initialize":
         initialize()
-    elif args.command == "sync-identity":
-        sync_identity(args)
     elif args.command == "enroll-bot":
         asyncio.run(enroll_bot(args))
     elif args.command == "approve-device":

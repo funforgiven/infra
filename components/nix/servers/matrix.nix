@@ -77,7 +77,10 @@ _: {
               pkgs.gitMinimal
               pkgs.matrix-authentication-service
             ];
-            text = ''exec ${python}/bin/python ${source}/admin.py "$@"'';
+            text = ''
+              export PYTHONPATH=${../../homelab/operations}
+              exec ${python}/bin/python ${source}/admin.py "$@"
+            '';
           }
         }/bin/matrix-admin";
       };

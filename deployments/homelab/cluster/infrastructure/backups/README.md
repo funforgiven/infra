@@ -49,8 +49,8 @@ Home Assistant, MQTT, Zigbee or Matter. See the [automation runbook](../../apps/
 for the separate Thread dataset and activation requirements.
 
 Matrix keeps its CloudNativePG data out of Velero. It creates logical dumps of
-Synapse and MAS at 01:15 Istanbul and in a fail-on-error Velero pre-backup hook
-on the `matrix-dumps` pod.
+Synapse and MAS in a fail-on-error Velero pre-backup hook on the `matrix-dumps`
+pod.
 The relay hook snapshots its SQLite queue and crypto store, recording the bot
 device identity and an encrypted recovery canary. Velero copies these recovery
 sources and local media. A separate monthly `matrix-restore-qualification`

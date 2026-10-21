@@ -33,7 +33,7 @@ def main():
                 [
                     "pg_dump",
                     "-h",
-                    os.environ.get("MATRIX_DB_HOST", "matrix-postgres"),
+                    os.environ.get("MATRIX_DB_HOST", "matrix-postgres-rw"),
                     "-p",
                     os.environ.get("MATRIX_DB_PORT", "5432"),
                     "-U",
