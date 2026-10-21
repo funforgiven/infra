@@ -60,11 +60,12 @@ in
       services = {
         openssh = {
           enable = true;
-          openFirewall = true;
+          # Each host opens SSH only on its administration path.
+          openFirewall = false;
           settings = {
             KbdInteractiveAuthentication = false;
             PasswordAuthentication = false;
-            PermitRootLogin = lib.mkForce "no";
+            PermitRootLogin = lib.mkDefault "no";
           };
         };
       };

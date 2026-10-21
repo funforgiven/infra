@@ -11,7 +11,6 @@ let
   host = inventory.hosts.${name};
   bootstrap = host.bootstrap or false;
   prefix = toString cluster.managementPrefixLength;
-  operatorKey = lib.removeSuffix "\n" (builtins.readFile ../../../secrets/github-ssh-key.pub);
   peers = map (item: item.management) (
     lib.attrValues (lib.filterAttrs (peer: _: peer != name) inventory.hosts)
   );
@@ -74,7 +73,6 @@ in
       "net.ipv4.conf.default.rp_filter" = 0;
       "net.ipv6.conf.iot0.disable_ipv6" = 1;
     };
-    tmp.cleanOnBoot = true;
   };
   hardware.enableRedistributableFirmware = true;
   hardware.cpu.${if host.cpu == "intel" then "intel" else "amd"}.updateMicrocode = true;
@@ -83,7 +81,6 @@ in
     useDHCP = false;
     useNetworkd = true;
     firewall = {
-      enable = true;
       checkReversePath = false;
       trustedInterfaces = [
         "lxc+"
@@ -224,7 +221,6 @@ in
         };
       };
     };
-    wait-online.anyInterface = true;
   };
   systemd.services.fabric-link-settings = {
     description = "Qualify the two ice links and set the switch-matched RS-FEC policy";
@@ -299,16 +295,10 @@ in
       };
     };
   };
-  users.mutableUsers = false;
-  users.users.root.hashedPasswordFile = config.sops.secrets.console-password-hash.path;
-  users.users.funforgiven = {
-    isNormalUser = true;
-    extraGroups = [ "wheel" ];
-    openssh.authorizedKeys.keys = [ operatorKey ];
-  };
-  security.sudo-rs = {
-    enable = true;
-    wheelNeedsPassword = false;
+  users.users.root = {
+    hashedPasswordFile = config.sops.secrets.console-password-hash.path;
+    openssh.authorizedKeys.keys =
+      config.users.users.${config.dendritic.primaryUser.username}.openssh.authorizedKeys.keys;
   };
   services.openssh = {
     hostKeys = [
@@ -317,15 +307,8 @@ in
         type = "ed25519";
       }
     ];
-    enable = true;
-    openFirewall = false;
-    settings = {
-      PasswordAuthentication = false;
-      KbdInteractiveAuthentication = false;
-      PermitRootLogin = "prohibit-password";
-    };
+    settings.PermitRootLogin = "prohibit-password";
   };
-  users.users.root.openssh.authorizedKeys.keys = [ operatorKey ];
   systemd.services.sshd = {
     after = [ "sops-install-secrets.service" ];
     requires = [ "sops-install-secrets.service" ];
@@ -439,14 +422,4 @@ in
     mdadm
     nftables
   ];
-  nix.settings.experimental-features = [
-    "nix-command"
-    "flakes"
-  ];
-  nix.gc = {
-    automatic = true;
-    dates = "weekly";
-    options = "--delete-older-than 14d";
-  };
-  nix.optimise.automatic = true;
 }

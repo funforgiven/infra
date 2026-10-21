@@ -10,7 +10,10 @@ in
     stateVersion = "26.05";
     user = "funforgiven";
     homeProfiles = [ ];
-    features = [ "homelab-cluster-host" ];
+    features = [
+      "services-server-common"
+      "homelab-cluster-host"
+    ];
   }) hosts;
   flake.diskoConfigurations = lib.mapAttrs (
     name: _:
@@ -26,7 +29,6 @@ in
   ) hosts;
   nixos.modules.homelab-cluster-host.imports = [
     inputs.disko.nixosModules.disko
-    inputs.sops-nix.nixosModules.sops
     ../../../deployments/homelab/hosts/common.nix
     ../../../deployments/homelab/hosts/disks.nix
   ];
