@@ -14,7 +14,8 @@ import json
 import sys
 import time
 import urllib.parse
-from dataclasses import dataclass
+from concurrent.futures import Future, ThreadPoolExecutor
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
@@ -29,6 +30,7 @@ MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 HTTP_TIMEOUT = 15.0
 POSTFLIGHT_ATTEMPTS = 15
 POSTFLIGHT_DELAY = 2.0
+READ_CONCURRENCY = 4
 PAGE = "page=1&pageSize=1000"
 BANDS = {"2.4GHz": 1, "dual": 3}
 # Port profile fields managed through the Omada API. A spanningTree block also
@@ -497,33 +499,7 @@ def _one_device(devices: Sequence[Mapping[str, Any]], mac: str, label: str) -> M
     return matches[0]
 
 
-def inspect(api: OmadaApi, desired: Desired) -> Snapshot:
-    sites = [site for site in api.read("sites") if site.get("name") == desired.site]
-    if len(sites) != 1:
-        raise SafeError("the exact Omada site is missing or ambiguous")
-    site_id = _string(sites[0].get("siteId"), "site ID")
-    devices = api.read("devices", site_id)
-    switch = _one_device(devices, desired.switch_mac, "switch")
-    if (
-        (switch.get("name"), switch.get("model"), str(switch.get("type", "")).lower())
-        != (desired.switch_name, desired.switch_model, "switch")
-    ):
-        raise SafeError("the exact switch identity differs from Git")
-    if desired.ap_mac:
-        ap = _one_device(devices, desired.ap_mac, "access point")
-        if (
-            (ap.get("name"), ap.get("model"), str(ap.get("type", "")).lower(),
-             ap.get("status"), ap.get("detailStatus"))
-            != (desired.ap_name, desired.ap_model, "ap", 1, 14)
-        ):
-            raise SafeError("the exact access-point identity or health differs from Git")
-        ap_detail = api.read("ap", site_id, desired.ap_mac)
-        if (
-            (normalize_mac(ap_detail.get("mac")), ap_detail.get("name"),
-             str(ap_detail.get("type", "")).lower())
-            != (desired.ap_mac, desired.ap_name, "ap")
-        ):
-            raise SafeError("the exact access-point detail identity differs from Git")
+def _read_networks(api: OmadaApi, site_id: str) -> dict[str, Any]:
     networks = _index_by(
         api.read("networks", site_id),
         lambda item: _integer(item.get("vlan"), "network VLAN"),
@@ -534,17 +510,26 @@ def inspect(api: OmadaApi, desired: Desired) -> Snapshot:
         lambda item: _string(item.get("id"), "network ID"),
         "LAN network",
     )
-    vlan_by_id = {
-        network_id: _integer(network.get("vlan"), "network VLAN")
-        for network_id, network in networks_by_id.items()
+    return {
+        "networks_by_vlan": networks,
+        "network_vlans_by_id": {
+            network_id: _integer(network.get("vlan"), "network VLAN")
+            for network_id, network in networks_by_id.items()
+        },
     }
+
+
+def _read_profiles(api: OmadaApi, site_id: str) -> dict[str, Any]:
     profiles = _index_by(
         api.read("profiles", site_id),
         lambda item: _string(item.get("name"), "profile name"),
         "profile",
     )
     _index_by(list(profiles.values()), _profile_id, "profile")
+    return {"profiles_by_name": profiles}
 
+
+def _read_ports(api: OmadaApi, site_id: str, desired: Desired) -> dict[str, Any]:
     ports: dict[int, Mapping[str, Any]] = {}
     for port in api.read("ports", site_id):
         try:
@@ -561,37 +546,106 @@ def inspect(api: OmadaApi, desired: Desired) -> Snapshot:
         ports[number] = port
     if not set(desired.ports).issubset(ports):
         raise SafeError("one or more declared switch ports are absent")
+    return {"ports": ports}
 
-    if not desired.ap_mac:
-        return Snapshot(
-            site_id=site_id, networks_by_vlan=networks,
-            network_vlans_by_id=vlan_by_id, profiles_by_name=profiles,
-            ports=ports, wlan_id="", ssid_ids={}, ssid_details={},
-            ap_ready=False, unexpected_ssids=(),
-        )
 
-    groups = [group for group in api.read("wlan-groups", site_id)
-              if group.get("name") == desired.wlan_group]
-    if len(groups) != 1:
-        raise SafeError("the exact WLAN group is missing or ambiguous")
-    wlan_id = _string(groups[0].get("wlanId"), "WLAN group ID")
-    summaries = _index_by(
-        api.read("ssids", site_id, wlan_id),
-        lambda item: _string(item.get("name"), "SSID name"),
-        "SSID",
-    )
-    _index_by(list(summaries.values()), lambda item: _string(item.get("ssidId"), "SSID ID"), "SSID")
-    ssid_ids = {name: _string(summary.get("ssidId"), "SSID ID") for name, summary in summaries.items()}
-    desired_names = {ssid.name for ssid in desired.ssids}
-    details = {
-        name: api.read("ssid", site_id, wlan_id, ssid_id)
-        for name, ssid_id in ssid_ids.items()
-        if name in desired_names
+# Reads that refresh one planning domain while apply waits for it to settle.
+DOMAIN_READERS: Mapping[str, Callable[[OmadaApi, str], dict[str, Any]]] = {
+    "network": _read_networks,
+    "profile": _read_profiles,
+}
+
+
+def _submit_all(executor: ThreadPoolExecutor, reads: Mapping[str, Callable[[], Any]]) -> dict[str, Future[Any]]:
+    return {name: executor.submit(read) for name, read in reads.items()}
+
+
+def _wired(site_id: str, results: Mapping[str, Future[Any]]) -> dict[str, Any]:
+    return {
+        "site_id": site_id,
+        **results["networks"].result(),
+        **results["profiles"].result(),
+        **results["ports"].result(),
     }
-    ap_ip = api.read("ap-ip", site_id, desired.ap_mac)
-    ap_vlan = api.read("ap-vlan", site_id, desired.ap_mac)
+
+
+def inspect(api: OmadaApi, desired: Desired) -> Snapshot:
+    sites = [site for site in api.read("sites") if site.get("name") == desired.site]
+    if len(sites) != 1:
+        raise SafeError("the exact Omada site is missing or ambiguous")
+    site_id = _string(sites[0].get("siteId"), "site ID")
+
+    # Every read below depends only on the site and declared identities, so
+    # they are fetched concurrently. Results are consumed in the original
+    # check order so the first reported failure stays the same.
+    reads: dict[str, Callable[[], Any]] = {
+        "devices": lambda: api.read("devices", site_id),
+        "networks": lambda: _read_networks(api, site_id),
+        "profiles": lambda: _read_profiles(api, site_id),
+        "ports": lambda: _read_ports(api, site_id, desired),
+    }
+    if desired.ap_mac:
+        reads |= {
+            "ap": lambda: api.read("ap", site_id, desired.ap_mac),
+            "ap-ip": lambda: api.read("ap-ip", site_id, desired.ap_mac),
+            "ap-vlan": lambda: api.read("ap-vlan", site_id, desired.ap_mac),
+            "wlan-groups": lambda: api.read("wlan-groups", site_id),
+        }
+    with ThreadPoolExecutor(max_workers=READ_CONCURRENCY) as executor:
+        results = _submit_all(executor, reads)
+        devices = results["devices"].result()
+        switch = _one_device(devices, desired.switch_mac, "switch")
+        if (
+            (switch.get("name"), switch.get("model"), str(switch.get("type", "")).lower())
+            != (desired.switch_name, desired.switch_model, "switch")
+        ):
+            raise SafeError("the exact switch identity differs from Git")
+        if not desired.ap_mac:
+            return Snapshot(
+                **_wired(site_id, results), wlan_id="", ssid_ids={}, ssid_details={},
+                ap_ready=False, unexpected_ssids=(),
+            )
+
+        ap = _one_device(devices, desired.ap_mac, "access point")
+        if (
+            (ap.get("name"), ap.get("model"), str(ap.get("type", "")).lower(),
+             ap.get("status"), ap.get("detailStatus"))
+            != (desired.ap_name, desired.ap_model, "ap", 1, 14)
+        ):
+            raise SafeError("the exact access-point identity or health differs from Git")
+        ap_detail = results["ap"].result()
+        if (
+            (normalize_mac(ap_detail.get("mac")), ap_detail.get("name"),
+             str(ap_detail.get("type", "")).lower())
+            != (desired.ap_mac, desired.ap_name, "ap")
+        ):
+            raise SafeError("the exact access-point detail identity differs from Git")
+        wired = _wired(site_id, results)
+
+        groups = [group for group in results["wlan-groups"].result()
+                  if group.get("name") == desired.wlan_group]
+        if len(groups) != 1:
+            raise SafeError("the exact WLAN group is missing or ambiguous")
+        wlan_id = _string(groups[0].get("wlanId"), "WLAN group ID")
+        summaries = _index_by(
+            api.read("ssids", site_id, wlan_id),
+            lambda item: _string(item.get("name"), "SSID name"),
+            "SSID",
+        )
+        _index_by(list(summaries.values()), lambda item: _string(item.get("ssidId"), "SSID ID"), "SSID")
+        ssid_ids = {name: _string(summary.get("ssidId"), "SSID ID") for name, summary in summaries.items()}
+        desired_names = {ssid.name for ssid in desired.ssids}
+        details = {
+            name: future.result()
+            for name, future in _submit_all(executor, {
+                name: (lambda ssid_id=ssid_id: api.read("ssid", site_id, wlan_id, ssid_id))
+                for name, ssid_id in ssid_ids.items()
+                if name in desired_names
+            }).items()
+        }
+        ap_ip = results["ap-ip"].result()
+        mvlan = results["ap-vlan"].result().get("mvlanSetting")
     static = ap_ip.get("staticIpSetting")
-    mvlan = ap_vlan.get("mvlanSetting")
     ap_ready = (
         ap.get("ip") == desired.ap_address
         and ap_detail.get("ip") == desired.ap_address
@@ -609,11 +663,7 @@ def inspect(api: OmadaApi, desired: Desired) -> Snapshot:
         and mvlan.get("mode") == 0
     )
     return Snapshot(
-        site_id=site_id,
-        networks_by_vlan=networks,
-        network_vlans_by_id=vlan_by_id,
-        profiles_by_name=profiles,
-        ports=ports,
+        **wired,
         wlan_id=wlan_id,
         ssid_ids=ssid_ids,
         ssid_details=details,
@@ -831,16 +881,28 @@ def make_plan(desired: Desired, snapshot: Snapshot, *, include_write_only: bool 
 def _wait(
     api: OmadaApi,
     desired: Desired,
-    predicate: Callable[[tuple[Action, ...]], bool],
+    snapshot: Snapshot,
+    domain: str | None,
     attempts: int,
     delay: float,
     sleeper: Callable[[float], None],
 ) -> Snapshot:
+    """Poll until every action (or only DOMAIN's actions) is a no-op.
+
+    With a domain, only that domain's resources are re-read and merged into
+    SNAPSHOT; otherwise the whole controller state is inspected again.
+    """
     for attempt in range(attempts):
         try:
-            snapshot = inspect(api, desired)
-            if predicate(make_plan(desired, snapshot)):
-                return snapshot
+            if domain is None:
+                current = inspect(api, desired)
+            else:
+                current = replace(snapshot, **DOMAIN_READERS[domain](api, snapshot.site_id))
+            if all(
+                action.operation == "noop" for action in make_plan(desired, current)
+                if domain is None or action.domain == domain
+            ):
+                return current
         except SafeError:
             pass
         if attempt + 1 < attempts:
@@ -879,14 +941,7 @@ def apply(
         api.write(resource, values, _network_payload(desired_networks[action.target]))
 
     if networks:
-        snapshot = _wait(
-            api, desired,
-            lambda plan: all(
-                action.operation == "noop" for action in plan
-                if action.domain == "network"
-            ),
-            attempts, delay, sleeper,
-        )
+        snapshot = _wait(api, desired, snapshot, "network", attempts, delay, sleeper)
         actions = make_plan(desired, snapshot, include_write_only=include_write_only)
         if any(action.blocked for action in actions):
             raise SafeError("apply became blocked after LAN network reconciliation")
@@ -930,11 +985,7 @@ def apply(
         api.write(resource, values, profile_payloads[action.target])
 
     if profiles:
-        snapshot = _wait(
-            api, desired,
-            lambda plan: all(action.operation == "noop" for action in plan if action.domain == "profile"),
-            attempts, delay, sleeper,
-        )
+        snapshot = _wait(api, desired, snapshot, "profile", attempts, delay, sleeper)
 
     ports = [action for action in make_plan(desired, snapshot) if action.domain == "port"]
     if any(action.blocked for action in ports):
@@ -974,11 +1025,7 @@ def apply(
             resource, values = "ssid-update", (*values, ssid_id)
         api.write(resource, values, ssid_payloads[action.target])
 
-    _wait(
-        api, desired,
-        lambda plan: all(action.operation == "noop" for action in plan),
-        attempts, delay, sleeper,
-    )
+    _wait(api, desired, snapshot, None, attempts, delay, sleeper)
     return len(networks) + len(profiles) + len(ports) + len(wireless)
 
 

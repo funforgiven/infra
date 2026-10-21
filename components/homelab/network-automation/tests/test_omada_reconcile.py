@@ -304,6 +304,20 @@ class ReconcilerTests(unittest.TestCase):
         self.assertIn(("assign_profile", 2), self.api.calls)
         self.assertTrue(all(action.operation == "noop" for action in self.plan()))
 
+    def test_domain_postflight_rereads_only_that_domain(self) -> None:
+        self.api.networks = [item for item in self.api.networks if item["vlan"] != 40]
+        for item in self.api.profiles:
+            if item["name"] in {"infra-ccr-trunk", "infra-crs-trunk"}:
+                item["tagNetworkIds"].remove("n40")
+        with mock.patch.object(self.api, "read", wraps=self.api.read) as read:
+            self.reconcile(include_psks=False)
+        resources = [call.args[0] for call in read.call_args_list]
+        # The initial inspection and the final postflight read everything;
+        # the network and profile postflights re-read only their domain.
+        self.assertEqual(resources.count("devices"), 2)
+        self.assertEqual(resources.count("networks"), 3)
+        self.assertEqual(resources.count("profiles"), 3)
+
     def test_port_assignment_preserves_name_speed_duplex_and_tags(self) -> None:
         self.api.ports[4] = {
             "profileId": "p-all", "profileName": "All", "portName": "Zigbee radio",
