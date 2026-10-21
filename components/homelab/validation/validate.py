@@ -8,6 +8,7 @@ import argparse
 import copy
 import gzip
 import json
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -51,6 +52,25 @@ def render(kustomize,path):
     result=subprocess.run([kustomize,"build","--load-restrictor","LoadRestrictionsNone",str(path)],capture_output=True)
     if result.returncode:raise ValueError("Kustomize build failed: "+str(path))
     return [d for d in yaml.safe_load_all(result.stdout) if d]
+
+def require_bounded_postgres_wal(objects):
+    """Keep an offline replica's WAL budget within half its storage volume."""
+    units = {"MB": 2**20, "GB": 2**30, "TB": 2**40, "Mi": 2**20, "Gi": 2**30, "Ti": 2**40}
+    for document in objects.values():
+        if document.get("apiVersion") != "postgresql.cnpg.io/v1" or document.get("kind") != "Cluster":
+            continue
+        spec = document["spec"]
+        if spec.get("instances", 1) < 2:
+            continue
+        name = document["metadata"]["name"]
+        limit = str(spec.get("postgresql", {}).get("parameters", {}).get("max_slot_wal_keep_size", ""))
+        wal = re.fullmatch(r"([1-9][0-9]*)\s*(MB|GB|TB)", limit)
+        storage = spec.get("walStorage") or spec.get("storage", {})
+        disk = re.fullmatch(r"([1-9][0-9]*)(Mi|Gi|Ti)", storage.get("size", ""))
+        if not wal or not disk:
+            raise ValueError(name + ": replicated PostgreSQL requires an explicit finite WAL budget and volume size")
+        if int(wal[1]) * units[wal[2]] > int(disk[1]) * units[disk[2]] // 2:
+            raise ValueError(name + ": replica WAL budget exceeds half its storage volume")
 
 def require_snapshot_support(objects):
     if any(d["kind"] == "VolumeSnapshotClass" for d in objects.values()):
@@ -135,6 +155,7 @@ def validate(root,kustomize,helm_cache=None,decrypt=False,helm="helm"):
     for d in all_objects.values():
         if d["kind"] not in ["CustomResourceDefinition","HelmRelease"]:inspect(d)
     require_snapshot_support(all_objects)
+    require_bounded_postgres_wal(all_objects)
     helm_count=0
     if helm_cache:
         charts=json.loads((helm_cache/"charts.json").read_text())
