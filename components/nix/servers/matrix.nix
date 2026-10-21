@@ -30,7 +30,7 @@ _: {
           python
           pkgs.matrix-synapse
           pkgs.matrix-authentication-service
-          pkgs.postgresql_17
+          pkgs.postgresql_18
           pkgs.nginx
           pkgs.squid
           pkgs.cacert
@@ -49,7 +49,7 @@ _: {
         config = {
           User = "1000:1000";
           Env = [
-            "PATH=${pkgs.postgresql_17}/bin:/bin"
+            "PATH=${pkgs.postgresql_18}/bin:/bin"
             "HOME=/var/lib/matrix"
             "PYTHONDONTWRITEBYTECODE=1"
             "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
@@ -101,7 +101,7 @@ _: {
           pkgs.writeShellApplication {
             name = "matrix-qualify-local";
             runtimeInputs = [
-              pkgs.postgresql_17
+              pkgs.postgresql_18
               pkgs.matrix-synapse
               pkgs.matrix-authentication-service
               pkgs.nginx
