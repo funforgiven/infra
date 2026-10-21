@@ -23,9 +23,8 @@ patches:
         provider: sops
         secretRef:
           name: sops-age
-# Degraded mode while pecorino is offline: stages count as ready once applied,
-# because full rollouts and three-way quorum cannot be reached. Delete this patch
-# when all three nodes are back.
+# Health means serving with one node lost: replicated workloads may run one
+# replica short, Ceph may warn, and single-replica workloads must be up.
 - target:
     group: kustomize.toolkit.fluxcd.io
     kind: Kustomization
@@ -35,6 +34,43 @@ patches:
     metadata:
       name: all
     spec:
-      wait: false
-      healthChecks: null
-      healthCheckExprs: null
+      healthCheckExprs:
+      - apiVersion: apps/v1
+        kind: Deployment
+        current: >-
+          has(status.observedGeneration) && status.observedGeneration == metadata.generation &&
+          (spec.replicas == 0 || (has(status.updatedReplicas) && has(status.availableReplicas) &&
+          status.updatedReplicas >= (spec.replicas > 1 ? spec.replicas - 1 : 1) &&
+          status.availableReplicas >= (spec.replicas > 1 ? spec.replicas - 1 : 1)))
+      - apiVersion: apps/v1
+        kind: StatefulSet
+        current: >-
+          has(status.observedGeneration) && status.observedGeneration == metadata.generation &&
+          (spec.replicas == 0 || (has(status.availableReplicas) &&
+          status.availableReplicas >= (spec.replicas > 1 ? spec.replicas - 1 : 1)))
+      - apiVersion: apps/v1
+        kind: DaemonSet
+        current: >-
+          has(status.observedGeneration) && status.observedGeneration == metadata.generation &&
+          (status.desiredNumberScheduled == 0 || (has(status.numberAvailable) && has(status.updatedNumberScheduled) &&
+          status.updatedNumberScheduled >= status.desiredNumberScheduled &&
+          status.numberAvailable >= (status.desiredNumberScheduled > 1 ? status.desiredNumberScheduled - 1 : 1)))
+      - apiVersion: postgresql.cnpg.io/v1
+        kind: Cluster
+        current: 'has(status.readyInstances) && status.readyInstances >= (spec.instances > 1 ? spec.instances - 1 : 1)'
+      - apiVersion: ceph.rook.io/v1
+        kind: CephCluster
+        failed: has(status.ceph.health) && status.ceph.health == 'HEALTH_ERR'
+        current: has(status.ceph.health) && status.ceph.health in ['HEALTH_OK', 'HEALTH_WARN']
+      - apiVersion: ceph.rook.io/v1
+        kind: CephBlockPool
+        failed: has(status.phase) && status.phase == 'Failure'
+        current: has(status.phase) && status.phase == 'Ready'
+      - apiVersion: ceph.rook.io/v1
+        kind: CephFilesystem
+        failed: has(status.phase) && status.phase == 'Failure'
+        current: has(status.phase) && status.phase == 'Ready'
+      - apiVersion: kubevirt.io/v1
+        kind: KubeVirt
+        failed: has(status.phase) && status.phase == 'Deleted'
+        current: has(status.phase) && status.phase == 'Deployed'
