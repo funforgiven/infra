@@ -35,6 +35,10 @@ patches:
       name: all
     spec:
       healthCheckExprs:
+      # Stages only label nodes; a node being down is not a deployment failure.
+      - apiVersion: v1
+        kind: Node
+        current: 'true'
       - apiVersion: apps/v1
         kind: Deployment
         current: >-
