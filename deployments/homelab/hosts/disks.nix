@@ -1,7 +1,7 @@
 { config, lib, ... }:
 let
   inventory = builtins.fromJSON (builtins.readFile ./inventory.json);
-  host = inventory.${config.networking.hostName};
+  host = inventory.hosts.${config.networking.hostName};
   makeDisk = index: device: {
     name = "os${toString index}";
     value = {

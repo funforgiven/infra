@@ -1,10 +1,16 @@
-{ config, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
-  minutes = {
-    pecorino = "30";
-    taleggio = "40";
-    asiago = "50";
-  };
+  inherit (builtins.fromJSON (builtins.readFile ./inventory.json)) hosts;
+  # Stagger uploads ten minutes apart from :30, highest VRRP priority first.
+  order = lib.sort (a: b: hosts.${a}.priority > hosts.${b}.priority) (lib.attrNames hosts);
+  minute = lib.mod (
+    30 + 10 * lib.lists.findFirstIndex (host: host == config.networking.hostName) 0 order
+  ) 60;
 in
 {
   sops.secrets = {
@@ -29,7 +35,7 @@ in
       "--group-by host,tags"
     ];
     timerConfig = {
-      OnCalendar = "*-*-* 00,06,12,18:${minutes.${config.networking.hostName}}:00 UTC";
+      OnCalendar = "*-*-* 00,06,12,18:${lib.fixedWidthNumber 2 minute}:00 UTC";
       Persistent = true;
       RandomizedDelaySec = "2m";
     };

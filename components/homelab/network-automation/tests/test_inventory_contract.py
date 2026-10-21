@@ -31,7 +31,7 @@ class NetworkInventoryTests(unittest.TestCase):
         cls.root = inventory["all"]
         cls.switch = cls.root["children"]["core_switch"]["hosts"]["crs510"]
         cls.router = cls.root["children"]["core_router"]["hosts"]["ccr2004"]
-        cls.host_inventory = json.loads(HOST_INVENTORY.read_text())
+        cls.host_inventory = json.loads(HOST_INVENTORY.read_text())["hosts"]
         cls.host_keys = json.loads(HOST_KEYS.read_text())
         cls.internal_dns = "\n".join(value for document in yaml.safe_load_all(INTERNAL_DNS.read_text()) if document["kind"] == "ConfigMap" for value in document.get("data", {}).values())
         cls.playbook = PLAYBOOK.read_text()

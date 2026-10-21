@@ -1,6 +1,8 @@
 { inputs, lib, ... }:
 let
-  inventory = builtins.fromJSON (builtins.readFile ../../../deployments/homelab/hosts/inventory.json);
+  inherit (builtins.fromJSON (builtins.readFile ../../../deployments/homelab/hosts/inventory.json))
+    hosts
+    ;
 in
 {
   dendritic.hosts = lib.mapAttrs (_: _: {
@@ -9,7 +11,7 @@ in
     user = "funforgiven";
     homeProfiles = [ ];
     features = [ "homelab-cluster-host" ];
-  }) inventory;
+  }) hosts;
   flake.diskoConfigurations = lib.mapAttrs (
     name: _:
     let
@@ -21,7 +23,7 @@ in
     {
       inherit (configuration) disko;
     }
-  ) inventory;
+  ) hosts;
   nixos.modules.homelab-cluster-host.imports = [
     inputs.disko.nixosModules.disko
     inputs.sops-nix.nixosModules.sops

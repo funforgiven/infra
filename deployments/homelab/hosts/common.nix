@@ -6,12 +6,14 @@
 }:
 let
   inventory = builtins.fromJSON (builtins.readFile ./inventory.json);
+  inherit (inventory) cluster;
   name = config.networking.hostName;
-  host = inventory.${name};
-  bootstrap = name == "pecorino";
+  host = inventory.hosts.${name};
+  bootstrap = host.bootstrap or false;
+  prefix = toString cluster.managementPrefixLength;
   operatorKey = lib.removeSuffix "\n" (builtins.readFile ../../../secrets/github-ssh-key.pub);
   peers = map (item: item.management) (
-    lib.attrValues (lib.filterAttrs (peer: _: peer != name) inventory)
+    lib.attrValues (lib.filterAttrs (peer: _: peer != name) inventory.hosts)
   );
   cniArchive = pkgs.fetchurl {
     url = "https://github.com/containernetworking/plugins/releases/download/v1.9.1/cni-plugins-linux-amd64-v1.9.1.tgz";
@@ -35,6 +37,12 @@ let
 in
 {
   imports = [ ./backup.nix ];
+  assertions = [
+    {
+      assertion = lib.count (peer: peer.bootstrap or false) (lib.attrValues inventory.hosts) == 1;
+      message = "Exactly one inventory host must set bootstrap to initialize the K3s cluster.";
+    }
+  ];
   boot = {
     initrd.availableKernelModules = [
       "ahci"
@@ -175,9 +183,9 @@ in
       };
       "20-management" = {
         matchConfig.Name = "bond0.20";
-        address = [ "${host.management}/24" ];
-        gateway = [ "10.21.20.1" ];
-        dns = [ "10.21.20.1" ];
+        address = [ "${host.management}/${prefix}" ];
+        gateway = [ cluster.managementGateway ];
+        dns = [ cluster.managementGateway ];
         networkConfig = {
           LinkLocalAddressing = "no";
           IPv6AcceptRA = false;
@@ -328,7 +336,7 @@ in
     package = pkgs.k3s;
     role = "server";
     clusterInit = bootstrap;
-    serverAddr = if bootstrap then "" else "https://10.21.20.128:6443";
+    serverAddr = if bootstrap then "" else "https://${cluster.apiVip}:6443";
     tokenFile = config.sops.secrets.k3s-token.path;
     disable = [
       "traefik"
@@ -344,8 +352,8 @@ in
     extraFlags = [
       "--node-ip=${host.management}"
       "--advertise-address=${host.management}"
-      "--tls-san=10.21.20.128"
-      "--tls-san=cluster-api.mgmt.cloud.fahrican.com"
+      "--tls-san=${cluster.apiVip}"
+      "--tls-san=${cluster.apiName}"
       "--cluster-cidr=10.100.0.0/16"
       "--service-cidr=172.24.0.0/13"
       "--cluster-dns=172.24.0.10"
@@ -407,7 +415,7 @@ in
       trackScripts = [ "api-ready" ];
       virtualIps = [
         {
-          addr = "10.21.20.128/24";
+          addr = "${cluster.apiVip}/${prefix}";
           dev = "bond0.20";
         }
       ];

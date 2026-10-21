@@ -8,6 +8,8 @@ let
   user = config.users.funforgiven;
   atollionWorkspace = "${user.homeDirectory}/dev/atollion";
   hostIdentityPath = "/etc/ssh/ssh_host_ed25519_key";
+  homelabHosts =
+    (builtins.fromJSON (builtins.readFile ../../../deployments/homelab/hosts/inventory.json)).hosts;
   # Verification-only key for older signed commits.
   historicalSigningPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHj9lWCKgMOZg6K1QzZvNH0QYY4m0lA0l6A+E4wVdVMT historical-signing-key";
   apiTokensFile = ../../../secrets/api-tokens.yaml;
@@ -125,34 +127,28 @@ let
       mkManagedHostSshSettings =
         {
           hostName,
-          user,
+          username,
         }:
         {
           HostName = hostName;
-          User = user;
+          User = username;
           IdentityAgent = "none";
           IdentitiesOnly = true;
           IdentityFile = secretPaths.github-ssh-key;
           StrictHostKeyChecking = "yes";
         };
-      managedHostSshSettings = lib.mapAttrs (_: mkManagedHostSshSettings) {
-        asiago = {
-          hostName = "10.21.20.12";
-          user = "funforgiven";
-        };
-        burrata = {
-          hostName = "10.21.90.8";
-          user = "root";
-        };
-        pecorino = {
-          hostName = "10.21.20.10";
-          user = "funforgiven";
-        };
-        taleggio = {
-          hostName = "10.21.20.11";
-          user = "funforgiven";
-        };
-      };
+      managedHostSshSettings = lib.mapAttrs (_: mkManagedHostSshSettings) (
+        lib.mapAttrs (_: host: {
+          hostName = host.management;
+          inherit (user) username;
+        }) homelabHosts
+        // {
+          burrata = {
+            hostName = "10.21.90.8";
+            username = "root";
+          };
+        }
+      );
       context7McpLauncher = mkSecretMcpLauncher {
         name = "context7-mcp";
         package = pkgs.context7-mcp;
@@ -216,16 +212,7 @@ let
       };
     in
     {
-      options.dendritic.gitAuthenticationPublicKey = lib.mkOption {
-        type = lib.types.singleLineStr;
-        readOnly = true;
-        internal = true;
-        description = "SSH public key used for GitHub access and commit verification.";
-      };
-
       config = {
-        dendritic.gitAuthenticationPublicKey = githubPublicKey;
-
         home.file = {
           ".ssh/config".source = lib.mkForce (config.lib.file.mkOutOfStoreSymlink sshConfigPath);
           ".ssh/allowed_signers".text = ''
