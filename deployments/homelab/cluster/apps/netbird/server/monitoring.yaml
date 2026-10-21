@@ -57,13 +57,6 @@ spec:
         severity: critical
       annotations:
         summary: NetBird service routing is unavailable
-    - alert: NetBirdDatabaseBackupStale
-      expr: time() - cnpg_pg_stat_archiver_last_archived_time{namespace="netbird"} > 3600
-      for: 15m
-      labels:
-        severity: warning
-      annotations:
-        summary: NetBird PostgreSQL WAL archive is stale
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: Probe

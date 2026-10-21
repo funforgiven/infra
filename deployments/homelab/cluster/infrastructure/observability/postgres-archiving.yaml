@@ -1,0 +1,22 @@
+# CloudNativePG reports pg_stat_archiver only from primaries. CNPG's default
+# five-minute archive_timeout closes a segment whenever there was activity, so
+# an archive older than an hour means WAL is not reaching the barman object
+# store (point-in-time recovery is falling behind).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: postgres-archiving
+  namespace: services-observability
+spec:
+  groups:
+  - name: postgres-archiving
+    rules:
+    - alert: PostgresWALArchiveStale
+      expr: time() - cnpg_pg_stat_archiver_last_archived_time > 3600
+      for: 15m
+      labels:
+        severity: warning
+      annotations:
+        summary: PostgreSQL WAL archive is stale for {{ $labels.namespace }}/{{ $labels.pod }}
+        description: No WAL segment was archived within an hour. Check the primary's archiver and
+          its barman-cloud object store credentials.
