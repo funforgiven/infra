@@ -56,10 +56,8 @@ read_sops_value() {
       managed-key-file "$key"
   )"
   value="$(
-    sops decrypt \
-      --extract "[\"data\"][\"$key\"]" \
-      --output-type binary \
-      "$repository_root/$relative_secret_file" | base64 --decode
+    sops-credential --repository-root "$repository_root" \
+      read "$relative_secret_file" "$key"
   )"
   if [[ "${#value}" -lt "$minimum" ]] ||
     [[ "${#value}" -gt "$maximum" ]] ||

@@ -11,15 +11,22 @@
           exec ${python}/bin/python ${./activation/runtime_contract.py} "$@"
         '';
       };
+      sopsCredential = pkgs.writeShellApplication {
+        name = "sops-credential";
+        runtimeInputs = [ pkgs.sops ];
+        text = ''
+          exec ${python}/bin/python ${./activation/sops_credentials.py} "$@"
+        '';
+      };
       enrollServicesCredential = pkgs.writeShellApplication {
         name = "enroll-services-credential";
         runtimeInputs = [
           pkgs.coreutils
           pkgs.gitMinimal
-          pkgs.jq
           pkgs.ripgrep
           pkgs.sops
           runtimeContract
+          sopsCredential
         ];
         text = builtins.readFile ./activation/enroll-services-credential.sh;
       };
@@ -28,11 +35,11 @@
         runtimeInputs = [
           pkgs.coreutils
           pkgs.gitMinimal
-          pkgs.jq
           pkgs.openssl
           pkgs.ripgrep
           pkgs.sops
           runtimeContract
+          sopsCredential
         ];
         text = builtins.readFile ./activation/generate-services-credential.sh;
       };
@@ -71,8 +78,8 @@
           pkgs.coreutils
           pkgs.gitMinimal
           pkgs.openssh
-          pkgs.sops
           runtimeContract
+          sopsCredential
         ];
         text = builtins.readFile ./activation/enroll-service-host-secrets.sh;
       };

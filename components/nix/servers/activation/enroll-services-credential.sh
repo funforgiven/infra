@@ -56,10 +56,7 @@ readonly repository_root
 cd "$repository_root"
 relative_secret_file="$(runtime-contract key-file "$key")"
 readonly relative_secret_file
-secret_file="$repository_root/$relative_secret_file"
-readonly secret_file
-[[ -f "$secret_file" ]]
-sops filestatus "$secret_file" | rg --quiet '"encrypted":true'
+sops filestatus "$repository_root/$relative_secret_file" | rg --quiet '"encrypted":true'
 
 if [[ "$from_file" == true ]]; then
   if [[ -z "$intake_directory" ]]; then
@@ -98,11 +95,9 @@ if [[ -z "$value" || "$value" == *$'\n'* || "$value" == *$'\r'* ]]; then
   exit 1
 fi
 
-encoded="$(printf '%s' "$value" | base64 --wrap=0)"
+printf '%s' "$value" | sops-credential --repository-root "$repository_root" \
+  write "$relative_secret_file" "$key"
 unset value
-printf '%s' "$encoded" | jq --raw-input . | \
-  sops set --value-stdin "$secret_file" "[\"data\"][\"$key\"]"
-unset encoded
 if [[ "$from_file" == true ]]; then
   truncate --size=0 "$source_file"
 fi

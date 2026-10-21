@@ -1,5 +1,10 @@
+import base64
+import json
 from pathlib import Path
+import subprocess
+from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 
 from sops_credentials import SopsCredentialError, SopsCredentialStore
 
@@ -75,6 +80,37 @@ class SopsCredentialStoreTest(unittest.TestCase):
 
         self.assertEqual(store.values, {"KEY_ID": "old-id", "KEY": "old-secret"})
         self.assertEqual(store.syncs, 2)
+
+
+class SopsDecryptionCacheTest(unittest.TestCase):
+    def test_file_is_decrypted_once_until_written(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / SECRET_FILE).write_text(
+                "data:\n  KEY_ID: ENC[a]\n  KEY: ENC[b]\n", encoding="utf-8"
+            )
+            store = SopsCredentialStore(root)
+            plaintext = {
+                "data": {
+                    "KEY_ID": base64.b64encode(b"id").decode(),
+                    "KEY": base64.b64encode(b"secret").decode(),
+                }
+            }
+            with patch("sops_credentials.subprocess.run") as run:
+                run.return_value = subprocess.CompletedProcess(
+                    [], 0, json.dumps(plaintext), ""
+                )
+                self.assertEqual(store.read(SECRET_FILE, "KEY_ID"), "id")
+                self.assertEqual(store.read(SECRET_FILE, "KEY"), "secret")
+                self.assertIsNone(store.read(SECRET_FILE, "MISSING"))
+                self.assertEqual(run.call_count, 1)
+                self.assertEqual(
+                    run.call_args.args[0][:4],
+                    ["sops", "decrypt", "--output-type", "json"],
+                )
+                store._set(root / SECRET_FILE, "KEY", "replacement")
+                store.read(SECRET_FILE, "KEY")
+                self.assertEqual(run.call_count, 3)
 
 
 if __name__ == "__main__":
