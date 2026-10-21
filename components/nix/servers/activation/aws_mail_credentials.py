@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 from dataclasses import dataclass
 import json
 import os
@@ -120,12 +121,15 @@ class AwsMailCredentials:
         self.store = SopsCredentialStore(self.repository_root)
 
     @staticmethod
-    def _aws_environment(values: dict[str, str]) -> dict[str, str]:
+    def _aws_environment(
+        values: dict[str, str], keys: tuple[str, str] = BOOTSTRAP_KEYS
+    ) -> dict[str, str]:
+        """Return an environment authenticated only by the selected key pair."""
         environment = os.environ.copy()
         environment.update(
             {
-                "AWS_ACCESS_KEY_ID": values[BOOTSTRAP_KEYS[0]],
-                "AWS_SECRET_ACCESS_KEY": values[BOOTSTRAP_KEYS[1]],
+                "AWS_ACCESS_KEY_ID": values[keys[0]],
+                "AWS_SECRET_ACCESS_KEY": values[keys[1]],
                 "AWS_DEFAULT_REGION": AWS_REGION,
             }
         )
@@ -139,9 +143,21 @@ class AwsMailCredentials:
         *,
         capture: bool = False,
         input_document: dict[str, str] | None = None,
+        stdin: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
-        command = ["aws", *arguments]
-        if input_document is None:
+        """Run the AWS CLI; secrets travel only through a temporary file or stdin."""
+        with contextlib.ExitStack() as stack:
+            command = ["aws", *arguments]
+            if input_document is not None:
+                input_file = stack.enter_context(
+                    tempfile.NamedTemporaryFile(
+                        mode="w", encoding="utf-8", prefix="aws-cli-input-"
+                    )
+                )
+                json.dump(input_document, input_file)
+                input_file.flush()
+                command += ["--cli-input-json", f"file://{input_file.name}"]
+            options = {} if stdin is None else {"input": stdin}
             return subprocess.run(
                 command,
                 check=False,
@@ -149,19 +165,7 @@ class AwsMailCredentials:
                 stderr=subprocess.DEVNULL,
                 text=True,
                 env=environment,
-            )
-        with tempfile.NamedTemporaryFile(
-            mode="w", encoding="utf-8", prefix="aws-cli-input-"
-        ) as input_file:
-            json.dump(input_document, input_file)
-            input_file.flush()
-            return subprocess.run(
-                [*command, "--cli-input-json", f"file://{input_file.name}"],
-                check=False,
-                stdout=subprocess.PIPE if capture else subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                text=True,
-                env=environment,
+                **options,
             )
 
     def _caller_identity(
@@ -209,10 +213,7 @@ class AwsMailCredentials:
     def _verify_gitops_identity(
         self, values: dict[str, str], account_id: str
     ) -> None:
-        environment = os.environ.copy()
-        environment.update(values)
-        environment["AWS_DEFAULT_REGION"] = AWS_REGION
-        environment.pop("AWS_SESSION_TOKEN", None)
+        environment = self._aws_environment(values, AUTH_KEYS)
         last_error: AwsMailCredentialError | None = None
         for attempt in range(12):
             try:
@@ -626,12 +627,8 @@ class AwsMailCredentials:
             raise AwsMailCredentialError(
                 "AWS provisioning ciphertext is not enrolled"
             )
-        environment = os.environ.copy()
-        environment.update({key: value for key, value in auth.items() if value})
-        environment.pop("AWS_SESSION_TOKEN", None)
-        result = subprocess.run(
+        result = self._aws(
             [
-                "aws",
                 "secretsmanager",
                 "put-secret-value",
                 "--region",
@@ -641,12 +638,8 @@ class AwsMailCredentials:
                 "--secret-string",
                 "file:///dev/stdin",
             ],
-            input=value,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            check=False,
-            env=environment,
+            self._aws_environment(auth, AUTH_KEYS),
+            stdin=value,
         )
         if result.returncode != 0:
             raise AwsMailCredentialError(

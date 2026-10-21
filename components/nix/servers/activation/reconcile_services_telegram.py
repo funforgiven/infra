@@ -11,16 +11,17 @@ from pathlib import Path
 
 import yaml
 
-from reconcile_support import request_json, require_mapping, require_string
+from reconcile_support import (
+    ReconcileError,
+    request_json,
+    require_mapping,
+    require_string,
+)
 from runtime_contract import ContractError, RuntimeContract, repository_root as resolve_repository_root
 from sops_credentials import SopsCredentialError, SopsCredentialStore
 
 
 TELEGRAM_CONTRACT_PATH = Path("deployments/homelab/credentials/telegram-bots.yaml")
-
-
-class TelegramReconcileError(RuntimeError):
-    """An error that can be printed without exposing credentials."""
 
 
 @dataclass(frozen=True)
@@ -50,47 +51,47 @@ class TelegramContract:
         try:
             document = yaml.safe_load(path.read_text(encoding="utf-8"))
         except (OSError, yaml.YAMLError) as error:
-            raise TelegramReconcileError(f"cannot read Telegram contract {path}") from error
+            raise ReconcileError(f"cannot read Telegram contract {path}") from error
         if not isinstance(document, dict) or document.get("schemaVersion") != 1:
-            raise TelegramReconcileError("Telegram contract must use schema version 1")
+            raise ReconcileError("Telegram contract must use schema version 1")
         definitions = document.get("bots")
         if not isinstance(definitions, dict) or not definitions:
-            raise TelegramReconcileError("Telegram contract must declare at least one bot")
+            raise ReconcileError("Telegram contract must declare at least one bot")
         runtime = RuntimeContract.load(repository_root)
         bots: list[BotSpec] = []
         for identifier, value in definitions.items():
-            definition = _mapping(value, f"bots.{identifier}")
-            activation = _mapping(definition.get("activation"), f"bots.{identifier}.activation")
-            outputs = _mapping(definition.get("outputs"), f"bots.{identifier}.outputs")
-            token_credential = _string(
+            definition = require_mapping(value, f"bots.{identifier}")
+            activation = require_mapping(definition.get("activation"), f"bots.{identifier}.activation")
+            outputs = require_mapping(definition.get("outputs"), f"bots.{identifier}.outputs")
+            token_credential = require_string(
                 definition.get("tokenCredential"), f"bots.{identifier}.tokenCredential"
             )
-            chat_credential = _string(
+            chat_credential = require_string(
                 outputs.get("chatCredential"), f"bots.{identifier}.outputs.chatCredential"
             )
             allowed = outputs.get("allowedUsersCredential")
             if allowed is not None:
-                allowed = _string(allowed, f"bots.{identifier}.outputs.allowedUsersCredential")
+                allowed = require_string(allowed, f"bots.{identifier}.outputs.allowedUsersCredential")
             token_route = runtime.credential(token_credential)
             chat_route = runtime.provisioned_credential(chat_credential)
             if chat_route.provisioner != "reconcile-services-telegram":
-                raise TelegramReconcileError(f"wrong provisioner for {chat_credential}")
+                raise ReconcileError(f"wrong provisioner for {chat_credential}")
             if allowed is not None:
                 allowed_route = runtime.provisioned_credential(allowed)
                 if allowed_route.provisioner != "reconcile-services-telegram":
-                    raise TelegramReconcileError(f"wrong provisioner for {allowed}")
+                    raise ReconcileError(f"wrong provisioner for {allowed}")
                 if allowed_route.secret_file != chat_route.secret_file:
-                    raise TelegramReconcileError(f"Telegram outputs for {identifier} must be co-located")
-            chat_type = _string(
+                    raise ReconcileError(f"Telegram outputs for {identifier} must be co-located")
+            chat_type = require_string(
                 activation.get("chatType"), f"bots.{identifier}.activation.chatType"
             )
             if chat_type not in {"private", "group"}:
-                raise TelegramReconcileError(f"invalid chat type for {identifier}")
+                raise ReconcileError(f"invalid chat type for {identifier}")
             chat_title = activation.get("chatTitle")
             if chat_type == "group":
-                chat_title = _string(chat_title, f"bots.{identifier}.activation.chatTitle")
+                chat_title = require_string(chat_title, f"bots.{identifier}.activation.chatTitle")
             elif chat_title is not None:
-                raise TelegramReconcileError(f"private bot {identifier} cannot select a group title")
+                raise ReconcileError(f"private bot {identifier} cannot select a group title")
             bots.append(
                 BotSpec(
                     identifier=identifier,
@@ -115,7 +116,7 @@ class TelegramContract:
                 )
             )
         if len({bot.username for bot in bots}) != len(bots):
-            raise TelegramReconcileError("Telegram usernames must be unique")
+            raise ReconcileError("Telegram usernames must be unique")
         return cls(tuple(bots))
 
 
@@ -129,18 +130,17 @@ class TelegramClient:
             method="POST",
             headers={"Content-Type": "application/json"},
             payload=payload or {},
-            error=TelegramReconcileError,
             rejected=f"Telegram rejected {method} with",
             failed=f"Telegram request {method} failed",
         )
         if not isinstance(document, dict) or document.get("ok") is not True:
-            raise TelegramReconcileError(f"Telegram request {method} was not accepted")
+            raise ReconcileError(f"Telegram request {method} was not accepted")
         return document.get("result")
 
     def metadata(self) -> dict:
         result = self.call("getMe")
         if not isinstance(result, dict):
-            raise TelegramReconcileError("Telegram getMe response is invalid")
+            raise ReconcileError("Telegram getMe response is invalid")
         return result
 
     def configure(self, spec: BotSpec) -> None:
@@ -151,12 +151,12 @@ class TelegramClient:
             ("deleteMyCommands", {}),
         ):
             if self.call(method, payload) is not True:
-                raise TelegramReconcileError(f"Telegram did not apply {method} for {spec.identifier}")
+                raise ReconcileError(f"Telegram did not apply {method} for {spec.identifier}")
 
     def updates(self) -> list[dict]:
         result = self.call("getUpdates", {"allowed_updates": ["message"]})
         if not isinstance(result, list):
-            raise TelegramReconcileError("Telegram getUpdates response is invalid")
+            raise ReconcileError("Telegram getUpdates response is invalid")
         return [update for update in result if isinstance(update, dict)]
 
     def acknowledge(self, update_id: int) -> None:
@@ -173,13 +173,13 @@ class TelegramReconciler:
         for spec in self.contract.bots:
             token = self.store.read(spec.token_file, spec.token_credential)
             if token is None:
-                raise TelegramReconcileError(
+                raise ReconcileError(
                     f"{spec.token_credential} must be enrolled before Telegram reconciliation"
                 )
             client = TelegramClient(token)
             metadata = client.metadata()
             if metadata.get("username") != spec.username:
-                raise TelegramReconcileError(
+                raise ReconcileError(
                     f"{spec.identifier} bot username must be @{spec.username}"
                 )
             if apply:
@@ -230,38 +230,30 @@ def _select_activation(spec: BotSpec, updates: list[dict]) -> tuple[int, int, in
         if isinstance(chat_id, int) and isinstance(user_id, int):
             matches.append((update_id, chat_id, user_id))
     if len(matches) != 1:
-        raise TelegramReconcileError(
+        raise ReconcileError(
             f"expected exactly one matching {spec.command} update for @{spec.username}; found {len(matches)}"
         )
     return matches[0]
 
 
-def _mapping(value: object, label: str) -> dict:
-    return require_mapping(value, label, TelegramReconcileError)
-
-
-def _string(value: object, label: str) -> str:
-    return require_string(value, label, TelegramReconcileError)
-
-
 def _bounded_string(value: object, label: str, maximum: int) -> str:
-    result = _string(value, label)
+    result = require_string(value, label)
     if len(result) > maximum:
-        raise TelegramReconcileError(f"{label} exceeds Telegram's {maximum}-character limit")
+        raise ReconcileError(f"{label} exceeds Telegram's {maximum}-character limit")
     return result
 
 
 def _username(value: object, identifier: str) -> str:
-    username = _string(value, f"bots.{identifier}.username")
+    username = require_string(value, f"bots.{identifier}.username")
     if not username.endswith("_bot") or not username.replace("_", "").isalnum():
-        raise TelegramReconcileError(f"invalid Telegram username for {identifier}")
+        raise ReconcileError(f"invalid Telegram username for {identifier}")
     return username
 
 
 def _command(value: object, identifier: str) -> str:
-    command = _string(value, f"bots.{identifier}.activation.command")
+    command = require_string(value, f"bots.{identifier}.activation.command")
     if not command.startswith("/") or not command[1:].replace("_", "").isalnum():
-        raise TelegramReconcileError(f"invalid activation command for {identifier}")
+        raise ReconcileError(f"invalid activation command for {identifier}")
     return command
 
 
@@ -291,7 +283,7 @@ def main() -> int:
     except (
         ContractError,
         SopsCredentialError,
-        TelegramReconcileError,
+        ReconcileError,
         subprocess.CalledProcessError,
     ) as error:
         print(f"error: {error}", file=sys.stderr)

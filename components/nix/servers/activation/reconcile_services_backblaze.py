@@ -11,16 +11,19 @@ import os
 import stat
 import subprocess
 import sys
-import urllib.error
 import urllib.parse
-import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
 import yaml
 
-from reconcile_support import request_json, require_mapping, require_string
+from reconcile_support import (
+    ReconcileError,
+    request_json,
+    require_mapping,
+    require_string,
+)
 from runtime_contract import ContractError, RuntimeContract, repository_root as resolve_repository_root
 from sops_credentials import SopsCredentialError, SopsCredentialStore
 
@@ -38,10 +41,6 @@ REQUIRED_CAPABILITIES = frozenset(
         "writeFiles",
     }
 )
-
-
-class ReconcileError(RuntimeError):
-    """An error that can be printed without exposing credentials."""
 
 
 @dataclass(frozen=True)
@@ -76,10 +75,10 @@ class BackupContract:
             raise ReconcileError(f"cannot read backup contract {path}") from error
         if not isinstance(document, dict) or document.get("provider") != "backblaze-b2":
             raise ReconcileError("backup contract must select provider backblaze-b2")
-        bucket = _mapping(document.get("bucket"), "bucket")
-        bootstrap = _mapping(bucket.get("operatorBootstrap"), "operator bootstrap")
-        services = _mapping(document.get("services"), "services")
-        kubernetes = _mapping(services.get("kubernetes"), "services.kubernetes")
+        bucket = require_mapping(document.get("bucket"), "bucket")
+        bootstrap = require_mapping(bucket.get("operatorBootstrap"), "operator bootstrap")
+        services = require_mapping(document.get("services"), "services")
+        kubernetes = require_mapping(services.get("kubernetes"), "services.kubernetes")
         runtime = RuntimeContract.load(repository_root)
         host_capabilities = _string_list(
             services.get("hostCapabilities"), "services.hostCapabilities"
@@ -97,7 +96,7 @@ class BackupContract:
             raise ReconcileError("services.hosts must be a non-empty list")
         for index, host in enumerate(hosts):
             host_spec = _key_spec(
-                _mapping(host, f"services.hosts[{index}]"),
+                require_mapping(host, f"services.hosts[{index}]"),
                 host_capabilities,
                 f"host {index}",
                 runtime,
@@ -111,10 +110,10 @@ class BackupContract:
         if not isinstance(lifecycle_rules, list) or not lifecycle_rules:
             raise ReconcileError("bucket.lifecycleRules must be a non-empty list")
         contract = cls(
-            bucket_name=_string(bucket.get("name"), "bucket.name"),
-            s3_endpoint=_string(bucket.get("s3Endpoint"), "bucket.s3Endpoint"),
-            region=_string(bucket.get("region"), "bucket.region"),
-            lifecycle_rules=tuple(_mapping(rule, "lifecycle rule") for rule in lifecycle_rules),
+            bucket_name=require_string(bucket.get("name"), "bucket.name"),
+            s3_endpoint=require_string(bucket.get("s3Endpoint"), "bucket.s3Endpoint"),
+            region=require_string(bucket.get("region"), "bucket.region"),
+            lifecycle_rules=tuple(require_mapping(rule, "lifecycle rule") for rule in lifecycle_rules),
             master_id_file=_safe_basename(
                 bootstrap.get("applicationKeyIdFile"), "applicationKeyIdFile"
             ),
@@ -199,7 +198,6 @@ class BackblazeClient:
             method=method,
             headers={"Authorization": authorization, "Content-Type": "application/json"},
             payload=payload,
-            error=ReconcileError,
             rejected="Backblaze API rejected a request with",
             failed="Backblaze API request failed",
         )
@@ -297,9 +295,8 @@ class BackblazeClient:
             authorization = target["authorizationToken"]
         except (KeyError, TypeError) as error:
             raise ReconcileError("Backblaze returned an invalid upload target") from error
-        request = urllib.request.Request(
+        document = request_json(
             upload_url,
-            data=content,
             method="POST",
             headers={
                 "Authorization": authorization,
@@ -309,16 +306,11 @@ class BackblazeClient:
                 ).hexdigest(),
                 "X-Bz-File-Name": urllib.parse.quote(file_name, safe="/"),
             },
+            data=content,
+            rejected="Backblaze rejected a file upload with",
+            failed="Backblaze file upload failed",
+            timeout=60,
         )
-        try:
-            with urllib.request.urlopen(request, timeout=60) as response:
-                document = json.load(response)
-        except urllib.error.HTTPError as error:
-            raise ReconcileError(
-                f"Backblaze rejected a file upload with HTTP {error.code}"
-            ) from error
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
-            raise ReconcileError("Backblaze file upload failed") from error
         try:
             return document["fileName"], document["fileId"]
         except (KeyError, TypeError) as error:
@@ -352,7 +344,7 @@ class ServicesBackblazeReconciler:
         else:
             reports.append(f"bucket policy: {'drift' if policy_drift else 'current'}")
         inventory = self.client.keys()
-        bucket_id = _string(bucket.get("bucketId"), "Backblaze bucket ID")
+        bucket_id = require_string(bucket.get("bucketId"), "Backblaze bucket ID")
         for spec in self.contract.keys:
             named = [item for item in inventory if item.get("keyName") == spec.name]
             stored_id = self.store.read(spec.secret_file, spec.id_credential)
@@ -435,14 +427,6 @@ class MasterCredentialFiles:
             os.close(descriptor)
 
 
-def _mapping(value: object, label: str) -> dict:
-    return require_mapping(value, label, ReconcileError)
-
-
-def _string(value: object, label: str) -> str:
-    return require_string(value, label, ReconcileError)
-
-
 def _string_list(value: object, label: str) -> tuple[str, ...]:
     if (
         not isinstance(value, (list, tuple))
@@ -454,7 +438,7 @@ def _string_list(value: object, label: str) -> tuple[str, ...]:
 
 
 def _safe_basename(value: object, label: str) -> str:
-    path = Path(_string(value, label))
+    path = Path(require_string(value, label))
     if path.parent != Path("secrets") or not path.name.endswith(".key"):
         raise ReconcileError(f"{label} must name one file below secrets/")
     return path.name
@@ -466,14 +450,14 @@ def _key_spec(
     label: str,
     runtime: RuntimeContract,
 ) -> KeySpec:
-    secret_file = Path(_string(definition.get("secretFile"), f"{label}.secretFile"))
+    secret_file = Path(require_string(definition.get("secretFile"), f"{label}.secretFile"))
     if secret_file.is_absolute() or ".." in secret_file.parts:
         raise ReconcileError(f"{label}.secretFile must stay inside the repository")
     password_value = definition.get("resticPasswordField")
     password_credential = (
         None
         if password_value is None
-        else _string(password_value, f"{label}.resticPasswordField")
+        else require_string(password_value, f"{label}.resticPasswordField")
     )
     password_file = (
         None
@@ -481,15 +465,15 @@ def _key_spec(
         else runtime.managed_credential(password_credential).secret_file
     )
     return KeySpec(
-        name=_string(definition.get("keyName"), f"{label}.keyName"),
-        prefix=_string(definition.get("namePrefix"), f"{label}.namePrefix"),
+        name=require_string(definition.get("keyName"), f"{label}.keyName"),
+        prefix=require_string(definition.get("namePrefix"), f"{label}.namePrefix"),
         capabilities=_string_list(capabilities, f"{label}.capabilities"),
         secret_file=secret_file,
-        id_credential=_string(
+        id_credential=require_string(
             definition.get("idField"),
             f"{label}.idField",
         ),
-        key_credential=_string(
+        key_credential=require_string(
             definition.get("valueField"),
             f"{label}.valueField",
         ),

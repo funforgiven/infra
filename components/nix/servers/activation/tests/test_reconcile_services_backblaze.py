@@ -10,10 +10,10 @@ from reconcile_services_backblaze import (
     BACKUP_CONTRACT_PATH,
     BackblazeClient,
     BackupContract,
-    ReconcileError,
     ServicesBackblazeReconciler,
     _bucket_policy_matches,
 )
+from reconcile_support import ReconcileError
 from fake_store import FakeStore
 from initialize_services_restic import ResticRunner, ServicesResticInitializer
 from runtime_contract import CONTRACT_PATH
@@ -418,17 +418,13 @@ class ServicesBackblazeReconcilerTest(unittest.TestCase):
             }
         )
         response = MagicMock()
-        response.__enter__.return_value = object()
-        with (
-            patch(
-                "reconcile_services_backblaze.urllib.request.urlopen",
-                return_value=response,
-            ) as urlopen,
-            patch(
-                "reconcile_services_backblaze.json.load",
-                return_value={"fileName": "prefix/config", "fileId": "file-id"},
-            ),
-        ):
+        response.__enter__.return_value.read.return_value = (
+            b'{"fileName": "prefix/config", "fileId": "file-id"}'
+        )
+        with patch(
+            "reconcile_support.urllib.request.urlopen",
+            return_value=response,
+        ) as urlopen:
             result = client.upload_file("bucket-id", "prefix/config", b"content")
         self.assertEqual(result, ("prefix/config", "file-id"))
         client.call.assert_called_once_with(
@@ -439,6 +435,7 @@ class ServicesBackblazeReconcilerTest(unittest.TestCase):
         self.assertEqual(request.get_header("Authorization"), "upload-token")
         self.assertEqual(request.get_header("X-bz-file-name"), "prefix/config")
         self.assertIsNotNone(request.get_header("X-bz-content-sha1"))
+        self.assertEqual(urlopen.call_args.kwargs["timeout"], 60)
 
     def test_native_upload_classifies_provider_cap_block(self) -> None:
         client = object.__new__(BackblazeClient)

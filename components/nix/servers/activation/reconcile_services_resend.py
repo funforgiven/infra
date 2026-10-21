@@ -11,17 +11,13 @@ from pathlib import Path
 
 import yaml
 
-from reconcile_support import request_json, require_string
+from reconcile_support import ReconcileError, request_json, require_string
 from runtime_contract import ContractError, RuntimeContract, repository_root as resolve_repository_root
 from sops_credentials import SopsCredentialError, SopsCredentialStore
 
 
 RESEND_CONTRACT_PATH = Path("deployments/homelab/credentials/resend-sending-keys.yaml")
 API_BASE = "https://api.resend.com"
-
-
-class ResendReconcileError(RuntimeError):
-    """An error that can be printed without exposing credentials."""
 
 
 @dataclass(frozen=True)
@@ -40,39 +36,39 @@ class ResendKeySpec:
         try:
             document = yaml.safe_load(path.read_text(encoding="utf-8"))
         except (OSError, yaml.YAMLError) as error:
-            raise ResendReconcileError(f"cannot read Resend contract {path}") from error
+            raise ReconcileError(f"cannot read Resend contract {path}") from error
         if not isinstance(document, dict) or document.get("schemaVersion") != 1:
-            raise ResendReconcileError("Resend contract must use schema version 1")
+            raise ReconcileError("Resend contract must use schema version 1")
         keys = document.get("keys")
         if not isinstance(keys, dict) or not set(keys) <= {"stalwart", "forgejo", "matrix"} or key not in keys:
-            raise ResendReconcileError("Resend contract must declare the requested service key")
+            raise ReconcileError("Resend contract must declare the requested service key")
         definition = keys[key]
         if not isinstance(definition, dict):
-            raise ResendReconcileError("Resend service key must be a mapping")
+            raise ReconcileError("Resend service key must be a mapping")
         runtime = RuntimeContract.load(repository_root)
-        administration_credential = _string(
+        administration_credential = require_string(
             definition.get("administrationCredential"), "administrationCredential"
         )
-        output_credential = _string(
+        output_credential = require_string(
             definition.get("outputCredential"), "outputCredential"
         )
         administration = runtime.credential(administration_credential)
         output = runtime.provisioned_credential(output_credential)
         if output.provisioner != "reconcile-services-resend":
-            raise ResendReconcileError("Sending key has the wrong provisioner")
+            raise ReconcileError("Sending key has the wrong provisioner")
         spec = cls(
-            name=_string(definition.get("name"), "name"),
-            permission=_string(definition.get("permission"), "permission"),
-            domain=_string(definition.get("domain"), "domain"),
+            name=require_string(definition.get("name"), "name"),
+            permission=require_string(definition.get("permission"), "permission"),
+            domain=require_string(definition.get("domain"), "domain"),
             administration_file=administration.secret_file,
             administration_credential=administration_credential,
             output_file=output.secret_file,
             output_credential=output_credential,
         )
         if spec.permission != "sending_access" or spec.domain != "fahrican.com":
-            raise ResendReconcileError("Sending keys must use sending access scoped to fahrican.com")
+            raise ReconcileError("Sending keys must use sending access scoped to fahrican.com")
         if len(spec.name) > 50:
-            raise ResendReconcileError("Resend key name exceeds the provider limit")
+            raise ReconcileError("Resend key name exceeds the provider limit")
         return spec
 
 
@@ -90,30 +86,29 @@ class ResendClient:
                 "User-Agent": "fahrican-infra-resend-key-reconciler/1.0",
             },
             payload=payload,
-            error=ResendReconcileError,
             rejected=f"Resend {method} {path} returned",
             failed=f"Resend request {method} {path} failed",
             allow_empty=True,
         )
         if not isinstance(document, dict):
-            raise ResendReconcileError("Resend returned an invalid response")
+            raise ReconcileError("Resend returned an invalid response")
         return document
 
     def domain(self, name: str) -> dict:
         document = self.request("GET", "/domains?limit=100")
         matches = [item for item in document.get("data", []) if item.get("name") == name]
         if len(matches) != 1:
-            raise ResendReconcileError(f"Resend domain {name} must exist uniquely first")
+            raise ReconcileError(f"Resend domain {name} must exist uniquely first")
         domain_id = matches[0].get("id")
         if not isinstance(domain_id, str):
-            raise ResendReconcileError("Resend domain response has no identifier")
+            raise ReconcileError("Resend domain response has no identifier")
         return self.request("GET", f"/domains/{domain_id}")
 
     def keys(self) -> list[dict]:
         document = self.request("GET", "/api-keys?limit=100")
         keys = document.get("data")
         if not isinstance(keys, list):
-            raise ResendReconcileError("Resend API-key inventory is invalid")
+            raise ReconcileError("Resend API-key inventory is invalid")
         return [key for key in keys if isinstance(key, dict)]
 
     def create(self, spec: ResendKeySpec, domain_id: str) -> tuple[str, str]:
@@ -129,7 +124,7 @@ class ResendClient:
         key_id = document.get("id")
         token = document.get("token")
         if not isinstance(key_id, str) or not isinstance(token, str):
-            raise ResendReconcileError("Resend did not return new sending-key material")
+            raise ReconcileError("Resend did not return new sending-key material")
         return key_id, token
 
     def delete(self, key_id: str) -> None:
@@ -151,9 +146,9 @@ class ResendKeyReconciler:
         domain = self.client.domain(self.spec.domain)
         domain_id = domain.get("id")
         if not isinstance(domain_id, str):
-            raise ResendReconcileError("Resend domain response has no identifier")
+            raise ReconcileError("Resend domain response has no identifier")
         if domain.get("status") != "verified":
-            raise ResendReconcileError("Resend domain must be verified before issuing a sending key")
+            raise ReconcileError("Resend domain must be verified before issuing a sending key")
         named = [key for key in self.client.keys() if key.get("name") == self.spec.name]
         stored = self.store.read(self.spec.output_file, self.spec.output_credential)
         if len(named) == 1 and stored is not None and not rotate:
@@ -161,7 +156,7 @@ class ResendKeyReconciler:
         if not apply:
             return f"{self.spec.name}: changes required"
         if (named or stored is not None) and not rotate:
-            raise ResendReconcileError(
+            raise ReconcileError(
                 f"{self.spec.name} has existing or partial state; inspect it and rerun with --rotate"
             )
         new_id, token = self.client.create(self.spec, domain_id)
@@ -177,10 +172,6 @@ class ResendKeyReconciler:
             if isinstance(old_id, str) and old_id != new_id:
                 self.client.delete(old_id)
         return f"{self.spec.name}: created and encrypted"
-
-
-def _string(value: object, label: str) -> str:
-    return require_string(value, label, ResendReconcileError)
 
 
 def argument_parser() -> argparse.ArgumentParser:
@@ -206,7 +197,7 @@ def main() -> int:
             spec.administration_file, spec.administration_credential
         )
         if administration_key is None:
-            raise ResendReconcileError(
+            raise ReconcileError(
                 f"{spec.administration_credential} must be enrolled first"
             )
         report = ResendKeyReconciler(
@@ -216,7 +207,7 @@ def main() -> int:
         return 0
     except (
         ContractError,
-        ResendReconcileError,
+        ReconcileError,
         SopsCredentialError,
         subprocess.CalledProcessError,
     ) as error:

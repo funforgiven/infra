@@ -8,9 +8,9 @@ from reconcile_services_telegram import (
     TELEGRAM_CONTRACT_PATH,
     BotSpec,
     TelegramContract,
-    TelegramReconcileError,
     _select_activation,
 )
+from reconcile_support import ReconcileError
 from runtime_contract import CONTRACT_PATH
 
 
@@ -119,7 +119,7 @@ class TelegramActivationSelectionTest(unittest.TestCase):
                 "from": {"id": 202},
             },
         }
-        with self.assertRaisesRegex(TelegramReconcileError, "exactly one"):
+        with self.assertRaisesRegex(ReconcileError, "exactly one"):
             _select_activation(bot_spec(), [update, {**update, "update_id": 18}])
 
     def test_group_activation_requires_exact_declared_title(self) -> None:
@@ -131,7 +131,7 @@ class TelegramActivationSelectionTest(unittest.TestCase):
                 "from": {"id": 202},
             },
         }
-        with self.assertRaisesRegex(TelegramReconcileError, "found 0"):
+        with self.assertRaisesRegex(ReconcileError, "found 0"):
             _select_activation(bot_spec("group"), [update])
 
 

@@ -12,12 +12,8 @@ import tempfile
 from pathlib import Path
 from typing import Protocol
 
-from reconcile_services_backblaze import (
-    BackblazeClient,
-    BackupContract,
-    KeySpec,
-    ReconcileError,
-)
+from reconcile_services_backblaze import BackblazeClient, BackupContract, KeySpec
+from reconcile_support import ReconcileError
 from runtime_contract import ContractError, repository_root as resolve_repository_root
 from sops_credentials import SopsCredentialError, SopsCredentialStore
 

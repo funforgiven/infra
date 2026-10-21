@@ -6,8 +6,8 @@ from fake_store import FakeStore
 from reconcile_services_resend import (
     ResendKeyReconciler,
     ResendKeySpec,
-    ResendReconcileError,
 )
+from reconcile_support import ReconcileError
 
 
 SPEC = ResendKeySpec(
@@ -73,7 +73,7 @@ class ResendKeyReconcilerTest(unittest.TestCase):
     def test_partial_or_unrecoverable_state_requires_rotation(self) -> None:
         client = FakeClient()
         client.inventory = [{"id": "old-id", "name": SPEC.name}]
-        with self.assertRaisesRegex(ResendReconcileError, "--rotate"):
+        with self.assertRaisesRegex(ReconcileError, "--rotate"):
             ResendKeyReconciler(SPEC, client, FakeStore()).reconcile(
                 apply=True, rotate=False
             )
