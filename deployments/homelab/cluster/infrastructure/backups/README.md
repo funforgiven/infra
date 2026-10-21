@@ -56,8 +56,9 @@ isolated namespace and executes only the offline verifier. It cannot start
 Home Assistant, MQTT, Zigbee or Matter. See the [automation runbook](../../apps/home-automation/README.md)
 for the separate Thread dataset and activation requirements.
 
-Matrix excludes its live PostgreSQL directory and creates logical dumps of
-Synapse and MAS at 01:15 Istanbul and in a fail-on-error Velero pre-backup hook.
+Matrix keeps its CloudNativePG data out of Velero. It creates logical dumps of
+Synapse and MAS at 01:15 Istanbul and in a fail-on-error Velero pre-backup hook
+on the `matrix-dumps` pod.
 The relay hook snapshots its SQLite queue and crypto store, recording the bot
 device identity and an encrypted recovery canary. Velero copies these recovery
 sources and local media. A separate monthly `matrix-restore-qualification`

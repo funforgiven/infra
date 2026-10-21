@@ -89,8 +89,8 @@ def main():
         ]
     )
     for resource, names in (
-        ("pods", ["matrix-postgres-0", "matrix-synapse-0", "matrix-relay-0"]),
-        ("pvc", ["matrix-postgres", "matrix-dumps", "matrix-media", "matrix-relay"]),
+        ("pods", ["matrix-dumps-0", "matrix-synapse-0", "matrix-relay-0"]),
+        ("pvc", ["matrix-dumps", "matrix-media", "matrix-relay"]),
     ):
         run(
             ["-n", "matrix-restore", "delete", resource]
@@ -116,7 +116,7 @@ def main():
                             "key": "app.kubernetes.io/name",
                             "operator": "In",
                             "values": [
-                                "matrix-postgres",
+                                "matrix-dumps",
                                 "matrix-synapse",
                                 "matrix-relay",
                             ],
@@ -151,7 +151,7 @@ def main():
             "matrix-restore",
             "wait",
             "--for=condition=Ready",
-            "pod/matrix-postgres-0",
+            "pod/matrix-dumps-0",
             "pod/matrix-synapse-0",
             "pod/matrix-relay-0",
             "--timeout=15m",

@@ -7,29 +7,29 @@ metadata:
     app.kubernetes.io/name: matrix-postgres
 spec:
   selector:
-    app.kubernetes.io/name: matrix-postgres
+    cnpg.io/cluster: matrix-postgres
+    cnpg.io/instanceRole: primary
   ports:
   - name: postgres
     port: 5432
-    targetPort: postgres
+    targetPort: 5432
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: matrix-postgres
+  name: matrix-dumps
   namespace: matrix
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: matrix-postgres
+      app.kubernetes.io/name: matrix-dumps
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: matrix-postgres
+        app.kubernetes.io/name: matrix-dumps
         app.kubernetes.io/part-of: matrix
       annotations:
-        backup.velero.io/backup-volumes-excludes: data
         backup.velero.io/backup-volumes: dumps
         pre.hook.backup.velero.io/container: dumps
         pre.hook.backup.velero.io/command: '["python", "/scripts/backup.py"]'
@@ -54,66 +54,8 @@ spec:
                 values:
                 - linux
       containers:
-      - name: postgres
-        image: git.fahrican.com/forge-runner/matrix-runtime
-        command:
-        - python
-        - /scripts/postgres.py
-        ports:
-        - name: postgres
-          containerPort: 5432
-        securityContext:
-          allowPrivilegeEscalation: false
-          runAsNonRoot: true
-          runAsUser: 1000
-          runAsGroup: 1000
-          capabilities:
-            drop:
-            - ALL
-          readOnlyRootFilesystem: true
-        resources:
-          requests:
-            cpu: 250m
-            memory: 512Mi
-          limits:
-            memory: 2Gi
-        volumeMounts:
-        - name: tmp
-          mountPath: /tmp
-          readOnly: false
-        - name: runtime
-          mountPath: /run/matrix
-          readOnly: true
-        - name: scripts
-          mountPath: /scripts
-          readOnly: true
-        - name: data
-          mountPath: /var/lib/matrix/postgres
-          readOnly: false
-        readinessProbe:
-          exec:
-            command:
-            - pg_isready
-            - -h
-            - 127.0.0.1
-            - -U
-            - postgres
-          periodSeconds: 10
-        startupProbe:
-          exec:
-            command:
-            - pg_isready
-            - -h
-            - 127.0.0.1
-            - -U
-            - postgres
-          failureThreshold: 60
-          periodSeconds: 10
       - name: dumps
         image: git.fahrican.com/forge-runner/matrix-runtime
-        env:
-        - name: MATRIX_DB_HOST
-          value: 127.0.0.1
         command:
         - bash
         - -c
@@ -154,8 +96,6 @@ spec:
         secret:
           secretName: matrix-runtime
           items:
-          - key: postgres-password
-            path: postgres-password
           - key: synapse-password
             path: synapse-password
           - key: mas-password
@@ -164,13 +104,10 @@ spec:
       - name: scripts
         configMap:
           name: matrix-scripts
-      - name: data
-        persistentVolumeClaim:
-          claimName: matrix-postgres
       - name: dumps
         persistentVolumeClaim:
           claimName: matrix-dumps
-  serviceName: matrix-postgres
+  serviceName: matrix-dumps
   persistentVolumeClaimRetentionPolicy:
     whenDeleted: Retain
     whenScaled: Retain
@@ -801,7 +738,7 @@ spec:
               - topologyKey: kubernetes.io/hostname
                 labelSelector:
                   matchLabels:
-                    app.kubernetes.io/name: matrix-postgres
+                    app.kubernetes.io/name: matrix-dumps
           containers:
           - name: backup
             image: git.fahrican.com/forge-runner/matrix-runtime

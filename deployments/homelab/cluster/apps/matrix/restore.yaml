@@ -16,7 +16,7 @@ data:
         path: /spec/volumeName
     - conditions:
         groupResource: pods
-        resourceNameRegex: ^matrix-postgres-0$
+        resourceNameRegex: ^matrix-dumps-0$
         namespaces:
         - matrix
       patches:

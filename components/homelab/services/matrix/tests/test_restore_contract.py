@@ -18,7 +18,7 @@ class RestoreContractTests(unittest.TestCase):
     def test_inert_verifiers_preserve_all_filesystem_helper_mounts(self):
         docs=list(yaml.safe_load_all((MATRIX/'restore.yaml').read_text()))
         rules=yaml.safe_load(docs[0]['data']['resource-modifiers.yaml'])['resourceModifierRules']
-        workloads=[x for x in yaml.safe_load_all((MATRIX/'workloads.yaml').read_text()) if x and x['kind']=='StatefulSet' and x['metadata']['name'] in ['matrix-postgres','matrix-synapse','matrix-relay']]
+        workloads=[x for x in yaml.safe_load_all((MATRIX/'workloads.yaml').read_text()) if x and x['kind']=='StatefulSet' and x['metadata']['name'] in ['matrix-dumps','matrix-synapse','matrix-relay']]
         self.assertEqual(len(workloads),3)
         for workload in workloads:
             name=workload['metadata']['name']+'-0'

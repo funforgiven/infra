@@ -1,6 +1,6 @@
 # Private Matrix community
 
-Synapse, PostgreSQL 17, Matrix Authentication Service (MAS), Element Web and
+Synapse, PostgreSQL, Matrix Authentication Service (MAS), Element Web and
 the encrypted alert relay run in the `matrix` namespace of the single physical
 homelab cluster. Accounts are `@name:matrix.fahrican.com`. Federation, remote
 media downloads, public registration, guests and URL previews are disabled.
@@ -24,12 +24,21 @@ the WAN IPv4 with Cloudflare proxying disabled. Cert-manager uses
 public resolvers for DNS-01 checks; see its
 [split DNS guidance](https://cert-manager.io/docs/configuration/acme/dns01/#setting-nameservers-for-dns01-self-check).
 
+## Database
+
+The `matrix-postgres` CloudNativePG cluster runs three instances with
+synchronous replication and holds the `synapse` and `mas` databases. Their
+roles take passwords from `database.sops.yaml`, which must match the
+`synapse-password` and `mas-password` in `runtime.sops.yaml`. The
+`matrix-postgres` Service points at the primary; the encrypted Synapse and MAS
+configs use that host name.
+
 ## Recovery
 
 Keep the Matrix Flux Kustomization suspended until both PostgreSQL databases,
 local media and relay state are restored and verified. Restore logical dumps of
-Synapse and MAS into PostgreSQL 17; a filesystem copy of live PostgreSQL is
-insufficient. Use both databases from the **same completed dump generation**.
+Synapse and MAS into the `matrix-postgres` cluster; a filesystem copy of live
+PostgreSQL is insufficient. Use both databases from the **same completed dump generation**.
 
 Restore the encrypted `runtime.sops.yaml` and `email.sops.yaml`, the media PVC
 and the relay PVC. The relay snapshot under `relay/backups` holds its SQLite
@@ -54,8 +63,8 @@ separate checks.
 
 ## Administration
 
-The access wrapper reads the K3s administrator config over pinned SSH to
-pecorino and keeps it in a Linux memory file. Run from the administration
+The access wrapper reads the K3s administrator config over pinned SSH from the
+first reachable server and keeps it in a Linux memory file. Run from the administration
 workstation with its enrolled key and private network access:
 
 ```sh
