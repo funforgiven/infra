@@ -419,30 +419,25 @@ local function clear_subject_control_metadata (source, subject_id)
   return cleared
 end
 
-local function report_move_result (source, bridge, key, value)
+local function report_result (source, bridge, key, value)
   if not set_control_metadata (source, bridge, key, value) then
-    log:warning (bridge, "could not publish the durable output move result")
+    log:warning (bridge, "could not publish the output transaction result")
     return false
   end
   return true
 end
 
-local function publish_pending_reset_result (
-    source, bridge, pending_reset, key, value)
-  pending_reset.result_key = key
-  pending_reset.result_value = value
-  if not set_control_metadata (source, bridge, key, value) then
-    log:warning (bridge, "could not publish the output reset result")
-    return false
-  end
-  return true
+-- Publishes a transaction result and remembers it so a replayed request can
+-- be answered with the same result.
+local function publish_pending_result (source, bridge, pending, key, value)
+  pending.result_key = key
+  pending.result_value = value
+  return report_result (source, bridge, key, value)
 end
 
-local function publish_pending_move_result (
-    source, bridge, pending_move, key, value)
-  pending_move.result_key = key
-  pending_move.result_value = value
-  return report_move_result (source, bridge, key, value)
+local function publish_pending_error (source, bridge, pending, code)
+  return publish_pending_result (
+    source, bridge, pending, pending.error_key, pending.nonce .. ":" .. code)
 end
 
 local function save_channel_target (channel, target_name, defer_save)
@@ -559,22 +554,33 @@ local function restore_or_bootstrap (source, bridge, channel, defer_save)
   end
 end
 
-local function rollback_channel_target (
-    source, bridge, channel, previous_target, persist_rollback)
+-- Restores PREVIOUS_TARGET after a failed transaction step, logs FAILURE (and
+-- its optional DETAIL) with the rollback outcome, and returns whether the live
+-- target and durable state were restored.
+local function roll_back_target (
+    source, bridge, channel, previous_target, persist_rollback, failure, detail)
   state_table [channel] = previous_target
   local live_restored = restore_or_bootstrap (
     source, bridge, channel, false)
 
-  if not persist_rollback then
-    return live_restored, true, nil
+  local durable_saved, save_error = true, nil
+  if persist_rollback then
+    local saved, rollback_error = state:save (state_table)
+    if not saved then
+      state:save_after_timeout (state_table)
+      durable_saved, save_error = false, rollback_error
+    end
   end
 
-  local saved, save_error = state:save (state_table)
-  if not saved then
-    state:save_after_timeout (state_table)
-    return live_restored, false, save_error
-  end
-  return live_restored, true, nil
+  log:warning (bridge, string.format (
+    "%s for channel '%s'%s; live target metadata %s; durable state %s%s",
+    failure, channel,
+    detail ~= nil and ": " .. tostring (detail) or "",
+    live_restored and "restored" or "NOT restored",
+    durable_saved and "restored" or "NOT restored",
+    durable_saved and "" or
+      ": " .. tostring (save_error or "unknown error")))
+  return live_restored, durable_saved
 end
 
 local function rollback_result_code (
@@ -589,15 +595,6 @@ local function rollback_result_code (
     return "rollback-live"
   end
   return "rollback-save"
-end
-
-local function rollback_status (live_restored, durable_saved, save_error)
-  return string.format (
-    "live target metadata %s; durable state %s%s",
-    live_restored and "restored" or "NOT restored",
-    durable_saved and "restored" or "NOT restored",
-    durable_saved and "" or
-      ": " .. tostring (save_error or "unknown error"))
 end
 
 local function pending_matches_bridge (pending, bridge)
@@ -760,6 +757,320 @@ SimpleEventHook {
   end,
 }:register ()
 
+-- Metadata handlers run after purge_stale_pending_transactions, so any pending
+-- transaction for CHANNEL belongs to the current bridge identity. Each handler
+-- returns true when later hooks must not process the event.
+
+local function handle_move_request (source, bridge, channel, value, value_type)
+  local active_move = pending_moves [channel]
+  if value == nil then
+    pending_moves [channel] = nil
+    clear_control_metadata (source, bridge, MOVE_ACK_KEY)
+    clear_control_metadata (source, bridge, MOVE_ERROR_KEY)
+    return true
+  end
+
+  local function restore_active_request ()
+    if active_move then
+      set_control_metadata (
+        source, bridge, MOVE_REQUEST_KEY,
+        active_move.nonce .. ":" .. active_move.target_serial)
+    end
+  end
+
+  local move_nonce, nonce_bridge_serial, requested_serial
+  if type (value) == "string" then
+    move_nonce, nonce_bridge_serial, requested_serial =
+      value:match ("^((%d+):%d+:%d+:%d+):(%d+)$")
+  end
+  local subject = node_id (bridge)
+  local bridge_serial = canonical_object_serial (
+    bridge.properties ["object.serial"])
+  nonce_bridge_serial = canonical_object_serial (nonce_bridge_serial)
+  requested_serial = canonical_object_serial (requested_serial)
+  if value_type ~= "Spa:String" or not move_nonce or not subject or
+      not bridge_serial or not nonce_bridge_serial or not requested_serial then
+    log:warning (bridge, "rejected malformed durable output move request")
+    restore_active_request ()
+    return true
+  end
+
+  if nonce_bridge_serial ~= bridge_serial then
+    log:warning (bridge, "rejected durable output move with stale bridge identity")
+    report_result (
+      source, bridge, MOVE_ERROR_KEY, move_nonce .. ":stale-identity")
+    restore_active_request ()
+    return true
+  end
+
+  if pending_resets [channel] then
+    log:warning (bridge, "rejected durable output move while a reset is active")
+    report_result (source, bridge, MOVE_ERROR_KEY, move_nonce .. ":busy")
+    return true
+  end
+
+  if active_move then
+    if active_move.nonce ~= move_nonce or
+        active_move.target_serial ~= requested_serial then
+      log:warning (bridge, "rejected overlapping durable output move")
+      report_result (source, bridge, MOVE_ERROR_KEY, move_nonce .. ":busy")
+      restore_active_request ()
+      return true
+    end
+    report_result (
+      source, bridge, active_move.result_key, active_move.result_value)
+    return false
+  end
+
+  local pending_move = {
+    nonce = move_nonce,
+    subject = subject,
+    bridge_serial = bridge_serial,
+    target_serial = requested_serial,
+    error_key = MOVE_ERROR_KEY,
+  }
+  pending_moves [channel] = pending_move
+  if not publish_pending_result (
+      source, bridge, pending_move, MOVE_ACK_KEY, move_nonce .. ":armed") then
+    publish_pending_error (source, bridge, pending_move, "arm-publish")
+  end
+  return false
+end
+
+local function handle_reset_request (source, bridge, channel, value, value_type)
+  local active_reset = pending_resets [channel]
+  if value == nil then
+    pending_resets [channel] = nil
+    clear_control_metadata (source, bridge, RESET_COMMIT_KEY)
+    clear_control_metadata (source, bridge, RESET_ACK_KEY)
+    clear_control_metadata (source, bridge, RESET_ERROR_KEY)
+    return true
+  end
+
+  local subject = node_id (bridge)
+  local bridge_serial = canonical_object_serial (
+    bridge.properties ["object.serial"])
+  local nonce_bridge_serial = canonical_object_serial (
+    type (value) == "string" and value:match ("^(%d+):%d+:%d+:%d+$") or nil)
+  if value_type ~= "Spa:String" or not subject or not bridge_serial or
+      not nonce_bridge_serial then
+    log:warning (bridge, "rejected malformed output reset request")
+    if active_reset then
+      set_control_metadata (source, bridge, RESET_KEY, active_reset.nonce)
+    end
+    return true
+  end
+
+  if nonce_bridge_serial ~= bridge_serial then
+    log:warning (bridge, "rejected output reset with stale bridge identity")
+    report_result (source, bridge, RESET_ERROR_KEY, value .. ":stale-identity")
+    return true
+  end
+
+  if pending_moves [channel] then
+    log:warning (bridge, "rejected output reset while a durable move is active")
+    report_result (source, bridge, RESET_ERROR_KEY, value .. ":busy")
+    return true
+  end
+
+  if active_reset then
+    if active_reset.nonce ~= value then
+      log:warning (bridge, "rejected overlapping output reset")
+      report_result (source, bridge, RESET_ERROR_KEY, value .. ":busy")
+      set_control_metadata (source, bridge, RESET_KEY, active_reset.nonce)
+      return true
+    end
+    report_result (
+      source, bridge, active_reset.result_key, active_reset.result_value)
+    return false
+  end
+
+  local pending_reset = {
+    nonce = value,
+    subject = subject,
+    bridge_serial = bridge_serial,
+    committed = false,
+    error_key = RESET_ERROR_KEY,
+  }
+  pending_resets [channel] = pending_reset
+  if not publish_pending_result (
+      source, bridge, pending_reset, RESET_ACK_KEY, value .. ":armed") then
+    publish_pending_error (source, bridge, pending_reset, "arm-publish")
+  end
+  return false
+end
+
+local function handle_reset_commit (source, bridge, channel, value, value_type)
+  if value == nil then
+    return true
+  end
+
+  local pending_reset = pending_resets [channel]
+  if not pending_reset then
+    log:warning (bridge, "ignored output reset commit without an active request")
+    return true
+  end
+  if value_type ~= "Spa:String" or value ~= pending_reset.nonce then
+    publish_pending_error (source, bridge, pending_reset, "invalid-commit")
+    return true
+  end
+  if pending_reset.committed then
+    report_result (
+      source, bridge, pending_reset.result_key, pending_reset.result_value)
+    return true
+  end
+  pending_reset.committed = true
+
+  local previous_target = state_table [channel]
+  state_table [channel] = nil
+  log:info (bridge, string.format (
+    "forgot saved target for channel '%s'; running neutral selection", channel))
+  if not restore_or_bootstrap (source, bridge, channel, false) then
+    local live_restored, durable_saved = roll_back_target (
+      source, bridge, channel, previous_target, false,
+      "could not publish the neutral output reset")
+    publish_pending_error (source, bridge, pending_reset,
+      rollback_result_code (live_restored, durable_saved, "metadata-publish"))
+    return true
+  end
+
+  local saved, save_error = state:save (state_table)
+  if not saved then
+    local live_restored, durable_saved = roll_back_target (
+      source, bridge, channel, previous_target, false,
+      "could not persist output reset", save_error)
+    publish_pending_error (source, bridge, pending_reset,
+      rollback_result_code (live_restored, durable_saved, "state-save"))
+    return true
+  end
+
+  if not publish_pending_result (
+      source, bridge, pending_reset, RESET_ACK_KEY, pending_reset.nonce) then
+    local live_restored, durable_saved = roll_back_target (
+      source, bridge, channel, previous_target, true,
+      "could not acknowledge output reset")
+    publish_pending_error (source, bridge, pending_reset,
+      rollback_result_code (live_restored, durable_saved, "ack-publish"))
+  end
+  return true
+end
+
+local function handle_target_change (
+    source, bridge, channel, value, value_type, nodes_om)
+  if value == nil then
+    state_table [channel] = nil
+    state:save_after_timeout (state_table)
+    log:info (bridge, string.format (
+      "forgot saved target for channel '%s'; running neutral selection", channel))
+    restore_or_bootstrap (source, bridge, channel)
+    return true
+  end
+
+  local pending_move = pending_moves [channel]
+  local links_om = source:call ("get-object-manager", "link")
+  local devices_om = source:call ("get-object-manager", "device")
+
+  -- The policy itself publishes the saved node.name; leave it alone while
+  -- that target is absent (waiting) or still safe.
+  if value_type == "Spa:String" and valid_saved_name (value) and
+      state_table [channel] == value then
+    local live_target, resolution = resolve_saved_target (value, nodes_om)
+    if resolution == "absent" then
+      return false
+    end
+    if resolution == "unique" and eligible_physical_sink (
+        live_target, bridge, nodes_om, links_om, devices_om) then
+      return false
+    end
+  end
+
+  local function reject (code, message)
+    log:warning (bridge, message)
+    local restored = restore_or_bootstrap (source, bridge, channel)
+    if pending_move then
+      publish_pending_error (source, bridge, pending_move,
+        rollback_result_code (restored, true, code))
+    end
+    return true
+  end
+
+  if value_type ~= "Spa:Id" or type (value) ~= "string" or
+      not value:match ("^%d+$") then
+    return reject ("invalid-target", string.format (
+      "rejected target '%s' of type '%s' for channel '%s'; " ..
+      "restoring the saved target", tostring (value),
+      tostring (value_type), channel))
+  end
+  if pending_move and pending_move.target_serial ~= value then
+    return reject ("superseded",
+      "durable output move was superseded before validation")
+  end
+
+  local target = nodes_om:lookup {
+    Constraint { "object.serial", "=", value, type = "pw-global" },
+  }
+  local eligible, rejection = eligible_physical_sink (
+    target, bridge, nodes_om, links_om, devices_om)
+  if not eligible then
+    return reject ("unsafe-target", string.format (
+      "rejected target serial %s for channel '%s': %s; restoring the saved target",
+      value, channel, rejection))
+  end
+
+  local target_name = target.properties ["node.name"]
+  local saved_message = string.format (
+    "saved channel '%s' target '%s' from live serial %s",
+    channel, target_name, value)
+  if not pending_move then
+    save_channel_target (channel, target_name)
+    if set_target_metadata (source, bridge, target_name) then
+      log:info (bridge, saved_message)
+    end
+    return true
+  end
+
+  local previous_target = state_table [channel]
+  state_table [channel] = target_name
+  local saved, save_error = state:save (state_table)
+  if not saved then
+    local live_restored, durable_saved = roll_back_target (
+      source, bridge, channel, previous_target, false,
+      "could not persist output move", save_error)
+    publish_pending_error (source, bridge, pending_move,
+      rollback_result_code (live_restored, durable_saved, "state-save"))
+    return true
+  end
+
+  if not set_target_metadata (source, bridge, target_name) then
+    local live_restored, durable_saved = roll_back_target (
+      source, bridge, channel, previous_target, true,
+      "could not publish normalized output target")
+    publish_pending_error (source, bridge, pending_move,
+      rollback_result_code (live_restored, durable_saved, "metadata-publish"))
+    return true
+  end
+
+  if not publish_pending_result (
+      source, bridge, pending_move, MOVE_ACK_KEY, pending_move.nonce) then
+    local live_restored, durable_saved = roll_back_target (
+      source, bridge, channel, previous_target, true,
+      "could not acknowledge output move")
+    publish_pending_error (source, bridge, pending_move,
+      rollback_result_code (live_restored, durable_saved, "ack-publish"))
+    return true
+  end
+
+  log:info (bridge, saved_message)
+  return true
+end
+
+local metadata_handlers = {
+  [TARGET_KEY] = handle_target_change,
+  [MOVE_REQUEST_KEY] = handle_move_request,
+  [RESET_KEY] = handle_reset_request,
+  [RESET_COMMIT_KEY] = handle_reset_commit,
+}
+
 SimpleEventHook {
   name = "funforgiven/channel-output/handle-target-change",
   before = "linking/rescan-trigger-on-target-metadata-changed",
@@ -777,9 +1088,9 @@ SimpleEventHook {
     local source = event:get_source ()
     local props = event:get_properties ()
     local subject_id = props ["event.subject.id"]
-    local metadata_key = props ["event.subject.key"]
-    local target_value = props ["event.subject.value"]
-    local target_type = props ["event.subject.spa_type"]
+    local key = props ["event.subject.key"]
+    local value = props ["event.subject.value"]
+    local value_type = props ["event.subject.spa_type"]
 
     local nodes_om = source:call ("get-object-manager", "node")
     local bridge = nodes_om and nodes_om:lookup {
@@ -790,8 +1101,7 @@ SimpleEventHook {
       return
     end
 
-    if metadata_key == TARGET_KEY and target_type == "Spa:String" and
-        target_value == "-1" then
+    if key == TARGET_KEY and value_type == "Spa:String" and value == "-1" then
       return
     end
 
@@ -804,456 +1114,10 @@ SimpleEventHook {
 
     purge_stale_pending_transactions (source, bridge, channel)
 
-    if metadata_key == MOVE_REQUEST_KEY then
-      if target_value == nil then
-        local active_move = pending_moves [channel]
-        if active_move then
-          local move_subject = canonical_global_id (subject_id)
-          local move_bridge_serial = canonical_object_serial (
-            bridge.properties ["object.serial"])
-          if active_move.subject ~= move_subject or
-              active_move.bridge_serial ~= move_bridge_serial then
-            log:warning (bridge,
-              "discarded durable output move after bridge identity teardown")
-          end
-          pending_moves [channel] = nil
-        end
-        clear_control_metadata (source, bridge, MOVE_ACK_KEY)
-        clear_control_metadata (source, bridge, MOVE_ERROR_KEY)
-        event:stop_processing ()
-        return
-      end
-
-      local active_move = pending_moves [channel]
-      local move_nonce = nil
-      local nonce_bridge_serial = nil
-      local requested_serial = nil
-      if type (target_value) == "string" then
-        move_nonce, nonce_bridge_serial, requested_serial =
-          target_value:match ("^((%d+):%d+:%d+:%d+):(%d+)$")
-      end
-      local move_subject = canonical_global_id (subject_id)
-      local move_bridge_serial = canonical_object_serial (
-        bridge.properties ["object.serial"])
-      active_move = pending_moves [channel]
-      nonce_bridge_serial = canonical_object_serial (nonce_bridge_serial)
-      requested_serial = canonical_object_serial (requested_serial)
-      if target_type ~= "Spa:String" or not move_nonce or
-          not move_subject or not move_bridge_serial or
-          not nonce_bridge_serial or not requested_serial then
-        log:warning (bridge, "rejected malformed durable output move request")
-        if active_move then
-          set_control_metadata (
-            source, bridge, MOVE_REQUEST_KEY,
-            active_move.nonce .. ":" .. active_move.target_serial)
-        end
-        event:stop_processing ()
-        return
-      end
-
-      if nonce_bridge_serial ~= move_bridge_serial then
-        log:warning (bridge, "rejected durable output move with stale bridge identity")
-        report_move_result (
-          source, bridge, MOVE_ERROR_KEY,
-          move_nonce .. ":stale-identity")
-        if active_move then
-          set_control_metadata (
-            source, bridge, MOVE_REQUEST_KEY,
-            active_move.nonce .. ":" .. active_move.target_serial)
-        end
-        event:stop_processing ()
-        return
-      end
-
-      if pending_resets [channel] then
-        log:warning (bridge, "rejected durable output move while a reset is active")
-        report_move_result (
-          source, bridge, MOVE_ERROR_KEY, move_nonce .. ":busy")
-        event:stop_processing ()
-        return
-      end
-
-      if active_move and
-          (active_move.nonce ~= move_nonce or
-            active_move.target_serial ~= requested_serial or
-            active_move.subject ~= move_subject or
-            active_move.bridge_serial ~= move_bridge_serial) then
-        log:warning (bridge, "rejected overlapping durable output move")
-        report_move_result (
-          source, bridge, MOVE_ERROR_KEY, move_nonce .. ":busy")
-        set_control_metadata (
-          source, bridge, MOVE_REQUEST_KEY,
-          active_move.nonce .. ":" .. active_move.target_serial)
-        event:stop_processing ()
-        return
-      end
-
-      if active_move then
-        report_move_result (
-          source, bridge, active_move.result_key, active_move.result_value)
-        return
-      end
-
-      pending_moves [channel] = {
-        nonce = move_nonce,
-        subject = move_subject,
-        bridge_serial = move_bridge_serial,
-        target_serial = requested_serial,
-      }
-      local pending_move = pending_moves [channel]
-      if not publish_pending_move_result (
-          source, bridge, pending_move,
-          MOVE_ACK_KEY, move_nonce .. ":armed") then
-        publish_pending_move_result (
-          source, bridge, pending_move,
-          MOVE_ERROR_KEY, move_nonce .. ":arm-publish")
-      end
-      return
-    end
-
-    if metadata_key == RESET_KEY then
-      if target_value == nil then
-        pending_resets [channel] = nil
-        clear_control_metadata (source, bridge, RESET_COMMIT_KEY)
-        clear_control_metadata (source, bridge, RESET_ACK_KEY)
-        clear_control_metadata (source, bridge, RESET_ERROR_KEY)
-        event:stop_processing ()
-        return
-      end
-
-      local active_reset = pending_resets [channel]
-      local reset_subject = canonical_global_id (subject_id)
-      local reset_bridge_serial = canonical_object_serial (
-        bridge.properties ["object.serial"])
-      active_reset = pending_resets [channel]
-
-      local nonce_bridge_serial =
-        type (target_value) == "string" and
-        target_value:match ("^(%d+):%d+:%d+:%d+$")
-      nonce_bridge_serial = canonical_object_serial (nonce_bridge_serial)
-      if target_type ~= "Spa:String" or not reset_subject or
-          not reset_bridge_serial or not nonce_bridge_serial then
-        log:warning (bridge, "rejected malformed output reset request")
-        if active_reset then
-          set_control_metadata (
-            source, bridge, RESET_KEY, active_reset.nonce)
-        end
-        event:stop_processing ()
-        return
-      end
-
-      if nonce_bridge_serial ~= reset_bridge_serial then
-        log:warning (bridge, "rejected output reset with stale bridge identity")
-        set_control_metadata (
-          source, bridge, RESET_ERROR_KEY,
-          target_value .. ":stale-identity")
-        event:stop_processing ()
-        return
-      end
-      if pending_moves [channel] then
-        log:warning (bridge, "rejected output reset while a durable move is active")
-        set_control_metadata (
-          source, bridge, RESET_ERROR_KEY, target_value .. ":busy")
-        event:stop_processing ()
-        return
-      end
-      if active_reset and active_reset.nonce ~= target_value then
-        log:warning (bridge, "rejected overlapping output reset")
-        set_control_metadata (
-          source, bridge, RESET_ERROR_KEY, target_value .. ":busy")
-        set_control_metadata (
-          source, bridge, RESET_KEY, active_reset.nonce)
-        event:stop_processing ()
-        return
-      end
-      if active_reset then
-        set_control_metadata (
-          source, bridge,
-          active_reset.result_key, active_reset.result_value)
-        return
-      end
-
-      pending_resets [channel] = {
-        nonce = target_value,
-        subject = reset_subject,
-        bridge_serial = reset_bridge_serial,
-        committed = false,
-      }
-      local pending_reset = pending_resets [channel]
-      if not publish_pending_reset_result (
-          source, bridge, pending_reset,
-          RESET_ACK_KEY, target_value .. ":armed") then
-        publish_pending_reset_result (
-          source, bridge, pending_reset,
-          RESET_ERROR_KEY, target_value .. ":arm-publish")
-      end
-      return
-    end
-
-    if metadata_key == RESET_COMMIT_KEY then
-      if target_value == nil then
-        event:stop_processing ()
-        return
-      end
-
-      local pending_reset = pending_resets [channel]
-      local reset_subject = canonical_global_id (subject_id)
-      local reset_bridge_serial = canonical_object_serial (
-        bridge.properties ["object.serial"])
-      if not pending_reset then
-        log:warning (bridge, "ignored output reset commit without an active request")
-        event:stop_processing ()
-        return
-      end
-      if pending_reset.subject ~= reset_subject or
-          pending_reset.bridge_serial ~= reset_bridge_serial then
-        publish_pending_reset_result (
-          source, bridge, pending_reset, RESET_ERROR_KEY,
-          pending_reset.nonce .. ":stale-identity")
-        event:stop_processing ()
-        return
-      end
-      if target_type ~= "Spa:String" or
-          target_value ~= pending_reset.nonce then
-        publish_pending_reset_result (
-          source, bridge, pending_reset, RESET_ERROR_KEY,
-          pending_reset.nonce .. ":invalid-commit")
-        event:stop_processing ()
-        return
-      end
-      if pending_reset.committed then
-        set_control_metadata (
-          source, bridge,
-          pending_reset.result_key, pending_reset.result_value)
-        event:stop_processing ()
-        return
-      end
-      pending_reset.committed = true
-
-      local previous_target = state_table [channel]
-      state_table [channel] = nil
-      log:info (bridge, string.format (
-        "forgot saved target for channel '%s'; running neutral selection", channel))
-      local reset_published = restore_or_bootstrap (
-        source, bridge, channel, false)
-      if not reset_published then
-        local live_restored, durable_saved, rollback_error =
-          rollback_channel_target (
-            source, bridge, channel, previous_target, false)
-        log:warning (bridge, string.format (
-          "could not publish the neutral output reset for channel '%s'; %s",
-          channel,
-          rollback_status (live_restored, durable_saved, rollback_error)))
-        publish_pending_reset_result (
-          source, bridge, pending_reset, RESET_ERROR_KEY,
-          pending_reset.nonce .. ":" .. rollback_result_code (
-            live_restored, durable_saved, "metadata-publish"))
-        event:stop_processing ()
-        return
-      end
-      local saved, save_error = state:save (state_table)
-      if not saved then
-        local live_restored, durable_saved, rollback_error =
-          rollback_channel_target (
-            source, bridge, channel, previous_target, false)
-        log:warning (bridge, string.format (
-          "could not persist output reset for channel '%s': %s; %s",
-          channel, save_error or "unknown error",
-          rollback_status (live_restored, durable_saved, rollback_error)))
-        publish_pending_reset_result (
-          source, bridge, pending_reset, RESET_ERROR_KEY,
-          pending_reset.nonce .. ":" .. rollback_result_code (
-            live_restored, durable_saved, "state-save"))
-        event:stop_processing ()
-        return
-      end
-      if not publish_pending_reset_result (
-          source, bridge, pending_reset,
-          RESET_ACK_KEY, pending_reset.nonce) then
-        local live_restored, durable_saved, rollback_error =
-          rollback_channel_target (
-            source, bridge, channel, previous_target, true)
-        log:warning (bridge, string.format (
-          "could not acknowledge output reset for channel '%s'; %s",
-          channel,
-          rollback_status (live_restored, durable_saved, rollback_error)))
-        publish_pending_reset_result (
-          source, bridge, pending_reset, RESET_ERROR_KEY,
-          pending_reset.nonce .. ":" .. rollback_result_code (
-            live_restored, durable_saved, "ack-publish"))
-      end
+    if metadata_handlers [key] (
+        source, bridge, channel, value, value_type, nodes_om) then
       event:stop_processing ()
-      return
     end
-
-    if target_value == nil then
-      state_table [channel] = nil
-      state:save_after_timeout (state_table)
-      log:info (bridge, string.format (
-        "forgot saved target for channel '%s'; running neutral selection", channel))
-      restore_or_bootstrap (source, bridge, channel)
-      event:stop_processing ()
-      return
-    end
-
-    local pending_move = pending_moves [channel]
-    local move_subject = canonical_global_id (subject_id)
-    local move_bridge_serial = canonical_object_serial (
-      bridge.properties ["object.serial"])
-    if pending_move and
-        (pending_move.subject ~= move_subject or
-          pending_move.bridge_serial ~= move_bridge_serial) then
-      log:warning (bridge, "discarded durable output move with stale bridge identity")
-      local restored = restore_or_bootstrap (source, bridge, channel)
-      publish_pending_move_result (
-        source, bridge, pending_move, MOVE_ERROR_KEY,
-        pending_move.nonce .. ":" .. rollback_result_code (
-          restored, true, "stale-identity"))
-      event:stop_processing ()
-      return
-    end
-
-    if target_type == "Spa:String" and valid_saved_name (target_value) and
-        state_table [channel] == target_value then
-      local links_om = source:call ("get-object-manager", "link")
-      local devices_om = source:call ("get-object-manager", "device")
-      local live_target, resolution = resolve_saved_target (
-        target_value, nodes_om)
-      if resolution == "ambiguous" then
-        live_target = nil
-      end
-      if not live_target then
-        if resolution == "absent" then
-          return
-        end
-      end
-
-      if live_target then
-        local eligible = eligible_physical_sink (
-          live_target, bridge, nodes_om, links_om, devices_om)
-        if eligible then
-          return
-        end
-      end
-    end
-
-    if target_type ~= "Spa:Id" or type (target_value) ~= "string" or
-        not target_value:match ("^%d+$") then
-      log:warning (bridge, string.format (
-        "rejected target '%s' of type '%s' for channel '%s'; " ..
-        "restoring the saved target", tostring (target_value),
-        tostring (target_type), channel))
-      local restored = restore_or_bootstrap (source, bridge, channel)
-      if pending_move then
-        publish_pending_move_result (
-          source, bridge, pending_move, MOVE_ERROR_KEY,
-          pending_move.nonce .. ":" .. rollback_result_code (
-            restored, true, "invalid-target"))
-      end
-      event:stop_processing ()
-      return
-    end
-    if pending_move and pending_move.target_serial ~= target_value then
-      log:warning (bridge, "durable output move was superseded before validation")
-      local restored = restore_or_bootstrap (source, bridge, channel)
-      publish_pending_move_result (
-        source, bridge, pending_move, MOVE_ERROR_KEY,
-        pending_move.nonce .. ":" .. rollback_result_code (
-          restored, true, "superseded"))
-      event:stop_processing ()
-      return
-    end
-
-    local links_om = source:call ("get-object-manager", "link")
-    local devices_om = source:call ("get-object-manager", "device")
-    local target = nodes_om:lookup {
-      Constraint { "object.serial", "=", target_value, type = "pw-global" },
-    }
-    local eligible, rejection =
-      eligible_physical_sink (
-        target, bridge, nodes_om, links_om, devices_om)
-    if not eligible then
-      log:warning (bridge, string.format (
-        "rejected target serial %s for channel '%s': %s; restoring the saved target",
-        target_value, channel, rejection))
-      local restored = restore_or_bootstrap (source, bridge, channel)
-      if pending_move then
-        publish_pending_move_result (
-          source, bridge, pending_move, MOVE_ERROR_KEY,
-          pending_move.nonce .. ":" .. rollback_result_code (
-            restored, true, "unsafe-target"))
-      end
-      event:stop_processing ()
-      return
-    end
-
-    local target_name = target.properties ["node.name"]
-    if pending_move then
-      local previous_target = state_table [channel]
-      state_table [channel] = target_name
-      local saved, save_error = state:save (state_table)
-      if not saved then
-        local live_restored, durable_saved, rollback_error =
-          rollback_channel_target (
-            source, bridge, channel, previous_target, false)
-        log:warning (bridge, string.format (
-          "could not persist output move for channel '%s': %s; %s",
-          channel, save_error or "unknown error",
-          rollback_status (live_restored, durable_saved, rollback_error)))
-        publish_pending_move_result (
-          source, bridge, pending_move, MOVE_ERROR_KEY,
-          pending_move.nonce .. ":" .. rollback_result_code (
-            live_restored, durable_saved, "state-save"))
-        event:stop_processing ()
-        return
-      end
-
-      if not set_target_metadata (source, bridge, target_name) then
-        local live_restored, durable_saved, rollback_error =
-          rollback_channel_target (
-            source, bridge, channel, previous_target, true)
-        log:warning (bridge, string.format (
-          "could not publish normalized output target for channel '%s'; %s",
-          channel,
-          rollback_status (live_restored, durable_saved, rollback_error)))
-        publish_pending_move_result (
-          source, bridge, pending_move, MOVE_ERROR_KEY,
-          pending_move.nonce .. ":" .. rollback_result_code (
-            live_restored, durable_saved, "metadata-publish"))
-        event:stop_processing ()
-        return
-      end
-
-      if not publish_pending_move_result (
-          source, bridge, pending_move,
-          MOVE_ACK_KEY, pending_move.nonce) then
-        local live_restored, durable_saved, rollback_error =
-          rollback_channel_target (
-            source, bridge, channel, previous_target, true)
-        log:warning (bridge, string.format (
-          "could not acknowledge output move for channel '%s'; %s",
-          channel,
-          rollback_status (live_restored, durable_saved, rollback_error)))
-        publish_pending_move_result (
-          source, bridge, pending_move, MOVE_ERROR_KEY,
-          pending_move.nonce .. ":" .. rollback_result_code (
-            live_restored, durable_saved, "ack-publish"))
-        event:stop_processing ()
-        return
-      end
-
-      log:info (bridge, string.format (
-        "saved channel '%s' target '%s' from live serial %s",
-        channel, target_name, target_value))
-    else
-      save_channel_target (channel, target_name)
-      if set_target_metadata (source, bridge, target_name) then
-        log:info (bridge, string.format (
-          "saved channel '%s' target '%s' from live serial %s",
-          channel, target_name, target_value))
-      end
-    end
-    event:stop_processing ()
   end,
 }:register ()
 
