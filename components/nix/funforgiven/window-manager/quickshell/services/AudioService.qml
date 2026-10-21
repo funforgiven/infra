@@ -150,28 +150,6 @@ QtObject {
         return stream(streamId, streamSerial) !== null;
     }
 
-    function channelIdForStream(streamId, streamSerial) {
-        var candidate = stream(streamId, streamSerial);
-        return candidate ? candidate.channelId : null;
-    }
-
-    function outputIdForChannel(channelId) {
-        var candidate = channel(channelId);
-        return candidate && candidate.output ? candidate.output.id : null;
-    }
-
-    function outputsForChannel(channelId) {
-        return physicalOutputs.filter(function (output) {
-            return output.safeFor.indexOf(channelId) !== -1;
-        });
-    }
-
-    function isLiveOutput(outputId, outputSerial, channelId) {
-        return physicalOutputs.some(function (output) {
-            return AudioModel.isSelectableOutput(output, outputId, outputSerial, channelId);
-        });
-    }
-
     function input(inputId, inputSerial) {
         for (var index = 0; index < physicalInputs.length; index += 1) {
             var candidate = physicalInputs[index];

@@ -491,7 +491,6 @@ test("a disabled connected output stays visible but is unavailable for status an
     assert.equal(system.output.available, false);
     assert.equal(system.status.state, "waiting");
     assert.match(system.status.message, /unavailable/);
-    assert.equal(AudioModel.isSelectableOutput(candidate, candidate.id, candidate.serial, "system"), false);
 
     delete output.properties["node.disabled"];
     const enabled = AudioModel.buildSnapshot(
@@ -508,18 +507,9 @@ test("a disabled connected output stays visible but is unavailable for status an
     assert.equal(enabled.physicalOutputs[0].available, true);
     assert.equal(enabled.channels[0].output.available, true);
     assert.equal(enabled.channels[0].status.state, "connected");
-    assert.equal(
-        AudioModel.isSelectableOutput(
-            enabled.physicalOutputs[0],
-            enabled.physicalOutputs[0].id,
-            enabled.physicalOutputs[0].serial,
-            "system"
-        ),
-        true
-    );
 });
 
-test("a route-unavailable physical target stays visible but cannot be selected", () => {
+test("a route-unavailable physical target stays visible but unavailable", () => {
     const fixture = graphFixture();
     fixture.nodes.find(node => node.id === 50).routeAvailable = false;
 
@@ -541,10 +531,6 @@ test("a route-unavailable physical target stays visible but cannot be selected",
     assert.equal(system.output.available, false);
     assert.equal(system.status.state, "waiting");
     assert.match(system.status.message, /unavailable/);
-    assert.equal(
-        AudioModel.isSelectableOutput(candidate, candidate.id, candidate.serial, "system"),
-        false
-    );
 });
 
 test("graph readiness distinguishes connection startup from missing topology", () => {

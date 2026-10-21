@@ -21,17 +21,9 @@ QtObject {
         void root._revision;
         return root._ownership.phase;
     }
-    readonly property string activeKind: {
-        void root._revision;
-        return root._ownership.kind;
-    }
     readonly property var activeOwner: {
         void root._revision;
         return root._ownership.owner;
-    }
-    readonly property var activeScreen: {
-        void root._revision;
-        return root._ownership.screen;
     }
     readonly property int generation: {
         void root._revision;

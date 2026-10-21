@@ -11,14 +11,11 @@ QtObject {
 
     property var pendingStreams: ({})
     property var streamErrors: ({})
-    property var pendingChannels: ({})
-    property var channelErrors: ({})
     property var recentErrors: []
     property var _operations: ({})
     property int _nextRequestId: 1
     readonly property int helperCommandTimeoutMs: 12000
     readonly property int graphConfirmationTimeoutMs: 6000
-    readonly property bool hasPendingOperations: Object.keys(_operations).length > 0
     readonly property int pendingOperationCount: Object.keys(_operations).length
 
     function _copyMap(source) {
@@ -33,67 +30,15 @@ QtObject {
         return String(streamId) + ":" + String(streamSerial);
     }
 
-    function _setStreamPending(key, details) {
-        var next = _copyMap(pendingStreams);
-        if (details) {
-            next[key] = details;
+    // Replaces one entry of a published map property so bindings see a new object.
+    function _setEntry(propertyName, key, value) {
+        var next = _copyMap(root[propertyName]);
+        if (value) {
+            next[key] = value;
         } else {
             delete next[key];
         }
-        pendingStreams = next;
-    }
-
-    function _setStreamError(key, message) {
-        var next = _copyMap(streamErrors);
-        if (message) {
-            next[key] = message;
-        } else {
-            delete next[key];
-        }
-        streamErrors = next;
-    }
-
-    function _setChannelPending(channelId, details) {
-        var next = _copyMap(pendingChannels);
-        if (details) {
-            next[channelId] = details;
-        } else {
-            delete next[channelId];
-        }
-        pendingChannels = next;
-    }
-
-    function _setChannelError(channelId, message) {
-        var next = _copyMap(channelErrors);
-        if (message) {
-            next[channelId] = message;
-        } else {
-            delete next[channelId];
-        }
-        channelErrors = next;
-    }
-
-    function streamState(streamId, streamSerial) {
-        var key = _streamKey(streamId, streamSerial);
-        return {
-            pending: pendingStreams[key] || null,
-            error: streamErrors[key] || ""
-        };
-    }
-
-    function channelState(channelId) {
-        return {
-            pending: pendingChannels[channelId] || null,
-            error: channelErrors[channelId] || ""
-        };
-    }
-
-    function dismissStreamError(streamId, streamSerial) {
-        _setStreamError(_streamKey(streamId, streamSerial), "");
-    }
-
-    function dismissChannelError(channelId) {
-        _setChannelError(channelId, "");
+        root[propertyName] = next;
     }
 
     function clearRecentErrors() {
@@ -116,9 +61,7 @@ QtObject {
         operation.requestId = "preflight-" + String(_nextRequestId++);
         _recordError(operation, message);
         if (operation.kind === "stream" && operation.key) {
-            _setStreamError(operation.key, message);
-        } else if (operation.kind === "channel" && operation.channelId) {
-            _setChannelError(operation.channelId, message);
+            _setEntry("streamErrors", operation.key, message);
         }
         return false;
     }
@@ -148,6 +91,7 @@ QtObject {
         operation.phase = "command";
         operations[requestId] = operation;
         _operations = operations;
+        _scheduleTimeout();
 
         var process = processComponent.createObject(root, {
             requestId: requestId
@@ -166,6 +110,31 @@ QtObject {
         var operations = _copyMap(_operations);
         delete operations[requestId];
         _operations = operations;
+        _scheduleTimeout();
+    }
+
+    function _scheduleTimeout() {
+        var earliest = Infinity;
+        Object.keys(_operations).forEach(function (requestId) {
+            earliest = Math.min(earliest, _operations[requestId].deadline);
+        });
+        if (earliest === Infinity) {
+            _timeoutTimer.stop();
+            return;
+        }
+        _timeoutTimer.interval = Math.max(0, earliest - Date.now());
+        _timeoutTimer.restart();
+    }
+
+    function _expireOperations() {
+        var now = Date.now();
+        Object.keys(_operations).forEach(function (requestId) {
+            var operation = _operations[requestId];
+            if (operation && now >= operation.deadline) {
+                _fail(requestId, operation.phase === "graph" ? "PipeWire did not confirm the requested graph change" : "The audio routing helper timed out");
+            }
+        });
+        _scheduleTimeout();
     }
 
     function _disposeProcess(operation) {
@@ -185,13 +154,8 @@ QtObject {
         if (!operation) {
             return;
         }
-        if (operation.kind === "stream") {
-            _setStreamPending(operation.key, null);
-            _setStreamError(operation.key, "");
-        } else {
-            _setChannelPending(operation.channelId, null);
-            _setChannelError(operation.channelId, "");
-        }
+        _setEntry("pendingStreams", operation.key, null);
+        _setEntry("streamErrors", operation.key, "");
         _removeOperation(requestId);
     }
 
@@ -202,13 +166,8 @@ QtObject {
         }
         root._disposeProcess(operation);
         _recordError(operation, message);
-        if (operation.kind === "stream") {
-            _setStreamPending(operation.key, null);
-            _setStreamError(operation.key, message);
-        } else {
-            _setChannelPending(operation.channelId, null);
-            _setChannelError(operation.channelId, message);
-        }
+        _setEntry("pendingStreams", operation.key, null);
+        _setEntry("streamErrors", operation.key, message);
         _removeOperation(requestId);
     }
 
@@ -224,12 +183,9 @@ QtObject {
             return;
         }
 
-        if (operation.action === "forget") {
-            _succeed(requestId);
-            return;
-        }
         operation.phase = "graph";
         operation.deadline = Date.now() + graphConfirmationTimeoutMs;
+        _scheduleTimeout();
         _reconcile(requestId);
     }
 
@@ -239,20 +195,8 @@ QtObject {
             return;
         }
 
-        if (operation.kind === "stream") {
-            var stream = AudioService.stream(operation.streamId, operation.streamSerial);
-            if (!stream) {
-                return;
-            } else if (stream.channelId === operation.channelId) {
-                _succeed(requestId);
-            }
-            return;
-        }
-
-        var channel = AudioService.channel(operation.channelId);
-        if (!channel || !channel.bridge || String(channel.bridgeId) !== String(operation.bridgeId) || String(channel.bridgeSerial) !== String(operation.bridgeSerial)) {
-            _fail(requestId, "The channel bridge changed before its output was confirmed");
-        } else if (channel.output && String(channel.output.id) === String(operation.outputId) && String(channel.output.serial) === String(operation.outputSerial)) {
+        var stream = AudioService.stream(operation.streamId, operation.streamSerial);
+        if (stream && stream.channelId === operation.channelId) {
             _succeed(requestId);
         }
     }
@@ -289,17 +233,6 @@ QtObject {
 
     function movePayload(payload, channelId) {
         return moveSelection(payload ? payload.selection : null, channelId);
-    }
-
-    function moveStreams(streamRefs, channelId) {
-        var selection = AudioRouting.referencesSelection(streamRefs);
-        if (selection === null) {
-            return _preflightError({
-                kind: "channel",
-                channelId: channelId || "Unknown"
-            }, "No playback streams were supplied for routing");
-        }
-        return moveSelection(selection, channelId);
     }
 
     function _moveResolvedStreams(streamRefs, channelId) {
@@ -361,8 +294,8 @@ QtObject {
 
         live.forEach(function (streamRef) {
             var key = _streamKey(streamRef.id, streamRef.serial);
-            _setStreamError(key, "");
-            _setStreamPending(key, {
+            _setEntry("streamErrors", key, "");
+            _setEntry("pendingStreams", key, {
                 action: "move",
                 channelId: channelId,
                 label: "Moving to " + channelId + "…"
@@ -378,96 +311,6 @@ QtObject {
                 command: [Shell.ShellConfig.audioController, "move-stream", String(streamRef.id), String(streamRef.serial), channelId]
             });
         });
-        return true;
-    }
-
-    function moveBridge(channelId, outputId, outputSerial) {
-        var channel = AudioService.channel(channelId);
-        if (!channel || !channel.bridge) {
-            return _preflightError({
-                kind: "channel",
-                channelId: channelId || "Unknown"
-            }, "The channel bridge is no longer available");
-        }
-        if (pendingChannels[channelId]) {
-            return _preflightError({
-                kind: "channel",
-                channelId: channelId
-            }, "Another output action is still pending");
-        }
-        if (!AudioService.isLiveOutput(outputId, outputSerial, channelId)) {
-            return _preflightError({
-                kind: "channel",
-                channelId: channelId
-            }, "The selected hardware output is no longer available or cycle-safe");
-        }
-
-        _setChannelError(channelId, "");
-        _setChannelPending(channelId, {
-            action: "move-output",
-            outputId: outputId,
-            label: "Switching output…"
-        });
-        return _newRequest({
-            kind: "channel",
-            action: "move-output",
-            channelId: channelId,
-            bridgeId: channel.bridgeId,
-            bridgeSerial: channel.bridgeSerial,
-            outputId: outputId,
-            outputSerial: outputSerial,
-            command: [Shell.ShellConfig.audioController, "move-bridge", String(channel.bridgeId), String(channel.bridgeSerial), channelId, String(outputId), String(outputSerial)]
-        });
-    }
-
-    function forgetBridgeTarget(channelId) {
-        var channel = AudioService.channel(channelId);
-        if (!channel || !channel.bridge) {
-            return _preflightError({
-                kind: "channel",
-                channelId: channelId || "Unknown"
-            }, "The channel bridge is no longer available");
-        }
-        if (pendingChannels[channelId]) {
-            return _preflightError({
-                kind: "channel",
-                channelId: channelId
-            }, "Another output action is still pending");
-        }
-
-        _setChannelError(channelId, "");
-        _setChannelPending(channelId, {
-            action: "forget",
-            label: "Forgetting saved output…"
-        });
-        return _newRequest({
-            kind: "channel",
-            action: "forget",
-            channelId: channelId,
-            bridgeId: channel.bridgeId,
-            bridgeSerial: channel.bridgeSerial,
-            command: [Shell.ShellConfig.audioController, "forget-bridge-target", String(channel.bridgeId), String(channel.bridgeSerial), channelId]
-        });
-    }
-
-    function setChannelVolume(channelId, requestedVolume) {
-        var channel = AudioService.channel(channelId);
-        var volume = Math.max(0, Math.min(1, Number(requestedVolume)));
-        if (!channel || !channel.bridge || !channel.bridge.audio || !isFinite(volume)) {
-            _setChannelError(channelId, "Channel gain is unavailable");
-            return false;
-        }
-        channel.bridge.audio.volume = volume;
-        return true;
-    }
-
-    function setChannelMuted(channelId, muted) {
-        var channel = AudioService.channel(channelId);
-        if (!channel || !channel.bridge || !channel.bridge.audio) {
-            _setChannelError(channelId, "Channel mute control is unavailable");
-            return false;
-        }
-        channel.bridge.audio.muted = muted === true;
         return true;
     }
 
@@ -500,19 +343,8 @@ QtObject {
     }
 
     property Timer _timeoutTimer: Timer {
-        interval: 200
-        repeat: true
-        running: root.hasPendingOperations
-
-        onTriggered: {
-            var now = Date.now();
-            Object.keys(root._operations).forEach(function (requestId) {
-                var operation = root._operations[requestId];
-                if (operation && now >= operation.deadline) {
-                    root._fail(requestId, operation.phase === "graph" ? "PipeWire did not confirm the requested graph change" : "The audio routing helper timed out");
-                }
-            });
-        }
+        repeat: false
+        onTriggered: root._expireOperations()
     }
 
     property Component _processComponent: Component {
