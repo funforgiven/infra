@@ -210,72 +210,40 @@ let
     in
     map (profile: user.home.${profile}) (builtins.deepSeq checks profiles);
 
-  mkHomeBase =
-    {
-      homeDirectory,
-      hostName,
-      niriOutputs,
-      polkitAgent,
-      stateVersion,
-      username,
-    }:
-    {
-      options.dendritic = {
-        hostName = lib.mkOption {
-          type = lib.types.singleLineStr;
-          readOnly = true;
-          internal = true;
-        };
-
-        niri.outputs = lib.mkOption {
-          type = lib.types.nullOr niriOutputsType;
-          readOnly = true;
-          internal = true;
-        };
-
-        polkit.agent = lib.mkOption {
-          type = polkitAgentType;
-          readOnly = true;
-          internal = true;
-        };
+  mkHomeBase = hostName: host: user: {
+    options.dendritic = {
+      hostName = lib.mkOption {
+        type = lib.types.singleLineStr;
+        readOnly = true;
+        internal = true;
       };
 
-      config = {
-        dendritic = {
-          inherit hostName;
-          niri.outputs = niriOutputs;
-          polkit.agent = polkitAgent;
-        };
+      niri.outputs = lib.mkOption {
+        type = lib.types.nullOr niriOutputsType;
+        readOnly = true;
+        internal = true;
+      };
 
-        home = {
-          inherit
-            homeDirectory
-            stateVersion
-            username
-            ;
-        };
+      polkit.agent = lib.mkOption {
+        type = polkitAgentType;
+        readOnly = true;
+        internal = true;
       };
     };
 
-  mkNestedHomeBase =
-    {
-      homeDirectory,
-      hostName,
-      niriOutputs,
-      polkitAgent,
-      username,
-    }:
-    { osConfig, ... }:
-    mkHomeBase {
-      inherit
-        homeDirectory
-        hostName
-        niriOutputs
-        polkitAgent
-        username
-        ;
-      stateVersion = osConfig.system.stateVersion;
+    config = {
+      dendritic = {
+        inherit hostName;
+        niri.outputs = host.niri.outputs;
+        polkit.agent = host.polkit.agent;
+      };
+
+      home = {
+        inherit (host) stateVersion;
+        inherit (user) homeDirectory username;
+      };
     };
+  };
 
   mkHostNixosModules =
     hostname: host:
@@ -334,12 +302,7 @@ let
               useUserPackages = true;
               backupFileExtension = "hm-bak";
               users.${user.username}.imports = [
-                (mkNestedHomeBase {
-                  hostName = hostname;
-                  niriOutputs = host.niri.outputs;
-                  polkitAgent = host.polkit.agent;
-                  inherit (user) homeDirectory username;
-                })
+                (mkHomeBase hostname host user)
               ]
               ++ homeProfilesFor user host.homeProfiles;
             };
@@ -363,13 +326,7 @@ let
     inputs.home-manager.lib.homeManagerConfiguration {
       pkgs = cfg.flake.lib.mkPkgs host.system;
       modules = [
-        (mkHomeBase {
-          hostName = hostname;
-          niriOutputs = host.niri.outputs;
-          polkitAgent = host.polkit.agent;
-          inherit (host) stateVersion;
-          inherit (user) homeDirectory username;
-        })
+        (mkHomeBase hostname host user)
       ]
       ++ standaloneHomeModulesFor host.features
       ++ homeProfilesFor user host.homeProfiles;
