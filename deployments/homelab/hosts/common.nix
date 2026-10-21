@@ -345,8 +345,6 @@ in
     ];
     nodeLabel = [
       "homelab.fahrican.com/hypervisor=${name}"
-      "homelab.fahrican.com/iot=true"
-      "homelab.fahrican.com/storage=true"
       "homelab.fahrican.com/ci-node=true"
     ];
     extraFlags = [
