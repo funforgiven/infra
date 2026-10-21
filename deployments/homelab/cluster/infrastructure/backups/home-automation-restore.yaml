@@ -219,6 +219,8 @@ kind: CronJob
 metadata:
   name: home-automation-restore
   namespace: backup-qualification
+  labels:
+    monitoring.fahrican.com/dedicated-job-alerts: "true"
 spec:
   schedule: 30 5 2 * *
   timeZone: Europe/Istanbul

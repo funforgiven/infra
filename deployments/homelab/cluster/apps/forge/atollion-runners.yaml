@@ -68,6 +68,8 @@ kind: CronJob
 metadata:
   name: forge-linux-atollion-launcher
   namespace: forge-control
+  labels:
+    monitoring.fahrican.com/dedicated-job-alerts: "true"
 spec:
   schedule: '* * * * *'
   suspend: false

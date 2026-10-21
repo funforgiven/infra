@@ -17,12 +17,14 @@ spec:
         \   max by (namespace, cronjob) (kube_cronjob_status_last_successful_time))\n  or\n  (services_cronjob_last_failed_start_timestamp_seconds\n\
         \   unless on (namespace, cronjob)\n   max by (namespace, cronjob) (kube_cronjob_status_last_successful_time))\n\
         ) and on (namespace, cronjob) (max by (namespace, cronjob) (kube_cronjob_spec_suspend) == 0)"
+    # CronJobs with service-specific failure alerts opt out with the label
+    # monitoring.fahrican.com/dedicated-job-alerts=true (allowlisted in
+    # kube-state-metrics).
     - alert: KubeJobFailed
-      expr: "services_cronjob_unrecovered_failure unless services_cronjob_unrecovered_failure{namespace=\"\
-        backup-qualification\",\n  cronjob=~\"restore-qualification|forge-restore-qualification\"}\nunless\
-        \ services_cronjob_unrecovered_failure{namespace=~\"forge|forge-ci|forge-control\",\n  cronjob=~\"\
-        forge-snapshot-backup|forge-linux-qualification|forge-linux-atollion-launcher|forge-(windows|macos)-qualification\"\
-        }"
+      expr: >-
+        services_cronjob_unrecovered_failure
+        unless on (namespace, cronjob)
+        kube_cronjob_labels{label_monitoring_fahrican_com_dedicated_job_alerts="true"}
       for: 15m
       labels:
         severity: warning

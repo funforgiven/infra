@@ -104,6 +104,8 @@ kind: CronJob
 metadata:
   name: forge-snapshot-backup
   namespace: forge
+  labels:
+    monitoring.fahrican.com/dedicated-job-alerts: "true"
 spec:
   schedule: 13 */6 * * *
   suspend: false

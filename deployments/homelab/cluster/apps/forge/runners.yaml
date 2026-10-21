@@ -26,6 +26,8 @@ kind: CronJob
 metadata:
   name: forge-linux-qualification
   namespace: forge-ci
+  labels:
+    monitoring.fahrican.com/dedicated-job-alerts: "true"
 spec:
   schedule: '* * * * *'
   concurrencyPolicy: Forbid

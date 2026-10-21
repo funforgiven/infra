@@ -234,6 +234,8 @@ kind: CronJob
 metadata:
   name: restore-qualification
   namespace: backup-qualification
+  labels:
+    monitoring.fahrican.com/dedicated-job-alerts: "true"
 spec:
   schedule: 0 7 1 * *
   timeZone: Europe/Istanbul

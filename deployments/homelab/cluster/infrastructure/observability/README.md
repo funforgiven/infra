@@ -28,8 +28,10 @@ uses the pinned operator's Endpoints workaround as a coordinated setting:
 Endpoints objects. Keep these settings until an operator upgrade is tested.
 
 Alertmanager groups application/backup failures and clears a failed CronJob
-incident when a newer execution succeeds. Forge's OnDelete rollout
-and long isolated restore verifier use their service-specific rules. UniFi AP
+incident when a newer execution succeeds. CronJobs with service-specific
+failure alerts opt out of the generic `KubeJobFailed` rule with the
+`monitoring.fahrican.com/dedicated-job-alerts: "true"` label. Forge's OnDelete
+rollout uses its own rule. UniFi AP
 telemetry distinguishes missing metrics/scrape failure from ordinary node
 targets. Runtime Telegram/Grafana/Matrix credentials stay SOPS-encrypted.
 
