@@ -15,18 +15,32 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 0' INT TERM
 
+# The lease is read with a builtin and its remaining time is counted down by
+# tick, so waiting while paused forks only sleep; date runs once per lease.
+seen_lease=
+remaining=0
 paused() {
   test -f "$control/pause" || return 1
+  lease=0
+  { read -r lease < "$control/pause"; } 2>/dev/null || :
+  if test "$lease" != "$seen_lease"; then
+    seen_lease="$lease"
+    deadline="${lease%%:*}"
+    case "$deadline" in '' | *[!0-9]*) deadline=0 ;; esac
+    remaining=$((deadline - $(date +%s)))
+  fi
   # Fail open after the backup controller dies; never leave the house paused.
-  lease="$(cat "$control/pause" 2>/dev/null || echo 0)"
-  deadline="${lease%%:*}"
-  test "$(date +%s)" -lt "$deadline"
+  test "$remaining" -gt 0
+}
+tick() {
+  sleep 1
+  remaining=$((remaining - 1))
 }
 
 while :; do
   if paused; then
     printf '%s' "$lease" > "$control/$name.paused"
-    sleep 1
+    tick
     continue
   fi
   rm -f "$control/$name.paused"
@@ -45,11 +59,11 @@ while :; do
           kill -KILL "$child" 2>/dev/null || true
           break
         fi
-        sleep 1
+        tick
       done
       break
     fi
-    sleep 1
+    tick
   done
   status=0
   wait "$child" || status=$?
