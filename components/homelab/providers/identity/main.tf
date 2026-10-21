@@ -15,6 +15,8 @@ variable "jwt_profile_json" {
 locals {
   org_id             = "385431068645343545"
   breakglass_user_id = "385431068646064441"
+  # The owner's everyday account, resolved through the private ZITADEL API.
+  owner_user_id = "385540008259371450"
 }
 
 provider "zitadel" {
@@ -109,7 +111,63 @@ resource "zitadel_machine_key" "identity_controller" {
   depends_on = [zitadel_org_member.identity_controller]
 }
 
+# Application projects outside Infrastructure: each has one member role
+# granted to the break-glass and owner accounts, and one web OIDC client.
 locals {
+  app_projects = {
+    matrix = {
+      name              = "Matrix"
+      role_key          = "matrix-member"
+      role_display_name = "Matrix member"
+    }
+    netbird = {
+      name              = "NetBird"
+      role_key          = "netbird-services"
+      role_display_name = "Private services"
+    }
+  }
+  app_project_grants = merge([
+    for project in keys(local.app_projects) : {
+      "${project}-breakglass" = { project = project, user_id = local.breakglass_user_id }
+      "${project}-owner"      = { project = project, user_id = local.owner_user_id }
+    }
+  ]...)
+}
+
+resource "zitadel_project" "app" {
+  for_each = local.app_projects
+
+  org_id                 = local.org_id
+  name                   = each.value.name
+  project_role_assertion = true
+  project_role_check     = true
+  has_project_check      = true
+}
+
+resource "zitadel_project_role" "app" {
+  for_each = local.app_projects
+
+  org_id       = local.org_id
+  project_id   = zitadel_project.app[each.key].id
+  role_key     = each.value.role_key
+  display_name = each.value.role_display_name
+  group        = each.key
+}
+
+resource "zitadel_user_grant" "app" {
+  for_each = local.app_project_grants
+
+  org_id     = local.org_id
+  project_id = zitadel_project.app[each.value.project].id
+  user_id    = each.value.user_id
+  role_keys  = [zitadel_project_role.app[each.value.project].role_key]
+}
+
+locals {
+  project_ids = merge(
+    { infrastructure = zitadel_project.infrastructure.id },
+    { for key, project in zitadel_project.app : key => project.id },
+  )
   web_oidc_apps = {
     forgejo = {
       name         = "Forgejo"
@@ -136,6 +194,18 @@ locals {
       redirect_uri = "https://audiomuse.fahrican.com/oauth2/callback"
       post_logout  = "https://audiomuse.fahrican.com/"
     }
+    matrix = {
+      name         = "Matrix Authentication Service"
+      project      = "matrix"
+      redirect_uri = "https://matrix-auth.fahrican.com/upstream/callback/01HFVBY12TMNTYTBV8W921M5FA"
+      post_logout  = "https://element.fahrican.com/"
+    }
+    netbird = {
+      name         = "NetBird"
+      project      = "netbird"
+      redirect_uri = "https://netbird.fahrican.com/oauth2/callback"
+      post_logout  = null
+    }
   }
 }
 
@@ -143,10 +213,10 @@ resource "zitadel_application_oidc" "web" {
   for_each = local.web_oidc_apps
 
   org_id                       = local.org_id
-  project_id                   = zitadel_project.infrastructure.id
+  project_id                   = local.project_ids[try(each.value.project, "infrastructure")]
   name                         = each.value.name
   redirect_uris                = [each.value.redirect_uri]
-  post_logout_redirect_uris    = [each.value.post_logout]
+  post_logout_redirect_uris    = each.value.post_logout == null ? [] : [each.value.post_logout]
   response_types               = ["OIDC_RESPONSE_TYPE_CODE"]
   grant_types                  = ["OIDC_GRANT_TYPE_AUTHORIZATION_CODE", "OIDC_GRANT_TYPE_REFRESH_TOKEN"]
   app_type                     = "OIDC_APP_TYPE_WEB"
@@ -215,8 +285,6 @@ output "grafana_client_secret" {
   sensitive = true
 }
 
-
-
 output "sftpgo_client_id" {
   value     = zitadel_application_oidc.web["sftpgo"].client_id
   sensitive = true
@@ -252,6 +320,29 @@ output "cluster_kubernetes_client_id" {
   sensitive = true
 }
 
+output "matrix_client_id" {
+  value     = zitadel_application_oidc.web["matrix"].client_id
+  sensitive = true
+}
+
+output "matrix_client_secret" {
+  value     = zitadel_application_oidc.web["matrix"].client_secret
+  sensitive = true
+}
+
+output "matrix_project_id" {
+  value = zitadel_project.app["matrix"].id
+}
+
+output "netbird_client_id" {
+  value     = zitadel_application_oidc.web["netbird"].client_id
+  sensitive = true
+}
+
+output "netbird_client_secret" {
+  value     = zitadel_application_oidc.web["netbird"].client_secret
+  sensitive = true
+}
 
 output "identity_controller_key" {
   value     = zitadel_machine_key.identity_controller.key_details
@@ -262,4 +353,55 @@ output "identity_controller_key" {
 moved {
   from = zitadel_application_oidc.kubernetes["undercloud"]
   to   = zitadel_application_oidc.kubernetes["homelab"]
+}
+
+# Matrix and NetBird projects folded into the shared app resources.
+moved {
+  from = zitadel_project.matrix
+  to   = zitadel_project.app["matrix"]
+}
+
+moved {
+  from = zitadel_project.netbird
+  to   = zitadel_project.app["netbird"]
+}
+
+moved {
+  from = zitadel_project_role.matrix_member
+  to   = zitadel_project_role.app["matrix"]
+}
+
+moved {
+  from = zitadel_project_role.netbird_services
+  to   = zitadel_project_role.app["netbird"]
+}
+
+moved {
+  from = zitadel_user_grant.matrix_owner
+  to   = zitadel_user_grant.app["matrix-breakglass"]
+}
+
+moved {
+  from = zitadel_user_grant.matrix_funforgiven
+  to   = zitadel_user_grant.app["matrix-owner"]
+}
+
+moved {
+  from = zitadel_user_grant.netbird_owner
+  to   = zitadel_user_grant.app["netbird-breakglass"]
+}
+
+moved {
+  from = zitadel_user_grant.netbird_funforgiven
+  to   = zitadel_user_grant.app["netbird-owner"]
+}
+
+moved {
+  from = zitadel_application_oidc.matrix
+  to   = zitadel_application_oidc.web["matrix"]
+}
+
+moved {
+  from = zitadel_application_oidc.netbird
+  to   = zitadel_application_oidc.web["netbird"]
 }
