@@ -65,15 +65,6 @@ spec:
     spec:
       automountServiceAccountToken: false
       terminationGracePeriodSeconds: 30
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/os
-                operator: In
-                values:
-                - linux
       securityContext:
         fsGroup: 1000
         fsGroupChangePolicy: OnRootMismatch
@@ -85,7 +76,6 @@ spec:
       containers:
       - name: muse
         image: ghcr.io/museofficial/muse:2.11.7-yt-dlp-2026.8.19@sha256:ffe4274041ff82d1ed0893bc299da4ec3afb82df1aee9c4e5e10eb980a4f38f7
-        imagePullPolicy: IfNotPresent
         env:
         - name: DISCORD_TOKEN
           valueFrom:

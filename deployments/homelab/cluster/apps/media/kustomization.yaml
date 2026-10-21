@@ -12,6 +12,18 @@ resources:
 - monitoring.yaml
 - network-policy.yaml
 - runtime.sops.yaml
+patches:
+- path: audiomuse-pod.yaml
+  target:
+    kind: Deployment
+    name: ^audiomuse(-worker)?$
+images:
+- name: ghcr.io/neptunehub/audiomuse-ai
+  newTag: 3.4.0
+  digest: sha256:5c2c3710d0a0990258946b2d268c955d29b675afc9588bcfe3f70fd3d1f11ff6
+- name: docker.io/library/postgres
+  newTag: 15.19-alpine
+  digest: sha256:a2c20749c564b4eb73a77bfda626f8a3cde1bbfae020fb97c616a00cdc1a2181
 configMapGenerator:
 - name: sftpgo-bootstrap
   namespace: media

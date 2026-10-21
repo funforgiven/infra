@@ -35,14 +35,6 @@ spec:
     spec:
       automountServiceAccountToken: false
       affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/os
-                operator: In
-                values:
-                - linux
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
           - weight: 100
@@ -58,7 +50,7 @@ spec:
           type: RuntimeDefault
       containers:
       - name: postgres
-        image: docker.io/library/postgres:15.19-alpine@sha256:a2c20749c564b4eb73a77bfda626f8a3cde1bbfae020fb97c616a00cdc1a2181
+        image: docker.io/library/postgres
         env:
         - name: POSTGRES_DB
           value: audiomusedb
@@ -164,16 +156,7 @@ spec:
         app.kubernetes.io/name: audiomuse
         app.kubernetes.io/part-of: media
     spec:
-      automountServiceAccountToken: false
       affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/os
-                operator: In
-                values:
-                - linux
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
           - weight: 100
@@ -182,62 +165,11 @@ spec:
               labelSelector:
                 matchLabels:
                   app.kubernetes.io/name: audiomuse-worker
-      securityContext:
-        fsGroup: 1000
-        fsGroupChangePolicy: OnRootMismatch
-        seccompProfile:
-          type: RuntimeDefault
-      initContainers:
-      - name: wait-for-navidrome
-        image: ghcr.io/neptunehub/audiomuse-ai:3.4.0@sha256:5c2c3710d0a0990258946b2d268c955d29b675afc9588bcfe3f70fd3d1f11ff6
-        command:
-        - /usr/bin/python3
-        - -c
-        args:
-        - "import time\nimport urllib.request\n\nfor attempt in range(120):\n    try:\n        urllib.request.urlopen(\n\
-          \            \"http://navidrome.media.svc.cluster.local:4533/ping\",\n            timeout=2,\n\
-          \        ).close()\n        break\n    except OSError:\n        if attempt == 119:\n       \
-          \     raise\n        time.sleep(2)\n"
-        env:
-        - name: PYTHONDONTWRITEBYTECODE
-          value: '1'
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 100m
-            memory: 128Mi
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          readOnlyRootFilesystem: true
-          runAsGroup: 1000
-          runAsNonRoot: true
-          runAsUser: 1000
       containers:
       - name: audiomuse
-        image: ghcr.io/neptunehub/audiomuse-ai:3.4.0@sha256:5c2c3710d0a0990258946b2d268c955d29b675afc9588bcfe3f70fd3d1f11ff6
-        envFrom:
-        - configMapRef:
-            name: audiomuse-config
         env:
         - name: SERVICE_TYPE
           value: flask
-        - name: NAVIDROME_USER
-          value: audiomuse
-        - name: NAVIDROME_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: media-runtime
-              key: AUDIOMUSE_NAVIDROME_PASSWORD
-        - name: POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: media-runtime
-              key: AUDIOMUSE_POSTGRES_PASSWORD
         ports:
         - name: http
           containerPort: 8000
@@ -260,22 +192,6 @@ spec:
           limits:
             cpu: '1'
             memory: 2Gi
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          readOnlyRootFilesystem: true
-          runAsGroup: 1000
-          runAsNonRoot: true
-          runAsUser: 1000
-        volumeMounts:
-        - name: tmp
-          mountPath: /tmp
-        - name: temp-audio
-          mountPath: /app/temp_audio
-        - name: plugins
-          mountPath: /app/plugin/installed
       - name: oauth2-proxy
         image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.4@sha256:b1b2021fe8f4004573e8d690dec6c7bb29cc44364572cf8510a05bf3a0ae2ded
         args:
@@ -340,13 +256,6 @@ spec:
         volumeMounts:
         - name: tmp
           mountPath: /tmp
-      volumes:
-      - name: tmp
-        emptyDir: {}
-      - name: temp-audio
-        emptyDir: {}
-      - name: plugins
-        emptyDir: {}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -364,16 +273,7 @@ spec:
         app.kubernetes.io/name: audiomuse-worker
         app.kubernetes.io/part-of: media
     spec:
-      automountServiceAccountToken: false
       affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/os
-                operator: In
-                values:
-                - linux
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
           - weight: 100
@@ -386,62 +286,11 @@ spec:
                   values:
                   - audiomuse
                   - audiomuse-postgres
-      securityContext:
-        fsGroup: 1000
-        fsGroupChangePolicy: OnRootMismatch
-        seccompProfile:
-          type: RuntimeDefault
-      initContainers:
-      - name: wait-for-navidrome
-        image: ghcr.io/neptunehub/audiomuse-ai:3.4.0@sha256:5c2c3710d0a0990258946b2d268c955d29b675afc9588bcfe3f70fd3d1f11ff6
-        command:
-        - /usr/bin/python3
-        - -c
-        args:
-        - "import time\nimport urllib.request\n\nfor attempt in range(120):\n    try:\n        urllib.request.urlopen(\n\
-          \            \"http://navidrome.media.svc.cluster.local:4533/ping\",\n            timeout=2,\n\
-          \        ).close()\n        break\n    except OSError:\n        if attempt == 119:\n       \
-          \     raise\n        time.sleep(2)\n"
-        env:
-        - name: PYTHONDONTWRITEBYTECODE
-          value: '1'
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 100m
-            memory: 128Mi
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          readOnlyRootFilesystem: true
-          runAsGroup: 1000
-          runAsNonRoot: true
-          runAsUser: 1000
       containers:
-      - name: worker
-        image: ghcr.io/neptunehub/audiomuse-ai:3.4.0@sha256:5c2c3710d0a0990258946b2d268c955d29b675afc9588bcfe3f70fd3d1f11ff6
-        envFrom:
-        - configMapRef:
-            name: audiomuse-config
+      - name: audiomuse
         env:
         - name: SERVICE_TYPE
           value: worker
-        - name: NAVIDROME_USER
-          value: audiomuse
-        - name: NAVIDROME_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: media-runtime
-              key: AUDIOMUSE_NAVIDROME_PASSWORD
-        - name: POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: media-runtime
-              key: AUDIOMUSE_POSTGRES_PASSWORD
         resources:
           requests:
             cpu: '1'
@@ -449,30 +298,10 @@ spec:
           limits:
             cpu: '3'
             memory: 7Gi
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          readOnlyRootFilesystem: true
-          runAsGroup: 1000
-          runAsNonRoot: true
-          runAsUser: 1000
-        volumeMounts:
-        - name: tmp
-          mountPath: /tmp
-        - name: temp-audio
-          mountPath: /app/temp_audio
-        - name: plugins
-          mountPath: /app/plugin/installed
       volumes:
-      - name: tmp
-        emptyDir: {}
       - name: temp-audio
         emptyDir:
           sizeLimit: 10Gi
-      - name: plugins
-        emptyDir: {}
 ---
 apiVersion: batch/v1
 kind: CronJob
@@ -503,7 +332,7 @@ spec:
               type: RuntimeDefault
           containers:
           - name: reconcile
-            image: ghcr.io/neptunehub/audiomuse-ai:3.4.0@sha256:5c2c3710d0a0990258946b2d268c955d29b675afc9588bcfe3f70fd3d1f11ff6
+            image: ghcr.io/neptunehub/audiomuse-ai
             command:
             - /usr/bin/python3
             - /config/reconcile-audiomuse.py
@@ -569,7 +398,7 @@ spec:
               type: RuntimeDefault
           containers:
           - name: pg-dump
-            image: docker.io/library/postgres:15.19-alpine@sha256:a2c20749c564b4eb73a77bfda626f8a3cde1bbfae020fb97c616a00cdc1a2181
+            image: docker.io/library/postgres
             command:
             - /bin/sh
             - /config/postgres-backup.sh

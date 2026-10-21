@@ -1,0 +1,98 @@
+# Pod settings shared by the AudioMuse web and worker Deployments; applied to
+# both through the kustomization patch target.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audiomuse-pod
+spec:
+  template:
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+      - name: wait-for-navidrome
+        image: ghcr.io/neptunehub/audiomuse-ai
+        command:
+        - /usr/bin/python3
+        - -c
+        args:
+        - |
+          import time
+          import urllib.request
+
+          for attempt in range(120):
+              try:
+                  urllib.request.urlopen(
+                      "http://navidrome.media.svc.cluster.local:4533/ping",
+                      timeout=2,
+                  ).close()
+                  break
+              except OSError:
+                  if attempt == 119:
+                      raise
+                  time.sleep(2)
+        env:
+        - name: PYTHONDONTWRITEBYTECODE
+          value: '1'
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 1000
+          runAsNonRoot: true
+          runAsUser: 1000
+      containers:
+      - name: audiomuse
+        image: ghcr.io/neptunehub/audiomuse-ai
+        envFrom:
+        - configMapRef:
+            name: audiomuse-config
+        env:
+        - name: NAVIDROME_USER
+          value: audiomuse
+        - name: NAVIDROME_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: media-runtime
+              key: AUDIOMUSE_NAVIDROME_PASSWORD
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: media-runtime
+              key: AUDIOMUSE_POSTGRES_PASSWORD
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 1000
+          runAsNonRoot: true
+          runAsUser: 1000
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: temp-audio
+          mountPath: /app/temp_audio
+        - name: plugins
+          mountPath: /app/plugin/installed
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: temp-audio
+        emptyDir: {}
+      - name: plugins
+        emptyDir: {}
