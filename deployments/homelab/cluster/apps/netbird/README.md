@@ -23,6 +23,9 @@ control plane is not made highly available by adding replicas. PostgreSQL has
 three instances with one required synchronous standby. Controller replacement
 does not discard enrolled devices, IdP signing keys, groups or policies.
 
+Each PostgreSQL instance has a 16 GiB volume and a 2 GiB replication-slot WAL
+budget, so an offline replica cannot retain an unlimited local backlog.
+
 The operator owns membership of the `private-services` resource group; OpenTofu
 owns its identity. Neither controller also owns the other's network resources.
 The operator's experimental Gateway API integration and automatic policy

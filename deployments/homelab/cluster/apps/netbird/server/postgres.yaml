@@ -20,7 +20,7 @@ spec:
         name: netbird-runtime
   storage:
     storageClass: ceph-block
-    size: 10Gi
+    size: 16Gi
   resources:
     requests:
       cpu: 100m
@@ -40,6 +40,8 @@ spec:
     parameters:
       max_connections: '100'
       archive_timeout: 60s
+      # Bound the backlog for an offline replica and leave recovery headroom.
+      max_slot_wal_keep_size: 2GB
   monitoring:
     enablePodMonitor: true
   plugins:
