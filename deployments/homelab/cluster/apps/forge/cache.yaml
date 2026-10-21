@@ -134,11 +134,10 @@ spec:
         - /bootstrap/cache-runner.yaml
         - cache-server
         readinessProbe:
-          exec:
-            command:
-            - python3
-            - -c
-            - import socket; socket.create_connection(('127.0.0.1',8081),2).close()
+          # The backend listens on loopback only; the gateway checks it in-process.
+          httpGet:
+            path: /healthz/backend
+            port: 8080
           periodSeconds: 10
         securityContext:
           allowPrivilegeEscalation: false

@@ -211,18 +211,12 @@ spec:
           periodSeconds: 5
           failureThreshold: 2
         livenessProbe:
-          exec:
-            command:
-            - curl
-            - --max-time
-            - '3'
-            - -fsS
-            - -o
-            - /dev/null
-            - http://127.0.0.1:3000/api/healthz
+          httpGet:
+            path: /api/healthz
+            port: http
           periodSeconds: 30
           failureThreshold: 3
-          timeoutSeconds: 5
+          timeoutSeconds: 3
         env:
         - name: HOME
           value: /var/lib/gitea/git
