@@ -32,17 +32,21 @@ class FakeCamera:
         self.writes = []
         self.closed = False
         self.position_error = False
+        self.calls = {"status": 0, "controls": 0}
 
     def close(self):
         self.closed = True
 
     def privacy(self):
         self.state.update(voiceMask=0, microphoneEnabled=False)
+        return self.status()
 
     def status(self):
+        self.calls["status"] += 1
         return dict(self.state)
 
     def controls(self):
+        self.calls["controls"] += 1
         descriptors = {key: {**control(value, high=10000 if "temperature" in key else 100,
                                inactive=key == "white_balance_temperature" and
                                self.values["white_balance_automatic"] == 1), "name": key}
@@ -218,6 +222,30 @@ class PersistenceTests(unittest.TestCase):
         self.assertIn("Cannot restore", first["settingsError"])
         self.assertEqual(self.controller.snapshot()["settingsError"], first["settingsError"])
         self.assertFalse(self.camera.closed)
+
+    def test_watched_snapshots_reuse_status_and_controls_until_a_change(self):
+        now = [1000.0]
+        with patch("controller.time.monotonic", lambda: now[0]):
+            self.controller.snapshot()
+            self.camera.calls.update(status=0, controls=0)
+            self.controller.snapshot()
+            self.controller.snapshot()
+            # One status read per poll and no control enumeration while fresh.
+            self.assertEqual(self.camera.calls, {"status": 2, "controls": 0})
+            now[0] += 5
+            self.controller.snapshot()
+            self.assertEqual(self.camera.calls["controls"], 1)
+            result = reply(self.controller, {"action": "set", "control": "brightness", "value": 20})
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["state"]["controls"]["brightness"]["value"], 20)
+
+    def test_restoring_rereads_controls_only_after_auto_writes(self):
+        self.controller.connect()
+        self.camera.calls["controls"] = 0
+        self.controller.apply_settings({"brightness": 5, "white_balance_automatic": 0,
+                                        "white_balance_temperature": 5200})
+        self.assertEqual(self.camera.calls["controls"], 2)
+        self.assertEqual(self.camera.values["white_balance_temperature"], 5200)
 
 
 if __name__ == "__main__":

@@ -154,7 +154,10 @@ class Camera:
             time.sleep(0.08)
 
     def privacy(self):
+        """Disable voice commands and USB audio; return the resulting status."""
         current = self.status()
+        if not (current["voiceMask"] or current["microphoneInSleep"] or current["microphoneEnabled"]):
+            return current
         if current["voiceMask"]:
             for bit in range(7):
                 self.tag(0x15, bytes((bit, 0)))

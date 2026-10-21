@@ -20,6 +20,10 @@ IMAGE_CONTROLS = (
     "focus_absolute", "brightness", "contrast", "saturation", "sharpness",
     "hue", "power_line_frequency", "backlight_compensation", "red_balance", "blue_balance",
 )
+AUTO_CONTROLS = ("auto_exposure", "white_balance_automatic", "focus_automatic_continuous")
+# While the popup watches, controls are re-enumerated after any request and at
+# least this often, so values changed outside the shell still appear.
+CONTROLS_MAX_AGE = 5
 PRESETS = {"call": "Normal call", "close": "Close-up", "standing": "Wide standing"}
 
 
@@ -69,11 +73,21 @@ class Controller:
         self.camera = None
         self.restore_error = ""
         self.last_awake = False
+        self.cached_controls = None
+        self.controls_read = 0
 
     def close(self):
         if self.camera:
             self.camera.close()
         self.camera = None
+        self.cached_controls = None
+
+    def controls(self):
+        """Enumerate controls, reusing a recent read while nothing changed."""
+        if self.cached_controls is None or time.monotonic() - self.controls_read >= CONTROLS_MAX_AGE:
+            self.cached_controls = self.camera.controls()
+            self.controls_read = time.monotonic()
+        return self.cached_controls
 
     def connect(self):
         if self.camera is None:
@@ -93,16 +107,20 @@ class Controller:
         if "trackingSpeed" in settings and (type(settings["trackingSpeed"]) is not int
                                             or settings["trackingSpeed"] not in (0, 2)):
             raise ValueError("Invalid saved tracking speed")
+        return controls
 
     def apply_settings(self, settings):
-        self.validate_settings(settings)
+        controls = self.validate_settings(settings)
         # Auto controls precede dependent manual controls; manual controls that
-        # are inactive under the selected auto mode do not get written.
+        # are inactive under the selected auto mode do not get written. Writing
+        # an auto control changes which manual controls are inactive.
         for key in IMAGE_CONTROLS:
             if key in settings:
-                control = self.camera.controls().get(key)
+                control = controls.get(key)
                 if control and not control["inactive"]:
                     self.camera.set(control, settings[key])
+                    if key in AUTO_CONTROLS:
+                        controls = self.camera.controls()
         if "hdr" in settings:
             self.camera.hdr(settings["hdr"])
         if "trackingSpeed" in settings and self.camera.status()["trackingSpeedSupported"]:
@@ -117,20 +135,20 @@ class Controller:
                 "awake": False, "voiceMask": None, "microphoneEnabled": None}
         try:
             self.connect()
-            current = self.camera.status()
             # Restore adjustments on reconnect/wake, never wake or move the
             # camera just because the desktop shell starts.
-            self.camera.privacy()
+            current = self.camera.privacy()
             if current["awake"] and not self.last_awake:
                 self.last_awake = True
+                self.cached_controls = None
                 try:
                     self.apply_settings(self.store.data["settings"])
                     self.restore_error = ""
                 except (ValueError, RuntimeError) as error:
                     self.restore_error = "Cannot restore image settings: " + str(error)
+                current = self.camera.status()
             self.last_awake = current["awake"]
-            current = self.camera.status()
-            controls = self.camera.controls() if current["awake"] else {}
+            controls = self.controls() if current["awake"] else {}
             base.update(current, connected=True, name=self.camera.name,
                         device=self.camera.path, controls=controls, settingsError=self.restore_error)
             if current["awake"]:
@@ -149,6 +167,8 @@ class Controller:
         operation = request.get("action")
         if operation == "status":
             return
+        # Any request may change control values or which ones are inactive.
+        self.cached_controls = None
         self.connect()
         if operation == "privacy":
             self.camera.privacy()
