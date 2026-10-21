@@ -44,14 +44,49 @@ function sameId(left, right) {
     return isId(left) && isId(right) && idKey(left) === idKey(right);
 }
 
-function copyIndex(source) {
+function shallowIndex(source) {
     var target = emptyIndex();
     var keys = source && typeof source === "object" ? Object.keys(source) : [];
 
     for (var index = 0; index < keys.length; index += 1) {
-        target[keys[index]] = cloneValue(source[keys[index]]);
+        target[keys[index]] = source[keys[index]];
     }
     return target;
+}
+
+function shallowEntry(source) {
+    var target = {};
+    var keys = Object.keys(source);
+
+    for (var index = 0; index < keys.length; index += 1) {
+        target[keys[index]] = source[keys[index]];
+    }
+    return target;
+}
+
+// Reducer states share their indexes and entries structurally: an event copies
+// only the index it touches and only the entries it changes. Entries are never
+// mutated after they are reachable from a returned state, so nested values may
+// be shared between generations as long as they are replaced, not edited.
+function writableIndex(next, previous, field) {
+    if (next[field] === previous[field]) {
+        next[field] = shallowIndex(previous[field]);
+    }
+    return next[field];
+}
+
+function setEntryField(next, previous, field, key, property, value) {
+    var entry = next[field][key];
+    if (!entry || entry[property] === value) {
+        return;
+    }
+
+    var index = writableIndex(next, previous, field);
+    if (previous[field] && entry === previous[field][key]) {
+        entry = shallowEntry(entry);
+        index[key] = entry;
+    }
+    entry[property] = value;
 }
 
 function replacementIndex(items) {
@@ -87,8 +122,8 @@ function copyState(state) {
     }
 
     return {
-        _workspaces: copyIndex(state._workspaces),
-        _windows: copyIndex(state._windows),
+        _workspaces: state._workspaces || emptyIndex(),
+        _windows: state._windows || emptyIndex(),
         _initialWorkspacesReceived: state._initialWorkspacesReceived === true,
         _initialWindowsReceived: state._initialWindowsReceived === true,
         configLoaded: state.configLoaded === true,
@@ -211,12 +246,22 @@ function sortedValues(index, compare) {
     return values;
 }
 
-function publish(state) {
-    state = state && typeof state === "object" ? state : createState();
+function publishedValues(index, previous, field, compare) {
+    if (previous && previous._sources && previous._sources[field] === index) {
+        return previous[field];
+    }
+    return sortedValues(index, compare);
+}
 
-    return {
-        workspaces: sortedValues(state._workspaces || emptyIndex(), compareWorkspace),
-        windows: sortedValues(state._windows || emptyIndex(), compareWindow),
+// Pass the previous publication to reuse its workspace or window list when the
+// corresponding reducer index has not changed since that publication.
+function publish(state, previous) {
+    state = state && typeof state === "object" ? state : createState();
+    var workspaceIndex = state._workspaces || emptyIndex();
+    var windowIndex = state._windows || emptyIndex();
+    var view = {
+        workspaces: publishedValues(workspaceIndex, previous, "workspaces", compareWorkspace),
+        windows: publishedValues(windowIndex, previous, "windows", compareWindow),
         configLoaded: state.configLoaded === true,
         configFailed: state.configFailed === true,
         connected: state.connected === true,
@@ -224,6 +269,14 @@ function publish(state) {
         error: state.error === undefined ? null : state.error,
         generation: typeof state.generation === "number" ? state.generation : 0
     };
+
+    Object.defineProperty(view, "_sources", {
+        value: {
+            workspaces: workspaceIndex,
+            windows: windowIndex
+        }
+    });
+    return view;
 }
 
 function applyWorkspacesChanged(next, payload) {
@@ -235,20 +288,20 @@ function applyWorkspacesChanged(next, payload) {
     return true;
 }
 
-function applyWorkspaceUrgencyChanged(next, payload) {
+function applyWorkspaceUrgencyChanged(next, payload, previous) {
     if (!payload || !isId(payload.id) || typeof payload.urgent !== "boolean") {
         return false;
     }
 
-    var workspace = next._workspaces[idKey(payload.id)];
-    if (!workspace) {
+    var key = idKey(payload.id);
+    if (!next._workspaces[key]) {
         return false;
     }
-    workspace.is_urgent = payload.urgent;
+    setEntryField(next, previous, "_workspaces", key, "is_urgent", payload.urgent);
     return true;
 }
 
-function applyWorkspaceActivated(next, payload) {
+function applyWorkspaceActivated(next, payload, previous) {
     if (!payload || !isId(payload.id) || typeof payload.focused !== "boolean") {
         return false;
     }
@@ -264,16 +317,16 @@ function applyWorkspaceActivated(next, payload) {
         var activated = sameId(workspace.id, payload.id);
 
         if (workspace.output === target.output) {
-            workspace.is_active = activated;
+            setEntryField(next, previous, "_workspaces", keys[index], "is_active", activated);
         }
         if (payload.focused) {
-            workspace.is_focused = activated;
+            setEntryField(next, previous, "_workspaces", keys[index], "is_focused", activated);
         }
     }
     return true;
 }
 
-function applyWorkspaceActiveWindowChanged(next, payload) {
+function applyWorkspaceActiveWindowChanged(next, payload, previous) {
     if (!payload
         || !isId(payload.workspace_id)
         || !owns(payload, "active_window_id")
@@ -281,11 +334,11 @@ function applyWorkspaceActiveWindowChanged(next, payload) {
         return false;
     }
 
-    var workspace = next._workspaces[idKey(payload.workspace_id)];
-    if (!workspace) {
+    var key = idKey(payload.workspace_id);
+    if (!next._workspaces[key]) {
         return false;
     }
-    workspace.active_window_id = payload.active_window_id;
+    setEntryField(next, previous, "_workspaces", key, "active_window_id", payload.active_window_id);
     return true;
 }
 
@@ -298,7 +351,7 @@ function applyWindowsChanged(next, payload) {
     return true;
 }
 
-function applyWindowOpenedOrChanged(next, payload) {
+function applyWindowOpenedOrChanged(next, payload, previous) {
     if (!payload
         || !payload.window
         || typeof payload.window !== "object"
@@ -307,21 +360,20 @@ function applyWindowOpenedOrChanged(next, payload) {
     }
 
     var window = cloneValue(payload.window);
-    next._windows[idKey(window.id)] = window;
+    writableIndex(next, previous, "_windows")[idKey(window.id)] = window;
 
     if (window.is_focused === true) {
         var keys = Object.keys(next._windows);
         for (var index = 0; index < keys.length; index += 1) {
-            var other = next._windows[keys[index]];
-            if (!sameId(other.id, window.id)) {
-                other.is_focused = false;
+            if (!sameId(next._windows[keys[index]].id, window.id)) {
+                setEntryField(next, previous, "_windows", keys[index], "is_focused", false);
             }
         }
     }
     return true;
 }
 
-function applyWindowClosed(next, payload) {
+function applyWindowClosed(next, payload, previous) {
     if (!payload || !isId(payload.id)) {
         return false;
     }
@@ -330,11 +382,11 @@ function applyWindowClosed(next, payload) {
     if (!owns(next._windows, key)) {
         return false;
     }
-    delete next._windows[key];
+    delete writableIndex(next, previous, "_windows")[key];
     return true;
 }
 
-function applyWindowFocusChanged(next, payload) {
+function applyWindowFocusChanged(next, payload, previous) {
     if (!payload
         || !owns(payload, "id")
         || (payload.id !== null && !isId(payload.id))) {
@@ -343,13 +395,13 @@ function applyWindowFocusChanged(next, payload) {
 
     var keys = Object.keys(next._windows);
     for (var index = 0; index < keys.length; index += 1) {
-        var window = next._windows[keys[index]];
-        window.is_focused = payload.id !== null && sameId(window.id, payload.id);
+        var focused = payload.id !== null && sameId(next._windows[keys[index]].id, payload.id);
+        setEntryField(next, previous, "_windows", keys[index], "is_focused", focused);
     }
     return true;
 }
 
-function applyWindowFocusTimestampChanged(next, payload) {
+function applyWindowFocusTimestampChanged(next, payload, previous) {
     if (!payload
         || !isId(payload.id)
         || !owns(payload, "focus_timestamp")
@@ -358,28 +410,28 @@ function applyWindowFocusTimestampChanged(next, payload) {
         return false;
     }
 
-    var window = next._windows[idKey(payload.id)];
-    if (!window) {
+    var key = idKey(payload.id);
+    if (!next._windows[key]) {
         return false;
     }
-    window.focus_timestamp = cloneValue(payload.focus_timestamp);
+    setEntryField(next, previous, "_windows", key, "focus_timestamp", cloneValue(payload.focus_timestamp));
     return true;
 }
 
-function applyWindowUrgencyChanged(next, payload) {
+function applyWindowUrgencyChanged(next, payload, previous) {
     if (!payload || !isId(payload.id) || typeof payload.urgent !== "boolean") {
         return false;
     }
 
-    var window = next._windows[idKey(payload.id)];
-    if (!window) {
+    var key = idKey(payload.id);
+    if (!next._windows[key]) {
         return false;
     }
-    window.is_urgent = payload.urgent;
+    setEntryField(next, previous, "_windows", key, "is_urgent", payload.urgent);
     return true;
 }
 
-function applyWindowLayoutsChanged(next, payload) {
+function applyWindowLayoutsChanged(next, payload, previous) {
     if (!payload || !Array.isArray(payload.changes)) {
         return false;
     }
@@ -395,9 +447,9 @@ function applyWindowLayoutsChanged(next, payload) {
             continue;
         }
 
-        var window = next._windows[idKey(pair[0])];
-        if (window) {
-            window.layout = cloneValue(pair[1]);
+        var key = idKey(pair[0]);
+        if (next._windows[key]) {
+            setEntryField(next, previous, "_windows", key, "layout", cloneValue(pair[1]));
             changed = true;
         }
     }
@@ -425,31 +477,33 @@ function reduce(state, event) {
     if (owns(event, "WorkspacesChanged")) {
         changed = applyWorkspacesChanged(next, event.WorkspacesChanged);
     } else if (owns(event, "WorkspaceUrgencyChanged")) {
-        changed = applyWorkspaceUrgencyChanged(next, event.WorkspaceUrgencyChanged);
+        changed = applyWorkspaceUrgencyChanged(next, event.WorkspaceUrgencyChanged, state);
     } else if (owns(event, "WorkspaceActivated")) {
-        changed = applyWorkspaceActivated(next, event.WorkspaceActivated);
+        changed = applyWorkspaceActivated(next, event.WorkspaceActivated, state);
     } else if (owns(event, "WorkspaceActiveWindowChanged")) {
         changed = applyWorkspaceActiveWindowChanged(
             next,
-            event.WorkspaceActiveWindowChanged
+            event.WorkspaceActiveWindowChanged,
+            state
         );
     } else if (owns(event, "WindowsChanged")) {
         changed = applyWindowsChanged(next, event.WindowsChanged);
     } else if (owns(event, "WindowOpenedOrChanged")) {
-        changed = applyWindowOpenedOrChanged(next, event.WindowOpenedOrChanged);
+        changed = applyWindowOpenedOrChanged(next, event.WindowOpenedOrChanged, state);
     } else if (owns(event, "WindowClosed")) {
-        changed = applyWindowClosed(next, event.WindowClosed);
+        changed = applyWindowClosed(next, event.WindowClosed, state);
     } else if (owns(event, "WindowFocusChanged")) {
-        changed = applyWindowFocusChanged(next, event.WindowFocusChanged);
+        changed = applyWindowFocusChanged(next, event.WindowFocusChanged, state);
     } else if (owns(event, "WindowFocusTimestampChanged")) {
         changed = applyWindowFocusTimestampChanged(
             next,
-            event.WindowFocusTimestampChanged
+            event.WindowFocusTimestampChanged,
+            state
         );
     } else if (owns(event, "WindowUrgencyChanged")) {
-        changed = applyWindowUrgencyChanged(next, event.WindowUrgencyChanged);
+        changed = applyWindowUrgencyChanged(next, event.WindowUrgencyChanged, state);
     } else if (owns(event, "WindowLayoutsChanged")) {
-        changed = applyWindowLayoutsChanged(next, event.WindowLayoutsChanged);
+        changed = applyWindowLayoutsChanged(next, event.WindowLayoutsChanged, state);
     } else if (owns(event, "ConfigLoaded")) {
         changed = applyConfigLoaded(next, event.ConfigLoaded);
     }

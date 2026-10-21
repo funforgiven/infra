@@ -258,3 +258,54 @@ test("connection errors expose an actionable stale state", () => {
     assert.equal(view.stale, true);
     assert.equal(view.error, "invalid JSON from event stream");
 });
+
+test("deltas share untouched state and never mutate the previous state", () => {
+    const before = applyFixture(openedState(), "initial-state.jsonl");
+    const snapshot = JSON.stringify(NiriState.publish(before));
+
+    const urgent = NiriState.reduce(before, {
+        WindowUrgencyChanged: { id: 201, urgent: true }
+    });
+    assert.strictEqual(urgent._workspaces, before._workspaces);
+    assert.notStrictEqual(urgent._windows, before._windows);
+    assert.notStrictEqual(urgent._windows["number:201"], before._windows["number:201"]);
+    assert.strictEqual(urgent._windows["number:102"], before._windows["number:102"]);
+
+    const focused = NiriState.reduce(urgent, { WindowFocusChanged: { id: 201 } });
+    const activated = NiriState.reduce(focused, {
+        WorkspaceActivated: { id: 22, focused: true }
+    });
+    NiriState.reduce(activated, {
+        WindowLayoutsChanged: { changes: [[102, { pos_in_scrolling_layout: [2, 1] }]] }
+    });
+    NiriState.reduce(activated, { WindowClosed: { id: 301 } });
+
+    assert.equal(JSON.stringify(NiriState.publish(before)), snapshot);
+    assert.equal(byId(NiriState.publish(urgent).windows, 102).is_focused, true);
+    assert.equal(byId(NiriState.publish(focused).windows, 201).is_focused, true);
+    assert.equal(byId(NiriState.publish(activated).workspaces, 22).is_focused, true);
+    assert.equal(byId(NiriState.publish(focused).workspaces, 22).is_focused, false);
+});
+
+test("publishing reuses unchanged collections from the previous publication", () => {
+    const state = applyFixture(openedState(), "initial-state.jsonl");
+    const first = NiriState.publish(state);
+
+    const urgent = NiriState.reduce(state, {
+        WorkspaceUrgencyChanged: { id: 22, urgent: true }
+    });
+    const second = NiriState.publish(urgent, first);
+    assert.strictEqual(second.windows, first.windows);
+    assert.notStrictEqual(second.workspaces, first.workspaces);
+    assert.equal(byId(second.workspaces, 22).is_urgent, true);
+
+    const closed = NiriState.connectionClosed(urgent, "gone");
+    const third = NiriState.publish(closed, second);
+    assert.strictEqual(third.workspaces, second.workspaces);
+    assert.strictEqual(third.windows, second.windows);
+    assert.equal(third.stale, true);
+    assert.deepEqual(Object.keys(third).sort(), [
+        "configFailed", "configLoaded", "connected", "error", "generation",
+        "stale", "windows", "workspaces"
+    ]);
+});

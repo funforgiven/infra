@@ -20,10 +20,6 @@ QtObject {
     readonly property bool configFailed: root._view.configFailed
     readonly property string error: root._view.error || ""
     readonly property int generation: root._view.generation
-    readonly property var focusedWorkspaceId: root._focusedId(root.workspaces)
-    readonly property var focusedWindowId: root._focusedId(root.windows)
-
-    readonly property bool actionBusy: root._actionQueue.length > 0
     readonly property string actionError: root._actionError
 
     signal actionSucceeded(string actionName)
@@ -47,17 +43,8 @@ QtObject {
         return left !== null && left !== undefined && right !== null && right !== undefined && typeof left === typeof right && String(left) === String(right);
     }
 
-    function _focusedId(items) {
-        for (var index = 0; index < items.length; index += 1) {
-            if (items[index].is_focused === true) {
-                return items[index].id;
-            }
-        }
-        return null;
-    }
-
     function _publish() {
-        root._view = NiriState.publish(root._state);
+        root._view = NiriState.publish(root._state, root._view);
     }
 
     function workspacesForOutput(outputName) {
@@ -78,16 +65,6 @@ QtObject {
             }
         }
         return result;
-    }
-
-    function activeWorkspaceForOutput(outputName) {
-        var outputWorkspaces = root.workspacesForOutput(outputName);
-        for (var index = 0; index < outputWorkspaces.length; index += 1) {
-            if (outputWorkspaces[index].is_active === true) {
-                return outputWorkspaces[index];
-            }
-        }
-        return null;
     }
 
     function _handleEventConnected() {
