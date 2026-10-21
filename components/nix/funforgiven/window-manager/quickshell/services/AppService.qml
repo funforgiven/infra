@@ -16,6 +16,11 @@ QtObject {
     property int launchStateRevision: 0
     property var pendingDesktopIds: []
     property var _pendingLaunchCounts: ({})
+    readonly property var _identityCacheStore: ({
+            revision: -1,
+            size: 0,
+            entries: null
+        })
     property string lastLaunchFailureDesktopId: ""
     property string lastLaunchFailureMessage: ""
 
@@ -326,13 +331,50 @@ QtObject {
         return root._result(null, AppIdentity.fallbackId(values), originalId, hints, "fallback");
     }
 
+    // Resolutions are memoised per desktop-entry revision. Reading revision
+    // here also keeps callers' bindings dependent on it.
+    function _identityCache() {
+        var cache = root._identityCacheStore;
+        if (cache.revision !== root.revision || cache.size > 512) {
+            cache.revision = root.revision;
+            cache.size = 0;
+            cache.entries = Object.create(null);
+        }
+        return cache;
+    }
+
+    function _memoised(key, resolve) {
+        var cache = root._identityCache();
+        if (!(key in cache.entries)) {
+            cache.entries[key] = resolve();
+            cache.size += 1;
+        }
+        return cache.entries[key];
+    }
+
+    function _windowIdentity(appId, title) {
+        // A window that resolves through its app ID alone does not depend on
+        // its title, so the title only joins the key for unmatched app IDs.
+        var primary = appId.length === 0 ? null : root._memoised("window-app\n" + appId, function () {
+            var result = root.resolveIdentity({
+                appId: appId
+            });
+            return result.desktopEntry === null ? null : result;
+        });
+        if (primary !== null) {
+            return primary;
+        }
+        return root._memoised("window\n" + appId + "\n" + title, function () {
+            return root.resolveIdentity({
+                appId: appId,
+                applicationName: title
+            });
+        });
+    }
+
     function resolveWindow(window) {
         var appId = root._value(window, ["app_id", "appId"]);
-        var result = root.resolveIdentity({
-            appId: appId,
-            applicationName: root._value(window, ["title"]),
-            fallbackName: root._value(window, ["title"])
-        });
+        var result = Object.assign({}, root._windowIdentity(appId, root._value(window, ["title"])));
         var canonicalId = AppIdentity.windowCanonicalId(result, appId, root._value(window, ["id"]));
         if (canonicalId !== result.canonicalId) {
             result.canonicalId = canonicalId;
@@ -343,10 +385,12 @@ QtObject {
 
     function resolveDesktopId(desktopId) {
         var normalized = AppIdentity.text(desktopId);
-        return root.resolveIdentity({
-            appId: normalized,
-            fallbackName: normalized
-        });
+        return Object.assign({}, root._memoised("desktop\n" + normalized, function () {
+            return root.resolveIdentity({
+                appId: normalized,
+                fallbackName: normalized
+            });
+        }));
     }
 
     function resolveStream(stream) {
@@ -377,10 +421,6 @@ QtObject {
 
     function iconPathForWindow(window) {
         return root.resolveWindow(window).iconPath;
-    }
-
-    function iconPathForStream(stream) {
-        return root.resolveStream(stream).iconPath;
     }
 
     function _launchCommand(entry) {
