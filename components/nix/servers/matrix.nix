@@ -94,7 +94,10 @@ _: {
               pkgs.kubectl
               accessPython
             ];
-            text = ''exec ${accessPython}/bin/python ${source}/access.py "$@"'';
+            text = ''
+              export HOMELAB_INVENTORY=${../../../deployments/homelab/hosts/inventory.json}
+              exec ${accessPython}/bin/python ${source}/access.py "$@"
+            '';
           }
         }/bin/matrix-access";
       };

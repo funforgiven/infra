@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Run a command with an ephemeral homelab Kubernetes administrator config."""
 import argparse
+import json
 import os
 import subprocess
 import tempfile
@@ -10,7 +11,11 @@ import yaml
 def capture(command, timeout=45, **kwargs):
     return subprocess.run(command, capture_output=True, check=True, timeout=timeout, **kwargs).stdout
 
-SERVERS = ("10.21.20.10", "10.21.20.11", "10.21.20.12")
+INVENTORY = json.loads(Path(
+    os.environ.get("HOMELAB_INVENTORY")
+    or Path(__file__).resolve().parents[4] / "deployments/homelab/hosts/inventory.json"
+).read_text())
+SERVERS = tuple(host["management"] for host in INVENTORY["hosts"].values())
 
 def read_admin_config():
     for index, server in enumerate(SERVERS):
@@ -25,7 +30,7 @@ def read_admin_config():
 
 def cluster_config():
     document = yaml.safe_load(read_admin_config())
-    document["clusters"][0]["cluster"]["server"] = "https://10.21.20.128:6443"
+    document["clusters"][0]["cluster"]["server"] = "https://" + INVENTORY["cluster"]["apiVip"] + ":6443"
     fd = os.memfd_create("homelab-kubeconfig")
     try:
         os.write(fd, yaml.safe_dump(document).encode())
