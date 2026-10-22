@@ -1,106 +1,96 @@
-# Music library workflow
+# Music library and Discord music
 
-SFTPGo is a temporary upload inbox, Beets owns the library, and Navidrome serves
-only files accepted by Beets.
+SFTPGo is a temporary upload inbox, Beets owns the library, Navidrome serves
+only files accepted by Beets, AudioMuse analyses the library for Navidrome, and
+Muse plays YouTube audio in Discord.
 
 ## Add music
 
-1. Download the album on the workstation. Streamrip can use the local Deezer
-   account configuration; keep provider and payment credentials outside this
-   repository and never provide them to a workload. Keep full albums together.
-2. Sign in to <https://upload.fahrican.com/web/client> with ZITADEL and upload
-   the album as received. The upload account has no local password or other file
-   transfer access.
-3. SFTPGo writes files atomically. Beets waits until the complete inbox has
-   been unchanged for two minutes, then imports confident MusicBrainz matches
-   without prompting.
-4. Listen at <https://music.fahrican.com> or through an OpenSubsonic client such
-   as Symfonium.
+1. Download complete albums on the workstation (Streamrip may use the local
+   Deezer configuration; provider and payment credentials never reach a
+   workload).
+2. Upload them as received at <https://upload.fahrican.com/web/client> (ZITADEL
+   login; the account has no local password or other protocol).
+3. Beets imports once the inbox has been quiet for two minutes, using confident
+   MusicBrainz/Deezer matches without prompting. Listen at
+   <https://music.fahrican.com> or any OpenSubsonic client.
 
-Beets prefers MusicBrainz metadata with Deezer as an additional metadata source,
-writes canonical tags and artwork, and moves accepted tracks to the
-artist/album/track library. Duplicate checks use the artist and album title;
-different versions sharing those names need explicit review. Release titles
-and edition disambiguation are retained, and rejected copies remain in
-quarantine instead of being discarded by a release-group rule.
-MusicBrainz genres and linked service IDs are imported when available, and
-barcode and track count help constrain metadata searches.
-Deezer-only matches retain their provider IDs; numeric identifiers are removed
-from MusicBrainz UUID fields rather than presented as unverified MusicBrainz
-matches. The provider IDs are also written explicitly into FLAC tags.
-Missing embedded artwork is filled from the album cover; existing embedded
-pictures are preserved, and the external cover is kept for Navidrome.
-It calculates track and album ReplayGain metadata without re-encoding audio.
-Navidrome mounts that library read-only and scans once per minute.
+For a large batch, stage complete album directories outside `inbox` and rename
+them in after validation: the quiet period cannot detect a paused upload. Use
+Picard for albums that need a manual MusicBrainz choice, then upload again.
 
-The listening library is studio-only. After import, recordings explicitly
-identified as live by MusicBrainz release types or concert-version markers in
-album/track titles move out of the catalog and into retained quarantine. This
-also handles live bonus tracks within an otherwise studio release. A studio
-song title merely containing the word "live" does not trigger this rule.
-Ado's intake also keeps standard vocal versions: explicitly marked remixes,
-piano versions, instrumentals, a cappella, speed variants, and stripped versions
-go to quarantine. Other artists' studio bonus tracks retain their release's
-track list.
+## Library policy
 
-Rejected, duplicate, unsupported, and unmatched files move to a timestamped
-directory under `quarantine`. Quarantine is not visible to SFTPGo or Navidrome
-and is retained until reviewed. Inspect and resolve quarantine explicitly; no
-scheduled job deletes unmatched music or uncertain duplicates. A failed Beets
-run leaves the inbox for the next attempt.
+- Numeric Deezer IDs never go into MusicBrainz UUID fields; provider IDs are
+  written explicitly to FLAC tags (`normalize-provider-ids.py`).
+- The library is studio-only: recordings marked live by MusicBrainz or by
+  concert markers in titles move to quarantine; for Ado, remixes, piano,
+  instrumental, a cappella, speed and stripped versions do too
+  (`quarantine-live.py`). A title merely containing "live" stays.
+- Duplicates (artist + album title), unmatched, unsupported and leftover files
+  move to a timestamped `quarantine` directory that neither SFTPGo nor
+  Navidrome can see. Nothing deletes quarantine automatically; review it.
+- Refreshing an existing album is a reviewed, manual operation: the inbox never
+  overwrites a release because another copy arrived.
+- The daily LastGenre cleanup only normalizes existing genres and runs only
+  while `verify-lastgenre-offline.py` proves it makes no Last.fm requests.
 
-For a large batch, prepare complete album directories in a staging directory
-outside `inbox`, then rename them into `inbox` after validation. The two-minute
-quiet period cannot guarantee completeness if an upload pauses for longer.
-Refreshing an existing album is a reviewed operation: preserve its audio when
-decoded PCM matches, merge missing source metadata, and compare artwork before
-replacing it. The automatic inbox never overwrites an existing release merely
-because another copy arrives.
+## Accounts
 
-Use Picard for an album that needs a manual MusicBrainz choice, then upload the
-corrected files again. There is no automatic release watcher or purchasing bot.
+Create the first Navidrome administrator on its one-time setup page. The
+`audiomuse` service account is created on the next Navidrome pod start after
+that (the init skips it while no admin exists, so the setup page stays
+reachable). Last.fm and ListenBrainz are authorized by each user in Navidrome.
 
-## Accounts and scrobbling
+Browser sessions for Navidrome and AudioMuse use ZITADEL refresh tokens with
+30-day cookies. SFTPGo reloads its upload account from `sftpgo-initial-data.json`
+on every start; its local `admin` (emergency inspection only) is created once
+from `SFTPGO_ADMIN_PASSWORD`, so rotating that value later needs a password
+change in SFTPGo too.
 
-Navidrome and AudioMuse browser sessions use ZITADEL refresh tokens and
-30-day cookies, refreshed on use. ZITADEL password and MFA checks also remain
-valid for 30 days. Existing sessions need one new login to receive refresh tokens.
+## AudioMuse database
 
-Create the first Navidrome administrator through its one-time setup page.
-Last.fm and ListenBrainz authorization is performed separately by each
-Navidrome user. Provider tokens remain in Navidrome state and its encrypted
-backups.
+`audiomuse-db` is a CloudNativePG cluster bootstrapped by importing the legacy
+`audiomuse-postgres` StatefulSet, which remains only until the cutover is
+verified. AudioMuse's database is recomputable analysis data; its CNPG volumes
+are covered by the daily volume snapshot schedule.
 
-SFTPGo rebuilds its declared configuration and upload account from the runtime
-Secret at pod start. The local administrator account is only for emergency
-inspection. Browser access uses ZITADEL OIDC; local user passwords, user API
-keys, and the native login form are disabled.
+AudioMuse 3.4.0 can persist its `TASK_STATUS_LIVE`/`TASK_STATUS_TERMINAL`
+tuples in `app_config` in a form it cannot read back, producing invalid queue
+SQL after a restart. If that recurs, confirm the traceback and the exact rows
+`('NEW', 'RUNNING')` and `('SUCCESS', 'FAIL', 'REVOKED')`, delete only those two
+overrides in a transaction, and require a healthy `/api/health`. Never clear
+`app_config` or task-status data.
+
+## Discord music (Muse)
+
+One replica with `Recreate`: two pods would compete for one bot identity and
+SQLite database. The cache is disposable; only `/data` is backed up, through a
+pre-backup hook (`sqlite-backup.py`) that writes a verified online copy to
+`/data/recovery/db.sqlite`. Restore from that copy with Muse stopped, never
+over an open database, and never let a restored pod run with the production
+token.
+
+- **DAVE is mandatory.** Discord voice requires DAVE end-to-end encryption;
+  reject an image that drops it from `@discordjs/voice`. Readiness only checks
+  the token, so run a real `/play` after every image or voice-library change.
+- **YouTube boundary.** Search uses the Data API key; playback uses `yt-dlp`,
+  which may conflict with YouTube's terms and breaks when YouTube changes.
+  There is deliberately no cookie support: login- and age-gated media fails.
+- **Discord application.** Private, guild-install only, no privileged intents,
+  scopes `bot applications.commands`, permissions View Channels, Send
+  Messages, Embed Links, Connect, Speak, Use Voice Activity (`36719616`), then
+  narrow with channel overrides. The installer needs **Manage Server**.
+- **Credentials.** Enroll `DISCORD_MUSIC_BOT_TOKEN` and
+  `DISCORD_MUSIC_YOUTUBE_API_KEY` (API-restricted to YouTube Data API v3)
+  with `nix run .#enroll-services-credential -- --from-file ...`, then
+  `nix run .#render-cluster-credentials`. After the Secret changes, restart
+  the Deployment. Resetting the Discord token invalidates the old one
+  immediately; for the YouTube key, create the replacement first. SOPS
+  re-encryption is not a rotation.
 
 ## Verify a change
 
-Before accepting media data, require successful backups and an isolated restore
-of the library, Beets catalog, Navidrome state, and quarantine PVCs.
-
-For an application or import-policy change:
-
-1. Upload a small test album.
-2. Confirm Beets moves and tags it after the quiet period.
-3. Confirm Navidrome scans it.
-4. Upload it again and confirm the duplicate is quarantined.
-5. Restore the relevant PVCs into an isolated namespace and verify the catalog
-   and representative audio.
-
-## AudioMuse startup recovery
-
-The pinned AudioMuse 3.4.0 setup bootstrap can persist its internal
-`TASK_STATUS_LIVE` and `TASK_STATUS_TERMINAL` tuples in `app_config`. Its
-`SetupManager.cast_value` does not deserialize tuples. After a restart this
-can generate invalid queue SQL by treating each character as a status.
-
-If this recurs, verify the image, traceback and both exact values first. The
-malformed rows are `('NEW', 'RUNNING')` and `('SUCCESS', 'FAIL', 'REVOKED')`;
-delete only those overrides in a transaction so the pinned code's defaults
-apply, and require a successful `/api/health` response. Do not clear
-`app_config` or change task-status data. A setup operation that writes all
-defaults may recreate the overrides; inspect the upstream tuple serialization
-before treating an upgrade as a fix.
+Upload a small test album, confirm Beets tags and moves it and Navidrome scans
+it, upload it again and confirm the duplicate is quarantined. Backups and the
+isolated media restore are owned by `infrastructure/backups/`.

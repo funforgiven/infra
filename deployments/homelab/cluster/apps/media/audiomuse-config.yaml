@@ -16,7 +16,7 @@ data:
   MUSICSERVER_LYRICS_TIMEOUT: '20'
   NAVIDROME_URL: http://navidrome.media.svc.cluster.local:4533
   POSTGRES_DB: audiomusedb
-  POSTGRES_HOST: audiomuse-postgres.media.svc.cluster.local
+  POSTGRES_HOST: audiomuse-db-rw.media.svc.cluster.local
   POSTGRES_PORT: '5432'
   POSTGRES_USER: audiomuse
   PYTHONDONTWRITEBYTECODE: '1'

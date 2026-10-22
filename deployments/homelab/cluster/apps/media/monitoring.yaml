@@ -60,14 +60,14 @@ spec:
         summary: AudioMuse analysis worker is unavailable
         description: AudioMuse has had no available analysis worker for fifteen minutes.
     - alert: AudioMusePostgresUnavailable
-      expr: "kube_statefulset_status_replicas_ready{\n  namespace=\"media\",statefulset=\"audiomuse-postgres\"\
-        \n} < 1"
+      expr: "sum(kube_pod_status_ready{\n  namespace=\"media\",pod=~\"audiomuse-db-[0-9]+\",condition=\"true\"\n}) < 1\
+        \ or absent(kube_pod_status_ready{\n  namespace=\"media\",pod=~\"audiomuse-db-[0-9]+\",condition=\"true\"\n})"
       for: 10m
       labels:
         severity: warning
       annotations:
         summary: AudioMuse PostgreSQL is unavailable
-        description: AudioMuse PostgreSQL has had no ready replica for ten minutes.
+        description: The audiomuse-db CloudNativePG instance has not been ready for ten minutes.
     - alert: AudioMuseReconcileStalled
       expr: "(time() - kube_cronjob_status_last_successful_time{\n  namespace=\"media\",cronjob=\"audiomuse-reconcile\"\
         \n} > 3600) or ((time() - kube_cronjob_created{\n  namespace=\"media\",cronjob=\"audiomuse-reconcile\"\
@@ -79,17 +79,6 @@ spec:
       annotations:
         summary: AudioMuse policy reconciliation is stale
         description: AudioMuse cron policy has not reconciled successfully for an hour.
-    - alert: AudioMusePostgresBackupStalled
-      expr: "(time() - kube_cronjob_status_last_successful_time{\n  namespace=\"media\",cronjob=\"audiomuse-postgres-backup\"\
-        \n} > 129600) or ((time() - kube_cronjob_created{\n  namespace=\"media\",cronjob=\"audiomuse-postgres-backup\"\
-        \n} > 129600) unless on(namespace,cronjob) kube_cronjob_status_last_successful_time{\n  namespace=\"\
-        media\",cronjob=\"audiomuse-postgres-backup\"\n})"
-      for: 30m
-      labels:
-        severity: warning
-      annotations:
-        summary: AudioMuse PostgreSQL logical backup is stale
-        description: No AudioMuse PostgreSQL logical backup completed in the last 36 hours.
     - alert: DiscordMusicUnavailable
       expr: "kube_deployment_status_replicas_available{\n  namespace=\"media\",deployment=\"discord-music\"\
         \n} < 1 or absent(kube_deployment_status_replicas_available{\n  namespace=\"media\",deployment=\"\

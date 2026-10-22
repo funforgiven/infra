@@ -1,27 +1,14 @@
 #!/lsiopy/bin/python3
-"""Prove the deployed LastGenre cleanup path cannot query Last.fm."""
+"""Prove the deployed LastGenre cleanup path cannot query Last.fm.
+
+import.sh runs this before its daily genre cleanup and skips the cleanup when
+it fails, so private-API drift after a Beets upgrade never blocks imports.
+"""
 
 from beets import config, library
 
-
-config["lastgenre"].set(
-    {
-        "auto": False,
-        "force": False,
-        "cleanup_existing": True,
-        "aliases": True,
-        "canonical": False,
-        "whitelist": False,
-        "keep_existing": False,
-        "count": 3,
-        "fallback": None,
-        "min_weight": 10,
-        "prefer_specific": False,
-        "source": "album",
-        "title_case": True,
-        "ignorelist": False,
-    }
-)
+# Use the deployed lastgenre settings from $BEETSDIR/config.yaml.
+config.read()
 
 from beetsplug.lastgenre import LastGenrePlugin  # noqa: E402
 

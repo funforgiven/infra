@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Install the two fixed RODECaster actions using encrypted webhook credentials."""
+"""Install the two fixed RODECaster actions using encrypted webhook credentials.
+
+The webhook IDs exist only in the workstation SOPS file, so these automations
+stay UI-owned (automations.yaml) instead of joining the Git-owned managed/ set.
+"""
 
 import argparse
 import json
@@ -45,7 +49,8 @@ def main():
         response.raise_for_status()
         response = http.get(endpoint, timeout=30)
         response.raise_for_status()
-        assert response.json() == config, 'Automation readback mismatch'
+        if response.json() != config:
+            raise RuntimeError('Automation readback mismatch: ' + config['id'])
         print('Installed and verified:', config['id'])
 
 

@@ -13,47 +13,6 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
-      initContainers:
-      - name: wait-for-navidrome
-        image: ghcr.io/neptunehub/audiomuse-ai
-        command:
-        - /usr/bin/python3
-        - -c
-        args:
-        - |
-          import time
-          import urllib.request
-
-          for attempt in range(120):
-              try:
-                  urllib.request.urlopen(
-                      "http://navidrome.media.svc.cluster.local:4533/ping",
-                      timeout=2,
-                  ).close()
-                  break
-              except OSError:
-                  if attempt == 119:
-                      raise
-                  time.sleep(2)
-        env:
-        - name: PYTHONDONTWRITEBYTECODE
-          value: '1'
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 100m
-            memory: 128Mi
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          readOnlyRootFilesystem: true
-          runAsGroup: 1000
-          runAsNonRoot: true
-          runAsUser: 1000
       containers:
       - name: audiomuse
         image: ghcr.io/neptunehub/audiomuse-ai
@@ -71,8 +30,8 @@ spec:
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: media-runtime
-              key: AUDIOMUSE_POSTGRES_PASSWORD
+              name: audiomuse-db-app
+              key: password
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

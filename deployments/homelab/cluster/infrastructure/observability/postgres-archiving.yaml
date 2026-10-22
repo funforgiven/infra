@@ -1,7 +1,8 @@
 # CloudNativePG reports pg_stat_archiver only from primaries. The clusters'
 # 60-second archive_timeout closes a segment whenever there was activity, so
 # an archive older than an hour means WAL is not reaching the barman object
-# store (point-in-time recovery is falling behind).
+# store (point-in-time recovery is falling behind). AudioMuse's recomputable
+# database does not archive; volume snapshots cover it.
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
@@ -12,7 +13,7 @@ spec:
   - name: postgres-archiving
     rules:
     - alert: PostgresWALArchiveStale
-      expr: time() - cnpg_pg_stat_archiver_last_archived_time > 3600
+      expr: time() - cnpg_pg_stat_archiver_last_archived_time{namespace!="media"} > 3600
       for: 15m
       labels:
         severity: warning

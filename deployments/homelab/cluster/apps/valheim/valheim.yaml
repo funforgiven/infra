@@ -96,6 +96,10 @@ spec:
           readOnly: true
         - name: data
           mountPath: /data
+        - name: server
+          mountPath: /data/server
+        - name: steamcmd
+          mountPath: /data/steamcmd
         - name: tmp
           mountPath: /tmp
         - name: credentials
@@ -170,6 +174,8 @@ spec:
           readOnly: true
         - name: data
           mountPath: /data
+        - name: server
+          mountPath: /data/server
         - name: tmp
           mountPath: /tmp
         - name: credentials
@@ -192,6 +198,14 @@ spec:
         secret:
           secretName: valheim-runtime
           defaultMode: 288
+      # SteamCMD and the game are re-downloadable, so they stay off the backed-up
+      # data volume and are reinstalled on every pod start.
+      - name: server
+        emptyDir:
+          sizeLimit: 8Gi
+      - name: steamcmd
+        emptyDir:
+          sizeLimit: 2Gi
       - name: tmp
         emptyDir:
           sizeLimit: 512Mi

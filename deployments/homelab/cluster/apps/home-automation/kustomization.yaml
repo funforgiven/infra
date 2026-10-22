@@ -14,11 +14,10 @@ configMapGenerator:
   namespace: home-automation
   files:
   - bootstrap.py
-  - install-onecta.py
+  - install-pinned.py
   - onecta-application-credentials.py
   - backup.py
   - run-service.sh
-  - start-zigbee.sh
   - configuration.yaml
   - zigbee-configuration.yaml
   - mosquitto.conf
@@ -29,10 +28,16 @@ configMapGenerator:
   - thread-backup.sh
   - thread-ready.sh
   - thread-recovery.py
-- name: automation-radios
+# Git-owned Home Assistant configuration, mounted read-only at /config/managed.
+- name: home-assistant-config
   namespace: home-automation
-  envs:
-  - radios.env
+  files:
+  - automation-hue-dimmers.yaml=automations/hue-dimmers.yaml
+  - automation-nuki-keypad-lighting.yaml=automations/nuki-keypad-lighting.yaml
+  - automation-bathroom-presence-lighting.yaml=automations/bathroom-presence-lighting.yaml
+  - package-nuki-mqtt.yaml=packages/nuki-mqtt.yaml
+  - dashboard-rooftrollen.yaml=dashboard/dashboard.yaml
+  - theme-rooftrollen.yaml=dashboard/theme.yaml
 - name: automation-thread
   namespace: home-automation
   envs:

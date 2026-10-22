@@ -13,14 +13,17 @@ mkdir -p "$inbox" "$library" "$quarantine" "$state/cache"
 
 # Keep unmatched music and uncertain duplicates for operator review.
 
-# Normalize only genres already present in the library. The verification script
-# first replaces LastGenre's network client with a hard failure, so this cleanup
-# makes no Last.fm requests.
+# Daily, normalize genres already present in the library, but only while the
+# offline contract holds: if a Beets upgrade breaks it, skip the cleanup and
+# keep importing rather than risk Last.fm requests or block new music.
 lastgenre_maintenance="$state/lastgenre-offline-maintenance"
 if [ ! -e "$lastgenre_maintenance" ] || \
   find "$lastgenre_maintenance" -mmin +1440 -print -quit | grep -q .; then
-  /opt/beets/verify-lastgenre-offline.py
-  "$beet" lastgenre 'genre::.'
+  if /opt/beets/verify-lastgenre-offline.py; then
+    "$beet" lastgenre 'genre::.'
+  else
+    printf '%s\n' "LastGenre offline contract failed; skipping genre cleanup" >&2
+  fi
   touch "$lastgenre_maintenance"
 fi
 

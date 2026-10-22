@@ -1,0 +1,23 @@
+{
+  "users": [
+    {
+      "status": 1,
+      "username": "fahricanelidemir@gmail.com",
+      "home_dir": "/srv/sftpgo/data/media/inbox",
+      "uid": 1000,
+      "gid": 1000,
+      "permissions": {"/": ["*"]},
+      "filters": {
+        "denied_protocols": ["SSH", "FTP", "DAV"],
+        "file_patterns": [{"path": "/", "denied_patterns": [".sftpgo-upload*"], "deny_policy": 1}],
+        "web_client": [
+          "password-change-disabled",
+          "password-reset-disabled",
+          "api-key-auth-change-disabled",
+          "publickey-change-disabled",
+          "tls-cert-change-disabled"
+        ]
+      }
+    }
+  ]
+}

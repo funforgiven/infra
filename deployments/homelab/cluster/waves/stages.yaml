@@ -253,6 +253,7 @@ spec:
   path: ./deployments/homelab/cluster/apps/media
   wait: true
   dependsOn:
+  - name: databases
   - name: gateway
   - name: velero
   - name: identity

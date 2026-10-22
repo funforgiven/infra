@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Seed missing state files and render runtime MQTT credentials."""
+"""Install Git-owned HA configuration, seed first-start state, render MQTT credentials."""
 import datetime
 import json
 import os
@@ -14,12 +14,17 @@ ha = state / 'home-assistant'
 for name, initial in [('automations.yaml', '[]\n'), ('scripts.yaml', '{}\n'), ('scenes.yaml', '[]\n')]:
     if not (ha / name).exists():
         (ha / name).write_text(initial)
-for source, destination in [('configuration.yaml', ha / 'configuration.yaml'),
-                            ('zigbee-configuration.yaml', state / 'zigbee2mqtt/configuration.yaml')]:
-    if not destination.exists():
-        shutil.copyfile(Path('/bootstrap') / source, destination)
+# Git owns configuration.yaml: replace it on every start.
+shutil.copyfile('/bootstrap/configuration.yaml', ha / 'configuration.yaml.new')
+os.replace(ha / 'configuration.yaml.new', ha / 'configuration.yaml')
+# Zigbee2MQTT writes its generated network keys and device options back into
+# its configuration.yaml, so Git only seeds a new network. Never re-seed it.
+zigbee = state / 'zigbee2mqtt/configuration.yaml'
+if not zigbee.exists():
+    shutil.copyfile('/bootstrap/zigbee-configuration.yaml', zigbee)
 
-# Seed HTTP settings once in HA's 2026.9 storage schema; later changes belong to HA's UI.
+# HA 2026.9 imports http: YAML once and ignores it afterwards, so seed its
+# storage schema instead; later changes belong to HA's UI.
 (ha / '.storage').mkdir(exist_ok=True)
 http = ha / '.storage/http'
 if not http.exists():
@@ -55,4 +60,4 @@ for filename, users in (
             if not password or any(c in password for c in '\r\n:'):
                 raise SystemExit('Invalid MQTT credential')
             output.write(f'{user}:{password}\n')
-print('Initial configuration and runtime credentials prepared.')
+print('Configuration and runtime credentials prepared.')

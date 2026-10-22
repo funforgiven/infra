@@ -35,11 +35,16 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       initContainers:
-      - name: render-initial-data
+      # SFTPGo mounts the inbox by subPath; create the tree as UID 1000 first so
+      # a fresh volume never gets a root-owned inbox from the kubelet.
+      - name: media-directories
         image: docker.io/library/busybox:1.38.0@sha256:dc2d74b28e4cf8984fa52af1f39bc7c3d9c73760b41a74d629f5d11b1ab28616
         command:
-        - /bin/sh
-        - /bootstrap/render.sh
+        - mkdir
+        - -p
+        - /media/inbox
+        - /media/library
+        - /media/quarantine
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -49,16 +54,8 @@ spec:
           runAsNonRoot: true
           runAsUser: 1000
         volumeMounts:
-        - name: bootstrap
-          mountPath: /bootstrap
-          readOnly: true
-        - name: bootstrap-source
-          mountPath: /run/source
-          readOnly: true
-        - name: bootstrap-rendered
-          mountPath: /run/rendered
         - name: media
-          mountPath: /srv/sftpgo/data/media
+          mountPath: /media
       containers:
       - name: sftpgo
         image: docker.io/drakkan/sftpgo:v2.7.5-slim@sha256:021e23c5336ebf0a12b663dcb773081f7537e0ef330cbd1534f446ce26c77faa
@@ -67,6 +64,15 @@ spec:
           value: sqlite
         - name: SFTPGO_DATA_PROVIDER__NAME
           value: /var/lib/sftpgo/sftpgo.db
+        - name: SFTPGO_DATA_PROVIDER__CREATE_DEFAULT_ADMIN
+          value: 'true'
+        - name: SFTPGO_DEFAULT_ADMIN_USERNAME
+          value: admin
+        - name: SFTPGO_DEFAULT_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: media-runtime
+              key: SFTPGO_ADMIN_PASSWORD
         - name: SFTPGO_HTTPD__BINDINGS__0__PORT
           value: '8080'
         - name: SFTPGO_HTTPD__BINDINGS__0__DISABLED_LOGIN_METHODS
@@ -93,9 +99,9 @@ spec:
         - name: SFTPGO_HTTPD__BINDINGS__0__OIDC__USERNAME_FIELD
           value: email
         - name: SFTPGO_LOADDATA_CLEAN
-          value: 'true'
+          value: 'false'
         - name: SFTPGO_LOADDATA_FROM
-          value: /run/rendered/initial-data.json
+          value: /bootstrap/initial-data.json
         - name: SFTPGO_LOADDATA_MODE
           value: '0'
         - name: SFTPGO_LOG_FILE_PATH
@@ -135,8 +141,9 @@ spec:
           runAsNonRoot: true
           runAsUser: 1000
         volumeMounts:
-        - name: bootstrap-rendered
-          mountPath: /run/rendered
+        - name: bootstrap
+          mountPath: /bootstrap
+          readOnly: true
         - name: data
           mountPath: /var/lib/sftpgo
         - name: media
@@ -149,14 +156,6 @@ spec:
       - name: bootstrap
         configMap:
           name: sftpgo-bootstrap
-          defaultMode: 365
-      - name: bootstrap-source
-        secret:
-          secretName: media-runtime
-          defaultMode: 288
-          items:
-          - key: SFTPGO_ADMIN_PASSWORD
-            path: sftpgo-admin-password
       - name: oidc
         secret:
           secretName: media-runtime
@@ -164,9 +163,6 @@ spec:
           items:
           - key: SFTPGO_OIDC_CLIENT_SECRET
             path: sftpgo-oidc-client-secret
-      - name: bootstrap-rendered
-        emptyDir:
-          medium: Memory
       - name: data
         persistentVolumeClaim:
           claimName: sftpgo-data

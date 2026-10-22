@@ -110,9 +110,30 @@ metadata:
   name: audiomuse-postgres-ingress
   namespace: media
 spec:
+  # The legacy database only serves the audiomuse-db bootstrap import.
   podSelector:
     matchLabels:
       app.kubernetes.io/name: audiomuse-postgres
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          cnpg.io/cluster: audiomuse-db
+    ports:
+    - protocol: TCP
+      port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: audiomuse-db-ingress
+  namespace: media
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: audiomuse-db
   policyTypes:
   - Ingress
   ingress:
@@ -124,7 +145,22 @@ spec:
           values:
           - audiomuse
           - audiomuse-worker
-          - audiomuse-postgres-backup
     ports:
     - protocol: TCP
       port: 5432
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: cnpg-system
+    ports:
+    - protocol: TCP
+      port: 8000
+    - protocol: TCP
+      port: 5432
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: services-observability
+    ports:
+    - protocol: TCP
+      port: 9187

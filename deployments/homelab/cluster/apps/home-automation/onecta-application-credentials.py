@@ -1,6 +1,6 @@
 """Onecta OAuth using the callback registered for this Home Assistant instance.
 
-Installed over the upstream application_credentials.py by install-onecta.py.
+Installed over the upstream application_credentials.py by install-pinned.py.
 Uses HA's documented custom OAuth implementation extension; other integrations
 can continue using My Home Assistant.
 """

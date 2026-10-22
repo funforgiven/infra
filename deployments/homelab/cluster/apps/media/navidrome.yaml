@@ -64,6 +64,9 @@ spec:
         command:
         - /lsiopy/bin/python3
         - /config/reconcile-navidrome-service-account.py
+        envFrom:
+        - configMapRef:
+            name: navidrome-env
         env:
         - name: AUDIOMUSE_NAVIDROME_PASSWORD
           valueFrom:
@@ -72,23 +75,27 @@ spec:
               key: AUDIOMUSE_NAVIDROME_PASSWORD
         - name: HOME
           value: /tmp
-        - name: ND_DATAFOLDER
-          value: /data
-        - name: ND_ENABLELOGREDACTING
-          value: 'true'
+        - name: PYTHONDONTWRITEBYTECODE
+          value: '1'
         - name: ND_LOGLEVEL
           value: error
-        - name: ND_MUSICFOLDER
-          value: /music
+        - name: ND_PLUGINS_ENABLED
+          value: 'false'
+        - name: ND_LASTFM_APIKEY
+          valueFrom:
+            secretKeyRef:
+              name: media-runtime
+              key: ND_LASTFM_APIKEY
+        - name: ND_LASTFM_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: media-runtime
+              key: ND_LASTFM_SECRET
         - name: ND_PASSWORDENCRYPTIONKEY
           valueFrom:
             secretKeyRef:
               name: media-runtime
               key: ND_PASSWORDENCRYPTIONKEY
-        - name: ND_PLUGINS_ENABLED
-          value: 'false'
-        - name: PYTHONDONTWRITEBYTECODE
-          value: '1'
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -112,70 +119,30 @@ spec:
           readOnly: true
         - name: tmp
           mountPath: /tmp
-      - name: install-plugins
+      - name: plugins
         image: docker.io/deluan/navidrome:0.63.2@sha256:9012939114fbb1bb641b81cf96dec5ded15f0aafefe8d47a511d7cb919658e40
         command:
         - /bin/sh
-        - /config/install-navidrome-plugins.sh
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          runAsGroup: 1000
-          runAsNonRoot: true
-          runAsUser: 1000
-        volumeMounts:
-        - name: data
-          mountPath: /data
-        - name: config
-          mountPath: /config
-          readOnly: true
-      - name: configure-plugins
-        image: docker.io/deluan/navidrome:0.63.2@sha256:9012939114fbb1bb641b81cf96dec5ded15f0aafefe8d47a511d7cb919658e40
-        command:
-        - /bin/sh
-        - /config/configure-navidrome-plugins.sh
+        - /config/navidrome-plugins.sh
+        envFrom:
+        - configMapRef:
+            name: navidrome-env
         env:
-        - name: ND_AGENTS
-          value: audiomuseai,lastfm,listenbrainz,deezer
-        - name: ND_DEFAULTLANGUAGE
-          value: en
-        - name: ND_ENABLEINSIGHTSCOLLECTOR
-          value: 'false'
-        - name: ND_ENABLELOGREDACTING
-          value: 'true'
-        - name: ND_ENABLESHARING
-          value: 'false'
         - name: ND_LASTFM_APIKEY
           valueFrom:
             secretKeyRef:
               name: media-runtime
               key: ND_LASTFM_APIKEY
-        - name: ND_LASTFM_LANGUAGE
-          value: en
         - name: ND_LASTFM_SECRET
           valueFrom:
             secretKeyRef:
               name: media-runtime
               key: ND_LASTFM_SECRET
-        - name: ND_LYRICSPRIORITY
-          value: embedded,.lrc,.elrc,.ttml,.srt,.txt,nd-lyrics
-        - name: ND_MUSICFOLDER
-          value: /music
         - name: ND_PASSWORDENCRYPTIONKEY
           valueFrom:
             secretKeyRef:
               name: media-runtime
               key: ND_PASSWORDENCRYPTIONKEY
-        - name: ND_PLUGINS_AUTORELOAD
-          value: 'true'
-        - name: ND_PLUGINS_ENABLED
-          value: 'true'
-        - name: ND_PLUGINS_FOLDER
-          value: /data/plugins
-        - name: ND_SEARCH_BACKEND
-          value: fts
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -199,64 +166,25 @@ spec:
       containers:
       - name: navidrome
         image: docker.io/deluan/navidrome:0.63.2@sha256:9012939114fbb1bb641b81cf96dec5ded15f0aafefe8d47a511d7cb919658e40
+        envFrom:
+        - configMapRef:
+            name: navidrome-env
         env:
-        - name: ND_AGENTS
-          value: audiomuseai,lastfm,listenbrainz,deezer
-        - name: ND_BACKUP_COUNT
-          value: '7'
-        - name: ND_BACKUP_PATH
-          value: /data/backups
-        - name: ND_BACKUP_SCHEDULE
-          value: 0 3 * * *
-        - name: ND_DEFAULTLANGUAGE
-          value: en
-        - name: ND_ENABLEINSIGHTSCOLLECTOR
-          value: 'false'
-        - name: ND_ENABLELOGREDACTING
-          value: 'true'
-        - name: ND_ENABLESHARING
-          value: 'false'
-        - name: ND_EXTAUTH_LOGOUTURL
-          value: https://music.fahrican.com/oauth2/sign_out
-        - name: ND_EXTAUTH_TRUSTEDSOURCES
-          value: 127.0.0.1/32,::1/128
-        - name: ND_EXTAUTH_USERHEADER
-          value: X-Forwarded-Preferred-Username
         - name: ND_LASTFM_APIKEY
           valueFrom:
             secretKeyRef:
               name: media-runtime
               key: ND_LASTFM_APIKEY
-        - name: ND_LASTFM_LANGUAGE
-          value: en
         - name: ND_LASTFM_SECRET
           valueFrom:
             secretKeyRef:
               name: media-runtime
               key: ND_LASTFM_SECRET
-        - name: ND_LOGLEVEL
-          value: info
-        - name: ND_LYRICSPRIORITY
-          value: embedded,.lrc,.elrc,.ttml,.srt,.txt,nd-lyrics
-        - name: ND_MUSICFOLDER
-          value: /music
         - name: ND_PASSWORDENCRYPTIONKEY
           valueFrom:
             secretKeyRef:
               name: media-runtime
               key: ND_PASSWORDENCRYPTIONKEY
-        - name: ND_PLUGINS_AUTORELOAD
-          value: 'true'
-        - name: ND_PLUGINS_ENABLED
-          value: 'true'
-        - name: ND_PLUGINS_FOLDER
-          value: /data/plugins
-        - name: ND_PROMETHEUS_ENABLED
-          value: 'true'
-        - name: ND_SCANNER_SCHEDULE
-          value: '@every 1m'
-        - name: ND_SEARCH_BACKEND
-          value: fts
         ports:
         - name: native
           containerPort: 4533

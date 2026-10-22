@@ -1,3 +1,6 @@
+# Git-owned: seed-config copies this file over /config/configuration.yaml on
+# every start. UI-owned automations, scripts and scenes stay in their own files;
+# everything under managed/ is a read-only ConfigMap (see kustomization.yaml).
 default_config:
 homeassistant:
   name: Home
@@ -7,6 +10,7 @@ homeassistant:
   unit_system: metric
   external_url: https://home.fahrican.com
   internal_url: https://home.fahrican.com
+  packages: !include_dir_named managed/packages
 recorder:
   purge_keep_days: 14
   auto_purge: true
@@ -14,6 +18,24 @@ recorder:
   commit_interval: 5
 prometheus:
   requires_auth: true
+frontend:
+  themes: !include_dir_merge_named managed/themes
+lovelace:
+  resource_mode: yaml
+  resources:
+  - url: /local/rooftrollen/mushroom.js?v=5.2.3
+    type: module
+  - url: /local/rooftrollen/card-mod.js?v=4.2.1
+    type: module
+  dashboards:
+    dashboard-rooftrollen:
+      mode: yaml
+      filename: managed/dashboards/rooftrollen.yaml
+      title: Rooftrollen
+      icon: mdi:home-variant-outline
+      show_in_sidebar: true
+      require_admin: false
 automation: !include automations.yaml
+automation managed: !include_dir_merge_list managed/automations
 script: !include scripts.yaml
 scene: !include scenes.yaml

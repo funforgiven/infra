@@ -7,6 +7,7 @@ resources:
 - navidrome.yaml
 - audiomuse-config.yaml
 - audiomuse.yaml
+- audiomuse-database.yaml
 - discord-music.yaml
 - routes.yaml
 - monitoring.yaml
@@ -28,7 +29,7 @@ configMapGenerator:
 - name: sftpgo-bootstrap
   namespace: media
   files:
-  - render.sh=render-initial-data.sh
+  - initial-data.json=sftpgo-initial-data.json
 - name: beets-config
   namespace: media
   files:
@@ -41,10 +42,16 @@ configMapGenerator:
   namespace: media
   files:
   - reconcile-navidrome-service-account.py=reconcile-navidrome-service-account.py
-  - install-navidrome-plugins.sh=install-navidrome-plugins.sh
-  - configure-navidrome-plugins.sh=configure-navidrome-plugins.sh
+  - navidrome-plugins.sh=navidrome-plugins.sh
+- name: navidrome-env
+  namespace: media
+  envs:
+  - navidrome.env
 - name: audiomuse-bootstrap
   namespace: media
   files:
   - reconcile-audiomuse.py=reconcile-audiomuse.py
-  - postgres-backup.sh=postgres-backup.sh
+- name: discord-music-backup
+  namespace: media
+  files:
+  - sqlite-backup.py

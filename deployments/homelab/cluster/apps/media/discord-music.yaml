@@ -1,25 +1,4 @@
 apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: discord-music-backup
-  namespace: media
-  labels:
-    app.kubernetes.io/name: discord-music
-    app.kubernetes.io/part-of: media
-data:
-  sqlite-backup.py: "import os\nimport sqlite3\nfrom contextlib import closing\nfrom pathlib import Path\n\
-    \nsource = Path(\"/data/db.sqlite\")\nrecovery = Path(\"/data/recovery\")\ndestination = recovery\
-    \ / \"db.sqlite\"\ntemporary = recovery / \"db.sqlite.tmp\"\n\ndef fsync_directory(directory: Path)\
-    \ -> None:\n    descriptor = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)\n    try:\n        os.fsync(descriptor)\n\
-    \    finally:\n        os.close(descriptor)\n\nrecovery.mkdir(mode=0o700, parents=True, exist_ok=True)\n\
-    os.chmod(recovery, 0o700)\nfsync_directory(recovery.parent)\ntemporary.unlink(missing_ok=True)\n\n\
-    with closing(sqlite3.connect(\n    f\"file:{source}?mode=ro\",\n    uri=True,\n)) as database, closing(sqlite3.connect(temporary))\
-    \ as backup:\n    database.backup(backup)\n    result = backup.execute(\"PRAGMA quick_check\").fetchone()\n\
-    \    if result != (\"ok\",):\n        raise RuntimeError(f\"backup integrity check failed: {result!r}\"\
-    )\n\nos.chmod(temporary, 0o600)\nwith temporary.open(\"rb\") as backup_file:\n    os.fsync(backup_file.fileno())\n\
-    os.replace(temporary, destination)\nfsync_directory(recovery)\n"
----
-apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: discord-music-data
@@ -110,10 +89,18 @@ spec:
             command:
             - node
             - -e
-            - "const token = process.env.DISCORD_TOKEN?.trim();\nif (!token) process.exit(1);\nconst headers\
-              \ = {\n  Authorization: \"Bot \" + token,\n};\nfetch(\"https://discord.com/api/v10/users/@me\"\
-              , {\n  headers,\n  signal: AbortSignal.timeout(5000),\n})\n  .then((response) => process.exit(response.ok\
-              \ ? 0 : 1))\n  .catch(() => process.exit(1));\n"
+            - |
+              const token = process.env.DISCORD_TOKEN?.trim();
+              if (!token) process.exit(1);
+              const headers = {
+                Authorization: "Bot " + token,
+              };
+              fetch("https://discord.com/api/v10/users/@me", {
+                headers,
+                signal: AbortSignal.timeout(5000),
+              })
+                .then((response) => process.exit(response.ok ? 0 : 1))
+                .catch(() => process.exit(1));
           periodSeconds: 60
           timeoutSeconds: 10
           failureThreshold: 3

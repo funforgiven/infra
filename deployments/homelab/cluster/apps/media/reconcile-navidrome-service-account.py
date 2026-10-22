@@ -7,6 +7,7 @@ import pty
 import select
 import signal
 import subprocess
+import sys
 import time
 
 
@@ -76,7 +77,11 @@ def run_password_command(args: list[str], password: str) -> None:
 
 users = json.loads(navidrome("user", "list", "--format", "json").stdout)
 if not any(user["admin"] for user in users):
-    raise RuntimeError("Refusing to create a service account without an admin")
+    # Navidrome offers its first-admin setup page only while no user exists, so
+    # never create the service account first. It is created on the next pod
+    # start after the owner has finished setup.
+    print("No Navidrome administrator yet; skipping the AudioMuse account")
+    sys.exit(0)
 
 password = os.environ["AUDIOMUSE_NAVIDROME_PASSWORD"]
 account = next(
