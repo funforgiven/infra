@@ -386,8 +386,6 @@ spec:
             - /sftpgo/sftpgo.db
             - --sqlite
             - /muse/db.sqlite
-            - --sqlite
-            - /muse/recovery/db.sqlite
             env:
             - name: HOME
               value: /tmp

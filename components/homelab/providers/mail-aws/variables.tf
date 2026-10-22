@@ -1,7 +1,6 @@
 variable "enable_reverse_dns" {
   description = "Create the EIP PTR only after forward DNS has propagated to the AWS address"
   type        = bool
-  default     = false
 }
 
 variable "enable_restore_qualification" {

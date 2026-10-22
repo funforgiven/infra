@@ -51,7 +51,3 @@ configMapGenerator:
   namespace: media
   files:
   - reconcile-audiomuse.py=reconcile-audiomuse.py
-- name: discord-music-backup
-  namespace: media
-  files:
-  - sqlite-backup.py

@@ -34,11 +34,6 @@ spec:
       labels:
         app.kubernetes.io/name: discord-music
         app.kubernetes.io/part-of: media
-      annotations:
-        pre.hook.backup.velero.io/command: '["/usr/bin/python3", "/backup/sqlite-backup.py"]'
-        pre.hook.backup.velero.io/container: muse
-        pre.hook.backup.velero.io/on-error: Fail
-        pre.hook.backup.velero.io/timeout: 1m
     spec:
       automountServiceAccountToken: false
       terminationGracePeriodSeconds: 30
@@ -119,9 +114,6 @@ spec:
           runAsNonRoot: true
           runAsUser: 1000
         volumeMounts:
-        - name: backup
-          mountPath: /backup
-          readOnly: true
         - name: data
           mountPath: /data
         - name: cache
@@ -129,10 +121,6 @@ spec:
         - name: tmp
           mountPath: /tmp
       volumes:
-      - name: backup
-        configMap:
-          name: discord-music-backup
-          defaultMode: 365
       - name: data
         persistentVolumeClaim:
           claimName: discord-music-data

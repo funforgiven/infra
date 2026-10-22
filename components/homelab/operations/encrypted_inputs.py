@@ -9,7 +9,9 @@ def decrypt(path):
     return list(yaml.safe_load_all(r.stdout))
 
 def values(document):
-    return document.get("stringData") or {k:base64.b64decode(v).decode() for k,v in document.get("data",{}).items()}
+    """A Secret's values; stringData wins over data, as in Kubernetes."""
+    decoded={k:base64.b64decode(v).decode() for k,v in (document.get("data") or {}).items()}
+    return {**decoded,**(document.get("stringData") or {})}
 
 def save(root,relative,documents):
     path=root/relative

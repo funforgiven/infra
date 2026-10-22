@@ -4,7 +4,7 @@ Each directory is an OpenTofu root run from the workstation:
 
 | Root | Owns | Provider credentials (environment) |
 | --- | --- | --- |
-| `identity` | ZITADEL projects, clients, machine user | `TF_VAR_jwt_profile_json` |
+| `identity` | ZITADEL projects, clients, machine user | `TF_VAR_jwt_profile_json`: this root's own `identity_controller_key` output (`nix run .#tofu -- identity output -raw identity_controller_key`) |
 | `netbird` | NetBird policy, DNS, IdP | `TF_VAR_netbird_token`, `TF_VAR_default_policy_id` (`../../../deployments/homelab/credentials/netbird-policy/credentials.sops.yaml`) |
 | `dns` | Cloudflare records | `CLOUDFLARE_API_TOKEN` (`cloudflare-token.sops.yaml`), `TF_VAR_resend_records_json` |
 | `mail-aws` | AWS mail host and its secret values | gitops pair from `mail-aws/aws.sops.yaml` (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`) |
@@ -16,8 +16,8 @@ from `secrets/opentofu-state.sops.yaml` without writing it anywhere:
 
 ```sh
 nix run .#tofu -- dns init
-nix run .#tofu -- dns plan -out=dns.plan
-nix run .#tofu -- dns apply dns.plan
+nix run .#tofu -- dns plan -out="$XDG_RUNTIME_DIR/dns.plan"
+nix run .#tofu -- dns apply "$XDG_RUNTIME_DIR/dns.plan"
 nix run .#tofu -- mail-aws output -json   # machine-readable outputs
 ```
 
@@ -42,7 +42,8 @@ values in write-only attributes, so they are not stored in state.
 
 Until every root is migrated, the previous snapshot is in
 `secrets/current-provider-state.sops.yaml` (Kubernetes-backend format). For
-each of `identity`, `dns`, `netbird` and `mail-aws`:
+each of `identity`, `mail-aws`, `dns` and `netbird`, in that order (`dns` and
+`netbird` read the first two through `terraform_remote_state`):
 
 ```sh
 nix run .#tofu -- ROOT migrate-legacy-state   # decrypt | unpack | `tofu state push -`
@@ -52,14 +53,15 @@ nix run .#tofu -- ROOT plan                    # with the root's credentials; ex
 Expected first-plan differences: `mail-aws` removes the `SourceRevision` tag,
 writes new versions of the resend, backup and vpn secrets (same values), and
 needs the role boundaries below; `netbird` reads its client from identity
-state. The `mail-aws` feature switches (`enable_reverse_dns`,
-`enable_matrix_monitoring`, `enable_matrix_delivery_alerts`) used to come from
-untracked tfvars; the last recorded values (commit `b48b84b`) were all `true`,
-with `enable_restore_qualification` `false`. If the plan would destroy a
-feature, set that variable's default to `true` and commit it instead of
-applying. Then commit the `terraform.tfstate` files, delete
-`secrets/current-provider-state.sops.yaml` and the `migrate-legacy-state`
-branch in `components/nix/servers/providers.nix`.
+state; `identity/moved.tf` keeps pre-migration addresses stable. The `mail-aws`
+feature switches (`enable_reverse_dns`, `enable_matrix_monitoring`,
+`enable_matrix_delivery_alerts`) used to come from untracked tfvars and have no
+default, so a plan without them fails instead of destroying anything. The last
+recorded values (commit `b48b84b`) were all `true`; pass them with `-var`,
+confirm the plan keeps those resources, then commit them as defaults. Finally
+commit the `terraform.tfstate` files and delete
+`secrets/current-provider-state.sops.yaml`, `identity/moved.tf` and the
+`migrate-legacy-state` branch in `components/nix/servers/providers.nix`.
 
 New roots start by importing what exists:
 

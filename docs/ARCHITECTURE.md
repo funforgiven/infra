@@ -84,8 +84,12 @@ Stages labelled `homelab.fahrican.com/recovery=hold` are suspended by the
 `deployments/homelab/recovery` overlay so Ceph and stateful apps do not start
 on empty volumes during a rebuild ([recovery](recovery.md)).
 
-Namespaces are declared centrally in `cluster/namespaces.yaml`, which carries
-Pod Security levels and the labels gateways use to admit routes.
+Namespaces are declared in `cluster/namespaces.yaml`, which carries Pod
+Security levels and the labels gateways use to admit routes. The `databases`
+stage still owns `netbird` and `netbird-routing` (and a duplicate of
+`cnpg-system`): moving a namespace between Flux Kustomizations risks one of them
+garbage-collecting it on the first reconcile, so those moves are done in
+separate releases.
 
 ## Data and backups
 
@@ -93,13 +97,17 @@ Pod Security levels and the labels gateways use to admit routes.
   NetBird, Matrix) archive WAL and base backups to Backblaze with the Barman
   Cloud plugin, giving point-in-time recovery. Recomputable databases rely on
   volume backups.
-- **Volumes** are backed up by Velero to Backblaze. Application hooks exist
-  only where a crash-consistent copy is not enough (a game save, the Matrix
-  relay's crypto store).
+- **Volumes** are backed up by Velero's CSI snapshot data mover to Backblaze.
+  Application hooks exist only where a crash-consistent copy is not enough (a
+  Factorio save, the Matrix relay's crypto store and canary). The CephFS media
+  library is the one filesystem backup, because exporting a CephFS snapshot
+  clones the whole volume.
 - **etcd and host identities** are backed up by each host with Restic to its
   own Backblaze prefix and key, which cluster workloads cannot reach.
-- **Restore drills** run in-cluster into isolated `*-restore` namespaces with
-  deny-all network policy, so a recovered copy can never talk to production.
+- **Restore drills** run monthly in-cluster into isolated `*-restore`
+  namespaces with deny-all network policy, so a recovered copy can never talk
+  to production: one Velero drill for volumes and one CloudNativePG recovery
+  test per archived database. The mail host has its own drill on AWS.
 
 Details and procedures: [backups](../deployments/homelab/cluster/infrastructure/backups/README.md).
 
@@ -109,16 +117,22 @@ OpenTofu roots run from the workstation; there is no in-cluster Terraform
 controller, so the cluster can be rebuilt without them and vice versa. State is
 committed in Git, encrypted by OpenTofu itself, and the passphrase is SOPS
 ciphertext; the `nix run .#tofu` wrapper supplies it ([providers](../components/homelab/providers/README.md)).
-ZITADEL client secrets are the one place a provider output feeds cluster
+ZITADEL client secrets are the one provider output that feeds cluster
 Secrets: `identity-credentials` copies them into the consuming SOPS files.
+Other operator tools that mint credentials (Forgejo enrollment, NetBird token
+rotation, Matrix bot enrollment) write their results straight into the
+consumer's SOPS file the same way.
 
 The mail host is a single NixOS instance on AWS (Stalwart, RDS, S3), replaced
 in place rather than recreated; it reaches the LAN-only admin backend over a
 WireGuard peer that may only reach the three node addresses
 ([mail](../components/homelab/services/mail-aws/README.md)).
 
-UniFi OS Server only supports Ubuntu, so it runs as one KubeVirt VM; its guest
-scripts are generated from `components/homelab/services/unifi`.
+UniFi OS Server only supports Ubuntu, so it runs as one KubeVirt VM. Its guest
+scripts are shipped as a ConfigMap disk from `components/homelab/services/unifi`;
+its credentials are still pushed over SSH by `enroll-service-host-secrets`
+because a KubeVirt Secret disk would need new ciphertext and only refreshes on
+VM restart.
 
 ## Validation
 
@@ -132,11 +146,20 @@ offline and without decrypting anything.
 
 Retained only where no declarative owner exists:
 
-- Application logic: the Matrix alert relay, Forgejo runner launcher and cache
-  gateway, media import policy, mail operations, desktop hardware integration
-  (audio MIDI routing, OBSBOT camera, Home Assistant MIDI controls).
-- API adapters without a provider: the Omada switch reconciler, Forgejo
-  account/token enrollment, the NetBird credential rotation, `identity-credentials`.
+- Application logic: the Matrix alert relay and its external probe, the
+  Forgejo runner launcher, job registration and cache gateway, media import
+  policy, Stalwart bootstrap and mail operations on the mail host, the UniFi
+  guest's install, backup and health scripts, game-server entrypoints, small
+  metrics exporters for services only reachable on loopback, and desktop
+  hardware integration (audio MIDI routing, OBSBOT camera, Home Assistant MIDI
+  controls, Niri chat layout).
+- API adapters without a provider: the Omada switch reconciler, in-cluster
+  AudioMuse and Navidrome account/plugin reconcilers, pinned Home Assistant
+  component installs, Forgejo account/token enrollment, NetBird credential
+  rotation and route copies (`render_routes.py`; Gateway API cannot vary
+  admission per parent), image publishing, `identity-credentials`,
+  `enroll-service-host-secrets`, and the RØDECaster Home Assistant automation
+  installer (its webhook IDs exist only in workstation SOPS).
 - RouterOS is driven by Ansible over SSH CLI rather than its API because the
   playbook shares rule tables it does not fully own ([network](network.md)).
-- Restore drills and their verifiers.
+- Restore drills, their verifiers and the manifest validator.

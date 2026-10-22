@@ -23,7 +23,7 @@ Applications pick a channel; the channel never picks a device.
   be the System channel.
 
 `funforgiven-audioctl move-stream ID SERIAL CHANNEL` is the contract used by
-Quickshell (`services/AudioActions.qml`) and `midi-router.py`: it refuses a
+Quickshell (`funforgiven/window-manager/quickshell/services/AudioActions.qml`) and `midi-router.py`: it refuses a
 reused ID whose `object.serial` changed, exits 64 on usage errors and 1 on
 runtime errors, and prints errors on stderr. Callers confirm the move from the
 live graph.

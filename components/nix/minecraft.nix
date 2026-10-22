@@ -64,9 +64,11 @@ _: {
 
           if [[ ! -e $server ]]; then
             staging=$(mktemp -d "$server.XXXXXX")
+            trap 'rm -rf "$staging"' EXIT
             cp -rT --no-preserve=mode ${pack} "$staging"
             echo ${packVersion} >"$staging/.nix-managed-pack-version"
             mv -T "$staging" "$server"
+            trap - EXIT
           elif [[ ! -f $marker || $(<"$marker") != ${packVersion} ]]; then
             echo "$server is not pack ${packVersion}; back up the world and migrate the pack manually" >&2
             exit 1
@@ -109,6 +111,8 @@ _: {
       };
 
       stopServer = pkgs.writeShellScript "${serviceName}-stop" ''
+        # Without the console FIFO there is nothing to ask; systemd stops it.
+        [ -p ${consoleFifo} ] || exit 0
         echo stop >${consoleFifo}
         # Let Minecraft finish saving before systemd's final kill phase.
         while ${pkgs.coreutils}/bin/kill -0 "$1" 2>/dev/null; do

@@ -89,10 +89,37 @@ resource "aws_iam_policy" "mail_boundary" {
         Resource = "*"
       },
       {
-        # AmazonSSMManagedInstanceCore
-        Sid      = "SessionManagerAgent"
-        Effect   = "Allow"
-        Action   = ["ssm:*", "ssmmessages:*", "ec2messages:*"]
+        # The actions of AmazonSSMManagedInstanceCore, so a bounded role cannot
+        # gain SendCommand or parameter access beyond the SSM agent's needs.
+        Sid    = "SessionManagerAgent"
+        Effect = "Allow"
+        Action = [
+          "ssm:DescribeAssociation",
+          "ssm:GetDeployablePatchSnapshotForInstance",
+          "ssm:GetDocument",
+          "ssm:DescribeDocument",
+          "ssm:GetManifest",
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:ListAssociations",
+          "ssm:ListInstanceAssociations",
+          "ssm:PutInventory",
+          "ssm:PutComplianceItems",
+          "ssm:PutConfigurePackageResult",
+          "ssm:UpdateAssociationStatus",
+          "ssm:UpdateInstanceAssociationStatus",
+          "ssm:UpdateInstanceInformation",
+          "ssmmessages:CreateControlChannel",
+          "ssmmessages:CreateDataChannel",
+          "ssmmessages:OpenControlChannel",
+          "ssmmessages:OpenDataChannel",
+          "ec2messages:AcknowledgeMessage",
+          "ec2messages:DeleteMessage",
+          "ec2messages:FailMessage",
+          "ec2messages:GetEndpoint",
+          "ec2messages:GetMessages",
+          "ec2messages:SendReply",
+        ]
         Resource = "*"
       },
     ]

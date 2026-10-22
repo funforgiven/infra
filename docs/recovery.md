@@ -12,7 +12,8 @@ are linked rather than repeated.
 - The Git repository (GitHub, plus any clone). It holds all configuration, all
   ciphertext and the encrypted OpenTofu state.
 - Backblaze bucket `fahrican-cloud-recovery`: CloudNativePG archives, Velero
-  backups, per-host Restic repositories (etcd and host identities) and the mail
+  backups, the hosts' Restic repository (etcd and host identities, one
+  snapshot series per host) and the mail
   host's backups. Never re-initialise a repository or reuse a Barman server
   name over existing data.
 

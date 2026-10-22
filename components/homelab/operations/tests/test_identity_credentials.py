@@ -21,7 +21,9 @@ class IdentityCredentials(unittest.TestCase):
             {"issuer": "https://auth.cloud.fahrican.com/", "client_id": "old", "client_secret": "old-secret"},
         ]}}
         return mas, {
+            # Like the real file: values in both stringData and data.
             "forge": [{"kind": "Secret", "metadata": {"name": "forge-runtime", "labels": {"keep": "yes"}},
+                       "stringData": {"forgejo-oidc-client-id": "old"},
                        "data": {"forgejo-secret-key": base64.b64encode(b"existing-signing-key").decode()}}],
             "matrix": [{"kind": "Secret", "metadata": {"name": "matrix-runtime"},
                         "stringData": {"mas.yaml": yaml.safe_dump(mas), "signing.key": "existing-matrix-key"}}],

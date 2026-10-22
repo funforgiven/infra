@@ -12,7 +12,7 @@
   claim out with `velero.io/exclude-from-backup=true`.
 - **Pre-backup hooks** exist only where a crash-consistent copy is not enough:
   Factorio saves a complete named world, the Matrix relay snapshots its queue
-  and crypto store with an encrypted canary, Muse writes an online SQLite copy.
+  and crypto store with an encrypted canary.
 - **The CephFS media library** is the one Kopia filesystem backup (opted in on
   the Navidrome pod): a CephFS snapshot is exported through a full 1 TiB clone.
 

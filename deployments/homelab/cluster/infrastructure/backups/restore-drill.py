@@ -44,6 +44,10 @@ def newest_daily_backup():
         status = backup.get("status", {})
         if status.get("phase") != "Completed":
             continue
+        # The restore namespaces, their RBAC and verifiers are declared per
+        # namespace, so a schedule change must be mirrored here explicitly.
+        if sorted(backup["spec"].get("includedNamespaces", [])) != sorted(NAMESPACES):
+            raise RuntimeError("daily backup namespaces differ from the drill's NAMESPACES")
         completed = datetime.datetime.fromisoformat(status["completionTimestamp"].replace("Z", "+00:00"))
         if now - completed < datetime.timedelta(hours=26):
             candidates.append((completed, backup["metadata"]["name"]))

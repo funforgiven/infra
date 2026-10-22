@@ -1,12 +1,10 @@
 variable "enable_matrix_monitoring" {
   type        = bool
-  default     = false
   description = "Enable AWS-side Matrix checks after public endpoint enrollment"
 }
 
 variable "enable_matrix_delivery_alerts" {
   type        = bool
-  default     = false
   description = "Enable delivery alarm notifications after recipient enrollment and a successful encrypted canary"
 }
 

@@ -5,7 +5,7 @@ popup using standard V4L2 controls and UVC extension queries on the capture
 node: no vendor SDK, video stream, driver detach or raw USB access, so the
 `video` group suffices. Vendor framing follows the MIT-licensed
 [obsbot-mcp](https://github.com/lxman/obsbot-mcp/tree/ec9304b2722745d698db2632eddeacdf24da37cc/src/codec)
-(see `NOTICE`); voice/audio tags and motor-state decoding were checked against
+(see `THIRD_PARTY_NOTICES.md`); voice/audio tags and motor-state decoding were checked against
 OBSBOT's SDK.
 
 - **Privacy.** On connect and while polling, the helper disables voice commands,

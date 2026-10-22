@@ -21,8 +21,7 @@ Addresses, MACs, VLAN membership and link policy live in
 | CRS `sfp28-3`..`8` | server bonds, per the inventory |
 | Omada ports 2–8 | as commented in `omada-network.yaml` |
 
-Omada port 3 is `gorgonzola` on trusted VLAN 10, as `omada-network.yaml`
-declares; older notes placing PiKVM `ricotta` there on VLAN 90 are stale.
+Omada port 3 is `gorgonzola` on trusted VLAN 10 (`omada-network.yaml`).
 `ricotta` is an unused PiKVM v2 that keeps only its address reservation.
 `u7-pro-max` on Omada port 6 is pinned to 1 Gb/s because 2.5 Gb/s was unstable
 on AP firmware 8.7.11; Omada keeps the speed and owns only the VLAN profile.

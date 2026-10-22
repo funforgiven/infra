@@ -65,10 +65,8 @@ overrides in a transaction, and require a healthy `/api/health`. Never clear
 ## Discord music (Muse)
 
 One replica with `Recreate`: two pods would compete for one bot identity and
-SQLite database. A pre-backup hook (`sqlite-backup.py`) writes a verified online
-copy to `/data/recovery/db.sqlite`; restore from it with Muse stopped, never
-over an open database, and never let a restored pod run with the production
-token.
+SQLite database. Restore its volume with Muse stopped, and never let a
+restored pod run with the production token.
 
 - **DAVE is mandatory.** Discord voice requires DAVE end-to-end encryption;
   reject an image that drops it from `@discordjs/voice`. Readiness only checks

@@ -203,7 +203,8 @@
   tags: [never, apply]
 
 # The mail relay is reachable from the homelab but must never open connections
-# into it, so its new connections are dropped ahead of every other rule.
+# into it, so its new connections are dropped ahead of every other rule. Rules
+# are placed by ID: numeric positions refer to the session's last `print`.
 - name: Isolate backend peers from initiating router or homelab connections
   community.routeros.command:
     commands:
@@ -218,12 +219,14 @@
         :if ([:len $row] = 0) do={
         /ip firewall filter add chain=$chain action=drop
         in-interface="{{ routeros_wireguard.name }}" src-address={{ item.allowed_address }}
-        connection-state=new comment=$comment disabled=no place-before=0
+        connection-state=new comment=$comment disabled=no
+        place-before=[:pick [/ip firewall filter find where chain=$chain] 0]
         } else={
         /ip firewall filter set $row chain=$chain action=drop
         in-interface="{{ routeros_wireguard.name }}" src-address={{ item.allowed_address }}
         connection-state=new disabled=no;
-        /ip firewall filter move $row destination=0 } };
+        :local first [:pick [/ip firewall filter find where chain=$chain] 0];
+        :if ($first != [:pick $row 0]) do={ /ip firewall filter move $row destination=$first } } };
         :put ("__infra_" . "ok__")
       - *wireguard_isolation
     wait_for: *wireguard_completed

@@ -16,7 +16,10 @@ each item when it is done, and this file when it is empty.
   can no longer delete host identities. Mint a key for that prefix (see
   [secrets](../secrets/README.md#edit-and-rotate)) and put it into
   `etcd_backup_environment` in `deployments/homelab/hosts/secrets.sops.yaml`
-  before deploying the hosts.
+  before deploying the hosts; without it host backups stop and alert. After the
+  first snapshot lands under `services/etcd/`, delete the old
+  `services/kubernetes/nixos-etcd/` repository, which the Velero key can still
+  read and delete.
 
 ## OpenTofu
 
@@ -25,6 +28,11 @@ each item when it is done, and this file when it is empty.
   check that every plan is empty except the listed expected differences, commit
   the encrypted states, then delete the legacy file and the
   `migrate-legacy-state` command.
+- `identity/moved.tf` exists only for the migration; delete it once the
+  migrated identity plan is clean.
+- `mail-aws` `bootstrap_revision` still names the pre-refactor commit; bump it
+  to a signed commit of this design after merging, before any instance
+  replacement.
 - Apply `aws-iam` and attach the two role permission boundaries with
   administrator credentials before the next `mail-aws` apply; import the bucket
   into `backblaze`.
@@ -63,6 +71,14 @@ each item when it is done, and this file when it is empty.
   the second copy in a later change.
 - **RouterOS.** Script errors now fail the playbook. Run it once in check mode
   (no tags) and fix any live drift it reports before `--tags apply`.
+
+## Alerting
+
+- Alerts are delivered to both Telegram and Matrix (`apps/matrix/rollout.json`
+  phase `dual`). Once Matrix delivery is trusted, run `matrix-admin qualify`
+  and `retire-telegram`, then delete `rollout.json`, those subcommands, the
+  Telegram receiver and bot secret, and the Telegram notes in the secrets,
+  observability and Matrix docs.
 
 ## Workstation
 
