@@ -35,6 +35,7 @@ spec:
       failoverQuorum: true
     parameters:
       max_connections: '200'
+      archive_timeout: 60s
       # Leave disk headroom when an offline replica retains WAL.
       max_slot_wal_keep_size: 16GB
   monitoring:
