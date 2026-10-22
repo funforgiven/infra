@@ -25,8 +25,8 @@ supports neither LAN-IP connections nor the Steam A2S query `ready.py` uses.
 ## Credentials
 
 `VALHEIM_GAME_PASSWORD` (12–128 characters, not contained in the server name)
-is enrolled with `nix run .#enroll-services-credential -- VALHEIM_GAME_PASSWORD`
-and rendered by `nix run .#render-cluster-credentials` into `valheim-runtime`.
+lives in the `valheim-runtime` Secret in `runtime.sops.yaml`; edit it with
+`sops` (see [secrets](../../../../../secrets/README.md#edit-and-rotate)).
 It is read when the game process starts; restart the pod to apply a rotation.
 WAN forwards are reconciled by the RouterOS playbook (`--tags wan-port-forwards`).
 

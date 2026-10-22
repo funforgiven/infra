@@ -80,10 +80,10 @@ token.
   scopes `bot applications.commands`, permissions View Channels, Send
   Messages, Embed Links, Connect, Speak, Use Voice Activity (`36719616`), then
   narrow with channel overrides. The installer needs **Manage Server**.
-- **Credentials.** Enroll `DISCORD_MUSIC_BOT_TOKEN` and
-  `DISCORD_MUSIC_YOUTUBE_API_KEY` (API-restricted to YouTube Data API v3)
-  with `nix run .#enroll-services-credential -- --from-file ...`, then
-  `nix run .#render-cluster-credentials`. After the Secret changes, restart
+- **Credentials.** `DISCORD_TOKEN` and `YOUTUBE_API_KEY` (restricted to the
+  YouTube Data API v3) live in the `discord-music-runtime` Secret in
+  `runtime.sops.yaml`; edit them with `sops` (see
+  [secrets](../../../../../secrets/README.md#edit-and-rotate)). After the Secret changes, restart
   the Deployment. Resetting the Discord token invalidates the old one
   immediately; for the YouTube key, create the replacement first. SOPS
   re-encryption is not a rotation.
