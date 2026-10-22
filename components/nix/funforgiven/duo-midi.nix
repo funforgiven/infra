@@ -7,7 +7,7 @@ let
       niri,
     }:
     pkgs.writeShellApplication {
-      name = "funforgiven-audio-midi";
+      name = "funforgiven-duo-midi";
       runtimeInputs = [
         audioctl
         niri
@@ -20,7 +20,7 @@ let
             ps.mido
             ps.python-rtmidi
           ])
-        }/bin/python3 ${../audio-channels/midi-router.py} "$@"
+        }/bin/python3 ${../duo-midi}/pads.py "$@"
       '';
     };
 in
@@ -37,9 +37,9 @@ in
     {
       home.packages = [ package ];
 
-      systemd.user.services.funforgiven-audio-midi = {
+      systemd.user.services.funforgiven-duo-midi = {
         Unit = {
-          Description = "RØDECaster Duo focused-application audio routing";
+          Description = "RØDECaster Duo audio routing and home-control pads";
           After = [
             "graphical-session.target"
             "wireplumber.service"
@@ -50,9 +50,12 @@ in
         };
         Service = {
           ExecStart = "${lib.getExe package} listen";
+          LoadCredential = [ "ha-webhooks:/run/secrets/home-assistant-midi-webhooks" ];
           Restart = "on-failure";
           RestartSec = 2;
           PassEnvironment = [ "NIRI_SOCKET" ];
+          NoNewPrivileges = true;
+          RestrictSUIDSGID = true;
           Slice = "session-graphical.slice";
           UMask = "0077";
         };
@@ -72,10 +75,11 @@ in
     in
     {
       checks = lib.mkIf (system == config.dendritic.hosts.parmigiano.system) {
-        audio-midi = pkgs.runCommandLocal "audio-midi-check" { } ''
-          ${pkgs.python3}/bin/python3 ${../audio-channels/tests/midi-router.test.py} \
-            ${../audio-channels/midi-router.py}
+        duo-midi = pkgs.runCommandLocal "duo-midi-check" { } ''
+          ${pkgs.python3}/bin/python3 -B ${../duo-midi}/tests.py ${../duo-midi}
           ${lib.getExe package} --help > /dev/null
+          ${lib.getExe package} trigger loft-light --dry-run
+          ${lib.getExe package} trigger loft-airflow --dry-run
           touch "$out"
         '';
       };

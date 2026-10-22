@@ -1,23 +1,18 @@
-"""Route the focused Niri application's playback from four RODECaster MIDI pads."""
+"""Route the focused Niri application's playback to an audio channel (CC 102–105)."""
 
-import argparse
 from dataclasses import dataclass
 import html
 import json
 import logging
 from pathlib import Path
 import queue
-import re
-import signal
 import subprocess
-import threading
 import time
 
 
 CHANNELS = {102: "system", 103: "game", 104: "voice", 105: "music"}
 LABELS = {"system": "System", "game": "Game", "voice": "Voice Chat", "music": "Music"}
-MIDI_CHANNEL = 15  # MIDI's displayed channel 16 is zero-based in Mido.
-LOG = logging.getLogger("audio-midi")
+LOG = logging.getLogger("duo-midi.audio")
 
 
 def normalized_id(value):
@@ -172,20 +167,9 @@ def route(focus, channel, dry_run=False):
     return {"app_id": focus.app_id, "channel": channel, "moved": len(streams)}
 
 
-def midi_target(message):
-    if (message.type == "control_change" and message.channel == MIDI_CHANNEL
-            and message.value > 0):
-        return CHANNELS.get(message.control)
-    return None
-
-
-def select_port(names):
-    matches = [name for name in names if re.fullmatch(
-        r"RODECaster Duo:RODECaster Duo MIDI 1 \d+:\d+", name.replace("Ø", "O"))]
-    return matches[0] if len(matches) == 1 else None
-
-
 class Dispatcher:
+    controls = CHANNELS
+
     def __init__(self, stopped, capture=capture_focus, move=route, report=notify):
         self.stopped = stopped
         self.capture = capture
@@ -194,8 +178,8 @@ class Dispatcher:
         self.events = queue.Queue(maxsize=8)
         self.last_press = {}
 
-    def receive(self, message):
-        channel = midi_target(message)
+    def receive(self, control):
+        channel = CHANNELS.get(control)
         if channel is None or self.stopped.is_set():
             return
         now = time.monotonic()
@@ -223,60 +207,3 @@ class Dispatcher:
             except (ValueError, OSError, subprocess.SubprocessError) as error:
                 LOG.warning("Cannot route app: %s", error)
                 self.report(str(error), error=True)
-
-
-def listen():
-    import mido
-
-    backend = mido.Backend("mido.backends.rtmidi/LINUX_ALSA")
-    stopped = threading.Event()
-    for signum in (signal.SIGINT, signal.SIGTERM):
-        signal.signal(signum, lambda *_: stopped.set())
-    dispatcher = Dispatcher(stopped)
-    worker = threading.Thread(target=dispatcher.work, daemon=True)
-    worker.start()
-    port = None
-    try:
-        LOG.info("Waiting for RODECaster Duo; channel 16, CC 102–105")
-        while not stopped.is_set():
-            name = select_port(backend.get_input_names())
-            if port is not None and (port.closed or port.name != name):
-                port.close()
-                port = None
-                LOG.info("Duo disconnected; waiting for reconnect")
-            if port is None and name is not None:
-                try:
-                    port = backend.open_input(name, callback=dispatcher.receive)
-                    LOG.info("Listening on %s", name)
-                except (OSError, RuntimeError) as error:
-                    LOG.warning("Cannot open Duo MIDI port: %s", error)
-            stopped.wait(1)
-    finally:
-        stopped.set()
-        if port is not None:
-            port.close()
-        worker.join(timeout=2)
-
-
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("listen", help="Listen for the four Duo MIDI routing pads")
-    action = commands.add_parser("route", help="Route the currently focused app once")
-    action.add_argument("channel", choices=LABELS)
-    action.add_argument("--dry-run", action="store_true", help="Show matching streams without moving them")
-    args = parser.parse_args()
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-    try:
-        if args.command == "listen":
-            listen()
-        else:
-            print(json.dumps(route(capture_focus(), args.channel, args.dry_run)))
-    except (ValueError, OSError, subprocess.SubprocessError) as error:
-        LOG.error("%s", error)
-        return 1
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

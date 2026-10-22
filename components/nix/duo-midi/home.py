@@ -1,14 +1,11 @@
-"""Control the loft light and AC airflow from two RODECaster MIDI pads."""
+"""Toggle the loft light and AC airflow through Home Assistant webhooks (CC 106–107)."""
 
-import argparse
 import json
 import logging
 import os
 from pathlib import Path
 import queue
 import re
-import signal
-import threading
 import time
 import urllib.error
 import urllib.parse
@@ -18,19 +15,7 @@ import urllib.request
 ACTIONS = {106: "loft-light", 107: "loft-airflow"}
 LABELS = {"loft-light": "Loft light toggle", "loft-airflow": "Loft AC comfort/swing"}
 COOLDOWN = {"loft-light": 0.3, "loft-airflow": 2.0}
-LOG = logging.getLogger("home-midi")
-
-
-def midi_action(message):
-    if message.type == "control_change" and message.channel == 15 and message.value > 0:
-        return ACTIONS.get(message.control)
-    return None
-
-
-def select_port(names):
-    matches = [name for name in names if re.fullmatch(
-        r"RODECaster Duo:RODECaster Duo MIDI 1 \d+:\d+", name.replace("Ø", "O"))]
-    return matches[0] if len(matches) == 1 else None
+LOG = logging.getLogger("duo-midi.home")
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -73,6 +58,8 @@ def trigger(action, webhooks, dry_run=False, opener=None):
 
 
 class Dispatcher:
+    controls = ACTIONS
+
     def __init__(self, stopped, send, clock=time.monotonic):
         self.stopped = stopped
         self.send = send
@@ -80,8 +67,8 @@ class Dispatcher:
         self.events = queue.Queue(maxsize=4)
         self.last_press = {}
 
-    def receive(self, message):
-        action = midi_action(message)
+    def receive(self, control):
+        action = ACTIONS.get(control)
         if action is None or self.stopped.is_set():
             return
         now = self.clock()
@@ -109,64 +96,3 @@ class Dispatcher:
                 self.dispatch(*event)
             except (ValueError, OSError):
                 LOG.warning("Home command failed; see HA automation traces before repeating a toggle")
-
-
-def listen(webhooks):
-    import mido
-
-    backend = mido.Backend("mido.backends.rtmidi/LINUX_ALSA")
-    stopped = threading.Event()
-    for signum in (signal.SIGINT, signal.SIGTERM):
-        signal.signal(signum, lambda *_: stopped.set())
-    dispatcher = Dispatcher(stopped, lambda action: trigger(action, webhooks))
-    worker = threading.Thread(target=dispatcher.work, daemon=True)
-    worker.start()
-    port = None
-    try:
-        LOG.info("Waiting for RODECaster Duo; channel 16, CC 106–107")
-        while not stopped.is_set():
-            name = select_port(backend.get_input_names())
-            if port is not None and (port.closed or port.name != name):
-                port.close()
-                port = None
-                LOG.info("Duo disconnected; waiting for reconnect")
-            if port is None and name is not None:
-                try:
-                    port = backend.open_input(name, callback=dispatcher.receive)
-                    LOG.info("Listening on %s", name)
-                except (OSError, RuntimeError):
-                    LOG.warning("Cannot open Duo MIDI port; will reconnect")
-            stopped.wait(1)
-    finally:
-        stopped.set()
-        if port is not None:
-            port.close()
-        worker.join(timeout=5)
-
-
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("listen", help="Listen for the two home-control MIDI pads")
-    action = commands.add_parser("trigger", help="Send one home-control command")
-    action.add_argument("action", choices=LABELS)
-    action.add_argument("--dry-run", action="store_true")
-    args = parser.parse_args()
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-    try:
-        if args.command == "trigger" and args.dry_run:
-            print(json.dumps(trigger(args.action, {}, dry_run=True)))
-        else:
-            webhooks = load_webhooks()
-            if args.command == "listen":
-                listen(webhooks)
-            else:
-                print(json.dumps(trigger(args.action, webhooks)))
-    except (ValueError, OSError):
-        LOG.error("Home control failed; check credential deployment, connectivity and HA automation traces")
-        return 1
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

@@ -23,7 +23,8 @@ Applications pick a channel; the channel never picks a device.
   be the System channel.
 
 `funforgiven-audioctl move-stream ID SERIAL CHANNEL` is the contract used by
-Quickshell (`funforgiven/window-manager/quickshell/services/AudioActions.qml`) and `midi-router.py`: it refuses a
+Quickshell (`funforgiven/window-manager/quickshell/services/AudioActions.qml`) and the
+[Duo pads](../duo-midi/README.md) (`duo-midi/audio.py`): it refuses a
 reused ID whose `object.serial` changed, exits 64 on usage errors and 1 on
 runtime errors, and prints errors on stderr. Callers confirm the move from the
 live graph.
@@ -32,12 +33,3 @@ Do not use `wpctl reset --all` or delete unrelated WirePlumber state to recover
 a route. The `audio-channels` check runs the generated configuration in an
 isolated PipeWire/WirePlumber session.
 
-## Duo MIDI routing pads
-
-`funforgiven-audio-midi` moves the focused Niri application's playback when a
-Duo SMART pad sends Control Change on **channel 16**, **value 127**, **On only**
-(enable MIDI under Settings → System → MIDI): CC **102** System, **103** Game,
-**104** Voice Chat, **105** Music. The app is captured when the message arrives;
-all of its live streams move (browsers count as one app). An app must already be
-playing. Test with `sleep 3; funforgiven-audio-midi route game --dry-run`.
-CC 106–107 belong to the [home controls](../home-midi/README.md).

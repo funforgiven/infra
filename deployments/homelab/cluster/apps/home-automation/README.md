@@ -103,7 +103,7 @@ wake). Run `spatial_learning` separately with the area empty for 30 s; profile
 replay never starts it. The bathroom light relies on the sensor's 30 s absence
 delay and treats unknown/unavailable as occupied.
 
-RØDECaster MIDI webhooks (see [home-midi](../../../../../components/nix/home-midi/README.md))
+RØDECaster MIDI webhooks (see [duo-midi](../../../../../components/nix/duo-midi/README.md))
 stay UI-owned because their IDs live only in `secrets/home-assistant-midi.yaml`;
 `install-rodecaster-midi.py` reinstalls them.
 
