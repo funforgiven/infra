@@ -167,3 +167,21 @@ Retained only where no declarative owner exists:
 - RouterOS is driven by Ansible over SSH CLI rather than its API because the
   playbook shares rule tables it does not fully own ([network](network.md)).
 - Restore drills, their verifiers and the manifest validator.
+
+## Known gaps
+
+Improvements that need decryption, new ciphertext or live verification, so
+they are recorded rather than done blind:
+
+- Synapse and MAS configuration, including non-secret settings, is one SOPS
+  value; splitting it into a plain ConfigMap plus secret files needs the
+  decrypted original.
+- The three cluster hosts share one age identity; per-host recipients need
+  each host's key in `.sops.yaml` and re-encryption of the host secrets.
+- UniFi guest credentials (SSH push) and the RØDECaster automation webhook IDs
+  (workstation-only SOPS) would move into Kubernetes Secrets once that
+  ciphertext is created.
+- Alert delivery is still dual Telegram/Matrix until Matrix delivery is
+  verified live ([rollout](rollout.md)).
+- RouterOS could move to its REST API once the playbook owns whole rule tables
+  ([network](network.md)).
