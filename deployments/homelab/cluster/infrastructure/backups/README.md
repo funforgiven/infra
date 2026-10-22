@@ -46,10 +46,14 @@ kept a `Retain` policy (delete those PVs by hand).
 It proves that B2, the Kopia repositories and data-mover restores work and that
 the data is application-consistent; it does not start workloads, rebuild the
 cluster or restore the media library (`backup.fahrican.com/restore-drill=skip`).
+Prometheus and Loki volumes are restored but not inspected: a skip label would
+have to go into their immutable StatefulSet claim templates, and the transfer
+itself proves those larger restores work.
 Run it on demand with `kubectl -n backup-qualification create job
 --from=cronjob/restore-drill <name>`. A new namespace needs both schedules,
 `NAMESPACES` in `restore-drill.py`, a `<namespace>-restore` namespace,
-`restore-namespaces.yaml` and a verifier.
+`restore-namespaces.yaml` and a verifier; the validator and the drill fail if
+the schedules and restore namespaces drift apart.
 
 ## Live restore
 

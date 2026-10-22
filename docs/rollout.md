@@ -75,9 +75,10 @@ each item when it is done, and this file when it is empty.
   restore checks, and the stale Valheim `/data/backups/recovery.tar`. Delete
   them once the new backups have run. The drill fails while Retain-policy
   volumes remain in a restore namespace.
-- **`cnpg-system` namespace** is declared both in `cluster/namespaces.yaml` and
-  `infrastructure/databases/namespaces.yaml` (identical, unprunable). Remove
-  the second copy in a later change.
+- **Namespace moves.** `cnpg-system`, `netbird` and `netbird-routing` are
+  declared identically and unprunably in both `cluster/namespaces.yaml` and
+  `infrastructure/databases/namespaces.yaml`. Once this release has reconciled,
+  delete `infrastructure/databases/namespaces.yaml` and its kustomization entry.
 - **RouterOS.** Script errors now fail the playbook. Run it once in check mode
   (no tags) and fix any live drift it reports before `--tags apply`.
 

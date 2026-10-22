@@ -84,12 +84,16 @@ Stages labelled `homelab.fahrican.com/recovery=hold` are suspended by the
 `deployments/homelab/recovery` overlay so Ceph and stateful apps do not start
 on empty volumes during a rebuild ([recovery](recovery.md)).
 
+Code that runs in the cluster sits beside its manifests and is shipped with
+`configMapGenerator`; code shared between namespaces, built into images or used
+by operators lives under `components/homelab/services/` with its tests.
+
 Namespaces are declared in `cluster/namespaces.yaml`, which carries Pod
-Security levels and the labels gateways use to admit routes. The `databases`
-stage still owns `netbird` and `netbird-routing` (and a duplicate of
-`cnpg-system`): moving a namespace between Flux Kustomizations risks one of them
-garbage-collecting it on the first reconcile, so those moves are done in
-separate releases.
+Security levels and the labels gateways use to admit routes. Moving a namespace
+between Flux Kustomizations is done in two releases (identical unprunable
+copies first, then the old copy removed) so neither garbage-collects it; the
+`databases` stage still holds such copies of `cnpg-system`, `netbird` and
+`netbird-routing`.
 
 ## Data and backups
 

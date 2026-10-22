@@ -1,7 +1,7 @@
-# Also declared in ../../namespaces.yaml; both copies must stay identical and
-# unprunable until one owner is removed in a release after this one reaches
-# the cluster (removing it in the same change could let either Kustomization
-# garbage-collect the namespace first).
+# Moving to ../../namespaces.yaml, which already declares identical copies.
+# Both copies stay unprunable; delete this file in a release after this one
+# reaches the cluster (removing it in the same change could let either
+# Kustomization garbage-collect the namespace first).
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -15,6 +15,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: netbird
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     gateway.fahrican.com/services: allowed
     gateway.fahrican.com/matrix: allowed
@@ -24,5 +26,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: netbird-routing
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     pod-security.kubernetes.io/enforce: privileged

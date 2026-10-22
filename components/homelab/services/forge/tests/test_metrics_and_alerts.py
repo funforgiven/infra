@@ -1,4 +1,4 @@
-"""Regression coverage for the October metrics and alert failures."""
+"""Forgejo Actions metrics and the shared job and persistent-target alert rules."""
 import importlib.util
 import io
 import os
