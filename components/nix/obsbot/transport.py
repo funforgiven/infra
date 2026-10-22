@@ -1,6 +1,6 @@
 """Small Linux UVC transport for the OBSBOT Tiny 3 (3564:ff02).
 
-Wire framing follows lxman/obsbot-mcp (MIT); see NOTICE.
+Wire framing follows lxman/obsbot-mcp (MIT); see THIRD_PARTY_NOTICES.md.
 Voice/audio tags were checked against OBSBOT libdev 1.0.2 disassembly.
 No SDK, streaming, kernel driver detachment, or arbitrary command interface.
 """
