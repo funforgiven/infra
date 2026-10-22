@@ -1,7 +1,15 @@
+# Also declared in ../../namespaces.yaml; both copies must stay identical and
+# unprunable until one owner is removed in a release after this one reaches
+# the cluster (removing it in the same change could let either Kustomization
+# garbage-collect the namespace first).
 apiVersion: v1
 kind: Namespace
 metadata:
   name: cnpg-system
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    pod-security.kubernetes.io/enforce: baseline
 ---
 apiVersion: v1
 kind: Namespace

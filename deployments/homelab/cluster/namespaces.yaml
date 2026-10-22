@@ -162,17 +162,21 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: rook-ceph
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     pod-security.kubernetes.io/enforce: privileged
-    gateway.fahrican.com/private: allowed
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: identity
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
-    pod-security.kubernetes.io/enforce: baseline
-    gateway.fahrican.com/private: allowed
+    pod-security.kubernetes.io/enforce: restricted
     gateway.fahrican.com/management: allowed
 ---
 apiVersion: v1
@@ -181,15 +185,15 @@ metadata:
   name: network-services
   labels:
     pod-security.kubernetes.io/enforce: baseline
-    gateway.fahrican.com/private: allowed
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: cnpg-system
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     pod-security.kubernetes.io/enforce: baseline
-    gateway.fahrican.com/private: allowed
 ---
 apiVersion: v1
 kind: Namespace
@@ -197,7 +201,6 @@ metadata:
   name: metallb-system
   labels:
     pod-security.kubernetes.io/enforce: privileged
-    gateway.fahrican.com/private: allowed
 ---
 apiVersion: v1
 kind: Namespace
@@ -205,4 +208,3 @@ metadata:
   name: kubevirt
   labels:
     pod-security.kubernetes.io/enforce: privileged
-    gateway.fahrican.com/private: allowed

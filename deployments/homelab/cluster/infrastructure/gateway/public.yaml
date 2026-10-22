@@ -32,13 +32,9 @@ spec:
       envoyService:
         type: LoadBalancer
         externalTrafficPolicy: Local
-        patch:
-          type: StrategicMerge
-          value:
-            metadata:
-              annotations: {}
-            spec:
-              loadBalancerIP: 10.21.40.128
+        annotations:
+          metallb.io/address-pool: services
+          metallb.io/loadBalancerIPs: 10.21.40.128
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass

@@ -112,7 +112,7 @@ spec:
   path: ./deployments/homelab/cluster/infrastructure/databases
   wait: true
   dependsOn:
-  - name: observability
+  - name: controllers
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -158,7 +158,7 @@ spec:
   wait: true
   dependsOn:
   - name: storage
-  - name: observability
+  - name: controllers
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -170,7 +170,6 @@ spec:
   wait: false
   dependsOn:
   - name: velero
-  - name: databases
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -240,7 +239,7 @@ spec:
   wait: true
   dependsOn:
   - name: gateway
-  - name: backups
+  - name: velero
   - name: multus
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -255,7 +254,7 @@ spec:
   wait: true
   dependsOn:
   - name: gateway
-  - name: backups
+  - name: velero
   - name: identity
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -270,7 +269,7 @@ spec:
   wait: false
   dependsOn:
   - name: gateway
-  - name: backups
+  - name: velero
   - name: identity
   healthChecks:
   - apiVersion: apps/v1
@@ -290,7 +289,7 @@ spec:
   wait: true
   dependsOn:
   - name: gateway
-  - name: backups
+  - name: velero
   - name: identity
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -304,7 +303,7 @@ spec:
   path: ./deployments/homelab/cluster/apps/factorio
   wait: true
   dependsOn:
-  - name: backups
+  - name: velero
   - name: load-balancers
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -318,7 +317,7 @@ spec:
   path: ./deployments/homelab/cluster/apps/valheim
   wait: true
   dependsOn:
-  - name: backups
+  - name: velero
   - name: load-balancers
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1

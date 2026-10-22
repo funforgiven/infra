@@ -137,8 +137,6 @@ metadata:
   namespace: network-services
   labels:
     app.kubernetes.io/name: internal-coredns
-    infra.fahrican.com/l2-announcement: vlan20
-    infra.fahrican.com/vip-purpose: internal-dns
   annotations:
     metallb.io/address-pool: management
     metallb.io/loadBalancerIPs: 10.21.20.129

@@ -5,6 +5,7 @@ No cluster or provider calls. Optional Helm rendering uses an existing local
 chart cache. Secret values and schema failure instances are never printed.
 """
 import argparse
+import sys
 import copy
 import gzip
 import json
@@ -192,5 +193,7 @@ def main():
     args=parser.parse_args()
     return validate(args.repository_root,args.kustomize,args.helm_cache,args.decrypt,args.helm)
 if __name__=="__main__":
+    # Exceptions can carry decrypted values only when --decrypt is in use.
+    if "--decrypt" not in sys.argv:raise SystemExit(main())
     try:raise SystemExit(main())
     except Exception as error:raise SystemExit("Validation could not complete ("+type(error).__name__+"); value-bearing diagnostics suppressed.") from None

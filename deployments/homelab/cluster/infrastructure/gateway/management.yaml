@@ -32,8 +32,6 @@ spec:
         annotations:
           metallb.io/address-pool: management
           metallb.io/loadBalancerIPs: 10.21.20.131
-        labels:
-          infra.fahrican.com/vip-purpose: management-gateway
       envoyPDB:
         minAvailable: 1
 ---

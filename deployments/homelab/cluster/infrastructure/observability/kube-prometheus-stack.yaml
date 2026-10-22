@@ -47,13 +47,15 @@ spec:
         version: v1
         kind: ValidatingWebhookConfiguration
         name: kube-prometheus-stack-admission
+  # The controllers stage owns the Prometheus Operator CRDs
+  # (components/homelab/monitoring-crds) so earlier stages can use them.
   install:
-    crds: Create
+    crds: Skip
     strategy:
       name: RetryOnFailure
       retryInterval: 1m
   upgrade:
-    crds: CreateReplace
+    crds: Skip
     strategy:
       name: RetryOnFailure
       retryInterval: 1m
@@ -86,9 +88,7 @@ spec:
       metricLabelsAllowlist:
       - cronjobs=[monitoring.fahrican.com/dedicated-job-alerts]
     crds:
-      enabled: true
-      upgradeJob:
-        enabled: false
+      enabled: false
     kubeControllerManager:
       enabled: false
     kubeEtcd:

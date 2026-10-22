@@ -1,5 +1,5 @@
-# CloudNativePG reports pg_stat_archiver only from primaries. CNPG's default
-# five-minute archive_timeout closes a segment whenever there was activity, so
+# CloudNativePG reports pg_stat_archiver only from primaries. The clusters'
+# 60-second archive_timeout closes a segment whenever there was activity, so
 # an archive older than an hour means WAL is not reaching the barman object
 # store (point-in-time recovery is falling behind).
 apiVersion: monitoring.coreos.com/v1

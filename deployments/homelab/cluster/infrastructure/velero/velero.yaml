@@ -23,10 +23,6 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: velero
-  valuesFrom:
-  - kind: ConfigMap
-    name: velero-runtime-values
-    valuesKey: values.yaml
   driftDetection:
     mode: enabled
   install:
@@ -55,6 +51,22 @@ spec:
       - name: plugins
         mountPath: /target
     configuration:
+      # The prefix is where existing backups live; changing it orphans them.
+      backupStorageLocation:
+      - name: default
+        provider: aws
+        bucket: fahrican-cloud-recovery
+        prefix: services/kubernetes/plugins/nixos-v1/velero
+        default: true
+        accessMode: ReadWrite
+        credential:
+          name: velero-object-storage
+          key: cloud
+        config:
+          region: us-west-004
+          checksumAlgorithm: ''
+          s3ForcePathStyle: 'true'
+          s3Url: https://s3.us-west-004.backblazeb2.com
       defaultBackupStorageLocation: default
       features: EnableCSI
       defaultVolumesToFsBackup: true
