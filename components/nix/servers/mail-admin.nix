@@ -9,13 +9,6 @@ _: {
         builtins.readFile ../../../deployments/homelab/network/mail-direct-vpn.json
       );
       directOrigin = "${direct.hostname}:${toString direct.httpsPort}";
-      python = pkgs.python3.withPackages (ps: [ ps.boto3 ]);
-      acmeState = pkgs.writeShellApplication {
-        name = "mail-admin-acme-state";
-        text = ''
-          exec ${python}/bin/python ${../../homelab/services/mail-aws/acme-state.py} "$@"
-        '';
-      };
       syncVpn = pkgs.writeShellApplication {
         name = "sync-mail-admin-vpn";
         runtimeInputs = [
@@ -82,16 +75,6 @@ _: {
           '';
         };
       };
-      stateService = action: {
-        wants = [ "network-online.target" ];
-        after = [ "network-online.target" ];
-        serviceConfig = {
-          Type = "oneshot";
-          ExecStart = "${acmeState}/bin/mail-admin-acme-state ${action}";
-          EnvironmentFile = "/etc/stalwart-bootstrap/aws.env";
-          UMask = "0077";
-        };
-      };
     in
     {
       networking.wg-quick.interfaces.wg-mail.configFile = "/run/mail-admin-vpn/wg-mail.conf";
@@ -127,12 +110,6 @@ _: {
         "wg-quick-wg-mail.service"
         "wg-quick-wg-mail-admin.service"
       ];
-      systemd.services.mail-admin-acme-restore = stateService "restore";
-      systemd.services.mail-admin-acme-save = stateService "save";
-      systemd.services.acme-setup = {
-        after = [ "mail-admin-acme-restore.service" ];
-        requires = [ "mail-admin-acme-restore.service" ];
-      };
       systemd.services."acme-order-renew-${direct.hostname}" = {
         after = [ "mail-admin-vpn-secrets.service" ];
         requires = [ "mail-admin-vpn-secrets.service" ];
@@ -146,7 +123,6 @@ _: {
           credentialFiles.CF_DNS_API_TOKEN_FILE = "/run/mail-admin-vpn/dns-api-token";
           group = "nginx";
           reloadServices = [ "nginx.service" ];
-          postRun = "${pkgs.systemd}/bin/systemctl start mail-admin-acme-save.service";
         };
       };
       services.nginx = {

@@ -386,7 +386,16 @@ def validate_archive(path):
 
 def backup():
     payload = STATE / "payload"
-    payload.mkdir(mode=0o700, parents=True, exist_ok=True)
+    # Plaintext mail and the database dump exist only for the upload.
+    shutil.rmtree(payload, ignore_errors=True)
+    payload.mkdir(mode=0o700, parents=True)
+    try:
+        upload_payload(payload)
+    finally:
+        shutil.rmtree(payload, ignore_errors=True)
+
+
+def upload_payload(payload):
     if shutil.disk_usage(STATE).free < 5 * 1024 ** 3:
         raise OperationError("Insufficient free space for mailbox backup")
     env = os.environ.copy()

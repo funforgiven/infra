@@ -41,6 +41,15 @@ if [[ "$ssh_target" == -* || ! "$ssh_target" =~ ^[A-Za-z0-9_.@:-]+$ ]]; then
   exit 64
 fi
 
+# Values live base64-encoded under `data` in these consumer SOPS files.
+secret_file() {
+  case "$1" in
+    UNIFI_POLLER_*) echo deployments/homelab/credentials/host-runtime/unifi.sops.yaml ;;
+    *_RESTIC_PASSWORD) echo deployments/homelab/credentials/host-runtime/generated.sops.yaml ;;
+    *_B2_APPLICATION_KEY*) echo deployments/homelab/credentials/host-runtime/backups.sops.yaml ;;
+  esac
+}
+
 read_sops_value() {
   local variable="$1"
   local key="$2"
@@ -50,14 +59,10 @@ read_sops_value() {
   local relative_secret_file
   local value
 
-  relative_secret_file="$(
-    runtime-contract \
-      --repository-root "$repository_root" \
-      managed-key-file "$key"
-  )"
+  relative_secret_file="$(secret_file "$key")"
   value="$(
-    sops-credential --repository-root "$repository_root" \
-      read "$relative_secret_file" "$key"
+    sops decrypt --extract "[\"data\"][\"$key\"]" \
+      "$repository_root/$relative_secret_file" | base64 --decode
   )"
   if [[ "${#value}" -lt "$minimum" ]] ||
     [[ "${#value}" -gt "$maximum" ]] ||

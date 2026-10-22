@@ -17,14 +17,12 @@ variable "default_policy_id" {
   type = string
 }
 
-variable "netbird_client_id" {
-  type      = string
-  sensitive = true
-}
-
-variable "netbird_client_secret" {
-  type      = string
-  sensitive = true
+# NetBird's ZITADEL client is created by the identity root.
+data "terraform_remote_state" "identity" {
+  backend = "local"
+  config = {
+    path = "${path.module}/../identity/terraform.tfstate"
+  }
 }
 
 provider "netbird" {
@@ -75,8 +73,8 @@ resource "netbird_identity_provider" "zitadel" {
   name          = "Fahrican"
   type          = "zitadel"
   issuer        = "https://auth.cloud.fahrican.com"
-  client_id     = var.netbird_client_id
-  client_secret = var.netbird_client_secret
+  client_id     = data.terraform_remote_state.identity.outputs.netbird_client_id
+  client_secret = data.terraform_remote_state.identity.outputs.netbird_client_secret
   depends_on    = [netbird_policy.default, netbird_account_settings.homelab]
 }
 
@@ -115,9 +113,8 @@ resource "netbird_dns_zone" "operator" {
 }
 
 locals {
-  service_hosts = toset([
-    "audiomuse", "cache", "git", "home", "mail-admin", "music", "unifi", "upload",
-  ])
+  # Shared with render_routes.py, which publishes these hosts on the NetBird gateway.
+  service_hosts = toset(jsondecode(file("${path.module}/service-hosts.json")))
 }
 
 # Zones cover only service hosts; other fahrican.com names stay on public/LAN DNS.

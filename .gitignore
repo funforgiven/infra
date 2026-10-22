@@ -7,6 +7,7 @@
 __pycache__/
 *.py[cod]
 **/.terraform/
+**/.build/
 
 # Plaintext that must never be committed
 .env
@@ -14,6 +15,8 @@ __pycache__/
 *.backup
 *.tfstate
 *.tfstate.*
+# OpenTofu encrypts these itself (encryption.tf); they are committed.
+!/components/homelab/providers/*/terraform.tfstate
 *.tfvars
 *.tfvars.json
 /deployments/homelab/**/*.agekey

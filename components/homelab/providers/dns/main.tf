@@ -11,26 +11,20 @@ terraform {
 
 provider "cloudflare" {}
 
-variable "mail_ipv4_address" {
-  description = "Stable public IPv4 address of the active mail origin"
-  type        = string
-
-  validation {
-    condition = can(cidrhost("${var.mail_ipv4_address}/32", 0)) && !contains([
-      "0.0.0.0",
-      "192.0.2.255",
-    ], var.mail_ipv4_address)
-    error_message = "mail_ipv4_address must be the activated mail edge address, not a sentinel."
+data "terraform_remote_state" "mail_aws" {
+  backend = "local"
+  config = {
+    path = "${path.module}/../mail-aws/terraform.tfstate"
   }
 }
 
 variable "resend_records_json" {
-  description = "Provider-issued public DNS verification records from the Resend domain reconciler"
+  description = "Resend's DNS records for fahrican.com as JSON (dashboard: Domains > fahrican.com)"
   type        = string
 
   validation {
     condition     = try(length(jsondecode(var.resend_records_json)) > 0, false)
-    error_message = "resend_records_json must be a non-empty JSON array from the Resend API reconciler."
+    error_message = "resend_records_json must be the non-empty JSON array of Resend's records."
   }
 }
 
@@ -42,6 +36,7 @@ data "cloudflare_zone" "fahrican" {
 }
 
 locals {
+  mail_ipv4_address        = data.terraform_remote_state.mail_aws.outputs.ipv4_address
   services_gateway_address = "10.21.40.122"
   private_services = toset([
     "audiomuse",
@@ -91,7 +86,7 @@ resource "cloudflare_dns_record" "mail_hosts" {
   zone_id = data.cloudflare_zone.fahrican.zone_id
   name    = "${each.key}.fahrican.com"
   type    = "A"
-  content = var.mail_ipv4_address
+  content = local.mail_ipv4_address
   ttl     = 300
   proxied = false
   comment = "Git-managed Stalwart mail edge"
@@ -197,5 +192,5 @@ output "services_gateway_address" {
 
 output "mail_ipv4_address" {
   description = "Public mail address published by this root"
-  value       = var.mail_ipv4_address
+  value       = local.mail_ipv4_address
 }

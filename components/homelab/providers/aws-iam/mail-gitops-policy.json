@@ -125,10 +125,17 @@
       }
     },
     {
-      "Sid": "PublishResendRuntimeCredential",
+      "Sid": "PublishOperatorCredentials",
       "Effect": "Allow",
-      "Action": "secretsmanager:PutSecretValue",
-      "Resource": "arn:aws:secretsmanager:eu-central-1:ACCOUNT_ID:secret:fahrican/stalwart/resend-*",
+      "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:PutSecretValue"
+      ],
+      "Resource": [
+        "arn:aws:secretsmanager:eu-central-1:ACCOUNT_ID:secret:fahrican/stalwart/resend-*",
+        "arn:aws:secretsmanager:eu-central-1:ACCOUNT_ID:secret:fahrican/stalwart/backup-*",
+        "arn:aws:secretsmanager:eu-central-1:ACCOUNT_ID:secret:fahrican/stalwart/vpn-*"
+      ],
       "Condition": {
         "StringEquals": {
           "aws:RequestedRegion": "eu-central-1"
@@ -196,35 +203,73 @@
       }
     },
     {
-      "Sid": "ManageMailRuntimeRole",
+      "Sid": "ManageMailInstanceProfile",
       "Effect": "Allow",
       "Action": [
         "iam:AddRoleToInstanceProfile",
-        "iam:AttachRolePolicy",
         "iam:CreateInstanceProfile",
-        "iam:CreateRole",
         "iam:DeleteInstanceProfile",
-        "iam:DeleteRole",
-        "iam:DeleteRolePolicy",
-        "iam:DetachRolePolicy",
         "iam:GetInstanceProfile",
+        "iam:RemoveRoleFromInstanceProfile",
+        "iam:TagInstanceProfile",
+        "iam:UntagInstanceProfile"
+      ],
+      "Resource": "arn:aws:iam::ACCOUNT_ID:instance-profile/stalwart-mail"
+    },
+    {
+      "Sid": "InspectMailRuntimeRole",
+      "Effect": "Allow",
+      "Action": [
+        "iam:DeleteRole",
         "iam:GetRole",
         "iam:GetRolePolicy",
         "iam:ListAttachedRolePolicies",
         "iam:ListInstanceProfilesForRole",
-        "iam:PassRole",
-        "iam:PutRolePolicy",
-        "iam:RemoveRoleFromInstanceProfile",
-        "iam:TagInstanceProfile",
         "iam:TagRole",
-        "iam:UntagInstanceProfile",
-        "iam:UntagRole",
-        "iam:UpdateAssumeRolePolicy"
+        "iam:UntagRole"
       ],
-      "Resource": [
-        "arn:aws:iam::ACCOUNT_ID:role/stalwart-mail",
-        "arn:aws:iam::ACCOUNT_ID:instance-profile/stalwart-mail"
-      ]
+      "Resource": "arn:aws:iam::ACCOUNT_ID:role/stalwart-mail"
+    },
+    {
+      "Sid": "ChangeBoundedMailRuntimeRole",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:DeleteRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:PutRolePolicy"
+      ],
+      "Resource": "arn:aws:iam::ACCOUNT_ID:role/stalwart-mail",
+      "Condition": {
+        "StringEquals": {
+          "iam:PermissionsBoundary": "arn:aws:iam::ACCOUNT_ID:policy/stalwart-mail-boundary"
+        }
+      }
+    },
+    {
+      "Sid": "AttachSessionManagerToMailRole",
+      "Effect": "Allow",
+      "Action": "iam:AttachRolePolicy",
+      "Resource": "arn:aws:iam::ACCOUNT_ID:role/stalwart-mail",
+      "Condition": {
+        "StringEquals": {
+          "iam:PermissionsBoundary": "arn:aws:iam::ACCOUNT_ID:policy/stalwart-mail-boundary"
+        },
+        "ArnEquals": {
+          "iam:PolicyARN": "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+        }
+      }
+    },
+    {
+      "Sid": "PassMailRoleToEc2",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::ACCOUNT_ID:role/stalwart-mail",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "ec2.amazonaws.com"
+        }
+      }
     },
     {
       "Sid": "CreateRdsServiceRole",

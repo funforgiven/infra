@@ -2,21 +2,44 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "ManageMatrixProbeRole",
+      "Sid": "InspectMatrixProbeRole",
+      "Effect": "Allow",
+      "Action": [
+        "iam:DeleteRole",
+        "iam:GetRole",
+        "iam:GetRolePolicy",
+        "iam:ListAttachedRolePolicies",
+        "iam:ListRolePolicies",
+        "iam:TagRole",
+        "iam:UntagRole"
+      ],
+      "Resource": "arn:aws:iam::ACCOUNT_ID:role/stalwart-matrix-probe"
+    },
+    {
+      "Sid": "ChangeBoundedMatrixProbeRole",
       "Effect": "Allow",
       "Action": [
         "iam:CreateRole",
-        "iam:DeleteRole",
         "iam:DeleteRolePolicy",
-        "iam:GetRole",
-        "iam:GetRolePolicy",
-        "iam:PassRole",
-        "iam:PutRolePolicy",
-        "iam:TagRole",
-        "iam:UntagRole",
-        "iam:UpdateAssumeRolePolicy"
+        "iam:PutRolePolicy"
       ],
-      "Resource": "arn:aws:iam::ACCOUNT_ID:role/stalwart-matrix-probe"
+      "Resource": "arn:aws:iam::ACCOUNT_ID:role/stalwart-matrix-probe",
+      "Condition": {
+        "StringEquals": {
+          "iam:PermissionsBoundary": "arn:aws:iam::ACCOUNT_ID:policy/stalwart-matrix-probe-boundary"
+        }
+      }
+    },
+    {
+      "Sid": "PassMatrixProbeRoleToLambda",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::ACCOUNT_ID:role/stalwart-matrix-probe",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "lambda.amazonaws.com"
+        }
+      }
     },
     {
       "Sid": "ManageMatrixAvailabilityFunction",

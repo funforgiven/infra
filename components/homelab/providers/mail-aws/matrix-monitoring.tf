@@ -14,7 +14,7 @@ data "archive_file" "matrix_probe" {
   count       = var.enable_matrix_monitoring ? 1 : 0
   type        = "zip"
   source_file = "${path.module}/../../services/matrix/outside_check.py"
-  output_path = "/tmp/fahrican-matrix-probe.zip"
+  output_path = "${path.module}/.build/matrix-probe.zip"
 }
 
 resource "aws_secretsmanager_secret" "matrix_heartbeat" {
@@ -26,6 +26,8 @@ resource "aws_secretsmanager_secret" "matrix_heartbeat" {
 resource "aws_iam_role" "matrix_probe" {
   count = var.enable_matrix_monitoring ? 1 : 0
   name  = "stalwart-matrix-probe"
+  # Owned by the aws-iam root; the gitops identity may only edit bounded roles.
+  permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/stalwart-matrix-probe-boundary"
   assume_role_policy = jsonencode({
     Version   = "2012-10-17"
     Statement = [{ Effect = "Allow", Action = "sts:AssumeRole", Principal = { Service = "lambda.amazonaws.com" } }]

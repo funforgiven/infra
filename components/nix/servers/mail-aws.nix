@@ -79,22 +79,32 @@ _: {
             name="''${definition%%:*}"
             arn="''${definition#*:}"
             candidate="$(mktemp ${runtimeDirectory}/candidate.XXXXXX)"
-            if aws --region "$AWS_REGION" secretsmanager get-secret-value \
+            errors="$(mktemp ${runtimeDirectory}/candidate.XXXXXX)"
+            if ! aws --region "$AWS_REGION" secretsmanager get-secret-value \
               --secret-id "$arn" --query SecretString --output text \
-              > "$candidate" 2>/dev/null; then
-              normalized="$(mktemp ${runtimeDirectory}/candidate.XXXXXX)"
-              tr -d '\r\n' < "$candidate" > "$normalized"
-              case "$name" in
-                admin|mailbox)
-                  grep -Eq '^[A-Za-z0-9]{40,128}$' "$normalized"
-                  ;;
-                resend)
-                  grep -Eq '^re_[A-Za-z0-9_-]{20,509}$' "$normalized"
-                  ;;
-              esac
-              install_secret "$normalized" "${runtimeDirectory}/$name-password"
-              rm -f "$normalized"
+              > "$candidate" 2> "$errors"; then
+              # A container without a value yet is expected before first
+              # bootstrap; anything else (access, network) must fail the unit.
+              if ! grep -q ResourceNotFoundException "$errors"; then
+                cat "$errors" >&2
+                exit 1
+              fi
+              rm -f "$candidate" "$errors"
+              continue
             fi
+            rm -f "$errors"
+            normalized="$(mktemp ${runtimeDirectory}/candidate.XXXXXX)"
+            tr -d '\r\n' < "$candidate" > "$normalized"
+            case "$name" in
+              admin|mailbox)
+                grep -Eq '^[A-Za-z0-9]{40,128}$' "$normalized"
+                ;;
+              resend)
+                grep -Eq '^re_[A-Za-z0-9_-]{20,509}$' "$normalized"
+                ;;
+            esac
+            install_secret "$normalized" "${runtimeDirectory}/$name-password"
+            rm -f "$normalized"
             rm -f "$candidate"
           done
 

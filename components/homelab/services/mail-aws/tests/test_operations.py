@@ -196,7 +196,18 @@ class MailOperationsTest(unittest.TestCase):
             with self.assertRaises(ops.OperationError):
                 ops.backup()
             self.assertFalse(Path(directory, "backup.json").exists())
+            self.assertFalse(Path(directory, "payload").exists())
             publish.assert_not_called()
+
+    def test_backup_removes_plaintext_payload_after_upload(self):
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(ops, "STATE", Path(directory)), \
+             patch.object(ops, "upload_payload") as upload:
+            Path(directory, "payload").mkdir()
+            Path(directory, "payload", "stale.sqlite").write_text("old mail")
+            ops.backup()
+            upload.assert_called_once_with(Path(directory, "payload"))
+            self.assertFalse(Path(directory, "payload").exists())
 
     def test_recovery_manifest_rejects_unexpected_paths(self):
         with tempfile.TemporaryDirectory() as directory:

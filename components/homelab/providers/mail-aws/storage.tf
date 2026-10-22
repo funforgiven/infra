@@ -219,7 +219,7 @@ resource "aws_secretsmanager_secret" "mailbox" {
 
 resource "aws_secretsmanager_secret" "resend" {
   name                    = "fahrican/stalwart/resend"
-  description             = "Independently revocable Resend sending key enrolled without OpenTofu state"
+  description             = "Independently revocable Resend sending key"
   recovery_window_in_days = 30
 
   lifecycle {
@@ -238,15 +238,14 @@ resource "aws_secretsmanager_secret" "canary" {
 
 resource "aws_secretsmanager_secret" "backup" {
   name                    = "fahrican/stalwart/backup"
-  description             = "Prefix-restricted Backblaze key and Restic password enrolled outside OpenTofu"
+  description             = "Prefix-restricted Backblaze key and Restic password"
   recovery_window_in_days = 30
   lifecycle {
     prevent_destroy = true
   }
 }
 
-# Delegate publication of this one externally enrolled secret without granting
-# the provisioning identity permission to read any runtime secret.
+# Lets the provisioning identity write the SOPS-sourced value below.
 resource "aws_secretsmanager_secret_policy" "backup_publisher" {
   secret_arn          = aws_secretsmanager_secret.backup.arn
   block_public_policy = true

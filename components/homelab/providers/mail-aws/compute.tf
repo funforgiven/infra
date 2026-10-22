@@ -1,10 +1,8 @@
+# Only a newly created instance uses the image; the running one is updated in
+# place by NixOS and ignores later image releases.
 data "aws_ami" "nixos" {
-  owners = ["427812963091"]
-
-  filter {
-    name   = "image-id"
-    values = [var.nixos_ami_id]
-  }
+  owners      = ["427812963091"]
+  most_recent = true
 
   filter {
     name   = "name"
@@ -42,6 +40,8 @@ data "aws_iam_policy_document" "instance_assume_role" {
 resource "aws_iam_role" "mail" {
   name               = "stalwart-mail"
   assume_role_policy = data.aws_iam_policy_document.instance_assume_role.json
+  # Owned by the aws-iam root; the gitops identity may only edit bounded roles.
+  permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/stalwart-mail-boundary"
 }
 
 resource "aws_iam_role_policy_attachment" "ssm" {
@@ -136,8 +136,7 @@ resource "aws_instance" "mail" {
     aws_security_group.mail.id,
   ]
 
-  # Bootstrap and readiness use a temporary address. Move the EIP
-  # only after the replacement serves MTA-STS and JMAP and blocks public admin.
+  # The EIP below is the public address; this one only serves first boot.
   associate_public_ip_address = true
   source_dest_check           = true
   monitoring                  = false
@@ -165,19 +164,16 @@ resource "aws_instance" "mail" {
     rds_host           = aws_db_instance.mail.address
     rds_secret_arn     = aws_db_instance.mail.master_user_secret[0].secret_arn
     resend_secret_arn  = aws_secretsmanager_secret.resend.arn
-    source_revision    = var.source_revision
+    source_revision    = local.bootstrap_revision
   })
-  user_data_replace_on_change = true
 
-  tags = {
-    Name           = "stalwart-mail"
-    SourceRevision = var.source_revision
-  }
+  tags = { Name = "stalwart-mail" }
 
   lifecycle {
-    # Never replace the instance; NixOS changes deploy in place.
+    # Never replace the instance; NixOS changes deploy in place. User data and
+    # the image only matter when recovery deliberately creates a new instance.
     prevent_destroy = true
-    ignore_changes  = [user_data]
+    ignore_changes  = [ami, user_data]
   }
 
   depends_on = [
@@ -191,10 +187,6 @@ resource "aws_eip" "mail" {
   domain   = "vpc"
   instance = aws_instance.mail.id
 
-  # Reassociate the allocation in place after readiness. A separate
-  # ForceNew association can disassociate the live endpoint during cleanup.
-  depends_on = [terraform_data.mail_ready]
-
   tags = { Name = "stalwart-mail" }
 
   lifecycle {
@@ -202,15 +194,11 @@ resource "aws_eip" "mail" {
   }
 }
 
-resource "terraform_data" "mail_ready" {
-  triggers_replace = [aws_instance.mail.id]
-  input            = aws_instance.mail.public_ip
-
-  provisioner "local-exec" {
-    command = "sh ${path.module}/wait-ready.sh"
-    environment = {
-      MAIL_READY_IP = self.input
-    }
+# The pre-move readiness probe could never run: the instance is never replaced.
+removed {
+  from = terraform_data.mail_ready
+  lifecycle {
+    destroy = false
   }
 }
 

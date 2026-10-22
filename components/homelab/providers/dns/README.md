@@ -1,28 +1,20 @@
 # Service DNS
 
-This OpenTofu root manages the public Cloudflare records for self-hosted
-services and mail.
+Public Cloudflare records for `fahrican.com`.
 
-Application records resolve to the routed-LAN services Gateway at
-`10.21.40.122`; that address is not reachable from the public Internet. Mail
-records resolve to the EIP output of the AWS mail root and
-include the Stalwart TLS, autoconfiguration, MX, SPF, DKIM, and DMARC records.
+- Private application names point at the routed-LAN services Gateway. The
+  address is not Internet-routable; publishing it publicly keeps one name per
+  service for LAN, NetBird and router-VPN clients.
+- Mail records follow the AWS mail EIP, read from the `mail-aws` state, so they
+  cannot drift from the instance.
+- Matrix, its auth hosts and NetBird resolve to the homelab's static WAN
+  address. Change `homelab_wan_ipv4_address` together with
+  `deployments/homelab/network/mail-admin-vpn.json` and the NetBird
+  network policy if the ISP address changes.
+- Resend issues its own verification records; pass them as
+  `TF_VAR_resend_records_json` (the JSON array from the Resend dashboard or
+  API). The Cloudflare token comes from the environment and never enters state.
 
-The Cloudflare provider discovers the `fahrican.com` zone by name. Its token is
-read from `CLOUDFLARE_API_TOKEN` in the private workstation provider environment and is not an
-OpenTofu variable, output, or state attribute.
-
-Resend verification records are supplied as `resend_records_json` from the
-reviewed enrollment inputs. OpenTofu validates and creates the returned CNAME, MX, and
-TXT records; the Resend administration key never enters provider state.
-
-Before accepting a DNS change, review the complete plan and verify:
-
-- the services Gateway still owns `10.21.40.122`;
-- private application names resolve to the routed-LAN address;
-- mail A, MX, SPF, DKIM, DMARC, and autoconfiguration records match the active
-  AWS mail origin; and
-- forward and reverse mail DNS agree before enabling or changing the PTR.
-
-Credential rotation and provider reconciliation are documented in the
-[service operations guide](../../../../deployments/homelab/credentials/README.md).
+Enable the mail PTR (`enable_reverse_dns` in `mail-aws`) only after forward DNS
+resolves to the EIP. Bump the `_mta-sts` policy ID whenever the served MTA-STS
+policy changes.

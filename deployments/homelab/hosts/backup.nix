@@ -18,10 +18,14 @@ in
     etcd-backup-environment.key = "etcd_backup_environment";
   };
   services.restic.backups.homelab-etcd = {
-    repository = "s3:s3.us-west-004.backblazeb2.com/fahrican-cloud-recovery/services/kubernetes/nixos-etcd";
+    # The B2 key in etcd_backup_environment is scoped to this prefix alone:
+    # the repository holds host identities, so cluster workloads (Velero) must
+    # not reach it. Snapshots before 2026-10 are in services/kubernetes/nixos-etcd.
+    repository = "s3:s3.us-west-004.backblazeb2.com/fahrican-cloud-recovery/services/etcd";
     passwordFile = config.sops.secrets.etcd-restic-password.path;
     environmentFile = config.sops.secrets.etcd-backup-environment.path;
-    initialize = false;
+    # `restic init` refuses to overwrite an existing repository.
+    initialize = true;
     paths = [ "/var/lib/homelab-etcd-export" ];
     extraBackupArgs = [
       "--host=${config.networking.hostName}"

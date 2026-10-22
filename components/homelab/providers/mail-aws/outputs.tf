@@ -29,7 +29,7 @@ output "mailbox_secret_arn" {
 }
 
 output "resend_secret_arn" {
-  description = "Secret container populated through the no-echo runtime enrollment"
+  description = "Secret holding the Resend sending key published from SOPS"
   value       = aws_secretsmanager_secret.resend.arn
 }
 

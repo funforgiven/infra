@@ -10,6 +10,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "= 6.58.0"
     }
+    sops = {
+      source  = "carlpett/sops"
+      version = "= 1.4.1"
+    }
   }
 }
 
