@@ -3,8 +3,9 @@
 ## What protects what
 
 - **PostgreSQL** (CloudNativePG: identity, NetBird, Matrix) goes to B2 with
-  Barman Cloud; each cluster has its own restore test (`apps/*/restore-test.yaml`).
-  CNPG data claims carry `velero.io/exclude-from-backup=true`.
+  Barman Cloud and has a weekly restore test beside it. Their data claims carry
+  `velero.io/exclude-from-backup=true`; AudioMuse's recomputable database does
+  not archive and is covered by volume snapshots instead.
 - **Volumes** in the namespaces listed in `schedules.yaml` are CSI snapshots
   moved to B2 by Velero's data mover (Kopia). A snapshot is crash-consistent:
   SQLite, PostgreSQL, Home Assistant, Zigbee2MQTT, Matter, OTBR and Valheim

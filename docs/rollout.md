@@ -21,6 +21,10 @@ each item when it is done, and this file when it is empty.
   `services/kubernetes/nixos-etcd/` repository, which the Velero key can still
   read and delete.
 
+- **`services-databases` namespace** is no longer declared and Flux will
+  delete it with everything inside. Confirm it is empty first
+  (`kubectl get all,pvc,secret -n services-databases`).
+
 ## OpenTofu
 
 - Migrate each root's state from `secrets/current-provider-state.sops.yaml`
@@ -47,13 +51,18 @@ each item when it is done, and this file when it is empty.
   topics.
 - **AudioMuse** imports its database into CloudNativePG cluster `audiomuse-db`.
   After AudioMuse works on it, delete the legacy `audiomuse-postgres`
-  StatefulSet, Service, network policy and PVCs and the `externalClusters`
-  import source.
+  StatefulSet, Service, network policy, its data PVC and the old
+  `audiomuse-postgres-dumps` PVC, and the `externalClusters` import source.
 - **Backups.** Check that the first `daily` Velero backup completes with its
   data uploads, then run the restore drill on demand
   ([backups](../deployments/homelab/cluster/infrastructure/backups/README.md)).
   Restart Velero if `VeleroScheduleBackupStale` keeps firing for the removed
-  `services-*` schedules.
+  `services-*`, `observability-history` or `volume-snapshots` schedules.
+- **Matrix database** gains the Barman plugin, so CloudNativePG rolls all three
+  instances with a switchover: schedule a short Matrix write interruption.
+- **UniFi VM** gets its guest scripts from a new ConfigMap disk and inline
+  cloud-init; restart it once (KubeVirt marks it `RestartRequired`) so the
+  scripts install on boot.
 - **Matrix restore pull secret.** `apps/matrix/registry-restore.sops.yaml`
   still names namespace `backup-qualification`; re-encrypt it for
   `matrix-restore` (or re-run `matrix-admin publish-image`), or the Matrix
@@ -62,7 +71,7 @@ each item when it is done, and this file when it is empty.
   sidecar.
 - **Released volumes.** `ceph-block` retains volumes, so PVCs removed from Git
   leave Released PVs: `forgejo-backups` (its claim is unprunable; delete the
-  claim first), `automation-backups`, `thread-backups`, volumes left by old
+  claim first), `automation-backups`, `thread-backups`, `matrix-dumps`, volumes left by old
   restore checks, and the stale Valheim `/data/backups/recovery.tar`. Delete
   them once the new backups have run. The drill fails while Retain-policy
   volumes remain in a restore namespace.

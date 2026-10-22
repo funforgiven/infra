@@ -253,6 +253,17 @@ def require_isolated_restores(objects):
             raise ValueError(namespace + ": restore namespace lacks a deny-all network policy")
 
 
+def require_restore_drill_coverage(objects):
+    """Both Velero schedules back up the same namespaces, each with a declared *-restore namespace."""
+    lists = {name: sorted(d["spec"]["template"].get("includedNamespaces", []))
+             for (kind, _, name), d in objects.items() if kind == "Schedule" and name in ("daily", "weekly")}
+    if len(lists) != 2 or lists["daily"] != lists["weekly"]:
+        raise ValueError("velero daily and weekly schedules must list the same namespaces")
+    for namespace in lists["daily"]:
+        if ("Namespace", "", namespace + "-restore") not in objects:
+            raise ValueError(namespace + ": backed-up namespace has no " + namespace + "-restore namespace for the drill")
+
+
 def require_monitoring_crds(objects, chart):
     """components/homelab/monitoring-crds must match the pinned kube-prometheus-stack chart."""
     shipped = {d["metadata"]["name"]: d["spec"] for path in sorted((chart / "charts/crds/crds").glob("*.yaml"))
@@ -380,6 +391,7 @@ def validate(root, inputs):
     require_shared_workload_health(waves)
     require_bounded_postgres_wal(objects)
     require_isolated_restores(objects)
+    require_restore_drill_coverage(objects)
     require_inventory_copies(json.loads((root / "deployments/homelab/hosts/inventory.json").read_text()), objects)
     failures += unknown_storage_classes(objects)
     for failure in sorted(set(failures)):

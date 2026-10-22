@@ -9,6 +9,9 @@ metadata:
   namespace: velero
 spec:
   paused: false
+  # A new Schedule (e.g. on a rebuilt cluster) must not back up empty volumes
+  # before the restore.
+  skipImmediately: true
   schedule: 30 2 * * *
   useOwnerReferencesInBackup: false
   template:
@@ -34,6 +37,9 @@ metadata:
   namespace: velero
 spec:
   paused: false
+  # A new Schedule (e.g. on a rebuilt cluster) must not back up empty volumes
+  # before the restore.
+  skipImmediately: true
   schedule: 15 3 * * 0
   useOwnerReferencesInBackup: false
   template:

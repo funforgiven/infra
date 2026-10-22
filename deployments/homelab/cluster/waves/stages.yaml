@@ -239,7 +239,6 @@ spec:
   wait: true
   dependsOn:
   - name: gateway
-  - name: velero
   - name: multus
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -255,7 +254,6 @@ spec:
   dependsOn:
   - name: databases
   - name: gateway
-  - name: velero
   - name: identity
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -270,7 +268,6 @@ spec:
   wait: false
   dependsOn:
   - name: gateway
-  - name: velero
   - name: identity
   healthChecks:
   - apiVersion: apps/v1
@@ -290,7 +287,6 @@ spec:
   wait: true
   dependsOn:
   - name: gateway
-  - name: velero
   - name: identity
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -304,7 +300,6 @@ spec:
   path: ./deployments/homelab/cluster/apps/factorio
   wait: true
   dependsOn:
-  - name: velero
   - name: load-balancers
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -318,7 +313,6 @@ spec:
   path: ./deployments/homelab/cluster/apps/valheim
   wait: true
   dependsOn:
-  - name: velero
   - name: load-balancers
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
