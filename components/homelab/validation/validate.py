@@ -73,6 +73,19 @@ def require_snapshot_support(objects):
         if drivers["spec"]["values"]["drivers"]["rbd"]["snapshotPolicy"] != "volumeSnapshot":
             raise ValueError("Forgejo snapshot backup requires enabled RBD CSI snapshots")
 
+def require_inventory_copies(inventory,objects):
+    """Manifests that cannot read hosts/inventory.json must repeat it exactly."""
+    cluster,hosts=inventory["cluster"],inventory["hosts"]
+    values=yaml.safe_load(objects[("ConfigMap","kube-system","cilium-values")]["data"]["values.yaml"])
+    if values["k8sServiceHost"]!=cluster["apiVip"]:raise ValueError("Cilium API host differs from the inventory VIP")
+    zone=objects[("ConfigMap","network-services","internal-coredns")]["data"]["cloud.fahrican.com.zone"]
+    records={fields[0]:fields[3] for fields in (line.split() for line in zone.splitlines()) if fields[1:3]==["IN","A"]}
+    expected={name+".mgmt":host["management"] for name,host in hosts.items()}
+    expected[cluster["apiName"].removesuffix(".cloud.fahrican.com")]=cluster["apiVip"]
+    if any(records.get(name)!=address for name,address in expected.items()):raise ValueError("Internal DNS records differ from the inventory")
+    nodes={d["metadata"]["name"]:d["metadata"].get("annotations",{}).get("network.rook.io/mon-ip") for d in objects.values() if d["kind"]=="Node"}
+    if nodes!={name:host["ceph"] for name,host in hosts.items()}:raise ValueError("Ceph monitor addresses differ from the inventory")
+
 def require_recovery_hold(waves,recovery):
     """Every stage labelled for recovery hold must be suspended by the overlay."""
     label,value=RECOVERY_HOLD
@@ -144,6 +157,7 @@ def validate(root,kustomize,helm_cache=None,decrypt=False,helm="helm"):
         if d["kind"] not in ["CustomResourceDefinition","HelmRelease"]:inspect(d)
     require_snapshot_support(all_objects)
     require_bounded_postgres_wal(all_objects)
+    require_inventory_copies(json.loads((root/"deployments/homelab/hosts/inventory.json").read_text()),all_objects)
     helm_count=0
     if helm_cache:
         charts=json.loads((helm_cache/"charts.json").read_text())
