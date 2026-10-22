@@ -60,13 +60,6 @@ all:
                   auto_negotiation: false
                   speed: 25G-baseCR
                   fec_mode: fec91
-            retired_bridge_vlans:
-            - id: 31
-              comment: 'infra: NOVA-MIGRATION; switch-local only'
-            - id: 32
-              comment: 'infra: OVN-GENEVE; switch-local only'
-            - id: 33
-              comment: 'infra: MANILA-NFS; switch-local only'
             bridge_vlans:
             - id: 20
               comment: 'infra: SERVERS'
@@ -287,31 +280,6 @@ all:
             trusted_interface: vlan10-trusted
             forward_chain: infra-forward
             final_drop_comment: 'infra: forward final drop'
-          routeros_retired_access_rules:
-          - comment: 'infra: SERVERS to CAPI management API'
-            chain: 'infra-forward'
-            source_interface: 'vlan20-servers'
-            destination: '10.21.40.0/24'
-            protocol: 'tcp'
-            destination_port: '6443'
-          - comment: 'infra: CLOUD-EXTERNAL to private cloud APIs'
-            chain: 'infra-forward'
-            source_interface: 'vlan40-external'
-            destination: '10.21.20.130'
-            protocol: 'tcp'
-            destination_port: '80,443'
-          - comment: 'infra: WireGuard workload Kubernetes APIs'
-            chain: 'infra-forward'
-            source_interface: 'wg-admin'
-            destination: '10.21.40.0/24'
-            protocol: 'tcp'
-            destination_port: '6443'
-          - comment: 'infra: WireGuard undercloud API'
-            chain: 'infra-forward'
-            source_interface: 'wg-admin'
-            destination: '10.21.20.128'
-            protocol: 'tcp'
-            destination_port: '6443'
           routeros_access_rules:
           - comment: 'infra: WireGuard to Matrix public HTTPS'
             chain: infra-forward

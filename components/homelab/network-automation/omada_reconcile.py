@@ -1,20 +1,21 @@
 #!/usr/bin/env python3
-"""Compare the Omada controller with the repository configuration.
+"""Compare the Omada switch with the repository configuration.
 
 The command only reports changes unless --apply is given. Credentials must be
 supplied as SOPS JSON on standard input; they are not printed or stored.
+UniFi owns the access points and WLANs, so this adapter manages only the
+declared switch networks, port profiles and port assignments.
 """
 
 from __future__ import annotations
 
 import argparse
 import copy
-import ipaddress
 import json
 import sys
 import time
 import urllib.parse
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
@@ -32,7 +33,6 @@ POSTFLIGHT_ATTEMPTS = 15
 POSTFLIGHT_DELAY = 2.0
 READ_CONCURRENCY = 4
 PAGE = "page=1&pageSize=1000"
-BANDS = {"2.4GHz": 1, "dual": 3}
 # Port profile fields managed through the Omada API. A spanningTree block also
 # manages the edge-port and BPDU settings.
 PROFILE_REQUIRED_POLICY_FIELDS = frozenset(
@@ -78,14 +78,6 @@ class Profile:
 
 
 @dataclass(frozen=True)
-class Ssid:
-    name: str
-    band: int
-    vlan: int
-    psk_ref: str
-
-
-@dataclass(frozen=True)
 class Desired:
     site: str
     switch_name: str
@@ -95,16 +87,6 @@ class Desired:
     networks: tuple[Network, ...]
     profiles: tuple[Profile, ...]
     ports: Mapping[int, str]
-    ap_name: str = ""
-    ap_mac: str = ""
-    ap_model: str = ""
-    ap_address: str = ""
-    ap_netmask: str = ""
-    ap_gateway: str = ""
-    ap_dns: str = ""
-    ap_port: int = 0
-    wlan_group: str = ""
-    ssids: tuple[Ssid, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -114,11 +96,6 @@ class Snapshot:
     network_vlans_by_id: Mapping[str, int]
     profiles_by_name: Mapping[str, Mapping[str, Any]]
     ports: Mapping[int, Mapping[str, Any]]
-    wlan_id: str
-    ssid_ids: Mapping[str, str]
-    ssid_details: Mapping[str, Mapping[str, Any]]
-    ap_ready: bool
-    unexpected_ssids: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -178,10 +155,10 @@ def _vlan(value: Any, label: str) -> int:
 def load_desired(path: Path = DEFAULT_DESIRED_STATE) -> Desired:
     try:
         root = yaml.safe_load(path.read_text(encoding="utf-8"))
-        switch_only = root["version"] == 2 and root.get("scope") == "switch-only"
-        if not switch_only and (root["version"] != 1 or root["wireless"]["policy"] != "standard"):
-            raise ValueError
-        if switch_only and ("accessPoint" in root or "wireless" in root):
+        if (
+            root["version"] != 2 or root.get("scope") != "switch-only"
+            or "accessPoint" in root or "wireless" in root
+        ):
             raise ValueError
         switch = root["switch"]
         networks = tuple(
@@ -207,68 +184,27 @@ def load_desired(path: Path = DEFAULT_DESIRED_STATE) -> Desired:
                     spanning_tree,
                 )
             )
-        profiles = tuple(profiles)
         ports = {int(port): str(profile) for port, profile in switch["ports"].items()}
-        if switch_only:
-            profile_map = {profile.name: profile for profile in profiles}
-            if not (
-                profiles and ports
-                and set(ports.values()).issubset(profile_map)
-                and all(1 <= port <= 65535 for port in ports)
-                and len({network.name for network in networks}) == len(networks)
-                and len({network.vlan for network in networks}) == len(networks)
-                and all(profile.native_vlan not in profile.tagged_vlans
-                        and len(profile.tagged_vlans) == len(set(profile.tagged_vlans))
-                        for profile in profiles)
-            ):
-                raise ValueError
-            return Desired(
-                site=_string(root["site"], "site"),
-                switch_name=_string(switch["name"], "switch name"),
-                switch_mac=normalize_mac(switch["mac"]),
-                switch_model=_string(switch["model"], "switch model"),
-                profile_template=_string(switch["profileTemplate"], "profile template"),
-                networks=networks, profiles=profiles, ports=ports,
-            )
-        ap, wireless = root["accessPoint"], root["wireless"]
-        interface = ipaddress.IPv4Interface(ap["address"])
-        gateway, dns = ipaddress.IPv4Address(ap["gateway"]), ipaddress.IPv4Address(ap["dns"])
-        ssids = tuple(
-            Ssid(str(item["name"]), BANDS[item["band"]], _vlan(item["vlan"], "SSID VLAN"),
-                 str(item["pskSecretRef"]))
-            for item in wireless["ssids"]
-        )
-        desired = Desired(
-            site=str(root["site"]), switch_name=str(switch["name"]),
-            switch_mac=normalize_mac(switch["mac"]), switch_model=str(switch["model"]),
-            profile_template=str(switch["profileTemplate"]), networks=networks,
-            profiles=profiles, ports=ports,
-            ap_name=str(ap["name"]), ap_mac=normalize_mac(ap["mac"]),
-            ap_model=str(ap["model"]), ap_address=str(interface.ip),
-            ap_netmask=str(interface.netmask), ap_gateway=str(gateway), ap_dns=str(dns),
-            ap_port=int(ap["switchPort"]), wlan_group=str(wireless["group"]), ssids=ssids,
-        )
-        profile_map = {profile.name: profile for profile in profiles}
-        ap_profile = profile_map[ports[desired.ap_port]]
-        valid = (
-            profiles and ports and ssids and ap["managementVlanMode"] == "default"
-            and ap_profile.native_vlan == _vlan(ap["managementVlan"], "AP VLAN")
-            and {ssid.vlan for ssid in ssids} == set(ap_profile.tagged_vlans)
-            and gateway in interface.network and dns in interface.network
+        if not (
+            profiles and ports
+            and set(ports.values()).issubset({profile.name for profile in profiles})
+            and all(1 <= port <= 65535 for port in ports)
             and len({network.name for network in networks}) == len(networks)
             and len({network.vlan for network in networks}) == len(networks)
             and all(profile.native_vlan not in profile.tagged_vlans
                     and len(profile.tagged_vlans) == len(set(profile.tagged_vlans))
                     for profile in profiles)
-            and set(ports.values()).issubset(profile_map)
-            and len({ssid.name for ssid in ssids}) == len(ssids)
-            and len({ssid.psk_ref for ssid in ssids}) == len(ssids)
-        )
-        if not valid:
+        ):
             raise ValueError
-        return desired
-    except (OSError, UnicodeError, yaml.YAMLError, KeyError, TypeError, ValueError,
-            ipaddress.AddressValueError, ipaddress.NetmaskValueError) as error:
+        return Desired(
+            site=_string(root["site"], "site"),
+            switch_name=_string(switch["name"], "switch name"),
+            switch_mac=normalize_mac(switch["mac"]),
+            switch_model=_string(switch["model"], "switch model"),
+            profile_template=_string(switch["profileTemplate"], "profile template"),
+            networks=networks, profiles=tuple(profiles), ports=ports,
+        )
+    except (OSError, UnicodeError, yaml.YAMLError, KeyError, TypeError, ValueError) as error:
         raise SafeError("Omada desired state is invalid") from error
 
 
@@ -313,16 +249,6 @@ def credentials_from_document(document: Mapping[str, Any]) -> Credentials:
         client_id=_string(omada.get("client_id"), "Omada client ID"),
         client_secret=_string(omada.get("client_secret"), "Omada client secret"),
     )
-
-
-def _secret(document: Mapping[str, Any], reference: str) -> str:
-    value: Any = document
-    for part in reference.split("."):
-        value = _mapping(value, "wireless secret parent").get(part)
-    secret = _string(value, "wireless PSK")
-    if not 8 <= len(secret) <= 63 or any(not 0x20 <= ord(character) <= 0x7E for character in secret):
-        raise SafeError("a wireless PSK violates the Omada constraints")
-    return secret
 
 
 def _items(result: Any, label: str) -> list[Mapping[str, Any]]:
@@ -426,26 +352,18 @@ class OmadaApi:
         self.token = _string(result.get("accessToken"), "Omada access token")
 
     def read(self, resource: str, *values: str) -> Any:
-        quoted = (*[self._segment(value) for value in values], "", "", "")
-        controller = urllib.parse.quote(self.credentials.controller_id, safe="")
+        quoted = (*[self._segment(value) for value in values], "")
         routes = {
-            "sites": ("site inventory", self._v1("sites"), True),
-            "devices": ("device inventory", self._v1(f"sites/{quoted[0]}/devices"), True),
-            "ap": ("AP detail", self._v1(f"sites/{quoted[0]}/aps/{quoted[1]}"), False),
-            "ap-ip": ("AP IP inventory", self._v1(f"sites/{quoted[0]}/aps/{quoted[1]}/ip-setting"), False),
-            "ap-vlan": ("AP VLAN inventory", f"/openapi/v2/{controller}/sites/{quoted[0]}/aps/{quoted[1]}/vlan", False),
-            "networks": ("LAN network inventory", self._v1(f"sites/{quoted[0]}/lan-networks"), True),
-            "profiles": ("LAN profile inventory", self._v1(f"sites/{quoted[0]}/lan-profiles"), True),
-            "ports": ("switch port inventory", self._v1(f"sites/{quoted[0]}/switches/ports/overview"), True),
-            "wlan-groups": ("WLAN group inventory", self._v1(f"sites/{quoted[0]}/wireless-network/wlans"), True),
-            "ssids": ("SSID inventory", self._v1(f"sites/{quoted[0]}/wireless-network/wlans/{quoted[1]}/ssids"), True),
-            "ssid": ("SSID detail", self._v1(f"sites/{quoted[0]}/wireless-network/wlans/{quoted[1]}/ssids/{quoted[2]}"), False),
+            "sites": ("site inventory", self._v1("sites")),
+            "devices": ("device inventory", self._v1(f"sites/{quoted[0]}/devices")),
+            "networks": ("LAN network inventory", self._v1(f"sites/{quoted[0]}/lan-networks")),
+            "profiles": ("LAN profile inventory", self._v1(f"sites/{quoted[0]}/lan-profiles")),
+            "ports": ("switch port inventory", self._v1(f"sites/{quoted[0]}/switches/ports/overview")),
         }
         if resource not in routes:
             raise SafeError("internal Omada read resource is invalid")
-        operation, path, listed = routes[resource]
-        result = self._call(operation, "GET", f"{path}?{PAGE}" if listed and resource != "wlan-groups" else path)
-        return _items(result, operation) if listed else _mapping(result, operation)
+        operation, path = routes[resource]
+        return _items(self._call(operation, "GET", f"{path}?{PAGE}"), operation)
 
     def write(self, resource: str, values: Sequence[str], payload: Mapping[str, Any]) -> None:
         quoted = (*[self._segment(value) for value in values], "", "", "")
@@ -462,8 +380,6 @@ class OmadaApi:
             "profile-create": ("LAN profile creation", "POST", self._v1(f"sites/{quoted[0]}/lan-profiles")),
             "profile-update": ("LAN profile update", "PATCH", self._v1(f"sites/{quoted[0]}/lan-profiles/{quoted[1]}")),
             "port-assign": ("switch port assignment", "PATCH", self._v1(f"sites/{quoted[0]}/switches/{quoted[1]}/ports/{quoted[2]}")),
-            "ssid-create": ("SSID creation", "POST", self._v1(f"sites/{quoted[0]}/wireless-network/wlans/{quoted[1]}/ssids")),
-            "ssid-update": ("SSID update", "PATCH", self._v1(f"sites/{quoted[0]}/wireless-network/wlans/{quoted[1]}/ssids/{quoted[2]}/update-basic-config")),
         }
         if resource not in routes:
             raise SafeError("internal Omada write resource is invalid")
@@ -556,120 +472,29 @@ DOMAIN_READERS: Mapping[str, Callable[[OmadaApi, str], dict[str, Any]]] = {
 }
 
 
-def _submit_all(executor: ThreadPoolExecutor, reads: Mapping[str, Callable[[], Any]]) -> dict[str, Future[Any]]:
-    return {name: executor.submit(read) for name, read in reads.items()}
-
-
-def _wired(site_id: str, results: Mapping[str, Future[Any]]) -> dict[str, Any]:
-    return {
-        "site_id": site_id,
-        **results["networks"].result(),
-        **results["profiles"].result(),
-        **results["ports"].result(),
-    }
-
-
 def inspect(api: OmadaApi, desired: Desired) -> Snapshot:
     sites = [site for site in api.read("sites") if site.get("name") == desired.site]
     if len(sites) != 1:
         raise SafeError("the exact Omada site is missing or ambiguous")
     site_id = _string(sites[0].get("siteId"), "site ID")
 
-    # Every read below depends only on the site and declared identities, so
-    # they are fetched concurrently. Results are consumed in the original
-    # check order so the first reported failure stays the same.
-    reads: dict[str, Callable[[], Any]] = {
-        "devices": lambda: api.read("devices", site_id),
-        "networks": lambda: _read_networks(api, site_id),
-        "profiles": lambda: _read_profiles(api, site_id),
-        "ports": lambda: _read_ports(api, site_id, desired),
-    }
-    if desired.ap_mac:
-        reads |= {
-            "ap": lambda: api.read("ap", site_id, desired.ap_mac),
-            "ap-ip": lambda: api.read("ap-ip", site_id, desired.ap_mac),
-            "ap-vlan": lambda: api.read("ap-vlan", site_id, desired.ap_mac),
-            "wlan-groups": lambda: api.read("wlan-groups", site_id),
-        }
+    # Every read depends only on the site and declared identities, so they are
+    # fetched concurrently. The switch identity is checked first so it stays
+    # the first reported failure.
     with ThreadPoolExecutor(max_workers=READ_CONCURRENCY) as executor:
-        results = _submit_all(executor, reads)
-        devices = results["devices"].result()
-        switch = _one_device(devices, desired.switch_mac, "switch")
+        devices = executor.submit(api.read, "devices", site_id)
+        networks = executor.submit(_read_networks, api, site_id)
+        profiles = executor.submit(_read_profiles, api, site_id)
+        ports = executor.submit(_read_ports, api, site_id, desired)
+        switch = _one_device(devices.result(), desired.switch_mac, "switch")
         if (
             (switch.get("name"), switch.get("model"), str(switch.get("type", "")).lower())
             != (desired.switch_name, desired.switch_model, "switch")
         ):
             raise SafeError("the exact switch identity differs from Git")
-        if not desired.ap_mac:
-            return Snapshot(
-                **_wired(site_id, results), wlan_id="", ssid_ids={}, ssid_details={},
-                ap_ready=False, unexpected_ssids=(),
-            )
-
-        ap = _one_device(devices, desired.ap_mac, "access point")
-        if (
-            (ap.get("name"), ap.get("model"), str(ap.get("type", "")).lower(),
-             ap.get("status"), ap.get("detailStatus"))
-            != (desired.ap_name, desired.ap_model, "ap", 1, 14)
-        ):
-            raise SafeError("the exact access-point identity or health differs from Git")
-        ap_detail = results["ap"].result()
-        if (
-            (normalize_mac(ap_detail.get("mac")), ap_detail.get("name"),
-             str(ap_detail.get("type", "")).lower())
-            != (desired.ap_mac, desired.ap_name, "ap")
-        ):
-            raise SafeError("the exact access-point detail identity differs from Git")
-        wired = _wired(site_id, results)
-
-        groups = [group for group in results["wlan-groups"].result()
-                  if group.get("name") == desired.wlan_group]
-        if len(groups) != 1:
-            raise SafeError("the exact WLAN group is missing or ambiguous")
-        wlan_id = _string(groups[0].get("wlanId"), "WLAN group ID")
-        summaries = _index_by(
-            api.read("ssids", site_id, wlan_id),
-            lambda item: _string(item.get("name"), "SSID name"),
-            "SSID",
+        return Snapshot(
+            site_id=site_id, **networks.result(), **profiles.result(), **ports.result(),
         )
-        _index_by(list(summaries.values()), lambda item: _string(item.get("ssidId"), "SSID ID"), "SSID")
-        ssid_ids = {name: _string(summary.get("ssidId"), "SSID ID") for name, summary in summaries.items()}
-        desired_names = {ssid.name for ssid in desired.ssids}
-        details = {
-            name: future.result()
-            for name, future in _submit_all(executor, {
-                name: (lambda ssid_id=ssid_id: api.read("ssid", site_id, wlan_id, ssid_id))
-                for name, ssid_id in ssid_ids.items()
-                if name in desired_names
-            }).items()
-        }
-        ap_ip = results["ap-ip"].result()
-        mvlan = results["ap-vlan"].result().get("mvlanSetting")
-    static = ap_ip.get("staticIpSetting")
-    ap_ready = (
-        ap.get("ip") == desired.ap_address
-        and ap_detail.get("ip") == desired.ap_address
-        and ap_ip.get("mode") == "static"
-        and isinstance(static, Mapping)
-        and (
-            static.get("configIp"), static.get("configMask"),
-            static.get("configGate"), static.get("preferredDNS"),
-            static.get("alternateDNS", ""),
-        ) == (
-            desired.ap_address, desired.ap_netmask, desired.ap_gateway,
-            desired.ap_dns, "",
-        )
-        and isinstance(mvlan, Mapping)
-        and mvlan.get("mode") == 0
-    )
-    return Snapshot(
-        **wired,
-        wlan_id=wlan_id,
-        ssid_ids=ssid_ids,
-        ssid_details=details,
-        ap_ready=ap_ready,
-        unexpected_ssids=tuple(sorted(set(ssid_ids) - desired_names)),
-    )
 
 
 def _profile_signature(profile: Mapping[str, Any], snapshot: Snapshot) -> tuple[int, tuple[int, ...], tuple[int, ...], int | None]:
@@ -743,56 +568,7 @@ def _profile_payload(source: Mapping[str, Any], desired: Profile, snapshot: Snap
     return payload
 
 
-def _ssid_fields(ssid: Ssid) -> dict[str, Any]:
-    return {
-        "name": ssid.name,
-        "deviceType": 1,
-        "band": ssid.band,
-        "guestNetEnable": False,
-        "security": 3,
-        "broadcast": True,
-        "vlanEnable": True,
-        "vlanId": ssid.vlan,
-        "pskSetting": {
-            "versionPsk": 2,
-            "encryptionPsk": 3,
-            "gikRekeyPskEnable": True,
-            "rekeyPskInterval": 3600,
-            "intervalPskType": 0,
-        },
-        "mloEnable": False,
-        "pmfMode": 3,
-        "enable11r": False,
-        "hidePwd": True,
-        "greEnable": False,
-        "prohibitWifiShare": False,
-    }
-
-
-def _ssid_matches(ssid: Ssid, detail: Mapping[str, Any]) -> bool:
-    expected = _ssid_fields(ssid)
-    psk = expected.pop("pskSetting")
-    hide_password = expected.pop("hidePwd")
-    gre = expected.pop("greEnable")
-    actual_psk = detail.get("pskSetting")
-    readable = all(detail.get(key) == value for key, value in expected.items())
-    return (
-        readable and isinstance(actual_psk, Mapping)
-        and all(actual_psk.get(key) == value for key, value in psk.items())
-        and detail.get("hidePwd", hide_password) is hide_password
-        and detail.get("greEnable", gre) is gre
-    )
-
-
-def _ssid_payload(ssid: Ssid, psk: str, *, create: bool) -> dict[str, Any]:
-    payload = _ssid_fields(ssid)
-    payload["pskSetting"]["securityKey"] = psk
-    if not create:
-        payload.pop("deviceType")
-    return payload
-
-
-def make_plan(desired: Desired, snapshot: Snapshot, *, include_write_only: bool = False) -> tuple[Action, ...]:
+def make_plan(desired: Desired, snapshot: Snapshot) -> tuple[Action, ...]:
     actions: list[Action] = []
     desired_network_vlans = {network.vlan for network in desired.networks}
     desired_network_names = {network.name for network in desired.networks}
@@ -851,30 +627,6 @@ def make_plan(desired: Desired, snapshot: Snapshot, *, include_write_only: bool 
             operation, detail = "assign", f"assign {profile_name}"
         actions.append(Action("port", str(port), operation, detail))
 
-    if not desired.ap_mac:
-        return tuple(actions)
-
-    actions.append(Action(
-        "access-point", desired.ap_name, "noop" if snapshot.ap_ready else "blocked",
-        "final static management state matches" if snapshot.ap_ready
-        else "management state differs; use the adoption runbook",
-    ))
-
-    if snapshot.unexpected_ssids:
-        actions.append(Action("wireless", "SSID set", "blocked", "undeclared SSIDs exist"))
-    for ssid in desired.ssids:
-        detail = snapshot.ssid_details.get(ssid.name)
-        if detail is None:
-            operation, reason = "create", "SSID is absent"
-        elif detail.get("deviceType") != 1:
-            operation, reason = "blocked", "device scope cannot be updated safely"
-        elif not _ssid_matches(ssid, detail):
-            operation, reason = "update", "readable settings differ"
-        elif include_write_only:
-            operation, reason = "update", "explicitly rewrite the write-only PSK"
-        else:
-            operation, reason = "noop", "readable settings match; PSK is write-only"
-        actions.append(Action("wireless", ssid.name, operation, reason))
     return tuple(actions)
 
 
@@ -915,9 +667,7 @@ def apply(
     desired: Desired,
     snapshot: Snapshot,
     actions: Sequence[Action],
-    secret_document: Mapping[str, Any],
     *,
-    include_write_only: bool,
     attempts: int = POSTFLIGHT_ATTEMPTS,
     delay: float = POSTFLIGHT_DELAY,
     sleeper: Callable[[float], None] = time.sleep,
@@ -942,13 +692,9 @@ def apply(
 
     if networks:
         snapshot = _wait(api, desired, snapshot, "network", attempts, delay, sleeper)
-        actions = make_plan(desired, snapshot, include_write_only=include_write_only)
+        actions = make_plan(desired, snapshot)
         if any(action.blocked for action in actions):
             raise SafeError("apply became blocked after LAN network reconciliation")
-
-    wireless = [action for action in actions if action.domain == "wireless" and action.mutates]
-    if wireless and not include_write_only:
-        raise SafeError("wireless changes require explicit --include-write-only")
 
     profiles = [action for action in actions if action.domain == "profile" and action.mutates]
     desired_profiles = {profile.name: profile for profile in desired.profiles}
@@ -962,16 +708,6 @@ def apply(
         profile_payloads[action.target] = _profile_payload(
             source, desired_profiles[action.target], snapshot
         )
-
-    desired_ssids = {ssid.name: ssid for ssid in desired.ssids}
-    ssid_payloads = {
-        action.target: _ssid_payload(
-            desired_ssids[action.target],
-            _secret(secret_document, desired_ssids[action.target].psk_ref),
-            create=action.operation == "create",
-        )
-        for action in wireless
-    }
 
     for action in profiles:
         current = snapshot.profiles_by_name.get(action.target)
@@ -1014,26 +750,14 @@ def apply(
             payload,
         )
 
-    for action in wireless:
-        ssid_id = snapshot.ssid_ids.get(action.target)
-        values = (snapshot.site_id, snapshot.wlan_id)
-        if action.operation == "create":
-            resource = "ssid-create"
-        else:
-            if ssid_id is None:
-                raise SafeError("SSID disappeared before apply")
-            resource, values = "ssid-update", (*values, ssid_id)
-        api.write(resource, values, ssid_payloads[action.target])
-
     _wait(api, desired, snapshot, None, attempts, delay, sleeper)
-    return len(networks) + len(profiles) + len(ports) + len(wireless)
+    return len(networks) + len(profiles) + len(ports)
 
 
 def render(actions: Sequence[Action]) -> None:
-    print("Connected to the configured Omada site and managed devices")
+    print("Connected to the configured Omada site and switch")
     for action in actions:
-        suffix = " (SSID password required)" if action.domain == "wireless" and action.mutates else ""
-        print(f"  {action.domain} {action.target}: {action.operation} - {action.detail}{suffix}")
+        print(f"  {action.domain} {action.target}: {action.operation} - {action.detail}")
     print(
         f"Summary: {sum(action.mutates for action in actions)} change(s), "
         f"{sum(action.blocked for action in actions)} blocker(s)"
@@ -1054,11 +778,6 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         help="read credentials as SOPS JSON from standard input",
     )
     parser.add_argument("--apply", action="store_true", help="make the planned changes")
-    parser.add_argument(
-        "--include-write-only",
-        action="store_true",
-        help="include SSID passwords; required to create, update, or rotate SSIDs",
-    )
     args = parser.parse_args(argv)
     if not args.credentials_stdin:
         parser.error("--credentials-stdin is required")
@@ -1073,24 +792,16 @@ def run(
 ) -> int:
     args = parse_args(argv)
     desired = load_desired(args.desired)
-    secret_document = _read_secret_document(stdin)
-    credentials = credentials_from_document(secret_document)
+    credentials = credentials_from_document(_read_secret_document(stdin))
     api = (api_factory or OmadaApi)(credentials)
     api.authorize()
     snapshot = inspect(api, desired)
-    actions = make_plan(desired, snapshot, include_write_only=args.include_write_only)
+    actions = make_plan(desired, snapshot)
     render(actions)
     if not args.apply:
         print("Read-only plan complete; no changes were made")
         return 0
-    mutations = apply(
-        api,
-        desired,
-        snapshot,
-        actions,
-        secret_document,
-        include_write_only=args.include_write_only,
-    )
+    mutations = apply(api, desired, snapshot, actions)
     print(f"Verified controller state after {mutations} change(s)")
     return 0
 

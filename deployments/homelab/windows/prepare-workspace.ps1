@@ -22,18 +22,6 @@ if (-not (Test-Path 'C:\Program Files\Git\cmd\git.exe')) {
 & 'C:\Program Files\Git\cmd\git.exe' config --global core.autocrlf input
 & 'C:\Program Files\Git\cmd\git.exe' config --global init.defaultBranch main
 
-$tools = Join-Path $env:LOCALAPPDATA 'infra\autologon'
-New-Item -ItemType Directory -Force $tools | Out-Null
-curl.exe --fail --location --output "$tools\Autologon.zip" https://download.sysinternals.com/files/AutoLogon.zip
-if ($LASTEXITCODE -ne 0) { throw 'Autologon download failed.' }
-Expand-Archive -LiteralPath "$tools\Autologon.zip" -DestinationPath $tools -Force
-$autologon = Join-Path $tools 'Autologon64.exe'
-$signature = Get-AuthenticodeSignature -LiteralPath $autologon
-if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Microsoft Corporation') {
-    throw 'Autologon must have a valid Microsoft signature.'
-}
-Write-Host "Autologon signature: $($signature.Status)"
-
 $linuxBootstrap = '/mnt/c/ProgramData/infra/gorgonzola/bootstrap'
 wsl.exe -d Ubuntu -u root --exec bash "$linuxBootstrap/prepare-ubuntu.sh"
 if ($LASTEXITCODE -ne 0) { throw 'Ubuntu workspace preparation failed.' }
@@ -47,6 +35,18 @@ Enter nix develop --accept-flake-config there for the repository's pinned tools.
 '@ | Set-Content -Encoding UTF8 (Join-Path $workspace 'AGENTS.md')
 Write-Host 'Windows workspace and Ubuntu infrastructure checkout are ready.'
 if ($OpenAutologon) {
+    # Sysinternals publishes no stable hash for this rolling download, so the
+    # Authenticode chain is the integrity check.
+    $tools = Join-Path $env:LOCALAPPDATA 'infra\autologon'
+    New-Item -ItemType Directory -Force $tools | Out-Null
+    curl.exe --fail --location --output "$tools\Autologon.zip" https://download.sysinternals.com/files/AutoLogon.zip
+    if ($LASTEXITCODE -ne 0) { throw 'Autologon download failed.' }
+    Expand-Archive -LiteralPath "$tools\Autologon.zip" -DestinationPath $tools -Force
+    $autologon = Join-Path $tools 'Autologon64.exe'
+    $signature = Get-AuthenticodeSignature -LiteralPath $autologon
+    if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Microsoft Corporation') {
+        throw 'Autologon must have a valid Microsoft signature.'
+    }
     # Enter the account password only in the masked GUI field.
     Start-Process -FilePath $autologon
 }

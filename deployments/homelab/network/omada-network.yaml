@@ -54,7 +54,7 @@ switch:
     3: infra-trusted-access # gorgonzola, GMKtec NucBox K8 Plus
     4: infra-iot-access # Dongle-M Zigbee coordinator
     5: infra-iot-access # Dongle-M Thread RCP
-    # Pinned to 1 Gb/s full duplex; see unifi-network.yaml (u7-pro-max).
+    # u7-pro-max; its 1 Gb/s link pin is kept on the port (docs/network.md).
     6: infra-ap-trunk
     7: infra-management-access # PiKVM burrata
     8: infra-iot-access

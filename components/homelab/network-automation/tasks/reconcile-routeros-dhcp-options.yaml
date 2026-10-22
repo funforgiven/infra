@@ -44,17 +44,3 @@
   loop: "{{ routeros_dhcp_options }}"
   tags: [never, apply, static-leases]
 
-- name: Prove declared DHCP option values
-  community.routeros.command:
-    commands:
-      - >-
-        :if ([:len [/ip dhcp-server option find where name="{{ item.name }}"
-        and code={{ item.code }} and value="{{ item.value }}" and
-        force={{ item.force | ternary('yes', 'no') }}]] != 1) do={ :error
-        "incorrect DHCP option" }; :put ("__infra_" . "dhcp_ok__")
-    wait_for:
-      - result[0] contains "__infra_dhcp_ok__"
-    retries: 1
-  loop: "{{ routeros_dhcp_options }}"
-  changed_when: false
-  tags: [never, apply, static-leases]

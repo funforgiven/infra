@@ -4,6 +4,7 @@ import io
 import json
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 from unittest import mock
 
@@ -15,8 +16,7 @@ sys.path.insert(0, str(AUTOMATION_ROOT))
 import omada_reconcile as omada  # noqa: E402
 
 
-DESIRED_PATH = Path(__file__).parent / "fixtures/omada-with-ap.yaml"
-SWITCH_ONLY_PATH = REPOSITORY_ROOT / "deployments/homelab/network/omada-network.yaml"
+DESIRED_PATH = REPOSITORY_ROOT / "deployments/homelab/network/omada-network.yaml"
 
 
 def network(name: str, vlan: int) -> dict[str, object]:
@@ -68,33 +68,6 @@ def profile(
     }
 
 
-def ssid_detail(name: str, ssid_id: str, band: int, vlan: int) -> dict[str, object]:
-    return {
-        "ssidId": ssid_id,
-        "name": name,
-        "deviceType": 1,
-        "band": band,
-        "guestNetEnable": False,
-        "security": 3,
-        "broadcast": True,
-        "vlanEnable": True,
-        "vlanId": vlan,
-        "pskSetting": {
-            "versionPsk": 2,
-            "encryptionPsk": 3,
-            "gikRekeyPskEnable": True,
-            "rekeyPskInterval": 3600,
-            "intervalPskType": 0,
-        },
-        "mloEnable": False,
-        "pmfMode": 3,
-        "enable11r": False,
-        "hidePwd": True,
-        "greEnable": False,
-        "prohibitWifiShare": False,
-    }
-
-
 class FakeApi:
     def __init__(self) -> None:
         self.calls: list[tuple[str, object]] = []
@@ -120,7 +93,7 @@ class FakeApi:
         self.ports = {
             1: {"profileId": "p-ccr", "profileName": "infra-ccr-trunk"},
             2: {"profileId": "p-trusted", "profileName": "infra-trusted-access"},
-            3: {"profileId": "p-management", "profileName": "infra-management-access"},
+            3: {"profileId": "p-trusted", "profileName": "infra-trusted-access"},
             4: {"profileId": "p-iot", "profileName": "infra-iot-access"},
             5: {"profileId": "p-iot", "profileName": "infra-iot-access"},
             6: {"profileId": "p-ap", "profileName": "infra-ap-trunk"},
@@ -128,28 +101,10 @@ class FakeApi:
             8: {"profileId": "p-iot", "profileName": "infra-iot-access"},
             9: {"profileId": "p-crs", "profileName": "infra-crs-trunk"},
         }
-        self.ssids = {
-            "Rooftrollen": ssid_detail("Rooftrollen", "s-personal", 3, 10),
-            "Rooftrollen_IoT": ssid_detail("Rooftrollen_IoT", "s-iot", 1, 50),
-        }
-        self.ap_ip = {
-            "mode": "static",
-            "staticIpSetting": {
-                "configIp": "10.21.90.4",
-                "configMask": "255.255.255.0",
-                "configGate": "10.21.90.1",
-                "preferredDNS": "10.21.90.1",
-            },
-        }
         self.devices = [
             {
                 "name": "98-25-4A-CB-BF-BE", "mac": "98-25-4A-CB-BF-BE",
                 "model": "SG3210XHP-M2 v3.0", "type": "switch",
-            },
-            {
-                "name": "9C-A2-F4-C2-ED-74", "mac": "9C-A2-F4-C2-ED-74",
-                "model": "EAP670(EU) v1.0", "type": "ap", "status": 1,
-                "detailStatus": 14, "ip": "10.21.90.4",
             },
         ]
 
@@ -161,15 +116,6 @@ class FakeApi:
             return [{"siteId": "site-hark", "name": "Hark"}]
         if resource == "devices":
             return self.devices
-        if resource == "ap":
-            return {
-                "name": "9C-A2-F4-C2-ED-74", "mac": "9C-A2-F4-C2-ED-74",
-                "type": "ap", "ip": "10.21.90.4",
-            }
-        if resource == "ap-ip":
-            return self.ap_ip
-        if resource == "ap-vlan":
-            return {"mvlanSetting": {"mode": 0}}
         if resource == "networks":
             return self.networks
         if resource == "profiles":
@@ -185,15 +131,6 @@ class FakeApi:
                 }
                 for number, state in self.ports.items()
             ]
-        if resource == "wlan-groups":
-            return [{"name": "Default", "wlanId": "w-default"}]
-        if resource == "ssids":
-            return [
-                {"name": name, "ssidId": detail["ssidId"]}
-                for name, detail in self.ssids.items()
-            ]
-        if resource == "ssid":
-            return next(detail for detail in self.ssids.values() if detail["ssidId"] == values[2])
         raise AssertionError(resource)
 
     def write(self, resource: str, values: tuple[str, ...], payload: dict[str, object]) -> None:
@@ -216,28 +153,10 @@ class FakeApi:
             selected = next(item for item in self.profiles if item["id"] == profile_id)
             self.ports[int(values[2])] = {"profileId": profile_id, "profileName": selected["name"]}
             self.calls.append(("assign_profile", int(values[2])))
-        elif resource == "ssid-create":
-            name = str(payload["name"])
-            self.ssids[name] = self._stored_ssid(payload, f"s-{name}")
-            self.calls.append(("create_ssid", name))
-        elif resource == "ssid-update":
-            current = next(item for item in self.ssids.values() if item["ssidId"] == values[2])
-            current.update(self._stored_ssid(payload, values[2]))
-            self.calls.append(("update_ssid", payload["name"]))
         else:
             raise AssertionError(resource)
 
-    @staticmethod
-    def _stored_ssid(payload: dict[str, object], ssid_id: str) -> dict[str, object]:
-        stored = dict(payload)
-        stored["ssidId"] = ssid_id
-        psk = dict(stored["pskSetting"])
-        psk.pop("securityKey")
-        stored["pskSetting"] = psk
-        stored.setdefault("deviceType", 1)
-        return stored
-
-def secrets(*, include_psks: bool = True) -> io.StringIO:
+def secrets() -> io.StringIO:
     document: dict[str, object] = {
         "omada": {
             "api_base": "https://controller.invalid",
@@ -246,10 +165,6 @@ def secrets(*, include_psks: bool = True) -> io.StringIO:
             "client_secret": "secret-value",
         }
     }
-    if include_psks:
-        document["wireless"] = {
-            "psks": {"personal": "personal-password", "iot": "iot-password"}
-        }
     return io.StringIO(json.dumps(document))
 
 
@@ -258,50 +173,36 @@ class ReconcilerTests(unittest.TestCase):
         self.desired = omada.load_desired(DESIRED_PATH)
         self.api = FakeApi()
 
-    def plan(self, *, include_write_only: bool = False) -> tuple[omada.Action, ...]:
-        return omada.make_plan(
-            self.desired,
-            omada.inspect(self.api, self.desired),
-            include_write_only=include_write_only,
-        )
+    def plan(self) -> tuple[omada.Action, ...]:
+        return omada.make_plan(self.desired, omada.inspect(self.api, self.desired))
 
-    def reconcile(self, *, include_write_only: bool = False, include_psks: bool = True) -> int:
+    def reconcile(self) -> int:
         snapshot = omada.inspect(self.api, self.desired)
-        actions = omada.make_plan(
-            self.desired, snapshot, include_write_only=include_write_only
-        )
         return omada.apply(
-            self.api, self.desired, snapshot, actions,
-            json.loads(secrets(include_psks=include_psks).read()),
-            include_write_only=include_write_only, attempts=1, delay=0,
-            sleeper=lambda _delay: None,
+            self.api, self.desired, snapshot, omada.make_plan(self.desired, snapshot),
+            attempts=1, delay=0, sleeper=lambda _delay: None,
         )
 
-    def test_final_plan_is_noop_and_does_not_need_psks(self) -> None:
-        actions = self.plan()
-        self.assertTrue(all(action.operation == "noop" for action in actions))
-        self.assertFalse(any(action.domain == "wireless" and action.mutates for action in actions))
+    def test_final_plan_is_noop(self) -> None:
+        self.assertTrue(all(action.operation == "noop" for action in self.plan()))
 
-    def test_write_only_flag_explicitly_rewrites_both_psks(self) -> None:
-        mutations = self.reconcile(include_write_only=True)
-        self.assertEqual(mutations, 2)
-        self.assertEqual([call for call in self.api.calls if call[0] == "update_ssid"], [
-            ("update_ssid", "Rooftrollen"), ("update_ssid", "Rooftrollen_IoT")
-        ])
-
-    def test_wireless_drift_requires_explicit_write_only_permission(self) -> None:
-        self.api.ssids["Rooftrollen"]["vlanId"] = 50
-        with self.assertRaisesRegex(omada.SafeError, "--include-write-only"):
-            self.reconcile()
-        self.assertFalse(any(call[0].startswith(("create_", "update_", "assign_")) for call in self.api.calls))
+    def test_input_refuses_wireless_objects(self) -> None:
+        for key in ("accessPoint", "wireless"):
+            with self.subTest(key=key), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / "omada.yaml"
+                path.write_text(DESIRED_PATH.read_text() + f"{key}: {{}}\n")
+                with self.assertRaisesRegex(omada.SafeError, "invalid"):
+                    omada.load_desired(path)
 
     def test_profile_and_port_reconcile_with_one_postflight(self) -> None:
         self.api.profiles = [item for item in self.api.profiles if item["name"] != "infra-trusted-access"]
         self.api.ports[2] = {"profileId": "p-all", "profileName": "All"}
-        mutations = self.reconcile(include_psks=False)
-        self.assertEqual(mutations, 2)
+        mutations = self.reconcile()
+        # Port 3 also follows the recreated profile's new identity.
+        self.assertEqual(mutations, 3)
         self.assertIn(("create_profile", "infra-trusted-access"), self.api.calls)
         self.assertIn(("assign_profile", 2), self.api.calls)
+        self.assertIn(("assign_profile", 3), self.api.calls)
         self.assertTrue(all(action.operation == "noop" for action in self.plan()))
 
     def test_domain_postflight_rereads_only_that_domain(self) -> None:
@@ -310,7 +211,7 @@ class ReconcilerTests(unittest.TestCase):
             if item["name"] in {"infra-ccr-trunk", "infra-crs-trunk"}:
                 item["tagNetworkIds"].remove("n40")
         with mock.patch.object(self.api, "read", wraps=self.api.read) as read:
-            self.reconcile(include_psks=False)
+            self.reconcile()
         resources = [call.args[0] for call in read.call_args_list]
         # The initial inspection and the final postflight read everything;
         # the network and profile postflights re-read only their domain.
@@ -352,7 +253,7 @@ class ReconcilerTests(unittest.TestCase):
             )
         )
 
-        mutations = self.reconcile(include_psks=False)
+        mutations = self.reconcile()
         self.assertEqual(mutations, 1)
         spanning_tree = trusted["spanningTreeSetting"]
         self.assertFalse(trusted["spanningTreeEnable"])
@@ -367,23 +268,10 @@ class ReconcilerTests(unittest.TestCase):
         for item in self.api.profiles:
             if item["name"] in {"infra-ccr-trunk", "infra-crs-trunk"}:
                 item["tagNetworkIds"].remove("n40")
-        mutations = self.reconcile(include_psks=False)
+        mutations = self.reconcile()
         self.assertEqual(mutations, 3)
         self.assertEqual(self.api.calls[0], ("create_network", "CLOUD-EXTERNAL"))
         self.assertTrue(all(action.operation == "noop" for action in self.plan()))
-
-    def test_ap_management_drift_blocks_all_mutation(self) -> None:
-        self.api.ap_ip["staticIpSetting"]["configIp"] = "10.21.90.44"
-        actions = self.plan()
-        self.assertTrue(any(action.domain == "access-point" and action.blocked for action in actions))
-        with self.assertRaisesRegex(omada.SafeError, "blockers"):
-            self.reconcile(include_psks=False)
-
-    def test_undeclared_ssid_blocks_without_deletion(self) -> None:
-        self.api.ssids["guest"] = ssid_detail("guest", "s-guest", 3, 10)
-        actions = self.plan()
-        self.assertTrue(any(action.target == "SSID set" and action.blocked for action in actions))
-        self.assertFalse(hasattr(self.api, "delete_ssid"))
 
     def test_identity_mismatch_fails_before_planning(self) -> None:
         self.api.devices = [
@@ -394,38 +282,14 @@ class ReconcilerTests(unittest.TestCase):
             omada.inspect(self.api, self.desired)
 
 
-class SwitchOnlyTests(unittest.TestCase):
-    plan = ReconcilerTests.plan
-    reconcile = ReconcilerTests.reconcile
-    def setUp(self) -> None:
-        self.desired = omada.load_desired(SWITCH_ONLY_PATH)
-        self.api = FakeApi()
-        self.api.ports[3] = {"profileId": "p-trusted", "profileName": "infra-trusted-access"}
-        self.api.devices = [item for item in self.api.devices if item["type"] == "switch"]
-
-    def test_no_wireless_reads_or_writes_without_an_ap(self) -> None:
-        original = self.api.read
-        def read(resource, *args):
-            if resource in {"ap", "ap-ip", "ap-vlan", "wlan-groups", "ssids", "ssid"}:
-                self.fail("Switch-only reconciliation accessed wireless state")
-            return original(resource, *args)
-        with mock.patch.object(self.api, "read", side_effect=read):
-            self.assertTrue(all(action.operation == "noop" for action in self.plan()))
-            self.assertEqual(self.reconcile(include_write_only=True, include_psks=False), 0)
-            self.api.ports[6] = {"profileId": "p-all", "profileName": "All"}
-            self.assertEqual(self.reconcile(include_psks=False), 1)
-            self.assertIn(("assign_profile", 6), self.api.calls)
-
-
-
 class CommandAndTransportTests(unittest.TestCase):
-    def test_default_command_is_read_only_and_does_not_require_psks(self) -> None:
+    def test_default_command_is_read_only(self) -> None:
         api = FakeApi()
         output = io.StringIO()
         with mock.patch("sys.stdout", output):
             result = omada.run(
                 ["--credentials-stdin", "--desired", str(DESIRED_PATH)],
-                stdin=secrets(include_psks=False),
+                stdin=secrets(),
                 api_factory=lambda _credentials: api,
             )
         self.assertEqual(result, 0)

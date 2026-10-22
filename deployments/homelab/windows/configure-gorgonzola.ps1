@@ -91,16 +91,6 @@ foreach ($capability in @('AccountInfo', 'Calendar', 'CallHistory', 'Camera', 'C
     $appPrivacy["LetAppsAccess$capability"] = 2
 }
 $registry['HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy'] = $appPrivacy
-$services = @('DiagTrack', 'dmwappushservice', 'WerSvc', 'lfsvc', 'MapsBroker')
-$taskPaths = @(
-    '\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser',
-    '\Microsoft\Windows\Application Experience\ProgramDataUpdater',
-    '\Microsoft\Windows\Customer Experience Improvement Program\Consolidator',
-    '\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip',
-    '\Microsoft\Windows\Feedback\Siuf\DmClient',
-    '\Microsoft\Windows\Feedback\Siuf\DmClientOnScenarioDownload'
-)
-$tasks = @(Get-ScheduledTask | Where-Object { ($_.TaskPath + $_.TaskName) -in $taskPaths })
 $consumerApps = @('Microsoft.Copilot', 'Microsoft.WindowsFeedbackHub', 'Microsoft.BingNews',
     'Microsoft.BingWeather', 'MicrosoftWindows.Client.WebExperience')
 $sleepGroup = '238c9fa8-0aad-41ed-83f4-97be242c8f20'
@@ -133,8 +123,6 @@ if (-not $VerifyOnly) {
     $before = Join-Path $recordDirectory ('settings-before-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.json')
     @{
         Registry = @(Read-RegistryValues)
-        Services = @(Get-Service -Name $services -ErrorAction SilentlyContinue | Select-Object Name, Status, StartType)
-        Tasks = @($tasks | Select-Object TaskPath, TaskName, State)
         Defender = Get-MpPreference | Select-Object MAPSReporting, SubmitSamplesConsent, DisableBlockAtFirstSeen
     } | ConvertTo-Json -Depth 6 | Set-Content -Encoding UTF8 $before
     powercfg.exe /query | Set-Content -Encoding UTF8 ($before + '.power.txt')
@@ -188,8 +176,6 @@ $record = [ordered]@{
     HibernateFilePresent = Test-Path 'C:\hiberfil.sys'
     RegistryValuesChecked = $values.Count
     RegistryMismatches = @($values | Where-Object { $_.Value -ne $_.Expected })
-    DiagnosticServices = @(Get-Service -Name $services -ErrorAction SilentlyContinue | Select-Object Name, Status, StartType)
-    FeedbackTasks = @(Get-ScheduledTask | Where-Object { ($_.TaskPath + $_.TaskName) -in $taskPaths } | Select-Object TaskName, State)
     RemainingConsumerApps = @(Get-AppxPackage -AllUsers | Where-Object Name -In $consumerApps | Select-Object Name)
     DefenderSamplesConsent = $preferences.SubmitSamplesConsent
     DefenderCloudReporting = $preferences.MAPSReporting
