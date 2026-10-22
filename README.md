@@ -34,22 +34,22 @@ nix build .#checks.x86_64-linux.homelab-configuration --no-link --accept-flake-c
 nix run .#repository-secret-scan --accept-flake-config
 ```
 
-The homelab check combines strict native manifest validation, service
-tests, OpenTofu formatting, RouterOS syntax and shell checks. It uses the
-committed schema bundle and needs no decryption or network access.
-
-Full pinned Helm rendering and schema validation need Python with
-PyYAML/requests, Helm, Kustomize and SOPS. Refresh the public schema and
-chart cache, then validate with decrypted Helm values:
-
-```sh
-python components/homelab/validation/refresh.py --cache /tmp/homelab-validation
-python components/homelab/validation/validate.py --helm-cache /tmp/homelab-validation --decrypt
-```
-
-The cache holds only public upstream data, never decrypted values.
-Pinned sources are described in
-[the validation README](deployments/homelab/validation/README.md).
+The homelab check combines manifest validation, service tests, OpenTofu
+formatting, RouterOS syntax and shell checks, offline and without decryption.
+`homelab-manifests` renders every Kustomize entrypoint and every HelmRelease
+(values resolved like Flux; SOPS Secret values are left out) and validates the
+output against Kubernetes, KubeVirt and CRD schemas plus repository policies.
+Upstream inputs are pinned in `deployments/homelab/validation/pins.json` and
+fetched by Nix as fixed-output derivations; the Kubernetes API version must
+match the hosts' K3s package. Each HelmRelease's chart digest, commit or
+version must equal its pin. To bump a chart, update the HelmRelease source and
+its pin's `url`/`ref`, set `sha256` to the archive hash (hex, or the SRI hash
+from the build's `got:` line after a wrong one), and rebuild. Vendored manifests are hash-checked
+through `vendors.json`; the monitoring CRDs must equal the pinned
+kube-prometheus-stack chart's. To run it on a working tree with Python
+(PyYAML, jsonschema), Helm and Kustomize on `PATH`:
+`python components/homelab/validation/validate.py --inputs "$(nix build
+--print-out-paths .#checks.x86_64-linux.homelab-manifests.inputs)"`.
 
 Read-only evaluations of host and disk configuration:
 

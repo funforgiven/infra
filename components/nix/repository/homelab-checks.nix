@@ -1,8 +1,57 @@
-{ lib, ... }:
+{ config, lib, ... }:
+let
+  inventory = lib.importJSON ../../../deployments/homelab/hosts/inventory.json;
+  host = config.flake.nixosConfigurations.${lib.head (lib.attrNames inventory.hosts)};
+in
 {
   perSystem =
     { pkgs, ... }:
     let
+      pins = lib.importJSON ../../../deployments/homelab/validation/pins.json;
+      # The store name follows url and ref, so bumping either one without the
+      # hash fails instead of silently reusing the previous download.
+      fetchPin =
+        pin:
+        let
+          name =
+            "pin-" + builtins.substring 0 32 (builtins.hashString "sha256" "${pin.url}@${pin.ref or ""}");
+          reference =
+            if lib.hasPrefix "sha256:" pin.ref then
+              "${pin.url}@${pin.ref}"
+            else
+              "${pin.url} --version ${pin.ref}";
+        in
+        if lib.hasPrefix "oci://" pin.url then
+          pkgs.runCommand name
+            {
+              nativeBuildInputs = [ pkgs.kubernetes-helm ];
+              outputHashAlgo = "sha256";
+              outputHashMode = "flat";
+              outputHash = pin.sha256;
+              SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+            }
+            ''
+              export HOME="$TMPDIR"
+              mkdir pulled
+              helm pull ${reference} --destination pulled
+              mv pulled/*.tgz "$out"
+            ''
+        else
+          pkgs.fetchurl {
+            inherit name;
+            inherit (pin) url sha256;
+          };
+      validationInputs = pkgs.writeText "homelab-validation-inputs.json" (
+        builtins.toJSON {
+          kubeVersion = lib.head (lib.splitString "+" host.config.services.k3s.package.version);
+          kubernetes = fetchPin pins.kubernetes;
+          kubevirt = fetchPin pins.kubevirt;
+          charts = lib.mapAttrs (_: pin: {
+            archive = fetchPin pin;
+            dependencies = map fetchPin (pin.dependencies or [ ]);
+          }) pins.charts;
+        }
+      );
       source = lib.fileset.toSource {
         root = ../../..;
         fileset = lib.fileset.unions [
@@ -34,13 +83,16 @@
           {
             nativeBuildInputs = [
               python
+              pkgs.kubernetes-helm
               pkgs.kustomize
             ];
+            passthru.inputs = validationInputs;
           }
           (
             prepare
             + ''
-              python components/homelab/validation/validate.py
+              export HOME="$TMPDIR"
+              python components/homelab/validation/validate.py --inputs ${validationInputs}
               touch "$out"
             ''
           );

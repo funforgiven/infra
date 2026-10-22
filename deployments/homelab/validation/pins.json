@@ -1,0 +1,91 @@
+{
+  "kubernetes": {
+    "url": "https://raw.githubusercontent.com/kubernetes/kubernetes/v1.36.4/api/openapi-spec/swagger.json",
+    "sha256": "dcede2063da1d7ad62ecb5af8adb6d7fabd0b52385a7fa0048afb491dac90450"
+  },
+  "kubevirt": {
+    "url": "https://raw.githubusercontent.com/kubevirt/kubevirt/v1.9.0/api/openapi-spec/swagger.json",
+    "sha256": "2c12b9c092941cff4dddabc65567e44a42c70d6b6c8a70d1c2a644f4960743c5"
+  },
+  "charts": {
+    "cert-manager/cert-manager": {
+      "url": "oci://quay.io/jetstack/charts/cert-manager",
+      "ref": "sha256:15c0b46d9006ce8eb9ff14d1bf54d1bbfcc587bb9e24cd9fe186fb8fec56af1f",
+      "sha256": "c27101f3f3e2349fb4a9e704316105bf7b52ad73b8c8257d3498ef7f2f6a4adc"
+    },
+    "cnpg-system/barman-cloud": {
+      "url": "https://codeload.github.com/cloudnative-pg/charts/tar.gz/b111f4a8eddc6c66bd61524e3bf0ec06387b78ab",
+      "ref": "b111f4a8eddc6c66bd61524e3bf0ec06387b78ab",
+      "sha256": "4288c4fd3dab2776164591c2983424e9050373b37fb18ad97be83dd86a23852b"
+    },
+    "cnpg-system/cloudnative-pg": {
+      "url": "https://codeload.github.com/cloudnative-pg/charts/tar.gz/d1b5ad60cee2d9432a9cc05627b42a8d8dc7bbae",
+      "ref": "d1b5ad60cee2d9432a9cc05627b42a8d8dc7bbae",
+      "sha256": "3018d417ca9ed4a55ac703cafcad5eb220e014b33ab6e11a9403301172912227",
+      "dependencies": [
+        {
+          "url": "https://github.com/cloudnative-pg/grafana-dashboards/releases/download/cluster-v0.0.5/cluster-0.0.5.tgz",
+          "ref": "0.0.5",
+          "sha256": "6a464dac4267bb1a3699c08ef3ecf17ad5d5b77ed7b717e36282a6ac0d3d73dd"
+        }
+      ]
+    },
+    "envoy-gateway-system/envoy-gateway": {
+      "url": "oci://docker.io/envoyproxy/gateway-helm",
+      "ref": "sha256:cfb34ff4266c87a394cd6be5c13607a2dd47083aef771368302eaeaa99c4a0a9",
+      "sha256": "4bb4e46f4d13d234b0ce785bee691c821b39ebd6884d80bdd69205bea9939d71"
+    },
+    "identity/zitadel": {
+      "url": "https://codeload.github.com/zitadel/zitadel-charts/tar.gz/b05bb603b2ffd0b3284a4b37bad613871bfed94a",
+      "ref": "b05bb603b2ffd0b3284a4b37bad613871bfed94a",
+      "sha256": "40b605788f0edf39e987d8328314a697c1bb7449b5f113ae94df4d7f6e3f1c14",
+      "dependencies": [
+        {
+          "url": "oci://registry-1.docker.io/bitnamicharts/postgresql",
+          "ref": "18.5.13",
+          "sha256": "af98a8b6eb66e42add4c6e27d723ed843ff8ea838b9e870ebc199e3723055b10"
+        }
+      ]
+    },
+    "kube-system/cilium": {
+      "url": "oci://quay.io/cilium/charts/cilium",
+      "ref": "sha256:a7c12d330dd96bfcda3bf057b24be8f36566c34868265f930f776dff6f42d838",
+      "sha256": "b2afd87b7f75f875f92a14559f14f59b7babbb479d968e3fd625a20bf30ec20e"
+    },
+    "netbird-routing/netbird-operator": {
+      "url": "https://codeload.github.com/netbirdio/kubernetes-operator/tar.gz/41d995671f55d790a4f4e1c37da8c9e41a36abee",
+      "ref": "41d995671f55d790a4f4e1c37da8c9e41a36abee",
+      "sha256": "a7e1523a5ad37f6383afbb8b3edc2b63dacd16e21e25810f8f4d2a4d8388dbbe"
+    },
+    "rook-ceph/ceph-csi-drivers": {
+      "url": "https://codeload.github.com/ceph/ceph-csi-operator/tar.gz/29a66b683aa8873001c729b7b120e18604cdb445",
+      "ref": "29a66b683aa8873001c729b7b120e18604cdb445",
+      "sha256": "83741558073367e05dad5594bd8daeafef728fe14dca83c84ce2ba10824ba9ad"
+    },
+    "rook-ceph/rook-ceph": {
+      "url": "oci://registry-1.docker.io/rook/rook-ceph",
+      "ref": "sha256:df8ebccb66165ff92aedf035cac9cd07eda9a44b92cb8f7f7570a7d7b5f19d84",
+      "sha256": "95bd3966bcf36b383b88e1996132642057e8fe4bc133b9681092c4ddec4dd0b2"
+    },
+    "services-observability/fluent-bit-collector": {
+      "url": "oci://ghcr.io/fluent/helm-charts/fluent-bit-collector",
+      "ref": "sha256:123bfa44d8402367138b3ba39d16e74c5fead51a68daad8082388618115aba92",
+      "sha256": "27ade6f7f57a414d0c3166ceeb4d8f5094630a917a6f5e6eb7de14903015753e"
+    },
+    "services-observability/kube-prometheus-stack": {
+      "url": "oci://ghcr.io/prometheus-community/charts/kube-prometheus-stack",
+      "ref": "sha256:db4805aa51d6566e6b628d71a6445be8a81ecd49701b99928c1a4cffc4132c1a",
+      "sha256": "0998b3fae8660cd9ea224caa1c7c4b5d2040d5a02c64e3cdfd3f48d184b50117"
+    },
+    "services-observability/loki": {
+      "url": "oci://ghcr.io/grafana-community/helm-charts/loki",
+      "ref": "sha256:7b785f8096f1eb03499d958280d65c634d6ecb5d9942a14d5302d7517d4c9fc4",
+      "sha256": "066756e9541507b665da700f3cf489cb990a9fab17b735845a60138a8e5c35fc"
+    },
+    "velero/velero": {
+      "url": "https://github.com/vmware-tanzu/helm-charts/releases/download/velero-12.1.0/velero-12.1.0.tgz",
+      "ref": "12.1.0",
+      "sha256": "cd23589ad1b2d25cdd3220f6866b3f6f4c5683c4c09494e76a14700b33f81f83"
+    }
+  }
+}
