@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Enroll individual agent web sessions for private Forgejo Actions evidence.
 
-Run from the infrastructure development shell as the workstation owner.
+Run `nix run .#forge-enroll-agent-sessions` from the repository root as the
+workstation owner.
 Passwords stay in SOPS and memory. API operations retain repository-scoped PATs;
 these account-scoped sessions are used only by the fixed-repository evidence CLI.
 """
@@ -11,13 +12,11 @@ from html.parser import HTMLParser
 import json
 import os
 from pathlib import Path
-import sys
 import tempfile
 
 import requests
 
-sys.path.insert(0, str(Path.cwd() / "components/homelab/operations"))
-from encrypted_inputs import decrypt, values  # noqa: E402
+from encrypted_inputs import decrypt, values
 
 URL = "https://git.fahrican.com"
 REPOSITORY = "funforgiven/atollion"

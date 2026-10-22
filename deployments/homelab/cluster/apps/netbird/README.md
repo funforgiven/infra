@@ -70,10 +70,10 @@ SOPS-encrypted `server/runtime.sops.yaml` (database password, store
 encryption key, cookie key, relay secret) and `server/backup.sops.yaml`.
 
 The weekly `postgres-restore-test` CronJob in the isolated `netbird-restore`
-namespace recovers the archive into a disposable cluster with no WAL archiver,
-checks accounts, groups, DNS, the identity connector, signing keys, the event
-schema and that the default policy is disabled, then deletes it. Never point a
-test cluster's archiver at the production prefix.
+namespace (shared `components/homelab/cnpg-restore-test`, assertions in
+`server/restore-test/check.sql`) recovers the archive into a disposable cluster
+with no WAL archiver, runs the checks, then deletes it. Never point a test
+cluster's archiver at the production prefix.
 
 A start from an empty database (no archive) means a new NetBird deployment:
 every device re-enrolls. Its one-off setup tooling is in Git history.

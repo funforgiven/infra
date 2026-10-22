@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 """Enroll the private Actions test repository and least-scope CI credentials.
 
-Requires the infrastructure development shell. API responses and plaintext
-credentials stay in memory; only encrypted Kubernetes Secrets are persisted.
+Run `nix run .#forge-enroll-runners` from the repository root. API responses and
+plaintext credentials stay in memory; only encrypted Kubernetes Secrets are
+persisted.
 """
 
+import argparse
 import base64
 import json
 from pathlib import Path
 import secrets
 import subprocess
-import sys
 
 import requests
 
-sys.path.insert(0, str(Path.cwd() / "components/homelab/operations"))
-from encrypted_inputs import decrypt, save, secret  # noqa: E402
+from encrypted_inputs import decrypt, save, secret
 
 ROOT = Path("deployments/homelab/cluster/apps/forge")
 BASE = "https://git.fahrican.com/api/v1"
@@ -29,6 +29,7 @@ def call(session, method, path, body=None, expected=(200, 201, 204)):
 
 
 def main():
+    argparse.ArgumentParser(description=__doc__).parse_args()
     runtime = decrypt(ROOT / "runtime.sops.yaml")[0]
     values = runtime["stringData"]
     admin = requests.Session()

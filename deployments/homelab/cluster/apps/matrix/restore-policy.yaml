@@ -1,6 +1,6 @@
 # The drill's verifier reads the restored relay crypto store: it never gets
 # network access, whatever NetworkPolicy allows. Only the CloudNativePG restore
-# test is exempt; it has its own allowlist in restore-test.yaml.
+# test is exempt; it has its own allowlist in components/homelab/cnpg-restore-test.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:

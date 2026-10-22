@@ -1,10 +1,11 @@
-# Weekly recovery of the production Barman archive into the isolated
-# matrix-restore namespace. Same pattern for every CloudNativePG database.
+# Weekly recovery of a production Barman archive into the app's isolated
+# <app>-restore namespace. Every value marked "set by the overlay" comes from the
+# overlay's local postgres-restore-test-values ConfigMap (see kustomization.yaml).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: default-deny
-  namespace: matrix-restore
+  namespace: restore
 spec:
   podSelector: {}
   policyTypes:
@@ -15,7 +16,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: restore-test
-  namespace: matrix-restore
+  namespace: restore
 spec:
   podSelector:
     matchLabels:
@@ -43,7 +44,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: restore-cluster
-  namespace: matrix-restore
+  namespace: restore
 spec:
   podSelector:
     matchLabels:
@@ -95,10 +96,10 @@ apiVersion: barmancloud.cnpg.io/v1
 kind: ObjectStore
 metadata:
   name: source
-  namespace: matrix-restore
+  namespace: restore
 spec:
   configuration:
-    destinationPath: s3://fahrican-cloud-recovery/services/kubernetes/plugins/matrix/postgresql/
+    destinationPath: set by the overlay
     endpointURL: https://s3.us-west-004.backblazeb2.com
     s3Credentials:
       accessKeyId:
@@ -121,13 +122,13 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: postgres-restore-test
-  namespace: matrix-restore
+  namespace: restore
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: postgres-restore-test
-  namespace: matrix-restore
+  namespace: restore
 rules:
 - apiGroups:
   - postgresql.cnpg.io
@@ -164,7 +165,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: postgres-restore-test
-  namespace: matrix-restore
+  namespace: restore
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -172,20 +173,20 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: postgres-restore-test
-  namespace: matrix-restore
+  namespace: restore
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: postgres-restore-test
-  namespace: matrix
+  namespace: source
 rules:
 - apiGroups:
   - ''
   resources:
   - secrets
   resourceNames:
-  - matrix-backup
+  - set by the overlay
   verbs:
   - get
 ---
@@ -193,7 +194,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: postgres-restore-test
-  namespace: matrix
+  namespace: source
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -201,84 +202,15 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: postgres-restore-test
-  namespace: matrix-restore
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: postgres-restore-test
-  namespace: matrix-restore
-data:
-  run.sh: |
-    #!/bin/sh
-    # Recover the production Barman archive into a disposable cluster, check it and
-    # delete it. The restore cluster has no WAL archiver or backup configuration.
-    set -eu
-    cleanup() {
-      kubectl delete cluster.postgresql.cnpg.io restore --ignore-not-found --wait=true --timeout=10m
-      kubectl delete secret source-credentials --ignore-not-found
-    }
-    trap cleanup EXIT
-    cleanup
-    kubectl -n "$SOURCE_NAMESPACE" get secret "$SOURCE_SECRET" -o json |
-      jq '{apiVersion, kind, type, data, metadata: {name: "source-credentials"}}' |
-      kubectl create -f -
-    kubectl create -f /restore/cluster.yaml
-    kubectl wait cluster.postgresql.cnpg.io/restore --for=condition=Ready --timeout=60m
-    primary="$(kubectl get cluster.postgresql.cnpg.io restore -o jsonpath='{.status.currentPrimary}')"
-    kubectl exec -i "$primary" -c postgres -- psql -X -q -v ON_ERROR_STOP=1 -f - </restore/check.sql
-    echo "Recovered $SOURCE_NAMESPACE PostgreSQL passed its checks"
-  cluster.yaml: |
-    apiVersion: postgresql.cnpg.io/v1
-    kind: Cluster
-    metadata:
-      name: restore
-      namespace: matrix-restore
-    spec:
-      instances: 1
-      imageName: ghcr.io/cloudnative-pg/postgresql:18.4-standard-trixie@sha256:f0cc49632b5cc1e51f65ba03658c89bd31d64ea2672b14843a808a8d281417e1
-      bootstrap:
-        recovery:
-          source: source
-      externalClusters:
-      - name: source
-        plugin:
-          name: barman-cloud.cloudnative-pg.io
-          parameters:
-            barmanObjectName: source
-            serverName: matrix-postgres
-      storage:
-        storageClass: ceph-block
-        size: 20Gi
-      resources:
-        requests:
-          cpu: 100m
-          memory: 256Mi
-        limits:
-          memory: 1Gi
-  check.sql: |
-    \connect synapse
-    DO $$
-    BEGIN
-      IF NOT EXISTS (SELECT 1 FROM users) OR NOT EXISTS (SELECT 1 FROM events) THEN
-        RAISE EXCEPTION 'Synapse accounts or events missing';
-      END IF;
-    END $$;
-    \connect mas
-    DO $$
-    BEGIN
-      IF NOT EXISTS (SELECT 1 FROM users) OR NOT EXISTS (SELECT 1 FROM upstream_oauth_providers) THEN
-        RAISE EXCEPTION 'MAS accounts or identity provider missing';
-      END IF;
-    END $$;
+  namespace: restore
 ---
 apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: postgres-restore-test
-  namespace: matrix-restore
+  namespace: restore
 spec:
-  schedule: 32 5 * * 0
+  schedule: set by the overlay
   timeZone: Europe/Istanbul
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
@@ -310,9 +242,13 @@ spec:
             - name: HOME
               value: /tmp
             - name: SOURCE_NAMESPACE
-              value: matrix
+              value: set by the overlay
             - name: SOURCE_SECRET
-              value: matrix-backup
+              value: set by the overlay
+            - name: SERVER_NAME
+              value: set by the overlay
+            - name: STORAGE_SIZE
+              value: set by the overlay
             volumeMounts:
             - name: restore
               mountPath: /restore
@@ -333,8 +269,12 @@ spec:
                 memory: 256Mi
           volumes:
           - name: restore
-            configMap:
-              name: postgres-restore-test
+            projected:
+              sources:
+              - configMap:
+                  name: postgres-restore-test
+              - configMap:
+                  name: postgres-restore-test-check
           - name: tmp
             emptyDir: {}
 ---
@@ -342,16 +282,17 @@ apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: postgres-restore-test
-  namespace: matrix-restore
+  namespace: restore
 spec:
   groups:
   - name: postgres-restore-test
     rules:
     - alert: PostgresRestoreTestStale
-      expr: time() - (kube_cronjob_status_last_successful_time{namespace="matrix-restore",cronjob="postgres-restore-test"}
-        or kube_cronjob_created{namespace="matrix-restore",cronjob="postgres-restore-test"}) > 1209600
+      expr: time() - (kube_cronjob_status_last_successful_time{namespace="restore",cronjob="postgres-restore-test"}
+        or kube_cronjob_created{namespace="restore",cronjob="postgres-restore-test"}) > 1209600
       for: 1h
       labels:
         severity: critical
       annotations:
-        summary: The Matrix PostgreSQL archive has not been restored successfully for 14 days
+        summary: The {{ $labels.namespace }} PostgreSQL archive has not been restored successfully for 14 days
+

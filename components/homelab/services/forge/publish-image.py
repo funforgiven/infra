@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Publish a Nix-built forge image to the Forgejo registry without disk auth files.
+"""Publish a Nix-built image to the Forgejo registry without disk auth files.
 
 The destination is the archive's own repository tag, so the Nix expression is
-the single source of the image name and version:
+the single source of the image name and version. Pin the printed digest in the
+consuming manifests:
 
-    nix build .#forge-cache-image && components/homelab/services/forge/publish-image.py result
+    nix build .#forge-cache-image && nix run .#publish-image -- result
 """
 
 import argparse
@@ -14,11 +15,9 @@ import os
 from pathlib import Path
 import re
 import subprocess
-import sys
 import tarfile
 
-sys.path.insert(0, str(Path.cwd() / "components/homelab/operations"))
-from encrypted_inputs import decrypt, values  # noqa: E402
+from encrypted_inputs import decrypt, values
 
 
 def destination(image):

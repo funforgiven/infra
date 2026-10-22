@@ -61,14 +61,13 @@ _: {
       packages.matrix-runtime-image = image;
       packages.matrix-python = python;
       apps.matrix-admin = {
-        meta.description = "Enroll devices, cut over alerting and publish the Matrix image";
+        meta.description = "Enroll devices and cut over Matrix alerting";
         program = "${
           pkgs.writeShellApplication {
             name = "matrix-admin";
             runtimeInputs = [
               pkgs.kubectl
               pkgs.sops
-              pkgs.skopeo
               pkgs.gitMinimal
             ];
             text = ''

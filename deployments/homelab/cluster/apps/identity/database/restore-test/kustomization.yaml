@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- values.yaml
+components:
+- ../../../../../../../components/homelab/cnpg-restore-test
+configMapGenerator:
+- name: postgres-restore-test-check
+  namespace: identity-restore
+  files:
+  - check.sql
+  options:
+    disableNameSuffixHash: true

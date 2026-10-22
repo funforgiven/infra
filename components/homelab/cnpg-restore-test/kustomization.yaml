@@ -1,0 +1,105 @@
+# Shared weekly CloudNativePG restore test. An app overlay includes this
+# component and supplies:
+# - a local-only ConfigMap postgres-restore-test-values (annotated
+#   config.kubernetes.io/local-config) with the keys namespace, sourceNamespace,
+#   sourceSecret, destinationPath, serverName, storageSize and schedule;
+# - a ConfigMap postgres-restore-test-check in the restore namespace holding
+#   check.sql, the app's assertions against the recovered databases.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+- resources.yaml
+configMapGenerator:
+- name: postgres-restore-test
+  namespace: restore
+  files:
+  - run.sh
+  - cluster.json
+  options:
+    disableNameSuffixHash: true
+replacements:
+- source: &values
+    kind: ConfigMap
+    name: postgres-restore-test-values
+    fieldPath: data.destinationPath
+  targets:
+  - select:
+      kind: ObjectStore
+      name: source
+    fieldPaths:
+    - spec.configuration.destinationPath
+- source:
+    <<: *values
+    fieldPath: data.schedule
+  targets:
+  - select:
+      kind: CronJob
+    fieldPaths:
+    - spec.schedule
+- source:
+    <<: *values
+    fieldPath: data.sourceSecret
+  targets:
+  - select:
+      kind: Role
+      namespace: source
+    fieldPaths:
+    - rules.0.resourceNames.0
+  - select:
+      kind: CronJob
+    fieldPaths:
+    - spec.jobTemplate.spec.template.spec.containers.[name=restore].env.[name=SOURCE_SECRET].value
+- source:
+    <<: *values
+    fieldPath: data.serverName
+  targets:
+  - select:
+      kind: CronJob
+    fieldPaths:
+    - spec.jobTemplate.spec.template.spec.containers.[name=restore].env.[name=SERVER_NAME].value
+- source:
+    <<: *values
+    fieldPath: data.storageSize
+  targets:
+  - select:
+      kind: CronJob
+    fieldPaths:
+    - spec.jobTemplate.spec.template.spec.containers.[name=restore].env.[name=STORAGE_SIZE].value
+- source:
+    <<: *values
+    fieldPath: data.sourceNamespace
+  targets:
+  - select:
+      kind: CronJob
+    fieldPaths:
+    - spec.jobTemplate.spec.template.spec.containers.[name=restore].env.[name=SOURCE_NAMESPACE].value
+  - select:
+      namespace: source
+    fieldPaths:
+    - metadata.namespace
+- source:
+    <<: *values
+    fieldPath: data.namespace
+  targets:
+  - select:
+      kind: RoleBinding
+    fieldPaths:
+    - subjects.0.namespace
+  - select:
+      kind: PrometheusRule
+    fieldPaths:
+    - spec.groups.0.rules.0.expr
+    options:
+      delimiter: '"'
+      index: 1
+  - select:
+      kind: PrometheusRule
+    fieldPaths:
+    - spec.groups.0.rules.0.expr
+    options:
+      delimiter: '"'
+      index: 5
+  - select:
+      namespace: restore
+    fieldPaths:
+    - metadata.namespace

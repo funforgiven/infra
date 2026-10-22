@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-restore-test-values
+  annotations:
+    config.kubernetes.io/local-config: "true"
+data:
+  namespace: matrix-restore
+  sourceNamespace: matrix
+  sourceSecret: matrix-backup
+  destinationPath: s3://fahrican-cloud-recovery/services/kubernetes/plugins/matrix/postgresql/
+  serverName: matrix-postgres
+  storageSize: 20Gi
+  schedule: 32 5 * * 0

@@ -13,7 +13,7 @@ resources:
 - database.sops.yaml
 - database.yaml
 - backup.yaml
-- restore-test.yaml
+- restore-test
 - email.sops.yaml
 - restore.yaml
 - registry.sops.yaml

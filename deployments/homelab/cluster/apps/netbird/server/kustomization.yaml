@@ -11,4 +11,4 @@ resources:
 - runtime.sops.yaml
 - backup.sops.yaml
 - credentials-monitoring.yaml
-- restore-test.yaml
+- restore-test

@@ -59,6 +59,8 @@ delivery, run `qualify --mobile-and-recovery-checked` from outside the LAN,
 
 `nix build .#matrix-runtime-image` builds the one image every workload uses;
 `nix run .#matrix-qualify-local` runs a disposable end-to-end test. After a
-passing test, `matrix-admin publish-image` pushes it, pins the digest in
-`kustomization.yaml` and renders the pull secret for `matrix` and
-`matrix-restore`.
+passing test, `nix run .#publish-image -- result` pushes it; pin the printed
+digest in `kustomization.yaml`. The `matrix-registry` pull secrets
+(`registry.sops.yaml` for `matrix`, `registry-restore.sops.yaml` for
+`matrix-restore`) hold a `forge-runner` registry login; change them with
+`sops edit` when that credential rotates.

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Enroll, cut over and publish the closed Matrix deployment without printing secrets."""
+"""Enroll and cut over the closed Matrix deployment without printing secrets."""
 
 import argparse
 import asyncio
-import base64
 import hashlib
 import json
 import os
@@ -546,78 +545,6 @@ def retire_telegram():
     )
 
 
-def publish(args):
-    credentials = load_secret(
-        Path("deployments/homelab/cluster/apps/forge/runtime.sops.yaml")
-    )["stringData"]
-    authentication = base64.b64encode(
-        ("forge-runner:" + credentials["forgejo-runner-password"]).encode()
-    ).decode()
-    fd = os.memfd_create("matrix-registry", os.MFD_CLOEXEC)
-    destination = "git.fahrican.com/forge-runner/matrix-runtime:1.0.0"
-    try:
-        auth = {"auths": {"git.fahrican.com": {"auth": authentication}}}
-        os.write(fd, json.dumps(auth).encode())
-        os.lseek(fd, 0, os.SEEK_SET)
-        runargs = [
-            "skopeo",
-            "copy",
-            "--quiet",
-            "--dest-authfile",
-            f"/proc/self/fd/{fd}",
-            "docker-archive:" + str(args.image),
-            "docker://" + destination,
-        ]
-        subprocess.run(runargs, pass_fds=(fd,), capture_output=True, check=True)
-        result = subprocess.run(
-            [
-                "skopeo",
-                "inspect",
-                "--authfile",
-                f"/proc/self/fd/{fd}",
-                "--format",
-                "{{.Digest}}",
-                "docker://" + destination,
-            ],
-            pass_fds=(fd,),
-            capture_output=True,
-            check=True,
-        )
-        digest = result.stdout.decode().strip()
-        if not re.fullmatch("sha256:[a-f0-9]{64}", digest):
-            raise ValueError("invalid published image digest")
-        kfile = DEPLOYMENT / "kustomization.yaml"
-        k = yaml.safe_load(kfile.read_text())
-        k["images"] = [
-            {
-                "name": destination.split(":")[0],
-                "newName": destination.split(":")[0],
-                "digest": digest,
-            }
-        ]
-        kfile.write_text(yaml.safe_dump(k, sort_keys=False))
-        registry_secret = secret(
-            "matrix-registry", "matrix", {".dockerconfigjson": json.dumps(auth)}
-        )
-        registry_secret["type"] = "kubernetes.io/dockerconfigjson"
-        save_secret(DEPLOYMENT / "registry.sops.yaml", registry_secret)
-        restore_registry = secret(
-            "matrix-registry",
-            "matrix-restore",
-            {".dockerconfigjson": json.dumps(auth)},
-        )
-        restore_registry["type"] = "kubernetes.io/dockerconfigjson"
-        save_secret(DEPLOYMENT / "registry-restore.sops.yaml", restore_registry)
-        if "registry.sops.yaml" not in k["resources"]:
-            k["resources"].append("registry.sops.yaml")
-        if "registry-restore.sops.yaml" not in k["resources"]:
-            k["resources"].append("registry-restore.sops.yaml")
-        kfile.write_text(yaml.safe_dump(k, sort_keys=False))
-        print("Published and pinned " + destination + "@" + digest)
-    finally:
-        os.close(fd)
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -632,8 +559,6 @@ def main():
     alerting = sub.add_parser("configure-alerting")
     alerting.add_argument("--host", action="append", default=[])
     alerting.add_argument("--phase", choices=["dual", "matrix"], default="dual")
-    publication = sub.add_parser("publish-image")
-    publication.add_argument("image", type=Path)
     sub.add_parser(
         "enroll-monitoring",
         help="pipe `nix run .#tofu -- mail-aws output -json` to stdin",
@@ -657,8 +582,6 @@ def main():
         approve_device(args)
     elif args.command == "configure-alerting":
         configure_alerting(args)
-    elif args.command == "publish-image":
-        publish(args)
     elif args.command == "enroll-monitoring":
         enroll_monitoring(json.load(sys.stdin))
     elif args.command == "qualify":

@@ -64,8 +64,8 @@ each item when it is done, and this file when it is empty.
   cloud-init; restart it once (KubeVirt marks it `RestartRequired`) so the
   scripts install on boot.
 - **Matrix restore pull secret.** `apps/matrix/registry-restore.sops.yaml`
-  still names namespace `backup-qualification`; re-encrypt it for
-  `matrix-restore` (or re-run `matrix-admin publish-image`), or the Matrix
+  still names namespace `backup-qualification`; change its
+  `metadata.namespace` to `matrix-restore` with `sops edit`, or the Matrix
   verifier cannot pull its image.
 - **Forgejo** is `OnDelete`: delete its pod once to drop the removed backup
   sidecar.

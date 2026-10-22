@@ -32,21 +32,21 @@
   their own caches and the protected-main baseline, but can write neither the
   baseline nor another PR's caches. The cache is disposable and not backed up.
 - Images are built by Nix (`forge-linux-runner-image`, `forge-cache-image`) and
-  published with `components/homelab/services/forge/publish-image.py result`.
-  Pin the printed digest in the manifests.
+  published with `nix run .#publish-image -- result`, which pushes to the tag
+  baked into the archive. Pin the printed digest in the manifests.
 - `components/homelab/services/forge/qualification.yaml` is the workflow
   committed to `forge-runner/runner-qualification`.
 - Drain one node at a time after checking etcd/Ceph quorum and capacity. Let
   builds finish or cancel them, then suspend both launcher CronJobs. Never
   delete data or cache PVCs to unblock a drain. Resume and check a cached build.
 
-## Credentials (manual, from the dev shell)
+## Credentials (manual, `nix run .#<app>` from the repository root)
 
-- `enroll.py` creates Forgejo's local secrets. The OIDC client comes from
+- `forge-enroll` creates Forgejo's local secrets. The OIDC client comes from
   `nix run .#tofu -- identity output -json | nix run .#identity-credentials`.
-- `enroll-runners.py` creates the `forge-runner` account, the qualification
+- `forge-enroll-runners` creates the `forge-runner` account, the qualification
   repository and the scoped runner/registry tokens.
-- `enroll-agent-sessions.py` renews the Atollion agents' web sessions.
+- `forge-enroll-agent-sessions` renews the Atollion agents' web sessions.
 
 Plaintext stays in pipes; only SOPS ciphertext is written.
 

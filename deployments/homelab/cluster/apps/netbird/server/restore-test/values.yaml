@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-restore-test-values
+  annotations:
+    config.kubernetes.io/local-config: "true"
+data:
+  namespace: netbird-restore
+  sourceNamespace: netbird
+  sourceSecret: netbird-backup
+  destinationPath: s3://fahrican-cloud-recovery/services/kubernetes/plugins/netbird/postgresql/nixos-v1/
+  serverName: netbird-postgres
+  storageSize: 16Gi
+  schedule: 47 4 * * 0
