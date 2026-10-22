@@ -86,6 +86,16 @@ def require_inventory_copies(inventory,objects):
     nodes={d["metadata"]["name"]:d["metadata"].get("annotations",{}).get("network.rook.io/mon-ip") for d in objects.values() if d["kind"]=="Node"}
     if nodes!={name:host["ceph"] for name,host in hosts.items()}:raise ValueError("Ceph monitor addresses differ from the inventory")
 
+def require_shared_workload_health(waves):
+    """HelmRelease waits must judge workloads exactly as the stage health checks do."""
+    for wave in waves:
+        stage={(e["apiVersion"],e["kind"]):e for e in wave["spec"].get("healthCheckExprs",[])}
+        patches=[p for p in wave["spec"].get("patches",[]) if p.get("target",{}).get("kind")=="HelmRelease"]
+        if len(patches)!=1:raise ValueError(wave["metadata"]["name"]+": stage must patch HelmRelease health checks once")
+        for expression in yaml.safe_load(patches[0]["patch"])[0]["value"]:
+            if stage.get((expression["apiVersion"],expression["kind"]))!=expression:
+                raise ValueError(wave["metadata"]["name"]+": HelmRelease health for "+expression["kind"]+" differs from the stage check")
+
 def require_recovery_hold(waves,recovery):
     """Every stage labelled for recovery hold must be suspended by the overlay."""
     label,value=RECOVERY_HOLD
@@ -145,6 +155,7 @@ def validate(root,kustomize,helm_cache=None,decrypt=False,helm="helm"):
         path=(root/wave["spec"]["path"]).resolve()
         if not path.is_relative_to(root.resolve()) or not (path/"kustomization.yaml").is_file():raise ValueError("Invalid Flux path")
     require_recovery_hold(waves,render(kustomize,root/"deployments/homelab/recovery"))
+    require_shared_workload_health(waves)
     storage={d["metadata"]["name"] for d in all_objects.values() if d["kind"]=="StorageClass"}
     def inspect(value):
         if isinstance(value,dict):

@@ -23,6 +23,39 @@ patches:
         provider: sops
         secretRef:
           name: sops-age
+      # HelmReleases wait with the same one-node-lost rules for their workloads;
+      # validate.py keeps these copies identical to the stage expressions.
+      patches:
+      - target:
+          group: helm.toolkit.fluxcd.io
+          kind: HelmRelease
+        patch: |
+          - op: add
+            path: /spec/healthCheckExprs
+            value:
+            - apiVersion: apps/v1
+              kind: Deployment
+              current: >-
+                has(status.observedGeneration) && status.observedGeneration == metadata.generation &&
+                (spec.replicas == 0 || (has(status.replicas) && has(status.updatedReplicas) && has(status.availableReplicas) &&
+                status.updatedReplicas == spec.replicas && status.replicas == status.updatedReplicas &&
+                status.availableReplicas >= (spec.replicas > 1 ? spec.replicas - 1 : 1)))
+            - apiVersion: apps/v1
+              kind: StatefulSet
+              current: >-
+                has(status.observedGeneration) && status.observedGeneration == metadata.generation &&
+                (spec.replicas == 0 || (has(status.availableReplicas) &&
+                status.availableReplicas >= (spec.replicas > 1 ? spec.replicas - 1 : 1) &&
+                (spec.updateStrategy.type == 'OnDelete' || (has(status.updatedReplicas) &&
+                has(status.currentRevision) && has(status.updateRevision) &&
+                status.updatedReplicas == spec.replicas && status.currentRevision == status.updateRevision))))
+            - apiVersion: apps/v1
+              kind: DaemonSet
+              current: >-
+                has(status.observedGeneration) && status.observedGeneration == metadata.generation &&
+                (status.desiredNumberScheduled == 0 || (has(status.numberAvailable) && has(status.updatedNumberScheduled) &&
+                status.updatedNumberScheduled >= status.desiredNumberScheduled &&
+                status.numberAvailable >= (status.desiredNumberScheduled > 1 ? status.desiredNumberScheduled - 1 : 1)))
       # Health means serving with one node lost: replicated workloads may run one
       # replica short, Ceph may warn, and single-replica workloads must be up.
       healthCheckExprs:
