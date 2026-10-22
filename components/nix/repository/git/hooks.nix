@@ -7,8 +7,6 @@
     flake = false;
   };
 
-  git.ignore = [ "/.pre-commit-config.yaml" ];
-
   perSystem =
     { config, ... }:
     {

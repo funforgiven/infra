@@ -17,13 +17,11 @@ NetBird) are managed by separate OpenTofu roots run from the workstation.
 - `docs/`: [architecture](docs/ARCHITECTURE.md).
 - `secrets/`: SOPS ciphertext and secret recovery instructions.
 
-`outputs.nix` loads every Nix module below `components/nix/`. Edit generated
-`flake.nix`, `.gitignore`, `README.md`, `LICENSE` and `THIRD_PARTY_NOTICES.md`
-through their Nix sources, then run:
+`outputs.nix` loads every Nix module below `components/nix/`. `flake.nix` is
+generated from the inputs those modules declare; after changing an input, run:
 
 ```sh
 nix run .#write-flake --accept-flake-config
-nix run .#write-files --accept-flake-config
 ```
 
 ## Local validation

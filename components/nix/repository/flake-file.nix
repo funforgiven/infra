@@ -26,11 +26,6 @@ in
 
       flake-file.url = "github:denful/flake-file";
 
-      files = {
-        url = "github:mightyiam/files";
-        flake = false;
-      };
-
       flake-parts = {
         url = "github:hercules-ci/flake-parts";
         inputs.nixpkgs-lib.follows = "nixpkgs";

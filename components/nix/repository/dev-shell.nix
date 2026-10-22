@@ -16,7 +16,6 @@ _: {
       config = {
         devShells.default = pkgs.mkShellNoCC {
           packages = [
-            config.files.writer.drv
             config.treefmt.build.wrapper
             pkgs.age
             pkgs.gitMinimal

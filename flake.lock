@@ -88,22 +88,6 @@
         "type": "github"
       }
     },
-    "files": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1790794605,
-        "narHash": "sha256-B3ALSvXErcALgwbMnocwwpOUjdFpcVmV65Cm2F0kMnw=",
-        "owner": "mightyiam",
-        "repo": "files",
-        "rev": "6263f7d48c7ed439fa59c210bc6cdd34e4042068",
-        "type": "github"
-      },
-      "original": {
-        "owner": "mightyiam",
-        "repo": "files",
-        "type": "github"
-      }
-    },
     "firefox-gnome-theme": {
       "flake": false,
       "locked": {
@@ -495,7 +479,6 @@
     "root": {
       "inputs": {
         "disko": "disko",
-        "files": "files",
         "flake-file": "flake-file",
         "flake-parts": "flake-parts",
         "git-hooks": "git-hooks",

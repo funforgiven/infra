@@ -60,8 +60,8 @@
             prepare
             + ''
               python -m compileall -q components/homelab deployments/homelab/cluster
-              for folder in validation operations network-automation services/forge services/valheim services/home-automation services/unifi services/mail-aws services/netbird services/matrix; do
-                python -m unittest discover -s "components/homelab/$folder/tests" -p 'test_*.py'
+              for folder in $(find components/homelab deployments/homelab -type d -name tests); do
+                python -m unittest discover -s "$folder" -p 'test_*.py'
               done
               touch "$out"
             ''
