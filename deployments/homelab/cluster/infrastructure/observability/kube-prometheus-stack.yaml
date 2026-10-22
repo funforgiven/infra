@@ -74,6 +74,12 @@ spec:
         hostPath: /var/lib/node_exporter/textfile
         mountPath: /host/textfile
         readOnly: true
+      # A lost node's pending pod holds one unavailable slot; keep rollouts
+      # moving on the remaining nodes.
+      updateStrategy:
+        type: RollingUpdate
+        rollingUpdate:
+          maxUnavailable: 2
     kube-state-metrics:
       image:
         sha: sha256:85108987d044b18a098126732f98602df408888c0f7d456241f5abefb9744bc1
