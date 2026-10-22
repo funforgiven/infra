@@ -12,13 +12,18 @@ spec:
       app.kubernetes.io/part-of: matrix
       # Barman Cloud is the backup; Velero skips the live data directories.
       velero.io/exclude-from-backup: "true"
+  # This cluster was created empty. To rebuild it from Barman, replace initdb
+  # with `recovery: {source: backup, database: synapse, owner: synapse,
+  # secret: {name: matrix-postgres-synapse}}` (as identity and netbird do).
   bootstrap:
-    recovery:
-      source: backup
+    initdb:
       database: synapse
       owner: synapse
       secret:
         name: matrix-postgres-synapse
+      encoding: UTF8
+      localeCollate: C
+      localeCType: C
   managed:
     roles:
     - name: synapse

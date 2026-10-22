@@ -11,8 +11,10 @@ the workloads that mount the changed keys (`runtime-rollouts.yaml`).
 ## Backups and recovery
 
 PostgreSQL (`synapse` and `mas`) is backed up by Barman Cloud like the other
-CloudNativePG databases, and a recreated `matrix-postgres` recovers from the
-archive automatically. Velero copies only the media and relay volumes.
+CloudNativePG databases. The live cluster was created empty, so rebuilding it
+from the archive means switching `bootstrap` in `database.yaml` from `initdb`
+to `recovery` first (the comment there has the exact stanza). Velero copies
+only the media and relay volumes.
 
 Keep the Flux stage suspended until the database, media and relay state are
 restored. The relay snapshot in `relay/backups` holds the SQLite queue, the
