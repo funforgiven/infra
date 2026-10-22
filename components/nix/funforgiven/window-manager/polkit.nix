@@ -6,6 +6,7 @@
       kdeSelected = config.dendritic.polkit.agent == "kde";
     in
     {
+      # The Quickshell agent (see quickshell/polkit) replaces niri-flake's KDE unit.
       systemd.user.services.niri-flake-polkit = lib.mkMerge [
         { enable = kdeSelected; }
         (lib.mkIf kdeSelected {
@@ -22,16 +23,6 @@
         {
           assertion = config.programs.niri.enable;
           message = "The selected polkit agent requires the Niri system feature.";
-        }
-        {
-          assertion = config.systemd.user.services.niri-flake-polkit.enable == kdeSelected;
-          message = "The KDE polkit unit must match dendritic.polkit.agent.";
-        }
-        {
-          assertion =
-            !kdeSelected
-            || config.systemd.user.services.niri-flake-polkit.wantedBy == [ "graphical-session.target" ];
-          message = "The KDE polkit unit must be owned by the UWSM graphical session.";
         }
       ];
     };

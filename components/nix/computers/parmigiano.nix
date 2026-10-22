@@ -112,8 +112,6 @@ in
           focusAtStartup = false;
         };
       };
-
-      polkit.agent = "kde";
     };
   };
 }

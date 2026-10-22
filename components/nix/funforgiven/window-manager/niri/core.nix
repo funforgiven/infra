@@ -9,11 +9,6 @@ in
 {
   dendritic.nixpkgs.overlays = [ inputs.niri.overlays.niri ];
 
-  homeManager.standaloneModules.niri.imports = [
-    inputs.niri.homeModules.config
-    inputs.niri.homeModules.stylix
-  ];
-
   nixos.modules.niri =
     { pkgs, ... }:
     {

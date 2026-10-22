@@ -30,59 +30,93 @@ _: {
       serverDirectory = "${stateDirectory}/server";
       consoleFifo = "/run/${serviceName}.stdin";
       serverPort = 25565;
-      serverMemory = "10G";
-      serverJavaArgs = "-Xms${serverMemory} -Xmx${serverMemory}";
-      fmlMaxThreads = 1;
-
-      # The modpack remains an external All Rights Reserved runtime download;
-      # neither its archive nor its extracted contents are part of this
-      # repository's MIT-licensed source.
-      pack = {
-        version = "2.8.1";
-        downloadUrl = "https://www.curseforge.com/api/v1/mods/1530020/files/8446077/download";
-        sha256 = "c46ef7d7e5fd4d319e912578de8d5c175330f29e74d24118c3c9ef442b769a42";
-        archiveRoot = "Exo2+create-2.8.1-server";
-        eulaAccepted = true;
-      };
-
       java = pkgs.jdk21_headless;
+
+      # The modpack is an All Rights Reserved download fetched at build time;
+      # neither its archive nor its contents are part of this repository.
+      packVersion = "2.8.1";
+      pack =
+        pkgs.runCommandLocal "exosphere-2-create-server-${packVersion}"
+          {
+            src = pkgs.fetchurl {
+              url = "https://www.curseforge.com/api/v1/mods/1530020/files/8446077/download";
+              name = "exosphere-2-create-server-${packVersion}.zip";
+              sha256 = "c46ef7d7e5fd4d319e912578de8d5c175330f29e74d24118c3c9ef442b769a42";
+            };
+            nativeBuildInputs = [ pkgs.unzip ];
+          }
+          ''
+            unzip -q "$src" 'Exo2+create-${packVersion}-server/*'
+            mv 'Exo2+create-${packVersion}-server' "$out"
+          '';
+
+      # Installs the pack once, then owns only the launcher, network and
+      # startup settings; the world and other pack settings stay mutable.
       prepareServer = pkgs.writeShellApplication {
         name = "${serviceName}-prepare";
         runtimeInputs = [
           pkgs.coreutils
-          pkgs.curl
-          pkgs.unzip
+          pkgs.gawk
         ];
-        text = builtins.readFile ./minecraft/server-prepare.sh;
-      };
-      stopServer = pkgs.writeShellApplication {
-        name = "${serviceName}-stop";
-        runtimeInputs = [ pkgs.coreutils ];
-        text = builtins.readFile ./minecraft/server-stop.sh;
+        text = ''
+          server=${serverDirectory}
+          marker="$server/.nix-managed-pack-version"
+
+          if [[ ! -e $server ]]; then
+            staging=$(mktemp -d "$server.XXXXXX")
+            cp -rT --no-preserve=mode ${pack} "$staging"
+            echo ${packVersion} >"$staging/.nix-managed-pack-version"
+            mv -T "$staging" "$server"
+          elif [[ ! -f $marker || $(<"$marker") != ${packVersion} ]]; then
+            echo "$server is not pack ${packVersion}; back up the world and migrate the pack manually" >&2
+            exit 1
+          fi
+
+          # set_key FILE KEY SEPARATOR VALUE replaces KEY's line or appends it.
+          set_key() {
+            touch "$1"
+            awk -v key="$2" -v line="$2$3$4" '
+              $0 ~ "^[[:space:]]*" key "[[:space:]]*=" { print line; found = 1; next }
+              { print }
+              END { if (!found) print line }
+            ' "$1" >"$1.tmp"
+            mv "$1.tmp" "$1"
+          }
+
+          # systemd owns the lifecycle and supplies the exact Java runtime.
+          set_key "$server/variables.txt" WAIT_FOR_USER_INPUT = false
+          set_key "$server/variables.txt" JAVA = '"${lib.getExe java}"'
+          set_key "$server/variables.txt" JAVA_ARGS = '"-Xms10G -Xmx10G"'
+          set_key "$server/variables.txt" RESTART = false
+          set_key "$server/variables.txt" SKIP_JAVA_CHECK = false
+          set_key "$server/variables.txt" SERVERSTARTERJAR_FORCE_FETCH = false
+
+          # Online mode authenticates players; access is not allowlisted.
+          set_key "$server/server.properties" server-ip = ""
+          set_key "$server/server.properties" server-port = ${toString serverPort}
+          set_key "$server/server.properties" online-mode = true
+          set_key "$server/server.properties" enable-query = false
+          set_key "$server/server.properties" enable-rcon = false
+          set_key "$server/server.properties" white-list = false
+          set_key "$server/server.properties" enforce-whitelist = false
+
+          # Serialize early mod initialization to avoid the pack's Mixin/LibJF deadlock.
+          set_key "$server/config/fml.toml" maxThreads " = " 1
+
+          # Accepting the Minecraft EULA is part of enabling this feature.
+          echo eula=true >"$server/eula.txt"
+        '';
       };
 
-      prepareCommand = lib.escapeShellArgs [
-        (lib.getExe prepareServer)
-        stateDirectory
-        pack.downloadUrl
-        pack.sha256
-        pack.version
-        pack.archiveRoot
-        (lib.boolToString pack.eulaAccepted)
-        (lib.getExe java)
-        serverJavaArgs
-        (toString serverPort)
-        (toString fmlMaxThreads)
-      ];
+      stopServer = pkgs.writeShellScript "${serviceName}-stop" ''
+        echo stop >${consoleFifo}
+        # Let Minecraft finish saving before systemd's final kill phase.
+        while ${pkgs.coreutils}/bin/kill -0 "$1" 2>/dev/null; do
+          ${pkgs.coreutils}/bin/sleep 1
+        done
+      '';
     in
     {
-      assertions = [
-        {
-          assertion = pack.eulaAccepted;
-          message = "Enabling the Minecraft server requires explicit acceptance of the Minecraft EULA.";
-        }
-      ];
-
       users = {
         groups.${serviceUser} = { };
 
@@ -135,12 +169,12 @@ _: {
             StartLimitIntervalSec = "15min";
           };
           serviceConfig = {
-            ExecStartPre = prepareCommand;
+            ExecStartPre = lib.getExe prepareServer;
             ExecStart = lib.escapeShellArgs [
               (lib.getExe pkgs.bash)
               "${serverDirectory}/start.sh"
             ];
-            ExecStop = "${lib.getExe stopServer} ${lib.escapeShellArg consoleFifo} $MAINPID";
+            ExecStop = "${stopServer} $MAINPID";
             Restart = "always";
             RestartSec = "15s";
             TimeoutStartSec = "30min";

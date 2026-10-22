@@ -7,6 +7,7 @@
 
     programs = {
       deadnix.enable = true;
+      nixf-diagnose.enable = true;
       nixfmt.enable = true;
       qmlformat.enable = true;
       statix.enable = true;

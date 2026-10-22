@@ -107,9 +107,8 @@ remaining DankMaterialShell process, unit, startup entry, or environment hook.
 ### Idle overlay and session lifecycle
 
 The overlay activates after two minutes of input inactivity and clears on
-keyboard, pointer or touch input. The
-[desk presence reader](../desk-presence/README.md) is disabled in the Nix
-configuration because the sensor reported presence at an empty desk.
+keyboard, pointer or touch input. A Home Assistant desk-presence trigger was
+removed because the sensor reported presence at an empty desk.
 
 1. Exercise the black overlay on every output, over fullscreen content, after
    hotplug, and with variable refresh enabled.

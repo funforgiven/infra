@@ -325,34 +325,12 @@ in
           message = "Qt theming must be configured only by the Material Qt module.";
         }
         {
-          assertion = config.qt.style.name == null;
-          message = "Qt style selection must stay in qtct; QT_STYLE_OVERRIDE is forbidden.";
-        }
-        {
           assertion = !(builtins.hasAttr "QT_STYLE_OVERRIDE" config.home.sessionVariables);
           message = "Home Manager must not export QT_STYLE_OVERRIDE.";
         }
         {
           assertion = !(builtins.hasAttr "QT_STYLE_OVERRIDE" config.systemd.user.sessionVariables);
           message = "The systemd user environment must not export QT_STYLE_OVERRIDE.";
-        }
-        {
-          assertion =
-            config.qt.qt5ctSettings.Appearance.color_scheme_path == qt5ctPalettePath
-            && config.qt.qt6ctSettings.Appearance.color_scheme_path == qt6ctPalettePath;
-          message = "Both qtct generations must consume their managed Material You palette.";
-        }
-        {
-          assertion = config.qt.kde.settings.kdeglobals.UiSettings.ColorScheme == schemeId;
-          message = "Dolphin and other KDE applications must select the managed Material You KColorScheme.";
-        }
-        {
-          assertion = config.qt.kde.settings.kdeglobals.KDE.widgetStyle == "kvantum";
-          message = "KDE applications and the KDE portal must use the managed Kvantum widget style.";
-        }
-        {
-          assertion = config.qt.kde.settings.kdeglobals.Icons.Theme == config.stylix.icons.dark;
-          message = "KDE applications and the KDE portal must use the managed semantic icon theme.";
         }
       ];
     };

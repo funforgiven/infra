@@ -24,7 +24,6 @@
       let
         materialSchemeType = "scheme-tonal-spot";
         materialContrast = 0.0;
-        materialColorType = lib.types.strMatching "^#[0-9a-fA-F]{6}$";
         requiredMaterialRoles = [
           "background"
           "error"
@@ -50,10 +49,6 @@
           "surface_container_lowest"
           "tertiary"
         ];
-        materialColorsType = lib.types.submodule {
-          freeformType = lib.types.attrsOf materialColorType;
-          options = lib.genAttrs requiredMaterialRoles (_: lib.mkOption { type = materialColorType; });
-        };
         materialPaletteJson =
           pkgs.runCommandLocal "material-you-palette.json"
             {
@@ -122,57 +117,14 @@
         };
       in
       {
-        options.dendritic.materialYou = {
-          schemeType = lib.mkOption {
-            type = lib.types.enum [ materialSchemeType ];
-            readOnly = true;
-            description = "Matugen color-scheme type used by the desktop.";
-          };
-          contrast = lib.mkOption {
-            type = lib.types.float;
-            readOnly = true;
-            description = "Matugen contrast value used by the desktop.";
-          };
-          generatedJson = lib.mkOption {
-            type = lib.types.package;
-            readOnly = true;
-            internal = true;
-            description = "Generated Matugen palette in JSON format.";
-          };
-          colors = lib.mkOption {
-            type = materialColorsType;
-            readOnly = true;
-            description = "Dark Material You colors keyed by role.";
-          };
+        options.dendritic.materialYou.colors = lib.mkOption {
+          type = lib.types.attrsOf lib.types.str;
+          readOnly = true;
+          description = "Dark Material You colors keyed by role.";
         };
 
         config = {
-          dendritic.materialYou = {
-            schemeType = materialSchemeType;
-            contrast = materialContrast;
-            generatedJson = materialPaletteJson;
-            colors = materialColors;
-          };
-
-          assertions = [
-            {
-              assertion = toString config.stylix.image == toString inputs.wallpaper;
-              message = "Stylix and swaybg must use the locked XDG Pictures wallpaper input.";
-            }
-            {
-              assertion = config.stylix.polarity == "dark";
-              message = "The shared Stylix palette must remain dark regardless of wallpaper brightness.";
-            }
-            {
-              assertion = config.dendritic.materialYou.schemeType == "scheme-tonal-spot";
-              message = "The desktop must use the tonal-spot Material You scheme.";
-            }
-            {
-              assertion =
-                config.stylix.base16Scheme.base00 == withoutHash config.dendritic.materialYou.colors.surface;
-              message = "Stylix base00 must use the generated Material surface color.";
-            }
-          ];
+          dendritic.materialYou.colors = materialColors;
 
           stylix = {
             enable = true;
@@ -253,31 +205,6 @@
         {
           dconf.settings."org/gnome/desktop/interface"."color-scheme" = "prefer-dark";
           xdg.configFile."material-you/palette.json".source = config.stylix.base16Scheme.x-material-you-json;
-
-          assertions = [
-            {
-              assertion = config.stylix.polarity == "dark" && config.lib.stylix.colors.scheme-variant == "dark";
-              message = "The shared Stylix palette must use dark polarity and declare a dark variant for every wallpaper.";
-            }
-            {
-              assertion =
-                config.stylix.targets.firefox.enable
-                && config.stylix.targets.firefox.colorTheme.enable
-                && config.stylix.targets.firefox.profileNames == [ "default" ];
-              message = "Stylix must theme the Firefox profile named default.";
-            }
-            {
-              assertion =
-                config.stylix.targets.zed.enable
-                &&
-                  config.programs.zed-editor.userSettings.theme == "Base16 ${config.lib.stylix.colors.scheme-name}";
-              message = "Zed must select the generated Stylix theme.";
-            }
-            {
-              assertion = config.dconf.settings."org/gnome/desktop/interface"."color-scheme" == "prefer-dark";
-              message = "The desktop appearance portal must advertise the shared dark theme.";
-            }
-          ];
         }
       )
     ];

@@ -20,10 +20,6 @@ in
       cfg.commonModule
     ];
 
-    homeManager.standaloneModules.stylix.imports = [
-      inputs.stylix.homeModules.stylix
-    ];
-
     home.gui.imports = [ cfg.commonModule ];
   };
 }

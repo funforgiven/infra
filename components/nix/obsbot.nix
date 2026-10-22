@@ -1,4 +1,5 @@
-_: {
+{ config, lib, ... }:
+{
   nixos.modules.obsbot-tiny3 = {
     services.pipewire.wireplumber.extraConfig."31-obsbot-privacy" = {
       "monitor.alsa.rules" = [
@@ -36,6 +37,18 @@ _: {
       config = {
         dendritic.cameraControllerPackage = controller;
         home.packages = [ controller ];
+      };
+    };
+
+  perSystem =
+    { pkgs, system, ... }:
+    {
+      checks = lib.mkIf (system == config.dendritic.hosts.parmigiano.system) {
+        obsbot-controller = pkgs.runCommandLocal "obsbot-controller-tests" { } ''
+          export PYTHONDONTWRITEBYTECODE=1
+          ${pkgs.python3}/bin/python3 -m unittest discover -s ${./obsbot} -v
+          touch "$out"
+        '';
       };
     };
 }

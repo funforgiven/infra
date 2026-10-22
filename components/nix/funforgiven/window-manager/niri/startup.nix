@@ -1,4 +1,5 @@
-_: {
+{ config, lib, ... }:
+{
   home.gui =
     {
       lib,
@@ -93,6 +94,17 @@ _: {
           description = "Steam";
           command = "${lib.getExe pkgs.steam} -silent";
         };
+      };
+    };
+
+  perSystem =
+    { pkgs, system, ... }:
+    {
+      checks = lib.mkIf (system == config.dendritic.hosts.parmigiano.system) {
+        niri-chat-layout = pkgs.runCommandLocal "niri-chat-layout-check" { } ''
+          ${lib.getExe pkgs.python3} ${./tests/chat-layout.test.py} ${./chat-layout.py}
+          touch "$out"
+        '';
       };
     };
 }

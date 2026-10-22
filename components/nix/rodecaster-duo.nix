@@ -1,4 +1,4 @@
-_:
+{ config, lib, ... }:
 let
   # USB 1 exposes PCM 0 (Main) and PCM 1 (Chat) on the same ALSA card.
   usbId = "USB19f7:0050";
@@ -111,6 +111,19 @@ in
           (endpointRule expandedUsbId "HiFi: Mic: source" "Chat Capture")
           (endpointRule expandedUsbId "HiFi: Line4: source" "Main Capture")
         ];
+      };
+    };
+
+  perSystem =
+    { pkgs, system, ... }:
+    {
+      checks = lib.mkIf (system == config.dendritic.hosts.parmigiano.system) {
+        rodecaster-duo-ucm = pkgs.runCommandLocal "rodecaster-duo-ucm-check" { } ''
+          ${pkgs.python3}/bin/python3 ${./rodecaster-duo/check-ucm.py} \
+            ${config.flake.nixosConfigurations.parmigiano.config.system.build.rodecaster-duo-ucm} \
+            ${pkgs.alsa-lib}/lib/libasound.so.2
+          touch "$out"
+        '';
       };
     };
 }

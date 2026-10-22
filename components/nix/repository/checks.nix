@@ -1,29 +1,20 @@
+{ config, lib, ... }:
 {
-  config,
-  lib,
-  ...
-}:
-let
-  hostChecksFor =
-    system:
-    lib.mergeAttrsList (
-      lib.mapAttrsToList (
+  perSystem =
+    { system, ... }:
+    {
+      checks = lib.concatMapAttrs (
         hostname: host:
         let
-          user = config.users.${host.user};
-          homeConfigurationName = "${user.username}@${hostname}";
+          hostConfig = config.flake.nixosConfigurations.${hostname}.config;
+          userName = config.users.${host.user}.username;
         in
         {
-          "${hostname}-toplevel" = config.flake.nixosConfigurations.${hostname}.config.system.build.toplevel;
+          "${hostname}-toplevel" = hostConfig.system.build.toplevel;
         }
         // lib.optionalAttrs (host.homeProfiles != [ ]) {
-          "${hostname}-home" = config.flake.homeConfigurations.${homeConfigurationName}.activationPackage;
+          "${hostname}-home" = hostConfig.home-manager.users.${userName}.home.activationPackage;
         }
-      ) (lib.filterAttrs (_: host: host.system == system) config.dendritic.hosts)
-    );
-in
-{
-  perSystem = { system, ... }: {
-    checks = hostChecksFor system;
-  };
+      ) (lib.filterAttrs (_: host: host.system == system) config.dendritic.hosts);
+    };
 }

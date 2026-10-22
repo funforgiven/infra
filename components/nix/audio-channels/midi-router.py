@@ -156,7 +156,7 @@ def route(focus, channel, dry_run=False):
     failures = 0
     for stream in streams:
         try:
-            # The existing helper revalidates IDs/serials and confirms each move.
+            # The helper revalidates IDs/serials before requesting each move.
             subprocess.run(
                 ["funforgiven-audioctl", "move-stream", str(stream["id"]), str(stream["serial"]), channel],
                 check=True, capture_output=True, text=True, timeout=15,

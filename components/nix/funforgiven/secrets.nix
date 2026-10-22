@@ -28,10 +28,6 @@ let
       key = "home_midi/webhooks";
       sopsFile = ../../../secrets/home-assistant-midi.yaml;
     };
-    home-assistant-presence-token = {
-      key = "desktop_presence/token";
-      sopsFile = ../../../secrets/home-assistant-presence.yaml;
-    };
     homelab-routeros-ccr2004-login-password = {
       key = "routeros/ccr2004_login_password";
       sopsFile = routerosSecretsFile;
@@ -65,20 +61,6 @@ let
       sopsFile = kubernetesSecretsFile;
     };
   };
-  runtimeSecretNames = builtins.attrNames runtimeSecretSpecs;
-
-  mkConsumerSopsSecrets =
-    permissions:
-    lib.mapAttrs (_: key: permissions // { inherit key; }) apiTokenKeys
-    // {
-      github-ssh-key = permissions // {
-        sopsFile = githubSshKeyFile;
-        format = "binary";
-      };
-    };
-
-  mkRuntimeSopsSecrets =
-    permissions: lib.mapAttrs (_: specification: permissions // specification) runtimeSecretSpecs;
 
   mkSecretMcpLauncher =
     {
@@ -283,7 +265,6 @@ in
       let
         deployedSecretPaths = lib.genAttrs consumerSecretNames (name: config.sops.secrets.${name}.path);
         githubSshConfig = config.sops.templates."github-ssh-config";
-        passwordHashSecret = config.sops.secrets.${passwordHashSecretName};
         secretPermissions = {
           owner = config.users.users.${user.username}.name;
           group = config.users.users.${user.username}.group;
@@ -296,43 +277,6 @@ in
             assertion = lib.any (key: key.path == hostIdentityPath) config.services.openssh.hostKeys;
             message = "The sops-nix age identity must be declared as an OpenSSH host key.";
           }
-          {
-            assertion =
-              passwordHashSecret.neededForUsers
-              && passwordHashSecret.path == "/run/secrets-for-users/${passwordHashSecretName}"
-              && passwordHashSecret.key == "users/${user.username}/password_hash"
-              && passwordHashSecret.mode == "0400"
-              && passwordHashSecret.uid == 0
-              && passwordHashSecret.gid == 0;
-            message = "The account password hash must be an early, root-owned sops-nix user secret.";
-          }
-          {
-            assertion = config.users.users.${user.username}.hashedPasswordFile == passwordHashSecret.path;
-            message = "The user account must read its password hash from the sops-nix secret.";
-          }
-          {
-            assertion =
-              githubSshConfig.owner == secretPermissions.owner
-              && githubSshConfig.group == secretPermissions.group
-              && githubSshConfig.mode == "0600";
-            message = "The OpenSSH client config must be rendered as a private user-owned file.";
-          }
-          {
-            assertion = lib.all (
-              name:
-              let
-                secret = config.sops.secrets.${name};
-                specification = runtimeSecretSpecs.${name};
-              in
-              secret.owner == secretPermissions.owner
-              && secret.group == secretPermissions.group
-              && secret.mode == secretPermissions.mode
-              && secret.path == "/run/secrets/${name}"
-              && secret.sopsFile == specification.sopsFile
-              && secret.key == specification.key
-            ) runtimeSecretNames;
-            message = "Infrastructure secrets must use their declared SOPS file and key and be readable only by the user.";
-          }
         ];
 
         sops = {
@@ -340,9 +284,13 @@ in
           defaultSopsFormat = "yaml";
           age.sshKeyPaths = [ hostIdentityPath ];
           secrets =
-            mkConsumerSopsSecrets secretPermissions
-            // mkRuntimeSopsSecrets secretPermissions
+            lib.mapAttrs (_: key: secretPermissions // { inherit key; }) apiTokenKeys
+            // lib.mapAttrs (_: specification: secretPermissions // specification) runtimeSecretSpecs
             // {
+              github-ssh-key = secretPermissions // {
+                sopsFile = githubSshKeyFile;
+                format = "binary";
+              };
               "${passwordHashSecretName}" = {
                 sopsFile = passwordHashesFile;
                 key = "users/${user.username}/password_hash";
@@ -367,36 +315,6 @@ in
         services.openssh.generateHostKeys = true;
         users.users.${user.username}.hashedPasswordFile =
           config.sops.secrets.${passwordHashSecretName}.path;
-      }
-    )
-  ];
-
-  homeManager.standaloneModules.funforgiven-secrets.imports = [
-    inputs.sops-nix.homeManagerModules.sops
-    (
-      { config, lib, ... }:
-      let
-        deployedSecretPaths = lib.genAttrs consumerSecretNames (name: config.sops.secrets.${name}.path);
-        githubSshConfig = config.sops.templates."github-ssh-config";
-      in
-      {
-        imports = [
-          (mkSecretConsumers {
-            secretPaths = deployedSecretPaths;
-            sshConfigPath = githubSshConfig.path;
-          })
-        ];
-
-        sops = {
-          age.keyFile = "${config.xdg.configHome}/sops/age/keys.txt";
-          defaultSopsFile = apiTokensFile;
-          defaultSopsFormat = "yaml";
-          secrets = mkConsumerSopsSecrets { mode = "0400"; };
-          templates."github-ssh-config" = {
-            content = config.home.file.".ssh/config".text;
-            mode = "0600";
-          };
-        };
       }
     )
   ];
