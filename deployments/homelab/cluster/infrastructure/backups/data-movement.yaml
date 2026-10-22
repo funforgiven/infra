@@ -20,10 +20,11 @@ spec:
     defaultVolumesToFsBackup: false
     itemOperationTimeout: 4h
 ---
+# Volumes opt in with backup.fahrican.com/volume-snapshot=true.
 apiVersion: velero.io/v1
 kind: Schedule
 metadata:
-  name: media-passive-state
+  name: volume-snapshots
   namespace: velero
 spec:
   paused: false
@@ -33,63 +34,15 @@ spec:
     storageLocation: default
     ttl: 720h
     includedNamespaces:
+    - forge
+    - home-automation
     - media
     includedResources:
     - persistentvolumeclaims
     - persistentvolumes
     labelSelector:
       matchLabels:
-        backup.fahrican.com/passive-media-state: "true"
-    snapshotVolumes: true
-    snapshotMoveData: true
-    defaultVolumesToFsBackup: false
-    itemOperationTimeout: 4h
----
-apiVersion: velero.io/v1
-kind: Schedule
-metadata:
-  name: forge-volume
-  namespace: velero
-spec:
-  paused: false
-  schedule: 0 5 * * *
-  useOwnerReferencesInBackup: false
-  template:
-    storageLocation: default
-    ttl: 720h
-    includedNamespaces:
-    - forge
-    includedResources:
-    - persistentvolumeclaims
-    - persistentvolumes
-    labelSelector:
-      matchLabels:
-        backup.fahrican.com/forge-volume: "true"
-    snapshotVolumes: true
-    snapshotMoveData: true
-    defaultVolumesToFsBackup: false
-    itemOperationTimeout: 4h
----
-apiVersion: velero.io/v1
-kind: Schedule
-metadata:
-  name: home-automation-volume
-  namespace: velero
-spec:
-  paused: false
-  schedule: 30 5 * * *
-  useOwnerReferencesInBackup: false
-  template:
-    storageLocation: default
-    ttl: 720h
-    includedNamespaces:
-    - home-automation
-    includedResources:
-    - persistentvolumeclaims
-    - persistentvolumes
-    labelSelector:
-      matchLabels:
-        backup.fahrican.com/automation-volume: "true"
+        backup.fahrican.com/volume-snapshot: "true"
     snapshotVolumes: true
     snapshotMoveData: true
     defaultVolumesToFsBackup: false

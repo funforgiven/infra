@@ -4,7 +4,7 @@ metadata:
   name: automation-state
   namespace: home-automation
   labels:
-    backup.fahrican.com/automation-volume: "true"
+    backup.fahrican.com/volume-snapshot: "true"
 spec:
   accessModes:
   - ReadWriteOnce

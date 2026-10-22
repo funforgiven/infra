@@ -4,7 +4,7 @@ metadata:
   name: forgejo-data
   namespace: forge
   labels:
-    backup.fahrican.com/forge-volume: "true"
+    backup.fahrican.com/volume-snapshot: "true"
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 spec:

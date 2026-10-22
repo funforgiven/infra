@@ -30,7 +30,7 @@ metadata:
   name: beets-data
   namespace: media
   labels:
-    backup.fahrican.com/passive-media-state: "true"
+    backup.fahrican.com/volume-snapshot: "true"
 spec:
   accessModes:
   - ReadWriteOnce
@@ -71,7 +71,7 @@ metadata:
   name: audiomuse-postgres-dumps
   namespace: media
   labels:
-    backup.fahrican.com/passive-media-state: "true"
+    backup.fahrican.com/volume-snapshot: "true"
 spec:
   accessModes:
   - ReadWriteOnce

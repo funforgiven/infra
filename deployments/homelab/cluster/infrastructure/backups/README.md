@@ -17,9 +17,7 @@ They snapshot through `ceph-block-snapshot`, the RBD class Velero selects by its
 | `services-daily` | 02:30 UTC every day (`30 2 * * *`) | 720 hours (30 days) | Daily application backup |
 | `services-weekly` | 03:15 UTC every Sunday (`15 3 * * 0`) | 2160 hours (90 days) | Weekly application backup |
 | `observability-history` | 03:45 UTC every day (`45 3 * * *`) | 720 hours (30 days) | CSI snapshots exported to B2 for Prometheus, Loki, Grafana and Alertmanager |
-| `media-passive-state` | 04:15 UTC every day (`15 4 * * *`) | 720 hours (30 days) | CSI snapshots exported to B2 for the Beets catalog and native AudioMuse dumps |
-| `forge-volume` | 05:00 UTC every day (`0 5 * * *`) | 720 hours (30 days) | CSI snapshot of the live Forgejo data volume exported to B2; on trial alongside the archive exports |
-| `home-automation-volume` | 05:30 UTC every day (`30 5 * * *`) | 720 hours (30 days) | Crash-consistent CSI snapshots of the automation and Thread state volumes exported to B2; on trial alongside the coordinated archives |
+| `volume-snapshots` | 04:15 UTC every day (`15 4 * * *`) | 720 hours (30 days) | CSI snapshots exported to B2 for claims labelled `backup.fahrican.com/volume-snapshot=true`: the Beets catalog, native AudioMuse dumps, and the Forgejo, automation and Thread state volumes on trial alongside their archives |
 | `restore-qualification` | `0 7 1 * *`, `Europe/Istanbul` | Latest restored namespace remains until the next run | Monthly B2 restore test |
 
 The Velero controller runs the backup schedules in UTC.
@@ -36,7 +34,7 @@ consumers; restore checks must keep their production writers inactive.
 AudioMuse's live PostgreSQL volume is excluded from filesystem backup. Its
 `audiomuse-postgres-backup` CronJob writes a PostgreSQL 15 custom-format dump at
 01:45 `Europe/Istanbul` to the `audiomuse-postgres-dumps` PVC and retains the
-three newest dumps. The passive-state schedule backs up that dump volume even
+three newest dumps. The volume-snapshot schedule backs up that dump volume even
 when the dump Job has completed. Recover AudioMuse from a
 dump, not from the empty restored live-data PVC.
 
