@@ -1,5 +1,4 @@
-"""Regression coverage for the October backup, restore and alert failures."""
-import copy
+"""Regression coverage for the October metrics and alert failures."""
 import importlib.util
 import io
 import os
@@ -7,7 +6,6 @@ from pathlib import Path
 import shutil
 import sqlite3
 import subprocess
-import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -16,71 +14,18 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[5]
 SERVICES = ROOT / 'deployments/homelab/cluster'
-sys.path.insert(0, str(SERVICES / 'apps/forge'))
-import restore_cleanup
-
-
-class CleanupTests(unittest.TestCase):
-    def setUp(self):
-        self.objects = {}
-        self.writes = []
-        for name in ('forgejo-data', 'forgejo-backups'):
-            self.objects[restore_cleanup.TARGET + 'persistentvolumeclaims/' + name] = {
-                'metadata': {'name': name, 'namespace': 'forge-restore', 'uid': name,
-                             'labels': {'velero.io/restore-name': 'forge-qualification-test'}},
-                'spec': {'storageClassName': 'forge-restore', 'volumeName': name}}
-            self.objects['/api/v1/persistentvolumes/' + name] = {
-                'metadata': {'uid': 'pv-' + name},
-                'spec': {'storageClassName': 'forge-restore', 'persistentVolumeReclaimPolicy': 'Retain',
-                         'claimRef': {'namespace': 'forge-restore', 'name': name, 'uid': name}}}
-
-    def api(self, method, path, body=None, missing=False):
-        if method == 'GET':
-            return copy.deepcopy(self.objects.get(path))
-        self.writes.append((method, path, body))
-        if method == 'PATCH':
-            self.assertEqual(body[0]['value'], self.objects[path]['metadata']['uid'])
-            self.assertEqual(body[1]['value'], self.objects[path]['spec']['claimRef'])
-            self.objects[path]['spec']['persistentVolumeReclaimPolicy'] = 'Delete'
-        if method == 'DELETE':
-            pvc = self.objects.pop(path)
-            self.assertEqual(body['preconditions']['uid'], pvc['metadata']['uid'])
-            volume = '/api/v1/persistentvolumes/' + pvc['spec']['volumeName']
-            self.assertEqual(self.objects[volume]['spec']['persistentVolumeReclaimPolicy'], 'Delete')
-            del self.objects[volume]
-
-    def test_success_releases_both_restored_volumes(self):
-        restore_cleanup.cleanup(self.api)
-        self.assertEqual(self.objects, {})
-        self.assertEqual([w[0] for w in self.writes], ['PATCH', 'DELETE', 'PATCH', 'DELETE'])
-
-    def test_rejects_production_or_rebound_volume_before_mutating(self):
-        for field, value in [('namespace', 'forge'), ('uid', 'different-claim')]:
-            with self.subTest(field=field):
-                self.setUp()
-                self.objects['/api/v1/persistentvolumes/forgejo-backups']['spec']['claimRef'][field] = value
-                with self.assertRaises(RuntimeError):
-                    restore_cleanup.cleanup(self.api)
-                self.assertEqual(self.writes, [])
-
-    def test_rejects_unrecognized_claim(self):
-        self.objects[restore_cleanup.TARGET + 'persistentvolumeclaims/forgejo-backups']['metadata']['labels'] = {}
-        with self.assertRaises(RuntimeError):
-            restore_cleanup.cleanup(self.api)
-        self.assertEqual(self.writes, [])
 
 
 class MetricsTests(unittest.TestCase):
     def test_every_scrape_closes_sqlite_even_on_query_error(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory)
-            env = {'BACKUP_DATA': directory, 'BACKUP_DESTINATION': directory,
-                   'BACKUP_DATABASE': 'db.sqlite', 'BACKUP_SERVICE': 'forgejo'}
+            env = {'FORGEJO_DATABASE': str(path / 'db.sqlite')}
             with sqlite3.connect(path / 'db.sqlite') as db:
                 db.executescript('CREATE TABLE action_run_job(status, updated, name, stopped, repo_id);'
                                  'CREATE TABLE repository(id, owner_name, name);')
             db.close()
-            spec = importlib.util.spec_from_file_location('backup_metrics_test', SERVICES / 'apps/forge/backup.py')
+            spec = importlib.util.spec_from_file_location('actions_metrics_test', SERVICES / 'apps/forge/actions-metrics.py')
             module = importlib.util.module_from_spec(spec)
             with patch.dict(os.environ, env):
                 spec.loader.exec_module(module)
@@ -105,7 +50,7 @@ class MetricsTests(unittest.TestCase):
                         handler.send_header = lambda *_: None
                         handler.end_headers = lambda: None
                         handler.do_GET()
-                        self.assertIn(b'forge_backup_completed_timestamp_seconds', handler.wfile.getvalue())
+                        self.assertIn(b'forge_actions_metrics_up', handler.wfile.getvalue())
                         with self.assertRaises(sqlite3.ProgrammingError):
                             connections[-1].execute('SELECT 1')
 
@@ -158,7 +103,7 @@ class AlertTests(unittest.TestCase):
         groups = []
         for filename in ('infrastructure/observability/persistent-targets.yaml',
                          'infrastructure/observability/job-health.yaml', 'apps/unifi/monitoring.yaml',
-                         'apps/forge/monitoring.yaml', 'infrastructure/backups/restore-qualification.yaml'):
+                         'apps/forge/monitoring.yaml', 'infrastructure/backups/drill.yaml'):
             for document in yaml.safe_load_all((SERVICES / filename).read_text()):
                 if document['kind'] == 'PrometheusRule':
                     groups.extend(document['spec']['groups'])
@@ -194,22 +139,14 @@ class AlertTests(unittest.TestCase):
                     'exp_labels': {'namespace': 'unifi', 'severity': 'warning'},
                     'exp_annotations': by_name['UniFiAPMetricsMissing']['annotations']}]},
                 {'eval_time': '16m', 'alertname': 'TargetDown', 'exp_alerts': []}]})
-        # The stale-archive incident survives an exporter restart without a
-        # label change or a fresh 15-minute delay.
-        tests.append({'interval': '1m', 'input_series': [{
-            'series': 'forge_backup_completed_timestamp_seconds{namespace="forge",service="forgejo",instance="old"}',
-            'values': '-40000+0x15 stale _ _ _ _'}], 'alert_rule_test': [
-                {'eval_time': t, 'alertname': 'ForgejoBackupStale', 'exp_alerts': [{
-                    'exp_labels': {'namespace': 'forge', 'severity': 'critical'},
-                    'exp_annotations': by_name['ForgejoBackupStale']['annotations']}]} for t in ('15m', '16m', '20m')]})
-        for namespace in ('forge', 'forge-restore'):
+        for namespace in ('forge',):
             labels = f'namespace="{namespace}",pod="forgejo-0",job="kube-state-metrics"'
             tests.append({'interval': '1m', 'input_series': [
                 {'series': f'kube_pod_status_phase{{{labels},phase="Pending"}}', 'values': '1+0x20'},
                 {'series': f'kube_pod_owner{{{labels},owner_kind="StatefulSet"}}', 'values': '1+0x20'},
                 {'series': f'kube_pod_info{{{labels}}}', 'values': '1+0x20'},
             ], 'alert_rule_test': [{'eval_time': '16m', 'alertname': 'KubePodNotReady',
-                'exp_alerts': [] if namespace == 'forge-restore' else [{
+                'exp_alerts': [{
                     'exp_labels': {'namespace': 'forge', 'pod': 'forgejo-0', 'job': 'kube-state-metrics', 'severity': 'warning'},
                     'exp_annotations': {'summary': by_name['KubePodNotReady']['annotations']['summary'],
                         'description': 'Pod forge/forgejo-0 has been in a non-ready state for longer than 15 minutes.',

@@ -3,8 +3,6 @@ kind: PersistentVolumeClaim
 metadata:
   name: forgejo-data
   namespace: forge
-  labels:
-    backup.fahrican.com/volume-snapshot: "true"
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
@@ -14,18 +12,3 @@ spec:
   resources:
     requests:
       storage: 80Gi
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: forgejo-backups
-  namespace: forge
-  annotations:
-    kustomize.toolkit.fluxcd.io/prune: disabled
-spec:
-  accessModes:
-  - ReadWriteOnce
-  storageClassName: ceph-block
-  resources:
-    requests:
-      storage: 800Gi

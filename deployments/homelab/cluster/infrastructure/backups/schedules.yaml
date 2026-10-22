@@ -1,7 +1,11 @@
+# Keep both namespace lists identical; restore-drill.py restores the same set.
+# Volumes are crash-consistent CSI snapshots moved to B2 by the data mover.
+# PVCs labelled velero.io/exclude-from-backup=true (CloudNativePG data, caches)
+# are skipped.
 apiVersion: velero.io/v1
 kind: Schedule
 metadata:
-  name: services-daily
+  name: daily
   namespace: velero
 spec:
   paused: false
@@ -15,16 +19,18 @@ spec:
     - forge
     - games
     - home-automation
-    - media
     - matrix
-    - services-databases
-    snapshotVolumes: false
-    defaultVolumesToFsBackup: true
+    - media
+    - services-observability
+    snapshotVolumes: true
+    snapshotMoveData: true
+    defaultVolumesToFsBackup: false
+    itemOperationTimeout: 4h
 ---
 apiVersion: velero.io/v1
 kind: Schedule
 metadata:
-  name: services-weekly
+  name: weekly
   namespace: velero
 spec:
   paused: false
@@ -38,8 +44,10 @@ spec:
     - forge
     - games
     - home-automation
-    - media
     - matrix
-    - services-databases
-    snapshotVolumes: false
-    defaultVolumesToFsBackup: true
+    - media
+    - services-observability
+    snapshotVolumes: true
+    snapshotMoveData: true
+    defaultVolumesToFsBackup: false
+    itemOperationTimeout: 4h

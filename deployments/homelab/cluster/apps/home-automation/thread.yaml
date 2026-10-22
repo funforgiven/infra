@@ -18,23 +18,6 @@ kind: PersistentVolumeClaim
 metadata:
   name: thread-state
   namespace: home-automation
-  labels:
-    backup.fahrican.com/volume-snapshot: "true"
-spec:
-  accessModes:
-  - ReadWriteOnce
-  storageClassName: ceph-block
-  resources:
-    requests:
-      storage: 1Gi
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: thread-backups
-  namespace: home-automation
-  labels:
-    backup.fahrican.com/verify: automation
 spec:
   accessModes:
   - ReadWriteOnce
@@ -59,15 +42,8 @@ spec:
       labels:
         app.kubernetes.io/name: openthread-border-router
         app.kubernetes.io/part-of: home-automation
-        backup.fahrican.com/verify: automation
       annotations:
         k8s.v1.cni.cncf.io/networks: '[{"name":"thread-lan","interface":"net1"}]'
-        backup.velero.io/backup-volumes: backups
-        backup.velero.io/backup-volumes-excludes: data
-        pre.hook.backup.velero.io/command: '["/bin/bash", "/bootstrap/thread-backup.sh"]'
-        pre.hook.backup.velero.io/container: otbr
-        pre.hook.backup.velero.io/on-error: Fail
-        pre.hook.backup.velero.io/timeout: 3m
     spec:
       automountServiceAccountToken: false
       securityContext:
@@ -114,9 +90,7 @@ spec:
             command:
             - /bin/bash
             - -ec
-            - 'test -f /tmp/backup-active && exit 0
-
-              test "$(s6-svstat -o ready /run/service/otbr-agent)" = true
+            - 'test "$(s6-svstat -o ready /run/service/otbr-agent)" = true
 
               curl --fail --silent http://127.0.0.1:8081/node/state >/dev/null'
           initialDelaySeconds: 30
@@ -140,8 +114,6 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /data
-        - name: backups
-          mountPath: /backups
         - name: bootstrap
           mountPath: /bootstrap
           readOnly: true
@@ -155,7 +127,7 @@ spec:
         image: docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4
         command:
         - python
-        - /bootstrap/thread-recovery.py
+        - /bootstrap/thread-metrics.py
         ports:
         - name: metrics
           containerPort: 9000
@@ -184,9 +156,6 @@ spec:
             cpu: 100m
             memory: 64Mi
         volumeMounts:
-        - name: backups
-          mountPath: /backups
-          readOnly: true
         - name: bootstrap
           mountPath: /bootstrap
           readOnly: true
@@ -194,9 +163,6 @@ spec:
       - name: data
         persistentVolumeClaim:
           claimName: thread-state
-      - name: backups
-        persistentVolumeClaim:
-          claimName: thread-backups
       - name: bootstrap
         configMap:
           name: automation-bootstrap

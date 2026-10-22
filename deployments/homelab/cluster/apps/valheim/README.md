@@ -19,8 +19,8 @@ supports neither LAN-IP connections nor the Steam A2S query `ready.py` uses.
   `getpwuid(getuid())` even with the Steam backend, so `prepare-identity.sh`
   writes `/etc/passwd`/`/etc/group` with a UID 1000 `valheim` account onto an
   ephemeral volume that the game mounts read-only.
-- Supervisor (`supervisord.conf`) keeps the pod alive while the game process
-  stops for a backup; its control socket has no network listener.
+- Supervisor (`supervisord.conf`) turns pod termination into the SIGINT that
+  makes Valheim save before exiting; its control socket has no network listener.
 
 ## Credentials
 
@@ -32,10 +32,8 @@ WAN forwards are reconciled by the RouterOS playbook (`--tags wan-port-forwards`
 
 ## Backup and recovery
 
-The pre-backup hook (`backup.sh`) stops the game so it saves, archives the
-whole `worlds` tree to `backups/recovery.tar` with a checksum, and restarts it;
-backup schedules are owned by `infrastructure/backups/`. Restore only from that
-archive, never from live world files: with the StatefulSet stopped, mount the
-PVC in a maintenance pod, verify `recovery.sha256`, move `worlds` aside,
-extract the archive into a fresh `worlds` owned by UID/GID 1000, then start the
-server with a compatible game version and load the world with a real player.
+`/data` is in the daily volume snapshots ([backups](../../infrastructure/backups/README.md));
+Valheim's own rotating world backups (`-backups 12`) live beside the world, so a
+snapshot taken mid-save still holds a loadable copy. To recover, restore the
+volume with the StatefulSet stopped, fall back to the newest backup copy only if
+the world fails to load, and check it with a real player.

@@ -1,12 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-if [[ "$POD_NAMESPACE" != games ]]; then
-  printf 'Restore isolation is active in namespace %s; the game server will not start.\n' \
-    "$POD_NAMESPACE"
-  exec /bin/sleep infinity
-fi
-
 mkdir -p \
   /factorio/config \
   /factorio/mods \

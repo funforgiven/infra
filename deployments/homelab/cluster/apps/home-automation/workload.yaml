@@ -55,15 +55,8 @@ spec:
       labels:
         app.kubernetes.io/name: home-assistant
         app.kubernetes.io/part-of: home-automation
-        backup.fahrican.com/verify: automation
       annotations:
         k8s.v1.cni.cncf.io/networks: '[{"name":"automation-lan","interface":"net1"}]'
-        backup.velero.io/backup-volumes: backups
-        backup.velero.io/backup-volumes-excludes: state,runtime,control,ha-tmp,matter-tmp,zigbee-tmp,backup-tmp
-        pre.hook.backup.velero.io/command: '["python", "/bootstrap/backup.py", "--once"]'
-        pre.hook.backup.velero.io/container: backup
-        pre.hook.backup.velero.io/on-error: Fail
-        pre.hook.backup.velero.io/timeout: 5m
     spec:
       automountServiceAccountToken: false
       nodeSelector:
@@ -168,9 +161,6 @@ spec:
       - name: home-assistant
         image: ghcr.io/home-assistant/home-assistant:2026.9.2@sha256:a1bc133af84ee6505fe2c266d9805b7c75b780dfdc188edfee3b11e8f3cd8efe
         command:
-        - /bin/sh
-        - /bootstrap/run-service.sh
-        - home-assistant
         - python
         - -m
         - homeassistant
@@ -199,8 +189,6 @@ spec:
         - name: bootstrap
           mountPath: /bootstrap
           readOnly: true
-        - name: control
-          mountPath: /control
         - name: state
           mountPath: /config
           subPath: home-assistant
@@ -209,14 +197,6 @@ spec:
           readOnly: true
         - name: ha-tmp
           mountPath: /tmp
-        livenessProbe:
-          exec:
-            command:
-            - /bin/sh
-            - -ec
-            - test -f /control/home-assistant.running || test -f /control/home-assistant.paused
-          periodSeconds: 30
-          failureThreshold: 5
         ports:
         - name: http
           containerPort: 8123
@@ -237,9 +217,6 @@ spec:
       - name: matter
         image: ghcr.io/matter-js/matterjs-server:1.4.0@sha256:54232d0d3e7dff5a54759469d2753399270412b4c30c55b31750a4595e4cb236
         command:
-        - /bin/sh
-        - /bootstrap/run-service.sh
-        - matter
         - node
         - --enable-source-maps
         - /app/node_modules/matter-server/dist/esm/MatterServer.js
@@ -276,27 +253,14 @@ spec:
         - name: bootstrap
           mountPath: /bootstrap
           readOnly: true
-        - name: control
-          mountPath: /control
         - name: state
           mountPath: /data
           subPath: matter
         - name: matter-tmp
           mountPath: /tmp
-        livenessProbe:
-          exec:
-            command:
-            - /bin/sh
-            - -ec
-            - test -f /control/matter.running || test -f /control/matter.paused
-          periodSeconds: 30
-          failureThreshold: 5
       - name: mosquitto
         image: docker.io/eclipse-mosquitto:2.1.2-alpine@sha256:6f8d8a947c506f8a2290ec65cd4bd2bc7cb4d43fb5f6271f861cb013e2ef9797
         command:
-        - /bin/sh
-        - /bootstrap/run-service.sh
-        - mosquitto
         - /usr/sbin/mosquitto
         - -c
         - /bootstrap/mosquitto.conf
@@ -323,28 +287,15 @@ spec:
         - name: bootstrap
           mountPath: /bootstrap
           readOnly: true
-        - name: control
-          mountPath: /control
         - name: state
           mountPath: /mosquitto/data
           subPath: mosquitto
         - name: runtime
           mountPath: /runtime
           readOnly: true
-        livenessProbe:
-          exec:
-            command:
-            - /bin/sh
-            - -ec
-            - test -f /control/mosquitto.running || test -f /control/mosquitto.paused
-          periodSeconds: 30
-          failureThreshold: 5
       - name: zigbee2mqtt
         image: ghcr.io/koenkk/zigbee2mqtt:2.14.1@sha256:fef0de769dcd04c27b3a6d277b61046eb96284bdd4198dcb1687c3a01b3020f3
         command:
-        - /bin/sh
-        - /bootstrap/run-service.sh
-        - zigbee2mqtt
         - node
         - /app/index.js
         env:
@@ -382,26 +333,16 @@ spec:
         - name: bootstrap
           mountPath: /bootstrap
           readOnly: true
-        - name: control
-          mountPath: /control
         - name: state
           mountPath: /app/data
           subPath: zigbee2mqtt
         - name: zigbee-tmp
           mountPath: /tmp
-        livenessProbe:
-          exec:
-            command:
-            - /bin/sh
-            - -ec
-            - test -f /control/zigbee2mqtt.running || test -f /control/zigbee2mqtt.paused
-          periodSeconds: 30
-          failureThreshold: 5
-      - name: backup
+      - name: health
         image: docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4
         command:
         - python
-        - /bootstrap/backup.py
+        - /bootstrap/health.py
         securityContext:
           runAsNonRoot: true
           runAsUser: 1000
@@ -426,23 +367,15 @@ spec:
           periodSeconds: 30
         resources:
           requests:
-            cpu: 25m
-            memory: 64Mi
+            cpu: 10m
+            memory: 32Mi
           limits:
-            cpu: '1'
-            memory: 512Mi
+            cpu: 250m
+            memory: 128Mi
         volumeMounts:
         - name: bootstrap
           mountPath: /bootstrap
           readOnly: true
-        - name: control
-          mountPath: /control
-        - name: state
-          mountPath: /state
-        - name: backups
-          mountPath: /backups
-        - name: backup-tmp
-          mountPath: /tmp
         - name: credentials
           mountPath: /credentials
           readOnly: true
@@ -474,14 +407,7 @@ spec:
       - name: state
         persistentVolumeClaim:
           claimName: automation-state
-      - name: backups
-        persistentVolumeClaim:
-          claimName: automation-backups
       - name: runtime
-        emptyDir:
-          medium: Memory
-          sizeLimit: 128Mi
-      - name: control
         emptyDir:
           medium: Memory
           sizeLimit: 128Mi
@@ -497,6 +423,3 @@ spec:
         emptyDir:
           medium: Memory
           sizeLimit: 128Mi
-      - name: backup-tmp
-        emptyDir:
-          sizeLimit: 20Gi

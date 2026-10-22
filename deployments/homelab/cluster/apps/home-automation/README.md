@@ -1,7 +1,7 @@
 # Home automation on Kubernetes
 
 One StatefulSet pod runs Home Assistant, Matter.js, Mosquitto, Zigbee2MQTT and a
-backup/metrics sidecar. They share one network namespace so internal MQTT and
+health-metrics sidecar. They share one network namespace so internal MQTT and
 the unauthenticated Matter WebSocket API stay on loopback. OTBR runs in its own
 pod (`thread.yaml`) because it needs a TUN device and IPv6 routing; its
 privileged exception is confined there. Both pods attach to IoT VLAN 50 through
@@ -27,8 +27,9 @@ never replay old radio/fabric state while another copy runs.
 - `install-pinned.py` installs checksum-pinned Onecta and dashboard JS modules
   and caches them on the state PVC, so restarts work offline. A new volume
   needs HTTPS to GitHub.
-- Application state backup and restore drills are owned by the backup sidecar
-  and `infrastructure/backups/`.
+- `automation-state` and `thread-state` are in the daily crash-consistent
+  volume snapshots and the monthly restore drill
+  ([backups](../../infrastructure/backups/README.md)); nothing pauses the house.
 
 ## First start
 
@@ -108,11 +109,8 @@ stay UI-owned because their IDs live only in `secrets/home-assistant-midi.yaml`;
 
 ## Live recovery
 
-1. Pass the isolated restore check first.
-2. Stop the main StatefulSet and OTBR.
-3. Extract the verified archive onto a **new** state PVC (UID/GID 1000) and the
-   Thread bundle's `thread.tar.gz` onto OTBR's new volume; `dataset.txt` is the
-   TLV fallback for replacement hardware.
-4. Point the claims at the recovered volumes and start exactly one instance.
-5. Verify HA login, MQTT discovery, coordinator identity and Matter devices
-   before deleting the old volumes.
+1. Pass the restore drill (or run it on demand) for the chosen backup.
+2. Stop the main StatefulSet and OTBR, then restore `automation-state` and
+   `thread-state` from that backup (UID/GID 1000 is preserved).
+3. Start exactly one instance; verify HA login, MQTT discovery, coordinator
+   identity, Matter devices and Thread attachment before deleting old volumes.

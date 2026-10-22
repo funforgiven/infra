@@ -1,6 +1,6 @@
 #!/usr/bin/with-contenv bash
 # shellcheck shell=bash
-# s6 runs this for every agent start, including backup-driven restarts.
+# s6 runs this for every agent start.
 set -euo pipefail
 test -S /run/openthread-wpan0.sock
 curl --fail --silent http://127.0.0.1:8081/node/state >/dev/null

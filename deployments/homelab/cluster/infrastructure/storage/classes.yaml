@@ -19,6 +19,30 @@ allowVolumeExpansion: true
 reclaimPolicy: Retain
 volumeBindingMode: Immediate
 ---
+# Disposable copies made by the backup restore drill. Delete reclaim frees the
+# RBD image with the claim; Immediate binding lets Velero's data mover restore
+# without a consumer pod. Never use it for live data.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ceph-block-restore
+provisioner: rook-ceph.rbd.csi.ceph.com
+parameters:
+  clusterID: rook-ceph
+  pool: services
+  imageFormat: '2'
+  imageFeatures: layering
+  csi.storage.k8s.io/provisioner-secret-name: rook-csi-rbd-provisioner
+  csi.storage.k8s.io/provisioner-secret-namespace: rook-ceph
+  csi.storage.k8s.io/controller-expand-secret-name: rook-csi-rbd-provisioner
+  csi.storage.k8s.io/controller-expand-secret-namespace: rook-ceph
+  csi.storage.k8s.io/node-stage-secret-name: rook-csi-rbd-node
+  csi.storage.k8s.io/node-stage-secret-namespace: rook-ceph
+  csi.storage.k8s.io/fstype: ext4
+allowVolumeExpansion: false
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
@@ -40,8 +64,7 @@ allowVolumeExpansion: true
 reclaimPolicy: Retain
 volumeBindingMode: Immediate
 ---
-# Default RBD snapshot class for Velero CSI data movement; Velero selects it by
-# the label for every rook-ceph.rbd.csi.ceph.com volume.
+# RBD snapshot class for Velero's CSI data mover, selected by its label.
 apiVersion: snapshot.storage.k8s.io/v1
 kind: VolumeSnapshotClass
 metadata:

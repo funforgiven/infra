@@ -1,0 +1,524 @@
+# Verifier templates the restore drill runs against restored claims (Matrix's
+# is in apps/matrix/restore.yaml). Suspended: they never run on their own. No
+# service-account token, no network, read-only volumes; SQLite is checked on a
+# scratch copy so an uncheckpointed WAL is recovered, never written back.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: restore-verify
+  namespace: backup-qualification-restore
+  labels:
+    backup.fahrican.com/restore-verifier: 'true'
+spec:
+  suspend: true
+  schedule: 0 0 31 2 *
+  jobTemplate:
+    metadata:
+      labels:
+        backup.fahrican.com/restore-drill: 'true'
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 1800
+      ttlSecondsAfterFinished: 604800
+      template:
+        spec:
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          securityContext:
+            fsGroup: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+          - name: canary
+            image: docker.io/library/busybox:1.38.0@sha256:dc2d74b28e4cf8984fa52af1f39bc7c3d9c73760b41a74d629f5d11b1ab28616
+            command:
+            - /bin/sh
+            - -ec
+            - |
+              printf '%s  %s\n' 8eae9bfd58377faaf8c96501d130bfae5e3fedb725cd31d8c717f500cddc3c70 /data/canary | sha256sum -c -
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 65532
+              runAsGroup: 65532
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+              limits:
+                cpu: '1'
+                memory: 512Mi
+            volumeMounts:
+            - name: data
+              mountPath: /data
+              readOnly: true
+          volumes:
+          - name: data
+            persistentVolumeClaim:
+              claimName: backup-canary
+              readOnly: true
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: restore-verify
+  namespace: forge-restore
+  labels:
+    backup.fahrican.com/restore-verifier: 'true'
+spec:
+  suspend: true
+  schedule: 0 0 31 2 *
+  jobTemplate:
+    metadata:
+      labels:
+        backup.fahrican.com/restore-drill: 'true'
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 7200
+      ttlSecondsAfterFinished: 604800
+      template:
+        spec:
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          securityContext:
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+          - name: database
+            image: docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4
+            command:
+            - python
+            - /scripts/verify-volume.py
+            - --sqlite
+            - /forgejo/data/forgejo.db
+            env:
+            - name: HOME
+              value: /tmp
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+              limits:
+                cpu: '1'
+                memory: 512Mi
+            volumeMounts:
+            - name: data
+              mountPath: /forgejo
+              readOnly: true
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          - name: git
+            image: codeberg.org/forgejo/forgejo:15.0.7-rootless@sha256:1131f4c646d6115577b7cb9ccfe8cd2c289bb54a1e1ed42400be0e22916af924
+            command:
+            - /bin/sh
+            - -ec
+            - |
+              found=
+              for repository in /forgejo/git/repositories/*/*.git; do
+                git --git-dir="$repository" fsck --full --strict --no-progress
+                found=1
+              done
+              test -n "$found"
+              echo 'Git object graphs verified.'
+            env:
+            - name: HOME
+              value: /tmp
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+              limits:
+                cpu: '1'
+                memory: 2Gi
+            volumeMounts:
+            - name: data
+              mountPath: /forgejo
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          volumes:
+          - name: data
+            persistentVolumeClaim:
+              claimName: forgejo-data
+              readOnly: true
+          - name: scripts
+            configMap:
+              name: restore-verify
+          - name: tmp
+            emptyDir:
+              sizeLimit: 4Gi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: restore-verify
+  namespace: games-restore
+  labels:
+    backup.fahrican.com/restore-verifier: 'true'
+spec:
+  suspend: true
+  schedule: 0 0 31 2 *
+  jobTemplate:
+    metadata:
+      labels:
+        backup.fahrican.com/restore-drill: 'true'
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 1800
+      ttlSecondsAfterFinished: 604800
+      template:
+        spec:
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          securityContext:
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+          - name: saves
+            image: docker.io/library/busybox:1.38.0@sha256:dc2d74b28e4cf8984fa52af1f39bc7c3d9c73760b41a74d629f5d11b1ab28616
+            command:
+            - /bin/sh
+            - -ec
+            - |
+              set -- /factorio/saves/*.zip
+              test -f "$1"
+              for save; do unzip -t "$save" >/dev/null; done
+              world=/valheim/worlds/worlds_local/Fahrican
+              ls "$world"/_main.*.ok >/dev/null
+              find "$world" -type f -size +0 | grep -q .
+              echo 'Factorio saves and the Valheim world verified.'
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+              limits:
+                cpu: '1'
+                memory: 512Mi
+            volumeMounts:
+            - name: factorio
+              mountPath: /factorio
+              readOnly: true
+            - name: valheim
+              mountPath: /valheim
+              readOnly: true
+          volumes:
+          - name: factorio
+            persistentVolumeClaim:
+              claimName: data-factorio-0
+              readOnly: true
+          - name: valheim
+            persistentVolumeClaim:
+              claimName: data-valheim-0
+              readOnly: true
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: restore-verify
+  namespace: home-automation-restore
+  labels:
+    backup.fahrican.com/restore-verifier: 'true'
+spec:
+  suspend: true
+  schedule: 0 0 31 2 *
+  jobTemplate:
+    metadata:
+      labels:
+        backup.fahrican.com/restore-drill: 'true'
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 1800
+      ttlSecondsAfterFinished: 604800
+      template:
+        spec:
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          securityContext:
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+          - name: state
+            image: docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4
+            command:
+            - python
+            - /scripts/verify-volume.py
+            - --sqlite
+            - /state/home-assistant/home-assistant_v2.db
+            - --json
+            - /state/home-assistant/.storage/core.config_entries
+            - --json
+            - /state/home-assistant/.storage/core.device_registry
+            - --json
+            - /state/home-assistant/.storage/core.entity_registry
+            - --json
+            - /state/home-assistant/.storage/auth
+            - --json
+            - /state/home-assistant/.storage/http
+            - --present
+            - /state/zigbee2mqtt/configuration.yaml
+            - --present
+            - /state/zigbee2mqtt/database.db
+            - --present
+            - /state/matter/**
+            - --present
+            - /thread/thread/*.data
+            env:
+            - name: HOME
+              value: /tmp
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+              limits:
+                cpu: '1'
+                memory: 512Mi
+            volumeMounts:
+            - name: state
+              mountPath: /state
+              readOnly: true
+            - name: thread
+              mountPath: /thread
+              readOnly: true
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          volumes:
+          - name: state
+            persistentVolumeClaim:
+              claimName: automation-state
+              readOnly: true
+          - name: thread
+            persistentVolumeClaim:
+              claimName: thread-state
+              readOnly: true
+          - name: scripts
+            configMap:
+              name: restore-verify
+          - name: tmp
+            emptyDir:
+              sizeLimit: 10Gi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: restore-verify
+  namespace: media-restore
+  labels:
+    backup.fahrican.com/restore-verifier: 'true'
+spec:
+  suspend: true
+  schedule: 0 0 31 2 *
+  jobTemplate:
+    metadata:
+      labels:
+        backup.fahrican.com/restore-drill: 'true'
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 1800
+      ttlSecondsAfterFinished: 604800
+      template:
+        spec:
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          securityContext:
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+          - name: databases
+            image: docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4
+            command:
+            - python
+            - /scripts/verify-volume.py
+            - --sqlite
+            - /navidrome/navidrome.db
+            - --sqlite
+            - /beets/library.db
+            - --sqlite
+            - /sftpgo/sftpgo.db
+            - --sqlite
+            - /muse/db.sqlite
+            - --sqlite
+            - /muse/recovery/db.sqlite
+            env:
+            - name: HOME
+              value: /tmp
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+              limits:
+                cpu: '1'
+                memory: 512Mi
+            volumeMounts:
+            - name: navidrome
+              mountPath: /navidrome
+              readOnly: true
+            - name: beets
+              mountPath: /beets
+              readOnly: true
+            - name: sftpgo
+              mountPath: /sftpgo
+              readOnly: true
+            - name: muse
+              mountPath: /muse
+              readOnly: true
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          volumes:
+          - name: navidrome
+            persistentVolumeClaim:
+              claimName: navidrome-data
+              readOnly: true
+          - name: beets
+            persistentVolumeClaim:
+              claimName: beets-data
+              readOnly: true
+          - name: sftpgo
+            persistentVolumeClaim:
+              claimName: sftpgo-data
+              readOnly: true
+          - name: muse
+            persistentVolumeClaim:
+              claimName: discord-music-data
+              readOnly: true
+          - name: scripts
+            configMap:
+              name: restore-verify
+          - name: tmp
+            emptyDir:
+              sizeLimit: 4Gi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: restore-verify
+  namespace: services-observability-restore
+  labels:
+    backup.fahrican.com/restore-verifier: 'true'
+spec:
+  suspend: true
+  schedule: 0 0 31 2 *
+  jobTemplate:
+    metadata:
+      labels:
+        backup.fahrican.com/restore-drill: 'true'
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 1800
+      ttlSecondsAfterFinished: 604800
+      template:
+        spec:
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          securityContext:
+            fsGroup: 472
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+          - name: grafana
+            image: docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4
+            command:
+            - python
+            - /scripts/verify-volume.py
+            - --sqlite
+            - /grafana/grafana.db
+            env:
+            - name: HOME
+              value: /tmp
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 472
+              runAsGroup: 472
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+              limits:
+                cpu: '1'
+                memory: 512Mi
+            volumeMounts:
+            - name: grafana
+              mountPath: /grafana
+              readOnly: true
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          volumes:
+          - name: grafana
+            persistentVolumeClaim:
+              claimName: kube-prometheus-stack-grafana
+              readOnly: true
+          - name: scripts
+            configMap:
+              name: restore-verify
+          - name: tmp
+            emptyDir:
+              sizeLimit: 2Gi

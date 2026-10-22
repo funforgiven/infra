@@ -25,8 +25,7 @@ def main():
     else:
         document = secret("forge-runtime", "forge", {})
     values = document["stringData"]
-    # Secrets recover from SOPS; the complete application archive is encrypted
-    # by Kopia. Avoid also putting plaintext Secret objects in Velero metadata.
+    # Secrets recover from SOPS; keep plaintext Secret objects out of Velero.
     document["metadata"].setdefault("labels", {})["velero.io/exclude-from-backup"] = "true"
     for name in ("forgejo-secret-key", "forgejo-internal-token", "forgejo-admin-password",
                  "forgejo-metrics-token"):

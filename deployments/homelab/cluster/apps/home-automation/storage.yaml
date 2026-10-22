@@ -3,23 +3,6 @@ kind: PersistentVolumeClaim
 metadata:
   name: automation-state
   namespace: home-automation
-  labels:
-    backup.fahrican.com/volume-snapshot: "true"
-spec:
-  accessModes:
-  - ReadWriteOnce
-  storageClassName: ceph-block
-  resources:
-    requests:
-      storage: 20Gi
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: automation-backups
-  namespace: home-automation
-  labels:
-    backup.fahrican.com/verify: automation
 spec:
   accessModes:
   - ReadWriteOnce

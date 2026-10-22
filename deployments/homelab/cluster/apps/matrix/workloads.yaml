@@ -31,8 +31,6 @@ spec:
       labels:
         app.kubernetes.io/name: matrix-synapse
         app.kubernetes.io/part-of: matrix
-      annotations:
-        backup.velero.io/backup-volumes: media
     spec:
       automountServiceAccountToken: false
       imagePullSecrets:
@@ -362,7 +360,6 @@ spec:
         app.kubernetes.io/name: matrix-relay
         app.kubernetes.io/part-of: matrix
       annotations:
-        backup.velero.io/backup-volumes: state
         pre.hook.backup.velero.io/container: relay
         pre.hook.backup.velero.io/command: '["curl", "--fail", "--silent", "--request", "POST", "http://127.0.0.1:8081/snapshot"]'
         pre.hook.backup.velero.io/on-error: Fail

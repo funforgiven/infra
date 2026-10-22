@@ -39,7 +39,6 @@ spec:
         app.kubernetes.io/name: factorio
         app.kubernetes.io/part-of: game-servers
       annotations:
-        backup.velero.io/backup-volumes: data
         pre.hook.backup.velero.io/command: '["/bootstrap/factorio-save.sh", "velero"]'
         pre.hook.backup.velero.io/container: factorio
         pre.hook.backup.velero.io/on-error: Fail
@@ -94,10 +93,6 @@ spec:
         env:
         - name: CONFIG
           value: /runtime-config
-        - name: POD_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
         - name: RCON_PORT
           value: '27015'
         ports:
@@ -154,36 +149,6 @@ spec:
           readOnly: true
         - name: tmp
           mountPath: /tmp
-      - name: save-integrity
-        image: docker.io/library/busybox:1.38.0@sha256:dc2d74b28e4cf8984fa52af1f39bc7c3d9c73760b41a74d629f5d11b1ab28616
-        command:
-        - /bootstrap/verify-saves.sh
-        - --watch
-        env:
-        - name: POD_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        resources:
-          requests:
-            cpu: 5m
-            memory: 8Mi
-          limits:
-            cpu: 100m
-            memory: 32Mi
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          readOnlyRootFilesystem: true
-        volumeMounts:
-        - name: bootstrap
-          mountPath: /bootstrap
-          readOnly: true
-        - name: data
-          mountPath: /factorio
-          readOnly: true
       volumes:
       - name: bootstrap
         configMap:

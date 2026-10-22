@@ -1,13 +1,8 @@
 #!/usr/bin/python3
-"""Require a responding Valheim 1.0 server, or a verified isolated restore."""
-import os
-from pathlib import Path
+"""Require a responding Valheim 1.0 server."""
 import sys
 
 import a2s
-
-if os.environ["POD_NAMESPACE"] != "games":
-    sys.exit(0 if Path("/tmp/restore-ready").is_file() else 1)
 
 try:
     info = a2s.info(("127.0.0.1", 2457), timeout=2)

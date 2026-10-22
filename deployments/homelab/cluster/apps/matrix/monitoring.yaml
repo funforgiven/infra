@@ -58,23 +58,6 @@ spec:
         severity: warning
       annotations:
         summary: Matrix persistent storage has less than 20% free
-    - alert: MatrixRestoreQualificationFailed
-      expr: kube_job_status_failed{namespace="backup-qualification",job_name=~"matrix-restore-qualification.*"}
-        > 0
-      for: 15m
-      labels:
-        severity: critical
-      annotations:
-        summary: Isolated Matrix restore qualification failed
-    - alert: MatrixRestoreQualificationStale
-      expr: time() - (kube_cronjob_status_last_successful_time{namespace="backup-qualification",cronjob="matrix-restore-qualification"}
-        or kube_cronjob_created{namespace="backup-qualification",cronjob="matrix-restore-qualification"})
-        > 3456000
-      for: 1h
-      labels:
-        severity: critical
-      annotations:
-        summary: Matrix restore qualification has not succeeded within 40 days
     - alert: MatrixCertificateExpiring
       expr: certmanager_certificate_expiration_timestamp_seconds{namespace="services-network",name="matrix-public"}
         - time() < 604800

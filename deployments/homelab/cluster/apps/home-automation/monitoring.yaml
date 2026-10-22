@@ -43,13 +43,6 @@ spec:
         severity: critical
       annotations:
         summary: Home automation has no ready instance.
-    - alert: HomeAutomationBackupStale
-      expr: time() - home_automation_backup_last_success_timestamp_seconds > 28800 or absent(home_automation_backup_last_success_timestamp_seconds)
-      for: 30m
-      labels:
-        severity: critical
-      annotations:
-        summary: No verified local automation recovery archive exists within eight hours.
     - alert: HomeAutomationMqttUnavailable
       expr: home_automation_mqtt_authenticated == 0
       for: 10m
@@ -94,10 +87,3 @@ spec:
         severity: critical
       annotations:
         summary: The Thread border router is not attached to its mesh.
-    - alert: HomeAutomationThreadBackupStale
-      expr: time() - home_automation_thread_backup_last_success_timestamp_seconds > 100800 or absent(home_automation_thread_backup_last_success_timestamp_seconds)
-      for: 30m
-      labels:
-        severity: critical
-      annotations:
-        summary: No verified Thread recovery archive exists within 28 hours.

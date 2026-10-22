@@ -22,19 +22,6 @@ DEPLOYMENT = Path("deployments/homelab/cluster/apps/matrix")
 OBSERVABILITY = Path("deployments/homelab/cluster/infrastructure/observability")
 
 
-class LiteralDumper(yaml.SafeDumper):
-    pass
-
-
-def literal_string(dumper, value):
-    return dumper.represent_scalar(
-        "tag:yaml.org,2002:str", value, style="|" if "\n" in value else None
-    )
-
-
-LiteralDumper.add_representer(str, literal_string)
-
-
 def run(argv, data=None):
     return subprocess.run(argv, input=data, capture_output=True, check=True).stdout
 
@@ -481,7 +468,7 @@ def qualify(args):
 
     now = datetime.datetime.now(datetime.timezone.utc)
     for namespace, name in (
-        ("backup-qualification", "matrix-restore-qualification"),
+        ("backup-qualification", "restore-drill"),
         ("matrix-restore", "postgres-restore-test"),
     ):
         cronjob = json.loads(
@@ -616,7 +603,7 @@ def publish(args):
         save_secret(DEPLOYMENT / "registry.sops.yaml", registry_secret)
         restore_registry = secret(
             "matrix-registry",
-            "backup-qualification",
+            "matrix-restore",
             {".dockerconfigjson": json.dumps(auth)},
         )
         restore_registry["type"] = "kubernetes.io/dockerconfigjson"
@@ -625,19 +612,6 @@ def publish(args):
             k["resources"].append("registry.sops.yaml")
         if "registry-restore.sops.yaml" not in k["resources"]:
             k["resources"].append("registry-restore.sops.yaml")
-        restore_file = DEPLOYMENT / "restore.yaml"
-        restore_docs = list(yaml.safe_load_all(restore_file.read_text()))
-        for doc in restore_docs:
-            if doc["kind"] == "ConfigMap":
-                value = doc["data"]["resource-modifiers.yaml"]
-                doc["data"]["resource-modifiers.yaml"] = re.sub(
-                    re.escape(destination) + r"(?:@sha256:[a-f0-9]{64})?",
-                    destination + "@" + digest,
-                    value,
-                )
-        restore_file.write_text(
-            yaml.dump_all(restore_docs, Dumper=LiteralDumper, sort_keys=False)
-        )
         kfile.write_text(yaml.safe_dump(k, sort_keys=False))
         print("Published and pinned " + destination + "@" + digest)
     finally:

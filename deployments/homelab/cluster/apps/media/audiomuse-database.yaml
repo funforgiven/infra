@@ -11,9 +11,6 @@ spec:
     labels:
       app.kubernetes.io/name: audiomuse-db
       app.kubernetes.io/part-of: media
-      # AudioMuse data is recomputable: CNPG copies this label onto its PVCs,
-      # which opts them into the daily crash-consistent volume snapshots.
-      backup.fahrican.com/volume-snapshot: "true"
   bootstrap:
     # One-time logical import from the legacy PostgreSQL 15 StatefulSet. CNPG
     # generates the audiomuse-db-app owner Secret that AudioMuse now uses.

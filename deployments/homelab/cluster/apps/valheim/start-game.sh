@@ -2,7 +2,6 @@
 set -euo pipefail
 umask 027
 
-[[ "$POD_NAMESPACE" == games ]]
 password="$(< /credentials/VALHEIM_GAME_PASSWORD)"
 if (( ${#password} < 12 || ${#password} > 128 )) ||
   [[ "$password" == *$'\n'* || "$password" == *$'\r'* || "$SERVER_NAME" == *"$password"* ]]; then

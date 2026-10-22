@@ -35,8 +35,7 @@
   published with `components/homelab/services/forge/publish-image.py result`.
   Pin the printed digest in the manifests.
 - `components/homelab/services/forge/qualification.yaml` is the workflow
-  committed to `forge-runner/runner-qualification`. Its artifact is what the
-  restore test verifies.
+  committed to `forge-runner/runner-qualification`.
 - Drain one node at a time after checking etcd/Ceph quorum and capacity. Let
   builds finish or cancel them, then suspend both launcher CronJobs. Never
   delete data or cache PVCs to unblock a drain. Resume and check a cached build.
@@ -53,19 +52,8 @@ Plaintext stays in pipes; only SOPS ciphertext is written.
 
 ## Backup and recovery
 
-- Every six hours, `forge-snapshot-backup` exports a CSI snapshot clone of the
-  data volume into a verified archive on `forgejo-backups`. Velero copies that
-  volume offsite with Kopia. Velero's global `defaultVolumesToFsBackup: true`
-  ignores opt-in annotations, so the pod excludes `data,tmp` explicitly.
-  Without that, the live SQLite volume would be copied inconsistently.
-- The monthly restore test restores the latest daily backup into
-  `forge-restore`. It verifies the archive, SQLite, OIDC, Actions artifact
-  bytes, Git objects and Atollion's branch protection. Velero restores the
-  source PV's `Retain` policy even onto the `Delete` scratch class, so cleanup
-  patches the reclaim policy before deleting the claims. Failed drills are kept
-  for diagnosis.
-- Disaster recovery: suspend the `forge` Flux Kustomization. Restore
-  `forgejo-backups` from Velero, pick the newest completed archive and check its
-  SHA-256. Extract its `data/` onto an empty `forgejo-data` owned by UID/GID
-  1000. Then resume Flux, which reapplies the SOPS secrets and pinned images.
-  Accept only after HTTP, SSH, OIDC and an Actions run work.
+`forgejo-data` (SQLite and Git) is in the daily volume snapshots and the
+monthly drill runs `git fsck` and an SQLite check on it; see
+[backups](../../infrastructure/backups/README.md). To recover, suspend the
+`forge` Flux Kustomization, restore the claim, resume Flux and accept only after
+HTTP, SSH, OIDC and an Actions run work.

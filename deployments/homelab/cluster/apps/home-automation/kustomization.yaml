@@ -16,8 +16,7 @@ configMapGenerator:
   - bootstrap.py
   - install-pinned.py
   - onecta-application-credentials.py
-  - backup.py
-  - run-service.sh
+  - health.py
   - configuration.yaml
   - zigbee-configuration.yaml
   - mosquitto.conf
@@ -25,9 +24,8 @@ configMapGenerator:
   - mosquitto-nuki.acl
   - iot-firewall.nft
   - thread-firewall.nft
-  - thread-backup.sh
+  - thread-metrics.py
   - thread-ready.sh
-  - thread-recovery.py
 # Git-owned Home Assistant configuration, mounted read-only at /config/managed.
 - name: home-assistant-config
   namespace: home-automation
@@ -42,10 +40,3 @@ configMapGenerator:
   namespace: home-automation
   envs:
   - thread.env
-- name: automation-recovery-tools
-  namespace: home-automation-restore
-  options:
-    disableNameSuffixHash: true
-  files:
-  - backup.py
-  - thread-recovery.py

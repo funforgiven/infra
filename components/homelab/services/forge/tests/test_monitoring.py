@@ -18,7 +18,7 @@ class MonitoringTests(unittest.TestCase):
         if not promtool:
             self.fail('promtool is required; run the repository cloud-python Nix check')
         selected = {'ForgejoActionsLauncherFailing', 'ForgejoLinuxControllerFailed',
-                    'ForgejoLinuxRunnerFailed', 'ForgejoSnapshotBackupFailed'}
+                    'ForgejoLinuxRunnerFailed'}
         rules = []
         # Controller alerts reuse the cluster-wide CronJob recovery recording rules.
         for path in [JOB_HEALTH, SCRIPTS / 'monitoring.yaml']:
@@ -29,7 +29,6 @@ class MonitoringTests(unittest.TestCase):
         by_name = {r['alert']: r for r in rules if 'alert' in r}
         tests = []
         for namespace, cronjob, alert in [
-            ('forge', 'forge-snapshot-backup', 'ForgejoSnapshotBackupFailed'),
             ('forge-ci', 'forge-linux-qualification', 'ForgejoActionsLauncherFailing'),
             ('forge-control', 'forge-linux-atollion-launcher', 'ForgejoLinuxControllerFailed'),
         ]:

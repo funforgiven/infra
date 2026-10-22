@@ -5,8 +5,7 @@ configMapGenerator:
     namespace: matrix
     files:
       - relay.py
-  - name: matrix-restore-controller
-    namespace: backup-qualification
+  - name: matrix-restore-verifier
+    namespace: matrix-restore
     files:
-      - restore_controller.py
       - restore.py

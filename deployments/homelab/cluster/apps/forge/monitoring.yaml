@@ -16,7 +16,7 @@ spec:
         name: forge-runtime
         key: forgejo-metrics-token
     interval: 30s
-  - port: backup-metrics
+  - port: actions-metrics
     path: /metrics
     interval: 60s
 ---
@@ -38,52 +38,6 @@ spec:
       annotations:
         summary: forgejo is unavailable
         description: The private development service has had no ready replica for five minutes.
-    - alert: ForgejoSnapshotBackupFailed
-      expr: services_cronjob_unrecovered_failure{namespace="forge",cronjob="forge-snapshot-backup"}
-      for: 5m
-      labels:
-        severity: warning
-      annotations:
-        summary: The online Forgejo backup has failed
-        description: Inspect snapshot/export controller logs and disposable volume cleanup. Earlier archives
-          are kept and Forgejo stays online.
-    - alert: ForgejoSnapshotControllerUnavailable
-      expr: kube_deployment_status_replicas_available{namespace="kube-system",deployment="snapshot-controller"}
-        < 1
-      for: 15m
-      labels:
-        severity: critical
-      annotations:
-        summary: Storage snapshot controller is unavailable
-        description: Online Forgejo backups require this controller; offsite restores do not.
-    - alert: ForgejoBackupStale
-      expr: (time() - max(forge_backup_completed_timestamp_seconds{namespace="forge",service="forgejo"})
-        > 28800) or max(absent(forge_backup_completed_timestamp_seconds{namespace="forge",service="forgejo"}))
-      for: 15m
-      keep_firing_for: 5m
-      labels:
-        severity: critical
-        namespace: forge
-      annotations:
-        summary: forgejo recovery archive is overdue
-        description: No successful local recovery archive in eight hours; inspect the snapshot/export
-          controller and backup metrics before relying on Velero.
-    - alert: ForgejoRestoreQualificationFailed
-      expr: services_cronjob_unrecovered_failure{namespace="backup-qualification",cronjob="forge-restore-qualification"}
-      for: 15m
-      labels:
-        severity: critical
-      annotations:
-        summary: Forgejo offsite restore test failed
-        description: Inspect the restore-test job and isolated forge-restore verifiers.
-    - alert: ForgejoRestoreQualificationStale
-      expr: (time() - kube_cronjob_status_last_successful_time{namespace="backup-qualification",cronjob="forge-restore-qualification"}
-        > 3456000) or absent(kube_cronjob_status_last_successful_time{namespace="backup-qualification",cronjob="forge-restore-qualification"})
-      for: 1h
-      labels:
-        severity: critical
-      annotations:
-        summary: No successful Forgejo offsite restore in 40 days
     - alert: ForgejoActionsLauncherFailing
       expr: services_cronjob_unrecovered_failure{namespace="forge-ci",cronjob="forge-linux-qualification"}
       for: 5m

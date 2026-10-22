@@ -52,8 +52,8 @@ change in SFTPGo too.
 
 `audiomuse-db` is a CloudNativePG cluster bootstrapped by importing the legacy
 `audiomuse-postgres` StatefulSet, which remains only until the cutover is
-verified. AudioMuse's database is recomputable analysis data; its CNPG volumes
-are covered by the daily volume snapshot schedule.
+verified (its claim is excluded from backups). AudioMuse's database is
+recomputable analysis data; its CNPG volumes are in the daily volume snapshots.
 
 AudioMuse 3.4.0 can persist its `TASK_STATUS_LIVE`/`TASK_STATUS_TERMINAL`
 tuples in `app_config` in a form it cannot read back, producing invalid queue
@@ -65,9 +65,8 @@ overrides in a transaction, and require a healthy `/api/health`. Never clear
 ## Discord music (Muse)
 
 One replica with `Recreate`: two pods would compete for one bot identity and
-SQLite database. The cache is disposable; only `/data` is backed up, through a
-pre-backup hook (`sqlite-backup.py`) that writes a verified online copy to
-`/data/recovery/db.sqlite`. Restore from that copy with Muse stopped, never
+SQLite database. A pre-backup hook (`sqlite-backup.py`) writes a verified online
+copy to `/data/recovery/db.sqlite`; restore from it with Muse stopped, never
 over an open database, and never let a restored pod run with the production
 token.
 
@@ -92,5 +91,5 @@ token.
 ## Verify a change
 
 Upload a small test album, confirm Beets tags and moves it and Navidrome scans
-it, upload it again and confirm the duplicate is quarantined. Backups and the
-isolated media restore are owned by `infrastructure/backups/`.
+it, upload it again and confirm the duplicate is quarantined. Backups and
+restore checks: [backups](../../infrastructure/backups/README.md).

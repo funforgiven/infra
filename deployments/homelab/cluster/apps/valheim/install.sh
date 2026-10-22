@@ -2,15 +2,10 @@
 set -euo pipefail
 umask 027
 
-# The game needs a resolvable non-root account, including in isolated restores.
+# The game needs a resolvable non-root account.
 /bootstrap/prepare-identity.sh
 
-# Restore checks must not download or start a second server.
-if [[ "$POD_NAMESPACE" != games ]]; then
-  exit 0
-fi
-
-mkdir -p /data/worlds /data/backups /data/home/.steam/sdk64 /data/steamcmd /data/server
+mkdir -p /data/worlds /data/home/.steam/sdk64 /data/steamcmd /data/server
 touch /data/worlds/adminlist.txt /data/worlds/bannedlist.txt /data/worlds/permittedlist.txt
 # SteamCMD updates itself, so copy it out of the read-only container filesystem.
 if [[ ! -x /data/steamcmd/steamcmd.sh ]]; then

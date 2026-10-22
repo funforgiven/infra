@@ -30,8 +30,7 @@ spec:
         \ pod, cluster) group_left ()\n  topk by (namespace, pod, cluster) (1,\n    max by (namespace,\
         \ pod, owner_kind, cluster) (kube_pod_owner{owner_kind!=\"Job\"}))\n) > 0 unless on (namespace,\
         \ pod, cluster) kube_pod_status_reason{job=\"kube-state-metrics\",reason=\"SchedulingGated\"}\
-        \ == 1) unless on (namespace, pod) kube_pod_info{namespace=\"forge-restore\",pod=\"forgejo-0\"\
-        }"
+        \ == 1)"
       for: 15m
       labels:
         severity: warning

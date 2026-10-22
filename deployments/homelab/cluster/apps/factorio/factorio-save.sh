@@ -9,8 +9,4 @@ case "$save_name" in
     ;;
 esac
 
-if [ "$POD_NAMESPACE" != games ]; then
-  exit 0
-fi
-
 exec /bin/rcon "/server-save $save_name"

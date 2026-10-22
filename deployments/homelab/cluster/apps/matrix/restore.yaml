@@ -1,256 +1,41 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: matrix-restore-modifiers
-  namespace: velero
-data:
-  resource-modifiers.yaml: |
-    version: v1
-    resourceModifierRules:
-    - conditions:
-        groupResource: persistentvolumeclaims
-        namespaces:
-        - matrix
-      patches:
-      - operation: remove
-        path: /spec/volumeName
-    - conditions:
-        groupResource: pods
-        resourceNameRegex: ^matrix-(synapse|relay)-0$
-        namespaces:
-        - matrix
-      patches:
-      - operation: test
-        path: /spec/initContainers/0/name
-        value: restore-wait
-      - operation: test
-        path: /spec/volumes/1/name
-        value: runtime
-      - operation: test
-        path: /spec/volumes/2/name
-        value: scripts
-      - operation: remove
-        path: /spec/volumes/2
-      - operation: remove
-        path: /spec/volumes/1
-      - operation: replace
-        path: /spec/containers
-        value: |-
-          [
-            {
-              "name": "restore-sleeper",
-              "image": "git.fahrican.com/forge-runner/matrix-runtime:1.0.0@sha256:9a2085fccc6c24252b545f0a1899542cf315d02c91d78171d389594753e8ddcc",
-              "command": [
-                "sleep",
-                "infinity"
-              ],
-              "securityContext": {
-                "runAsNonRoot": true,
-                "runAsUser": 1000,
-                "runAsGroup": 1000,
-                "allowPrivilegeEscalation": false,
-                "readOnlyRootFilesystem": true,
-                "capabilities": {
-                  "drop": [
-                    "ALL"
-                  ]
-                }
-              },
-              "resources": {
-                "requests": {
-                  "cpu": "10m",
-                  "memory": "32Mi"
-                },
-                "limits": {
-                  "memory": "128Mi"
-                }
-              },
-              "volumeMounts": [
-                {
-                  "mountPath": "/recovery"
-                }
-              ]
-            }
-          ]
-      - operation: copy
-        from: /spec/volumes/1/name
-        path: /spec/containers/0/volumeMounts/0/name
-      - operation: add
-        path: /spec/restartPolicy
-        value: Never
-      - operation: add
-        path: /spec/affinity
-        value: '{"podAffinity": {"requiredDuringSchedulingIgnoredDuringExecution": [{"topologyKey":
-          "kubernetes.io/hostname", "labelSelector": {"matchLabels": {"matrix.fahrican.com/restore-cohort":
-          "matrix"}}}]}}'
-      - operation: add
-        path: /metadata/labels/matrix.fahrican.com~1restore-cohort
-        value: '"matrix"'
-      - operation: add
-        path: /metadata/annotations
-        value: '{}'
-      - operation: add
-        path: /metadata/ownerReferences
-        value: '[]'
-      - operation: add
-        path: /spec/initContainers/0/securityContext
-        value: '{"runAsNonRoot": true, "runAsUser": 1000, "runAsGroup": 1000, "allowPrivilegeEscalation":
-          false, "readOnlyRootFilesystem": true, "capabilities": {"drop": ["ALL"]}}'
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: matrix-restore-controller
-  namespace: backup-qualification
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: matrix-restore-controller
-  namespace: velero
-rules:
-- apiGroups:
-  - velero.io
-  resources:
-  - backups
-  verbs:
-  - get
-  - list
-- apiGroups:
-  - velero.io
-  resources:
-  - restores
-  verbs:
-  - create
-  - get
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: matrix-restore-controller
-  namespace: velero
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: matrix-restore-controller
-subjects:
-- kind: ServiceAccount
-  name: matrix-restore-controller
-  namespace: backup-qualification
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: matrix-restore-controller
-  namespace: matrix
-rules:
-- apiGroups:
-  - ''
-  resources:
-  - secrets
-  resourceNames:
-  - matrix-registry
-  verbs:
-  - get
-- apiGroups:
-  - ''
-  resources:
-  - pods
-  resourceNames:
-  - matrix-synapse-0
-  verbs:
-  - get
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: matrix-restore-controller
-  namespace: matrix
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: matrix-restore-controller
-subjects:
-- kind: ServiceAccount
-  name: matrix-restore-controller
-  namespace: backup-qualification
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: matrix-restore-controller
-  namespace: matrix-restore
-rules:
-- apiGroups:
-  - ''
-  resources:
-  - pods
-  - persistentvolumeclaims
-  - secrets
-  - configmaps
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - patch
-  - delete
-- apiGroups:
-  - batch
-  resources:
-  - jobs
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - delete
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: matrix-restore-controller
-  namespace: matrix-restore
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: matrix-restore-controller
-subjects:
-- kind: ServiceAccount
-  name: matrix-restore-controller
-  namespace: backup-qualification
----
+# Verifier template run by backup-qualification/restore-drill against the
+# media and relay volumes it restores into matrix-restore. Suspended: it never
+# runs on its own. It decrypts the relay's recovery canary with the restored
+# crypto store, so it has no token and no network (restore-policy.yaml).
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: matrix-restore-qualification
-  namespace: backup-qualification
+  name: restore-verify
+  namespace: matrix-restore
+  labels:
+    backup.fahrican.com/restore-verifier: "true"
 spec:
-  schedule: 0 7 1 * *
-  timeZone: Europe/Istanbul
-  concurrencyPolicy: Forbid
-  successfulJobsHistoryLimit: 1
-  failedJobsHistoryLimit: 2
+  suspend: true
+  schedule: 0 0 31 2 *
   jobTemplate:
+    metadata:
+      labels:
+        backup.fahrican.com/restore-drill: "true"
     spec:
       backoffLimit: 0
-      activeDeadlineSeconds: 6600
+      activeDeadlineSeconds: 1800
+      ttlSecondsAfterFinished: 604800
       template:
         spec:
-          serviceAccountName: matrix-restore-controller
+          automountServiceAccountToken: false
           restartPolicy: Never
+          imagePullSecrets:
+          - name: matrix-registry
           securityContext:
             fsGroup: 1000
             seccompProfile:
               type: RuntimeDefault
-          imagePullSecrets:
-          - name: matrix-registry
           containers:
-          - name: controller
+          - name: verify
             image: git.fahrican.com/forge-runner/matrix-runtime
             command:
             - python
-            - /scripts/restore_controller.py
+            - /scripts/restore.py
             securityContext:
               runAsNonRoot: true
               runAsUser: 1000
@@ -262,19 +47,35 @@ spec:
                 - ALL
             resources:
               requests:
-                cpu: 50m
-                memory: 128Mi
+                cpu: 100m
+                memory: 256Mi
               limits:
-                memory: 512Mi
+                cpu: '1'
+                memory: 1Gi
             volumeMounts:
+            - name: media
+              mountPath: /var/lib/matrix/media
+              readOnly: true
+            - name: relay
+              mountPath: /var/lib/matrix/relay
+              readOnly: true
             - name: scripts
               mountPath: /scripts
               readOnly: true
             - name: tmp
               mountPath: /tmp
           volumes:
+          - name: media
+            persistentVolumeClaim:
+              claimName: matrix-media
+              readOnly: true
+          - name: relay
+            persistentVolumeClaim:
+              claimName: matrix-relay
+              readOnly: true
           - name: scripts
             configMap:
-              name: matrix-restore-controller
+              name: matrix-restore-verifier
           - name: tmp
-            emptyDir: {}
+            emptyDir:
+              sizeLimit: 1Gi

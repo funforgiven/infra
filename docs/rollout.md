@@ -41,9 +41,23 @@ each item when it is done, and this file when it is empty.
   After AudioMuse works on it, delete the legacy `audiomuse-postgres`
   StatefulSet, Service, network policy and PVCs and the `externalClusters`
   import source.
+- **Backups.** Check that the first `daily` Velero backup completes with its
+  data uploads, then run the restore drill on demand
+  ([backups](../deployments/homelab/cluster/infrastructure/backups/README.md)).
+  Restart Velero if `VeleroScheduleBackupStale` keeps firing for the removed
+  `services-*` schedules.
+- **Matrix restore pull secret.** `apps/matrix/registry-restore.sops.yaml`
+  still names namespace `backup-qualification`; re-encrypt it for
+  `matrix-restore` (or re-run `matrix-admin publish-image`), or the Matrix
+  verifier cannot pull its image.
+- **Forgejo** is `OnDelete`: delete its pod once to drop the removed backup
+  sidecar.
 - **Released volumes.** `ceph-block` retains volumes, so PVCs removed from Git
-  (old backup archives, the Valheim game install) leave Released PVs. Delete
-  them once the new backups have run and a restore drill has passed.
+  leave Released PVs: `forgejo-backups` (its claim is unprunable; delete the
+  claim first), `automation-backups`, `thread-backups`, volumes left by old
+  restore checks, and the stale Valheim `/data/backups/recovery.tar`. Delete
+  them once the new backups have run. The drill fails while Retain-policy
+  volumes remain in a restore namespace.
 - **`cnpg-system` namespace** is declared both in `cluster/namespaces.yaml` and
   `infrastructure/databases/namespaces.yaml` (identical, unprunable). Remove
   the second copy in a later change.

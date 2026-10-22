@@ -40,6 +40,9 @@ spec:
       digest: sha256:37396519f399536e5f01427d723565ae69294ec3fb5625cf1c87c09eaa9de16b
     initContainers:
     - name: velero-plugin-for-aws
+      # Upstream main built 2026-08-14 (commit 8dbd6b8), which omits the empty
+      # x-amz-tagging header B2 rejects. Replace only with a tagged release
+      # containing that fix.
       image: docker.io/velero/velero-plugin-for-aws:main@sha256:0f442cf9263b3a579d9b22417501dfef75e83b300b8180b9394c86d0127ec220
       imagePullPolicy: IfNotPresent
       securityContext:
@@ -64,12 +67,15 @@ spec:
           key: cloud
         config:
           region: us-west-004
+          # B2 rejects request checksums; TLS and Kopia integrity checks remain.
           checksumAlgorithm: ''
           s3ForcePathStyle: 'true'
           s3Url: https://s3.us-west-004.backblazeb2.com
       defaultBackupStorageLocation: default
       features: EnableCSI
-      defaultVolumesToFsBackup: true
+      # Volumes go through the CSI snapshot data mover; Kopia filesystem
+      # backup is opt-in per pod volume (only the CephFS media library).
+      defaultVolumesToFsBackup: false
       defaultRepoMaintainFrequency: 24h
     credentials:
       useSecret: true
@@ -117,15 +123,15 @@ spec:
           for: 15m
           labels:
             severity: critical
-        # Every schedule is daily except *-weekly ones; both get a two-hour
+        # Every schedule is daily except "weekly"; both get a two-hour
         # grace. A schedule that never succeeded since Velero started has
         # attempt counters but no success timestamp.
         - alert: VeleroScheduleBackupStale
           annotations:
             summary: Velero schedule {{ $labels.schedule }} has no successful backup within its interval.
           expr: >-
-            (time() - velero_backup_last_successful_timestamp{schedule!="", schedule!~".+-weekly"} > 26 * 3600)
-            or (time() - velero_backup_last_successful_timestamp{schedule=~".+-weekly"} > (7 * 24 + 2) * 3600)
+            (time() - velero_backup_last_successful_timestamp{schedule!="", schedule!="weekly"} > 26 * 3600)
+            or (time() - velero_backup_last_successful_timestamp{schedule="weekly"} > (7 * 24 + 2) * 3600)
             or (velero_backup_attempt_total{schedule!=""} unless on (schedule) velero_backup_last_successful_timestamp)
           for: 1h
           labels:

@@ -32,6 +32,9 @@ spec:
       labels:
         app.kubernetes.io/name: navidrome
         app.kubernetes.io/part-of: media
+      annotations:
+        # The CephFS library is the one Kopia filesystem backup; see storage.yaml.
+        backup.velero.io/backup-volumes: media
     spec:
       automountServiceAccountToken: false
       securityContext:

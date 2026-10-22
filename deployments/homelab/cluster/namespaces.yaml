@@ -71,6 +71,14 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
+  name: backup-qualification-restore
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.35
+---
+apiVersion: v1
+kind: Namespace
+metadata:
   name: cert-manager
   labels:
     pod-security.kubernetes.io/enforce: restricted
@@ -112,6 +120,22 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
+  name: media-restore
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.35
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: games-restore
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.35
+---
+apiVersion: v1
+kind: Namespace
+metadata:
   name: home-automation
   labels:
     gateway.fahrican.com/services: allowed
@@ -139,8 +163,10 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: services-databases
-  labels: {}
+  name: services-observability-restore
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.35
 ---
 apiVersion: v1
 kind: Namespace

@@ -13,8 +13,8 @@ the workloads that mount the changed keys (`runtime-rollouts.yaml`).
 PostgreSQL (`synapse` and `mas`) is backed up by Barman Cloud like the other
 CloudNativePG databases. The live cluster was created empty, so rebuilding it
 from the archive means switching `bootstrap` in `database.yaml` from `initdb`
-to `recovery` first (the comment there has the exact stanza). Velero copies
-only the media and relay volumes.
+to `recovery` first (the comment there has the exact stanza). Velero snapshots
+only the media and relay volumes ([backups](../../infrastructure/backups/README.md)).
 
 Keep the Flux stage suspended until the database, media and relay state are
 restored. The relay snapshot in `relay/backups` holds the SQLite queue, the
@@ -31,9 +31,9 @@ Two isolated checks run unattended:
 
 - `matrix-restore/postgres-restore-test` recovers the Barman archive into a
   disposable cluster with no WAL archiver and checks both databases.
-- `backup-qualification/matrix-restore-qualification` restores the media and
-  relay volumes with Velero into `matrix-restore` behind a Cilium deny-all,
-  decrypts the canary with the recovered session, then deletes the copies.
+- The monthly restore drill restores the media and relay volumes into
+  `matrix-restore` behind a Cilium deny-all and runs `restore-verify`
+  (`restore.py`), which decrypts the canary with the recovered session.
 
 ## Alert relay and devices
 
@@ -59,5 +59,6 @@ delivery, run `qualify --mobile-and-recovery-checked` from outside the LAN,
 
 `nix build .#matrix-runtime-image` builds the one image every workload uses;
 `nix run .#matrix-qualify-local` runs a disposable end-to-end test. After a
-passing test, `matrix-admin publish-image` pushes it and pins the digest in
-`kustomization.yaml` and the restore modifiers in `restore.yaml`.
+passing test, `matrix-admin publish-image` pushes it, pins the digest in
+`kustomization.yaml` and renders the pull secret for `matrix` and
+`matrix-restore`.

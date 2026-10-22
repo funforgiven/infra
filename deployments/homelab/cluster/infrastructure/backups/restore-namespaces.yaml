@@ -1,0 +1,166 @@
+# The drill's permissions inside each restore namespace. Every *-restore
+# namespace denies all traffic (matrix-restore's policy lives with its
+# CloudNativePG restore test).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all
+  namespace: backup-qualification-restore
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: restore-drill
+  namespace: backup-qualification-restore
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: restore-drill-target
+subjects:
+- kind: ServiceAccount
+  name: restore-drill
+  namespace: backup-qualification
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all
+  namespace: forge-restore
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: restore-drill
+  namespace: forge-restore
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: restore-drill-target
+subjects:
+- kind: ServiceAccount
+  name: restore-drill
+  namespace: backup-qualification
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all
+  namespace: games-restore
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: restore-drill
+  namespace: games-restore
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: restore-drill-target
+subjects:
+- kind: ServiceAccount
+  name: restore-drill
+  namespace: backup-qualification
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all
+  namespace: home-automation-restore
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: restore-drill
+  namespace: home-automation-restore
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: restore-drill-target
+subjects:
+- kind: ServiceAccount
+  name: restore-drill
+  namespace: backup-qualification
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: restore-drill
+  namespace: matrix-restore
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: restore-drill-target
+subjects:
+- kind: ServiceAccount
+  name: restore-drill
+  namespace: backup-qualification
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all
+  namespace: media-restore
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: restore-drill
+  namespace: media-restore
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: restore-drill-target
+subjects:
+- kind: ServiceAccount
+  name: restore-drill
+  namespace: backup-qualification
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all
+  namespace: services-observability-restore
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: restore-drill
+  namespace: services-observability-restore
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: restore-drill-target
+subjects:
+- kind: ServiceAccount
+  name: restore-drill
+  namespace: backup-qualification

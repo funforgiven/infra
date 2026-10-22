@@ -2,12 +2,27 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
 - schedules.yaml
-- data-movement.yaml
-- restore-modifiers.yaml
-- restore-qualification.yaml
-- home-automation-restore.yaml
+- drill.yaml
+- restore-namespaces.yaml
+- verifiers.yaml
 configMapGenerator:
-- name: automation-restore-controller
+- name: restore-drill
   namespace: backup-qualification
   files:
-  - qualify-home-automation.py
+  - restore-drill.py
+- name: restore-verify
+  namespace: forge-restore
+  files:
+  - verify-volume.py
+- name: restore-verify
+  namespace: home-automation-restore
+  files:
+  - verify-volume.py
+- name: restore-verify
+  namespace: media-restore
+  files:
+  - verify-volume.py
+- name: restore-verify
+  namespace: services-observability-restore
+  files:
+  - verify-volume.py

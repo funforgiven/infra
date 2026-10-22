@@ -4,13 +4,7 @@ metadata:
   name: forge
   namespace: forge
 spec:
-  endpointSelector:
-    matchExpressions:
-    - key: app.kubernetes.io/name
-      operator: NotIn
-      values:
-      - forge-snapshot-backup
-      - forge-snapshot-export
+  endpointSelector: {}
   ingress:
   - fromEndpoints:
     - matchLabels:

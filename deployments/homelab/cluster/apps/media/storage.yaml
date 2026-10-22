@@ -3,6 +3,11 @@ kind: PersistentVolumeClaim
 metadata:
   name: media-library
   namespace: media
+  labels:
+    # Backed up by Kopia from the Navidrome pod, not by snapshot: a CephFS
+    # snapshot is exported through a full clone. A PVC-only restore cannot
+    # recover it, so the restore drill skips it.
+    backup.fahrican.com/restore-drill: skip
 spec:
   accessModes:
   - ReadWriteMany
@@ -29,8 +34,6 @@ kind: PersistentVolumeClaim
 metadata:
   name: beets-data
   namespace: media
-  labels:
-    backup.fahrican.com/volume-snapshot: "true"
 spec:
   accessModes:
   - ReadWriteOnce
@@ -57,6 +60,9 @@ kind: PersistentVolumeClaim
 metadata:
   name: audiomuse-postgres
   namespace: media
+  labels:
+    # Legacy import source for audiomuse-db; recomputable and not backed up.
+    velero.io/exclude-from-backup: "true"
 spec:
   accessModes:
   - ReadWriteOnce
@@ -70,8 +76,6 @@ kind: PersistentVolumeClaim
 metadata:
   name: audiomuse-postgres-dumps
   namespace: media
-  labels:
-    backup.fahrican.com/volume-snapshot: "true"
 spec:
   accessModes:
   - ReadWriteOnce

@@ -42,12 +42,6 @@ spec:
       labels:
         app.kubernetes.io/name: valheim
         app.kubernetes.io/part-of: game-servers
-      annotations:
-        backup.velero.io/backup-volumes: data
-        pre.hook.backup.velero.io/command: '["/bootstrap/backup.sh"]'
-        pre.hook.backup.velero.io/container: valheim
-        pre.hook.backup.velero.io/on-error: Fail
-        pre.hook.backup.velero.io/timeout: 5m
     spec:
       automountServiceAccountToken: false
       terminationGracePeriodSeconds: 180
@@ -67,10 +61,6 @@ spec:
         command:
         - /bootstrap/install.sh
         env:
-        - name: POD_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
         - name: HOME
           value: /data/home
         - name: SERVER_NAME
@@ -113,10 +103,6 @@ spec:
         command:
         - /bootstrap/start.sh
         env:
-        - name: POD_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
         - name: HOME
           value: /data/home
         - name: SERVER_NAME
@@ -149,10 +135,7 @@ spec:
             command:
             - /bin/bash
             - -ec
-            - "if [[ \"$POD_NAMESPACE\" != games ]]; then\n  test -f /tmp/restore-ready;\n\
-              else\n  supervisorctl -c /bootstrap/supervisord.conf status valheim\
-              \ |\n  grep -Eq ' (RUNNING|STARTING|BACKOFF|STOPPING) ' ||\n  test -d\
-              \ /tmp/valheim-backup.lock;\nfi"
+            - supervisorctl -c /bootstrap/supervisord.conf status valheim | grep -Eq ' (RUNNING|STARTING|BACKOFF|STOPPING) '
           timeoutSeconds: 5
           periodSeconds: 30
           failureThreshold: 6

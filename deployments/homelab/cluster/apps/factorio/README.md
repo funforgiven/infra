@@ -27,8 +27,6 @@ game password.
 
 ## Backup
 
-Before each backup the pod hook runs `/server-save velero` over RCON so the
-copy contains a complete save; the `save-integrity` sidecar tests every save
-archive but never gates readiness. Twelve ten-minute autosaves give a separate
-two-hour rollback window. Schedules and restore drills are owned by
-`infrastructure/backups/`.
+Before each Velero backup the pod hook runs `/server-save velero` over RCON, so
+the volume snapshot holds a complete named save; twelve ten-minute autosaves
+give a separate two-hour rollback window. See [backups](../../infrastructure/backups/README.md).

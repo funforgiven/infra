@@ -13,4 +13,3 @@ configMapGenerator:
   - factorio-save.sh
   - render-config.sh
   - start.sh
-  - verify-saves.sh

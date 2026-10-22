@@ -13,9 +13,9 @@ spec:
   - name: http
     port: 3000
     targetPort: http
-  - name: backup-metrics
+  - name: actions-metrics
     port: 9900
-    targetPort: backup-metrics
+    targetPort: actions-metrics
   - name: cache-scope
     port: 8083
     targetPort: cache-scope
@@ -42,13 +42,6 @@ spec:
       labels:
         app.kubernetes.io/name: forgejo
         app.kubernetes.io/part-of: forge
-      annotations:
-        backup.velero.io/backup-volumes: backups
-        backup.velero.io/backup-volumes-excludes: data,tmp
-        pre.hook.backup.velero.io/command: '["python", "/bootstrap/backup.py", "--once"]'
-        pre.hook.backup.velero.io/container: backup
-        pre.hook.backup.velero.io/on-error: Fail
-        pre.hook.backup.velero.io/timeout: 15m
     spec:
       automountServiceAccountToken: false
       terminationGracePeriodSeconds: 60
@@ -61,9 +54,6 @@ spec:
       - name: data
         persistentVolumeClaim:
           claimName: forgejo-data
-      - name: backups
-        persistentVolumeClaim:
-          claimName: forgejo-backups
       - name: bootstrap
         configMap:
           name: forge-bootstrap
@@ -265,11 +255,11 @@ spec:
           limits:
             cpu: 100m
             memory: 64Mi
-      - name: backup
+      - name: actions-metrics
         image: docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4
         command:
         - python
-        - /bootstrap/backup.py
+        - /bootstrap/actions-metrics.py
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
@@ -279,22 +269,13 @@ spec:
           runAsNonRoot: true
           runAsUser: 1000
           runAsGroup: 1000
-        env:
-        - name: BACKUP_DATA
-          value: /data
-        - name: BACKUP_DATABASE
-          value: data/forgejo.db
-        - name: BACKUP_SERVICE
-          value: forgejo
         ports:
-        - name: backup-metrics
+        - name: actions-metrics
           containerPort: 9900
         volumeMounts:
         - name: data
           mountPath: /data
           readOnly: true
-        - name: backups
-          mountPath: /backups
         - name: bootstrap
           mountPath: /bootstrap
           readOnly: true
