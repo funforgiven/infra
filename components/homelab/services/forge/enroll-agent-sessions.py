@@ -101,12 +101,19 @@ def main():
             raise RuntimeError("No secure authentication cookies were issued")
         document = {"username": name, "user_id": entry["user_id"], "url": URL,
                     "repository": REPOSITORY, "cookies": cookies}
-        with tempfile.NamedTemporaryFile(mode="w", dir=directory, prefix=".web-session-", delete=False) as output:
-            temporary = Path(output.name)
-            json.dump(document, output, indent=2)
-            output.write("\n")
-        temporary.chmod(0o600)
-        temporary.replace(directory / "web-session.json")
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", dir=directory, prefix=".web-session-",
+                                             delete=False) as output:
+                temporary = Path(output.name)
+                json.dump(document, output, indent=2)
+                output.write("\n")
+            temporary.chmod(0o600)
+            temporary.replace(directory / "web-session.json")
+        except BaseException:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
+            raise
         print("Verified individual Actions evidence session:", name, flush=True)
 
 

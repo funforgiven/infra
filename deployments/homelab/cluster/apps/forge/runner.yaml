@@ -9,7 +9,7 @@ runner:
   insecure: false
   fetch_timeout: 30s
   fetch_interval: 5s
-  env_file: ''
+  env_file: /run/runner/env
 cache:
   enabled: false
 container:

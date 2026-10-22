@@ -14,6 +14,11 @@ import urllib.request
 
 from cluster_http import NoRedirect
 
+PAGE_SIZE = 50
+# Runner Jobs end within activeDeadlineSeconds (2.5h); an offline identity
+# whose name minute is older than this can never be used again.
+STALE_SECONDS = 6 * 3600
+
 
 def registration_request(opener, request, deadline):
     """Wait out short maintenance pauses without replaying enrollment writes."""
@@ -38,10 +43,20 @@ def registration_request(opener, request, deadline):
         time.sleep(min(5, remaining))
 
 
-def runner_configuration(base, raw_cache, now=None):
-    """Copy the immutable configuration, adding only a validated job capability."""
+def stale_runners(runners, now):
+    """Offline ephemeral identities created by these CronJobs and long expired."""
+    for runner in runners:
+        if not runner["ephemeral"] or runner["status"] != "offline":
+            continue
+        match = re.match(r"^forge-linux-(?:qualification|atollion)-(\d+)-", runner["name"])
+        if match and now - int(match.group(1)) * 60 > STALE_SECONDS:
+            yield runner["id"]
+
+
+def cache_environment(raw_cache, now=None):
+    """Return the runner env_file contents for a validated job cache capability."""
     if not raw_cache:
-        return base
+        return ""
     try:
         if len(raw_cache) > 1024:
             raise ValueError()
@@ -54,14 +69,11 @@ def runner_configuration(base, raw_cache, now=None):
                 or type(cache.get("expires_unix")) is not int
                 or not now < cache["expires_unix"] <= now + 7200):
             raise ValueError()
-        anchor = '  env_file: ""\n'
-        if base.count(anchor) != 1:
-            raise ValueError()
-        envs = {"ACTIONS_CACHE_URL": cache["actions_cache_url"], "FORGE_CACHE_MODE": cache["cache_mode"]}
-        return base.replace(anchor, anchor + "  envs: " + json.dumps(envs) + "\n")
+        return ("ACTIONS_CACHE_URL=" + cache["actions_cache_url"] + "\n"
+                "FORGE_CACHE_MODE=" + cache["cache_mode"] + "\n")
     except (ValueError, TypeError):
         print("Optional cache capability unavailable; continuing with a cold job.", flush=True)
-        return base
+        return ""
 
 
 def main():
@@ -71,7 +83,7 @@ def main():
     base = "https://git.fahrican.com/api/v1/repos/" + repository + "/actions/runners"
     token = Path("/run/enrollment/token").read_text().strip()
     opener = urllib.request.build_opener(NoRedirect)
-    # One budget covers both discovery reads, including their response bodies.
+    # One budget covers every discovery read, including response bodies.
     # POST/DELETE are attempted once; uncertain writes are never replayed.
     deadline = time.monotonic() + 180
 
@@ -83,20 +95,15 @@ def main():
         return registration_request(opener, request, deadline)
 
 
-    # Kubernetes expires idle/failed job pods after three hours. Remove only
-    # older, offline ephemeral identities belonging to this managed CronJob.
-    for runner in request("GET", "?limit=50") or []:
-        if not runner["ephemeral"] or runner["status"] != "offline":
-            continue
-        match = re.match(r"^forge-linux-(?:qualification|atollion)-(\d+)-", runner["name"])
-        if not match:
-            continue
-        try:
-            minute = int(match.group(1))
-        except ValueError:
-            continue
-        if time.time() - minute * 60 > 21600:
-            request("DELETE", "/" + str(runner["id"]))
+    runners, page = [], 1
+    while True:
+        batch = request("GET", f"?limit={PAGE_SIZE}&page={page}") or []
+        runners += batch
+        if len(batch) < PAGE_SIZE:
+            break
+        page += 1
+    for identity in stale_runners(runners, time.time()):
+        request("DELETE", "/" + str(identity))
 
     jobs = request("GET", "/jobs?labels=linux-x86_64") or []
     waiting = [job for job in jobs if job["status"] == "waiting"
@@ -113,8 +120,9 @@ def main():
     (root / "uuid").write_text(registered["uuid"])
     (root / "token").write_text(registered["token"])
     (root / "handle").write_text(handle)
-    (root / "runner.yaml").write_text(runner_configuration(
-        Path("/bootstrap/runner.yaml").read_text(), os.environ.get("FORGE_CACHE_CONFIG")))
+    # runner.yaml names this file as env_file; it is always written so a cold
+    # job never reads a stale or missing capability.
+    (root / "env").write_text(cache_environment(os.environ.get("FORGE_CACHE_CONFIG")))
     print("Registered a repository-scoped ephemeral runner; enrollment credential remains in init only.")
 
 

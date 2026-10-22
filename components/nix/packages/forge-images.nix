@@ -7,7 +7,7 @@ _: {
       ...
     }:
     {
-      packages = lib.optionalAttrs (system == "x86_64-linux") {
+      packages = lib.optionalAttrs (system == "x86_64-linux") rec {
         forge-linux-runner-image =
           let
             runnerBinary = pkgs.fetchurl {
@@ -95,6 +95,93 @@ _: {
                 "org.opencontainers.image.source" = "https://github.com/funforgiven/infra";
                 "org.opencontainers.image.description" =
                   "Unprivileged Forgejo Actions runner for one disposable Kubernetes job";
+              };
+            };
+          };
+
+        # Only the build cache runs patched code: upstream keys caches globally
+        # by key/version, so another repository could read or evict entries.
+        # Runner jobs keep the upstream binary above.
+        forge-cache-backend = pkgs.forgejo-runner.overrideAttrs (_: {
+          version = "13.1.0";
+          src = pkgs.fetchFromGitea {
+            domain = "code.forgejo.org";
+            owner = "forgejo";
+            repo = "runner";
+            rev = "v13.1.0";
+            hash = "sha256-0LVia4B9n2zuuHDGFnBVM1mrbI7XBhMfy25kRSN5/WQ=";
+          };
+          vendorHash = "sha256-2QwltVOR6MJO8rLNgktN1ulvP0YrnqQorNnfJXzRmJs=";
+          patches = [ ../../homelab/services/forge/runner-cache-isolation.patch ];
+          ldflags = [
+            "-s"
+            "-w"
+            "-X code.forgejo.org/forgejo/runner/v13/internal/pkg/ver.version=v13.1.0+cache-isolation.1"
+          ];
+          # The patch only touches the cache server; test that package alone.
+          # Handler tests discover an outbound address, absent in the sandbox.
+          preCheck = ''
+            substituteInPlace act/artifactcache/handler_test.go \
+              --replace-fail 'StartHandler(dir, "", 0,' 'StartHandler(dir, "127.0.0.1", 0,'
+          '';
+          checkPhase = ''
+            runHook preCheck
+            go test -p "$NIX_BUILD_CORES" -count=1 ./act/artifactcache
+            runHook postCheck
+          '';
+          # No git wrapper: the cache server never runs jobs.
+          postInstall = ''
+            mv "$out/bin/runner" "$out/bin/forgejo-runner"
+          '';
+        });
+
+        forge-cache-image =
+          let
+            tools = pkgs.buildEnv {
+              name = "forge-cache-tools";
+              paths = [
+                forge-cache-backend
+                pkgs.python3
+                pkgs.cacert
+              ];
+              pathsToLink = [
+                "/bin"
+                "/etc/ssl"
+              ];
+            };
+            root = pkgs.runCommand "forge-cache-root" { } ''
+              mkdir -p "$out/etc" "$out/tmp" "$out/var/lib/forge-cache"
+              printf '%s\n' 'cache:x:1000:1000:Cache:/var/lib/forge-cache:/bin/false' > "$out/etc/passwd"
+              printf '%s\n' 'cache:x:1000:' > "$out/etc/group"
+            '';
+          in
+          pkgs.dockerTools.buildLayeredImage {
+            name = "git.fahrican.com/forge-runner/cache";
+            tag = "13.1.0-isolation.2";
+            contents = [
+              tools
+              root
+            ];
+            fakeRootCommands = ''
+              chmod 1777 tmp
+              chown 1000:1000 var/lib/forge-cache
+            '';
+            config = {
+              User = "1000:1000";
+              WorkingDir = "/var/lib/forge-cache";
+              Env = [
+                "PATH=/bin"
+                "HOME=/var/lib/forge-cache"
+                "PYTHONDONTWRITEBYTECODE=1"
+              ];
+              Cmd = [
+                "/bin/forgejo-runner"
+                "--version"
+              ];
+              Labels = {
+                "org.opencontainers.image.source" = "https://github.com/funforgiven/infra";
+                "org.opencontainers.image.description" =
+                  "Private Forgejo build cache backend with scoped cache isolation fixes";
               };
             };
           };

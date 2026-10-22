@@ -14,7 +14,7 @@ spec:
   ingress:
   - fromEndpoints:
     - matchLabels:
-        app.kubernetes.io/name: forge-native-broker
+        app.kubernetes.io/name: forge-linux-launcher
         k8s:io.kubernetes.pod.namespace: forge-control
     toPorts:
     - ports:
@@ -113,17 +113,6 @@ spec:
         protocol: TCP
   - toEndpoints:
     - matchLabels:
-        gateway.envoyproxy.io/owning-gateway-name: services
-        gateway.envoyproxy.io/owning-gateway-namespace: services-network
-        k8s:io.kubernetes.pod.namespace: envoy-gateway-system
-    toPorts:
-    - ports:
-      - port: '10443'
-        protocol: TCP
-      - port: '2222'
-        protocol: TCP
-  - toEndpoints:
-    - matchLabels:
         gateway.envoyproxy.io/owning-gateway-name: management
         gateway.envoyproxy.io/owning-gateway-namespace: network-services
         k8s:io.kubernetes.pod.namespace: envoy-gateway-system
@@ -194,6 +183,35 @@ spec:
     - ports:
       - port: '443'
         protocol: TCP
+---
+# The launcher holds a Job-creating service account token and the cache broker
+# credential; it only talks to the API server, Forgejo and the cache control API.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: linux-launcher
+  namespace: forge-control
+spec:
+  endpointSelector: {}
+  ingressDeny:
+  - {}
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        k8s-app: kube-dns
+        k8s:io.kubernetes.pod.namespace: kube-system
+    toPorts:
+    - ports:
+      - port: '53'
+        protocol: UDP
+      - port: '53'
+        protocol: TCP
+  - toEntities:
+    - kube-apiserver
+    toPorts:
+    - ports:
+      - port: '6443'
+        protocol: TCP
   - toEndpoints:
     - matchLabels:
         gateway.envoyproxy.io/owning-gateway-name: services
@@ -203,5 +221,26 @@ spec:
     - ports:
       - port: '10443'
         protocol: TCP
-      - port: '2222'
+  - toCIDRSet:
+    - cidr: 10.21.40.122/32
+      except: []
+    toPorts:
+    - ports:
+      - port: '443'
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: forgejo
+        k8s:io.kubernetes.pod.namespace: forge
+    toPorts:
+    - ports:
+      - port: '8083'
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: forge-cache
+        k8s:io.kubernetes.pod.namespace: forge-cache
+    toPorts:
+    - ports:
+      - port: '8082'
         protocol: TCP

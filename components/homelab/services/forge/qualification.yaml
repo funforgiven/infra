@@ -23,7 +23,8 @@ jobs:
           test ! -S /var/run/docker.sock
           python3 - <<'PY'
           import socket, urllib.request, urllib.error
-          for host, port in [('169.254.169.254', 80), ('172.24.0.1', 443), ('10.21.20.131', 443), ('192.168.82.10', 5432)]:
+          for host, port in [('169.254.169.254', 80), ('172.24.0.1', 443), ('10.21.20.131', 443),
+                             ('forge-cache.forge-cache.svc', 8082), ('forgejo.forge.svc', 8083)]:
               try:
                   with socket.create_connection((host, port), timeout=2):
                       raise AssertionError(f'Private endpoint reachable: {host}:{port}')

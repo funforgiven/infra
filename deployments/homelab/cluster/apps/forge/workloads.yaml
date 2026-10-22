@@ -74,48 +74,37 @@ spec:
         secret:
           secretName: forge-runtime
           defaultMode: 288
+      - name: config-secrets
+        secret:
+          secretName: forge-runtime
+          defaultMode: 288
+          items:
+          - key: forgejo-secret-key
+            path: forgejo-secret-key
+          - key: forgejo-internal-token
+            path: forgejo-internal-token
+          - key: forgejo-lfs-secret
+            path: forgejo-lfs-secret
+          - key: forgejo-oauth-secret
+            path: forgejo-oauth-secret
+          - key: FORGEJO_RESEND_API_KEY
+            path: FORGEJO_RESEND_API_KEY
+      # Forgejo signs with the key next to SIGNING_KEY minus ".pub". Files are
+      # root:1000 0440, so OpenSSH's owner-only permission check does not apply.
       - name: signing
         secret:
           secretName: forge-signing
           defaultMode: 288
+          items:
+          - key: private-key
+            path: instance-signing
+          - key: public-key
+            path: instance-signing.pub
       - name: cache-descriptor-keys
         secret:
           secretName: cache-descriptors
           defaultMode: 288
       initContainers:
-      - name: configure
-        image: docker.io/python:3.14.6-alpine3.23@sha256:b165067c5afc37fa5608a3c05609cc3d51aafd808a30fbfd822ee594fef55ad4
-        command:
-        - python
-        - /bootstrap/render-forgejo.py
-        securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          capabilities:
-            drop:
-            - ALL
-          runAsNonRoot: true
-          runAsUser: 1000
-          runAsGroup: 1000
-        volumeMounts:
-        - name: data
-          mountPath: /var/lib/gitea
-        - name: bootstrap
-          mountPath: /bootstrap
-          readOnly: true
-        - name: secrets
-          mountPath: /run/forge-secrets
-          readOnly: true
-        - name: signing
-          mountPath: /run/forge-signing
-          readOnly: true
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 250m
-            memory: 128Mi
       - name: bootstrap
         image: codeberg.org/forgejo/forgejo:15.0.7-rootless@sha256:1131f4c646d6115577b7cb9ccfe8cd2c289bb54a1e1ed42400be0e22916af924
         command:
@@ -149,6 +138,9 @@ spec:
           readOnly: true
         - name: secrets
           mountPath: /run/forge-secrets
+          readOnly: true
+        - name: config-secrets
+          mountPath: /run/forgejo/secrets
           readOnly: true
         - name: tmp
           mountPath: /tmp
@@ -186,8 +178,11 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /var/lib/gitea
-        - name: bootstrap
-          mountPath: /bootstrap
+        - name: config-secrets
+          mountPath: /run/forgejo/secrets
+          readOnly: true
+        - name: signing
+          mountPath: /run/forgejo/signing
           readOnly: true
         - name: tmp
           mountPath: /tmp

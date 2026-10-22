@@ -1,6 +1,12 @@
 #!/bin/sh
 set -eu
-mkdir -p "${GITEA_TEMP:-/tmp/gitea}"
+umask 077
+mkdir -p "${GITEA_TEMP:-/tmp/gitea}" /var/lib/gitea/custom/conf /var/lib/gitea/git
+# forgejo.ini reads secrets through *_URI files. [metrics] TOKEN has no URI
+# form, so Forgejo's own environment-to-ini adds it to the generated app.ini.
+FORGEJO__metrics__TOKEN__FILE=/run/forge-secrets/forgejo-metrics-token \
+  /usr/local/bin/environment-to-ini --config /bootstrap/forgejo.ini \
+  --out /var/lib/gitea/custom/conf/app.ini
 forgejo() { /app/gitea/gitea --config /var/lib/gitea/custom/conf/app.ini "$@"; }
 forgejo migrate
 if ! forgejo admin user list | awk '$2 == "forge-admin" { found = 1 } END { exit !found }'; then

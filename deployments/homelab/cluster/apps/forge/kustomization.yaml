@@ -35,7 +35,6 @@ configMapGenerator:
   files:
   - backup.py
   - recovery_archive.py
-  - render-forgejo.py
   - forgejo.ini
   - bootstrap-forgejo.sh
   - cache-descriptors.py=../../../../../components/homelab/services/forge/cache-descriptors.py

@@ -9,6 +9,8 @@ import sys
 import unittest
 from unittest.mock import Mock, patch
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 import broker_cache as cache
@@ -114,18 +116,33 @@ class CacheAuthority(unittest.TestCase):
         self.assertNotIn('private-token', output.getvalue())
         self.assertIn('expiry remains', output.getvalue())
 
-
-
-    def test_linux_generated_config_contains_only_own_capability(self):
-        base = 'runner:\n  env_file: ""\ncache:\n  enabled: false\n'
-        output = register.runner_configuration(base, json.dumps(cache.carrier(self.lease, 1000)), 1000)
-        envs = json.loads(next(line.split('envs: ', 1)[1] for line in output.splitlines() if 'envs: ' in line))
-        self.assertEqual(set(envs), {'ACTIONS_CACHE_URL', 'FORGE_CACHE_MODE'})
-        self.assertNotIn('lease_id', output)
-        self.assertEqual(register.runner_configuration(base, None, 1000), base)
+    def test_deployed_runner_reads_only_own_capability_from_env_file(self):
+        deployed = yaml.safe_load((ROOT.parents[3] / 'deployments/homelab/cluster/apps/forge/runner.yaml').read_text())
+        self.assertEqual(deployed['runner']['env_file'], '/run/runner/env')
+        self.assertNotIn('envs', deployed['runner'])
+        output = register.cache_environment(json.dumps(cache.carrier(self.lease, 1000)), 1000)
+        envs = dict(line.split('=', 1) for line in output.splitlines())
+        self.assertEqual(envs, {'ACTIONS_CACHE_URL': self.lease['actions_cache_url'],
+                                'FORGE_CACHE_MODE': 'broker-scoped-v1'})
+        self.assertEqual(register.cache_environment(None, 1000), '')
         with contextlib.redirect_stdout(io.StringIO()) as warning:
-            self.assertEqual(register.runner_configuration(base, '{invalid-secret', 1000), base)
+            self.assertEqual(register.cache_environment('{invalid-secret', 1000), '')
+            self.assertEqual(register.cache_environment(json.dumps(
+                {**cache.carrier(self.lease, 1000), 'actions_cache_url': 'https://cache.fahrican.com/x\nA=B/'}), 1000), '')
         self.assertNotIn('invalid-secret', warning.getvalue())
+
+    def test_registration_prunes_only_expired_offline_ephemeral_identities(self):
+        minute = 100000
+        runners = [
+            {'id': 1, 'ephemeral': True, 'status': 'offline', 'name': f'forge-linux-atollion-{minute}-83-2-x'},
+            {'id': 2, 'ephemeral': True, 'status': 'offline', 'name': f'forge-linux-qualification-{minute + 300}-x'},
+            {'id': 3, 'ephemeral': True, 'status': 'online', 'name': f'forge-linux-atollion-{minute}-83-2-y'},
+            {'id': 4, 'ephemeral': False, 'status': 'offline', 'name': f'forge-linux-atollion-{minute}-83-2-z'},
+            {'id': 5, 'ephemeral': True, 'status': 'offline', 'name': 'workstation'},
+        ]
+        now = (minute + 361) * 60
+        self.assertEqual(list(register.stale_runners(runners, now)), [1])
+
 
     def test_linux_job_preserves_handle_and_attempt_and_revokes_on_create_failure(self):
         assignment = {**self.job, 'name': 'linux-quality', 'runs_on': ['linux-x86_64']}

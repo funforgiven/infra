@@ -9,6 +9,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[5]
 SCRIPTS = ROOT / 'deployments/homelab/cluster/apps/forge'
+JOB_HEALTH = ROOT / 'deployments/homelab/cluster/infrastructure/observability/job-health.yaml'
 
 
 class MonitoringTests(unittest.TestCase):
@@ -19,8 +20,9 @@ class MonitoringTests(unittest.TestCase):
         selected = {'ForgejoActionsLauncherFailing', 'ForgejoLinuxControllerFailed',
                     'ForgejoLinuxRunnerFailed', 'ForgejoSnapshotBackupFailed'}
         rules = []
-        for name in ['monitoring.yaml']:
-            for document in yaml.safe_load_all((SCRIPTS / name).read_text()):
+        # Controller alerts reuse the cluster-wide CronJob recovery recording rules.
+        for path in [JOB_HEALTH, SCRIPTS / 'monitoring.yaml']:
+            for document in yaml.safe_load_all(path.read_text()):
                 if document['kind'] == 'PrometheusRule':
                     rules += [r for group in document['spec']['groups'] for r in group['rules']
                               if 'record' in r or r.get('alert') in selected]
@@ -40,6 +42,7 @@ class MonitoringTests(unittest.TestCase):
                     series += [
                         {'series': f'kube_job_status_start_time{{{labels}}}', 'values': values},
                         {'series': f'kube_job_status_failed{{{labels}}}', 'values': values.replace('100', '1').replace('220', '1')},
+                        {'series': f'kube_job_failed{{{labels},condition="true"}}', 'values': values.replace('100', '1').replace('220', '1')},
                         {'series': f'kube_job_owner{{{labels},owner_kind="CronJob",owner_name="{cronjob}"}}',
                          'values': values.replace('100', '1').replace('220', '1')},
                     ]

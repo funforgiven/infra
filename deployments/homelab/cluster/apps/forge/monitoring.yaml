@@ -29,18 +29,6 @@ spec:
   groups:
   - name: forge
     rules:
-    - record: forge_controller_last_failed_start_timestamp_seconds
-      expr: "max by (namespace, cronjob) (\n  label_replace(\n    (kube_job_status_start_time{namespace=~\"\
-        forge|forge-ci|forge-control\"}\n     and on (namespace, job_name)\n     (kube_job_status_failed{namespace=~\"\
-        forge|forge-ci|forge-control\"} > 0))\n    * on (namespace, job_name) group_left (owner_name)\n\
-        \    max by (namespace, job_name, owner_name) (\n      kube_job_owner{namespace=~\"forge|forge-ci|forge-control\"\
-        ,owner_kind=\"CronJob\",\n        owner_name=~\"forge-linux-qualification|forge-linux-atollion-launcher|forge-snapshot-backup\"\
-        }\n    ), \"cronjob\", \"$1\", \"owner_name\", \"(.+)\"\n  )\n)"
-    - record: forge_controller_unrecovered_failure
-      expr: "(\n  (forge_controller_last_failed_start_timestamp_seconds\n   > on (namespace, cronjob)\n\
-        \   max by (namespace, cronjob) (kube_cronjob_status_last_successful_time))\n  or\n  (forge_controller_last_failed_start_timestamp_seconds\n\
-        \   unless on (namespace, cronjob)\n   max by (namespace, cronjob) (kube_cronjob_status_last_successful_time))\n\
-        ) and on (namespace, cronjob) (max by (namespace, cronjob) (kube_cronjob_spec_suspend) == 0)"
     - alert: ForgejoUnavailable
       expr: kube_statefulset_replicas{namespace="forge",statefulset="forgejo"} > 0 and kube_statefulset_status_replicas_ready{namespace="forge",statefulset="forgejo"}
         < 1
@@ -51,7 +39,7 @@ spec:
         summary: forgejo is unavailable
         description: The private development service has had no ready replica for five minutes.
     - alert: ForgejoSnapshotBackupFailed
-      expr: forge_controller_unrecovered_failure{namespace="forge",cronjob="forge-snapshot-backup"}
+      expr: services_cronjob_unrecovered_failure{namespace="forge",cronjob="forge-snapshot-backup"}
       for: 5m
       labels:
         severity: warning
@@ -97,7 +85,7 @@ spec:
       annotations:
         summary: No successful Forgejo offsite restore in 40 days
     - alert: ForgejoActionsLauncherFailing
-      expr: forge_controller_unrecovered_failure{namespace="forge-ci",cronjob="forge-linux-qualification"}
+      expr: services_cronjob_unrecovered_failure{namespace="forge-ci",cronjob="forge-linux-qualification"}
       for: 5m
       labels:
         severity: warning
@@ -115,7 +103,7 @@ spec:
         summary: An Atollion disposable Linux runner failed to finish
         description: Inspect failed runner Jobs and their logs; concurrent failures share one incident.
     - alert: ForgejoLinuxControllerFailed
-      expr: forge_controller_unrecovered_failure{namespace="forge-control",cronjob="forge-linux-atollion-launcher"}
+      expr: services_cronjob_unrecovered_failure{namespace="forge-control",cronjob="forge-linux-atollion-launcher"}
       for: 5m
       labels:
         severity: warning

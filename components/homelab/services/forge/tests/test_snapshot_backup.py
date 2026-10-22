@@ -90,6 +90,16 @@ class SnapshotControllerTests(unittest.TestCase):
         self.assertEqual(len(api.objects), 2)
         self.assertFalse(api.deleted)
 
+    def test_only_backups_reading_forgejo_pod_volumes_conflict(self):
+        # File-system backup of the forge namespace versus a PVC data-mover schedule.
+        self.assertTrue(backup.reads_archive_volume({'includedNamespaces': ['forge', 'media'],
+                                                     'defaultVolumesToFsBackup': True}))
+        self.assertFalse(backup.reads_archive_volume({'includedNamespaces': ['forge'],
+            'includedResources': ['persistentvolumeclaims', 'persistentvolumes'], 'snapshotMoveData': True}))
+        self.assertTrue(backup.reads_archive_volume({}))
+        self.assertFalse(backup.reads_archive_volume({'includedNamespaces': ['media']}))
+        self.assertFalse(backup.reads_archive_volume({'excludedResources': ['pods']}))
+
     def test_cleanup_rejects_foreign_resources_even_with_matching_name(self):
         api = FakeAPI()
         path = backup.PVC_PREFIX + '/forge-snapshot-foreign'

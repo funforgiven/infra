@@ -20,12 +20,24 @@ JOB_PREFIX = '/apis/batch/v1/namespaces/forge/jobs'
 LABEL = 'app.kubernetes.io/managed-by'
 
 
+def reads_archive_volume(spec):
+    """Velero reads forgejo-backups only through file-system backup of Forgejo's pod.
+
+    Snapshot/data-mover backups (PVC/PV resources only) copy a point-in-time
+    snapshot, so pruning cannot race them.
+    """
+    if 'forge' in (spec.get('excludedNamespaces') or []) or 'pods' in (spec.get('excludedResources') or []):
+        return False
+    namespaces = spec.get('includedNamespaces') or ['*']
+    resources = spec.get('includedResources') or ['*']
+    return bool(set(namespaces) & {'forge', '*'} and set(resources) & {'pods', '*'})
+
+
 def active_offsite(api):
     backups = api.request('GET', '/apis/velero.io/v1/namespaces/velero/backups')['items']
     finished = {'Completed', 'PartiallyFailed', 'Failed', 'FailedValidation', 'Deleting'}
-    return any(b.get('status', {}).get('phase', 'New') not in finished and
-               (not b['spec'].get('includedNamespaces') or
-                set(b['spec']['includedNamespaces']) & {'forge', '*'}) for b in backups)
+    return any(b.get('status', {}).get('phase', 'New') not in finished and reads_archive_volume(b['spec'])
+               for b in backups)
 
 
 def wait_for(api, path, ready, timeout=900):
