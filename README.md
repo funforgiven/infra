@@ -1,88 +1,69 @@
 # infra
 
-NixOS, Kubernetes, desktop and physical-network configuration for this
-homelab. Three NixOS/K3s servers run one Flux-managed cluster with direct
-Rook-Ceph storage. AWS mail and external provider resources (identity, DNS,
-NetBird) are managed by separate OpenTofu roots run from the workstation.
+Desired state for a homelab: a NixOS workstation, three NixOS servers running
+one Flux-managed K3s cluster on Rook-Ceph, a NixOS mail host on AWS, external
+services (ZITADEL, Cloudflare, NetBird, Backblaze) and the physical network.
+[Architecture](docs/ARCHITECTURE.md) explains who owns what and why.
 
-## Repository map
+## Map
 
-- `components/nix/`: NixOS/Home Manager modules, packages, checks and generated files.
-- `deployments/homelab/hosts/`: physical host inventory, declarative mirrored-SATA disko, NixOS networking, K3s and encrypted bootstrap.
-- `deployments/homelab/cluster/`: Flux dependency graph (`waves/`), infrastructure and apps.
-- `deployments/homelab/recovery/`: Flux overlay that holds Ceph and stateful apps while restoring a cluster from backup.
-- `components/homelab/providers/`: identity, Cloudflare DNS, AWS mail and NetBird OpenTofu configurations.
-- `components/homelab/operations/`: credential rendering and provider-state helpers.
-- `deployments/homelab/network/` and `components/homelab/network-automation/`: RouterOS/Omada/UniFi desired network state.
-- `docs/`: [architecture](docs/ARCHITECTURE.md).
-- `secrets/`: SOPS ciphertext and secret recovery instructions.
+| Path | Contents | Applied by |
+| --- | --- | --- |
+| `components/nix/` | NixOS and Home Manager modules, packages and checks (the flake) | `nixos-rebuild` |
+| `deployments/homelab/hosts/` | server inventory, disks, networking, K3s, host backups | `nixos-rebuild` per server |
+| `deployments/homelab/cluster/` | everything in Kubernetes; `waves/stages.yaml` is the Flux graph | Flux, from `main` |
+| `deployments/homelab/recovery/` | Flux overlay that holds stateful stages during a rebuild | by hand, see [recovery](docs/recovery.md) |
+| `components/homelab/providers/` | OpenTofu roots for external services | `nix run .#tofu -- ROOT …` |
+| `components/homelab/network-automation/`, `deployments/homelab/network/` | router and switch desired state | Ansible / Omada reconciler, see [network](docs/network.md) |
+| `components/homelab/services/` | application code and tests shipped into the cluster or mail host | via the above |
+| `components/homelab/operations/` | `cluster-access` (admin kubeconfig) and `identity-credentials` | `nix run .#…` |
+| `secrets/` | workstation, network and recovery ciphertext | see [secrets](secrets/README.md) |
 
-`outputs.nix` loads every Nix module below `components/nix/`. `flake.nix` is
-generated from the inputs those modules declare; after changing an input, run:
+`outputs.nix` loads every module below `components/nix/`. `flake.nix` is
+generated from the inputs those modules declare; after changing one, run
+`nix run .#write-flake --accept-flake-config`.
 
-```sh
-nix run .#write-flake --accept-flake-config
-```
+## Common workflows
 
-## Local validation
+- Workstation: `sudo nixos-rebuild switch --flake .#parmigiano`.
+- Servers: `nixos-rebuild switch --flake .#HOST` on the host or with
+  `--target-host`; one host at a time.
+- Cluster: commit to `main`; Flux applies it. Secrets are SOPS files beside
+  their manifests.
+- External services: `nix run .#tofu -- ROOT plan`, then `apply`, then commit
+  the encrypted state ([providers](components/homelab/providers/README.md)).
+- Secrets: `nix run .#sops -- FILE` ([secrets](secrets/README.md)).
 
-```sh
-nix develop --accept-flake-config
-nix fmt --accept-flake-config
-nix flake check --no-build --accept-flake-config
-nix build .#checks.x86_64-linux.homelab-configuration --no-link --accept-flake-config
-nix run .#repository-secret-scan --accept-flake-config
-```
-
-The homelab check combines manifest validation, service tests, OpenTofu
-formatting, RouterOS syntax and shell checks, offline and without decryption.
-`homelab-manifests` renders every Kustomize entrypoint and every HelmRelease
-(values resolved like Flux; SOPS Secret values are left out) and validates the
-output against Kubernetes, KubeVirt and CRD schemas plus repository policies.
-Upstream inputs are pinned in `deployments/homelab/validation/pins.json` and
-fetched by Nix as fixed-output derivations; the Kubernetes API version must
-match the hosts' K3s package. Each HelmRelease's chart digest, commit or
-version must equal its pin. To bump a chart, update the HelmRelease source and
-its pin's `url`/`ref`, set `sha256` to the archive hash (hex, or the SRI hash
-from the build's `got:` line after a wrong one), and rebuild. Vendored manifests are hash-checked
-through `vendors.json`; the monitoring CRDs must equal the pinned
-kube-prometheus-stack chart's. To run it on a working tree with Python
-(PyYAML, jsonschema), Helm and Kustomize on `PATH`:
-`python components/homelab/validation/validate.py --inputs "$(nix build
---print-out-paths .#checks.x86_64-linux.homelab-manifests.inputs)"`.
-
-Read-only evaluations of host and disk configuration:
+## Validation
 
 ```sh
-nix eval .#nixosConfigurations.pecorino.config.system.build.toplevel.drvPath
-nix eval --json .#diskoConfigurations.pecorino.disko.devices.disk --apply 'disks: builtins.mapAttrs (_: disk: disk.device) disks'
-nix eval .#nixosConfigurations.parmigiano.config.system.build.toplevel.drvPath
-nix eval .#homeConfigurations."funforgiven@parmigiano".activationPackage.drvPath
+nix fmt
+nix flake check
+nix run .#repository-secret-scan
 ```
 
-## Secrets
+`nix flake check` builds every host and runs all repository checks without
+network access to the cluster or decryption. `homelab-manifests` renders every
+Kustomize entrypoint and HelmRelease and validates the output against
+Kubernetes, KubeVirt and CRD schemas plus repository policies (Flux graph,
+recovery holds, restore isolation, inventory copies). Charts and API schemas
+are fetched by Nix from `deployments/homelab/validation/pins.json`; a
+HelmRelease whose chart does not match its pin fails. To bump a chart, update
+the HelmRelease and its pin (`url`/`ref`, and `sha256` from the build's `got:`
+line), then rebuild. Vendored manifests are hash-checked through
+`deployments/homelab/validation/vendors.json`. To validate a working tree
+directly with Python (PyYAML, jsonschema), Helm and Kustomize on `PATH`:
 
-The personal age identity at
-`/home/funforgiven/.config/sops/age/keys.txt` decrypts operator inputs.
-Keep its offline recovery copy. Cluster hosts use a dedicated age identity
-seeded during installation, and Flux has a separate age recipient. Host SSH
-identities are encrypted in `deployments/homelab/hosts/secrets.sops.yaml`.
+```sh
+python components/homelab/validation/validate.py --inputs \
+  "$(nix build --print-out-paths .#checks.x86_64-linux.homelab-manifests.inputs)"
+```
 
-`render-cluster-credentials` refreshes encrypted application Secrets from
-local enrollment inputs; `provider-state` exports a provider's OpenTofu
-state. Neither applies changes.
+## Notes
 
-See [secret recovery](secrets/README.md) and
-[architecture](docs/ARCHITECTURE.md).
-
-## Wallpaper
-
-The wallpaper is at
-`/home/funforgiven/Pictures/Wallpapers/current.png`; after replacing
-it, refresh the lock with `nix flake update wallpaper --accept-flake-config`.
-
-## Credits
-
-The Nix module layout follows
-[mightyiam's dendritic pattern](https://github.com/mightyiam/dendritic).
-Quickshell adaptations and licenses are recorded in `THIRD_PARTY_NOTICES.md`.
+- The flake's `wallpaper` input is a local path
+  (`~/Pictures/Wallpapers/current.png`); after replacing the image run
+  `nix flake update wallpaper`.
+- The Nix module layout follows
+  [mightyiam's dendritic pattern](https://github.com/mightyiam/dendritic).
+  Adapted code and licences are listed in `THIRD_PARTY_NOTICES.md`.

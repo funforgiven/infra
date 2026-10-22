@@ -3,7 +3,7 @@
 
 Run in the infrastructure development shell from the repository root.
 Secrets travel through captured pipes; only SOPS ciphertext is written to disk.
-The ZITADEL OIDC client comes from render-cluster-credentials --identity-outputs-stdin.
+The ZITADEL OIDC client comes from the identity-credentials app.
 """
 
 import argparse

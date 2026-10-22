@@ -4,13 +4,22 @@ resources:
 - ../cluster
 patches:
 # Ceph and stateful stages carry homelab.fahrican.com/recovery=hold in
-# cluster/waves/stages.yaml; they stay suspended until restored data is checked.
+# cluster/waves/stages.yaml. They are created suspended, and IfNotPresent keeps
+# Flux from re-suspending a stage after an operator resumes it.
 - target:
     group: kustomize.toolkit.fluxcd.io
     version: v1
     kind: Kustomization
     labelSelector: homelab.fahrican.com/recovery=hold
-  patch: '[{"op":"add","path":"/spec/suspend","value":true}]'
+  patch: |
+    apiVersion: kustomize.toolkit.fluxcd.io/v1
+    kind: Kustomization
+    metadata:
+      name: held
+      annotations:
+        kustomize.toolkit.fluxcd.io/ssa: IfNotPresent
+    spec:
+      suspend: true
 - target:
     group: kustomize.toolkit.fluxcd.io
     version: v1

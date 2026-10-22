@@ -222,7 +222,7 @@ spec:
   wait: false
   dependsOn:
   - name: gateway
-  - name: observability
+  - name: controllers
   - name: kubevirt
   - name: multus
   - name: storage

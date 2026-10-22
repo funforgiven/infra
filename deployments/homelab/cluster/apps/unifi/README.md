@@ -32,8 +32,8 @@ release; UniFi's own updater advances the running version afterwards.
 - UniFi WLANs use **Third-party Gateway** networks; never create a DHCP server
   or gateway in UniFi. Verify each WLAN's `networkconf_id`; the API ignores
   legacy `vlan` fields.
-- `deployments/homelab/network/unifi-network.yaml` documents the WLAN settings
-  and secret references; it is not reconciled automatically. PSKs are in
+- The WLAN settings are recorded in [network](../../../../../docs/network.md#wireless);
+  they are not reconciled automatically. PSKs are in
   `secrets/omada.yaml`. Keep the country set to Turkey; never change it to
   unlock channels.
 - Port 6 on the SG3210XHP is pinned to 1 Gb/s; 2.5 Gb/s drops the link.

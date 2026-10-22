@@ -1,85 +1,142 @@
 # Architecture
 
-Three NixOS machines run one flake-pinned K3s cluster with three embedded-etcd
-servers. Every server also schedules applications and is a Ceph failure domain.
+One workstation (`parmigiano`), three NixOS servers running one K3s cluster
+(`pecorino`, `taleggio`, `asiago`), a NixOS mail host on AWS, and the physical
+network. Configuration describes what exists; this document records who owns
+each piece and why it is built this way. Versions, addresses and sizes live in
+the files referenced here, not in prose.
 
-K3s is used for the NixOS-native module, embedded-etcd lifecycle and lower
-host maintenance burden. Kubernetes is pinned by `flake.lock`, currently
-1.36.4+k3s1. Traefik, ServiceLB, local-path storage, bundled network policy and
-the bundled Helm controller are disabled. Flux owns application/Helm lifecycles.
-The first server initializes etcd; the other two join through the API VIP.
+## Ownership
 
-Cilium 1.20.2 supplies the primary VXLAN pod network and eBPF service routing.
-Kube-proxy is disabled. Its official OCI chart is pinned by manifest digest;
-the matching upstream CRDs are vendored and hash checked. Flux owns the Helm
-release after the identical configuration is installed during CNI bootstrap.
-Standard Kubernetes NetworkPolicies enforce Matrix and NetBird allowlists.
-Forge and backup jobs use Cilium policies; deny rules isolate restore and
-export helpers. The general Forge policy excludes its API-only backup and
-offline export pods so additive policy evaluation cannot broaden their access.
+Every resource has exactly one declarative owner. The repository has no
+reconcilers of its own beyond the API adapters listed at the end.
 
-MetalLB announces IPv4 VIPs on the management and services VLANs. It keeps
-the `externalTrafficPolicy: Local` client-address behavior. Cilium L2
-announcements are incompatible with that setting, so replacing MetalLB needs a
-separate BGP or service-routing design. Envoy Gateway handles listeners,
-admission and routing. Cilium's Gateway API, ingress, L2 announcement and BGP
-controllers are disabled, and it does not allocate LoadBalancer addresses. Its
-unused L7 proxy/Envoy and Hubble relay/UI are disabled to limit workloads.
+| Owner | Scope | Where |
+| --- | --- | --- |
+| NixOS / Home Manager (flake) | workstation, cluster hosts (disks, network, K3s, host backups), mail host | `components/nix/`, `deployments/homelab/hosts/` |
+| Flux (Kustomize, Helm) | everything inside the cluster | `deployments/homelab/cluster/` |
+| OpenTofu, run from the workstation | ZITADEL, Cloudflare DNS, NetBird policy, AWS mail and IAM, the Backblaze bucket | `components/homelab/providers/` |
+| Ansible / Omada OpenAPI | RouterOS router and switch, Omada switch | `components/homelab/network-automation/`, `deployments/homelab/network/` |
+| SOPS | every secret value, encrypted beside its consumer | see [secrets](../secrets/README.md) |
 
-The host-level keepalived service owns only the Kubernetes API VIP and does
-not require CNI or Flux to bootstrap. Multus/macvlan provides IoT and the
-UniFi guest's secondary VLAN attachment. `cni.exclusive: false` keeps Cilium
-from renaming the Multus configuration. Socket load balancing stays in the
-host namespace so the pod's primary TC datapath sees service traffic alongside
-the separate secondary network. NixOS supplies cgroup v2 at `/sys/fs/cgroup`;
-Cilium mounts bpffs and uses the host cgroup mount. VXLAN uses UDP 8472
-between node management addresses. LoadBalancer processing attaches to
-`bond0.20` and `bond0.40`, excluding the Ceph and IoT interfaces.
+`deployments/homelab/hosts/inventory.json` is the host inventory (addresses,
+disks, API VIP). Nix reads it directly. Kubernetes manifests that cannot read
+it (CoreDNS zone, Rook monitor addresses, the Cilium API endpoint) keep literal
+copies that the manifest validator checks against it.
 
-Policy permits for in-cluster HTTPS VIPs also select the corresponding managed
-gateway pods on translated port 10443; VIP CIDRs alone cannot identify those
-backends after Cilium service translation.
+## Hosts and cluster
 
-Rook-Ceph uses the six NVMe disks, two per host. One replicated RBD pool
-(`ceph-block`) and one replicated CephFS filesystem provide storage, with
-replica count three, minimum two, across three hosts. Applications restore from
-off-cluster backups into fresh PVCs; keeping OSD disks alone is not a cluster
-restore. Rook stores monitor state under `/var/lib/rook` on the SATA roots.
+K3s is used for its NixOS module, embedded etcd and low maintenance. All three
+servers are control-plane, etcd, workload and Ceph failure domains. The first
+initializes etcd; the others join through the API VIP, which host-level
+keepalived owns so that it needs neither CNI nor Flux. Flannel, kube-proxy,
+Traefik, ServiceLB, local-path and the embedded Helm controller are disabled:
+Flux owns every add-on.
 
-The two SATA disks hold declarative mirrored ESP and root MD arrays. Disk
-selection is by inventoried physical connector, not kernel names. Ceph disks
-are absent from disko. The boot filesystem uses metadata 1.0 so both members
-contain a firmware-readable FAT filesystem and removable EFI boot path.
+Boot disks are two mirrored SATA disks per host, selected by physical connector
+rather than kernel name; the ESP uses metadata 1.0 so firmware can read either
+member. The NVMe disks are not in disko: Rook-Ceph owns them (one replicated RBD
+pool and one CephFS, size 3/min 2 across hosts). Keeping OSD disks is not a
+restore strategy; data comes back from off-cluster backups.
 
-Flux Kustomizations use semantic folders, `dependsOn` and readiness checks.
-The recovery overlay holds stateful applications until their data is restored.
-Off-cluster DNS, identity configuration, AWS mail infrastructure and NetBird
-policy are OpenTofu roots run from the workstation; there is no in-cluster
-OpenTofu operator.
+The three hosts share one SOPS age identity, delivered at install time. That
+keeps installation simple but means one compromised host exposes the others'
+host secrets; per-host recipients would fix it at the cost of re-encrypting.
 
-UniFi OS Server requires its supported Ubuntu environment. A single small
-KubeVirt VM runs it with a fixed IP, controlled through Kubernetes; the three
-physical machines are NixOS. There are no native Windows/macOS CI runners.
-Linux CI, Nix package cache, Forgejo packages, signing and recovery run in the
-cluster.
+## Networking
 
-K3s v1.36.4+k3s1 `pkg/executor/embed/embed.go` sets embedded CNI paths only
-when flannel is enabled. With flannel disabled, Cilium, Multus and the pinned
-static secondary plugins use the standard containerd CNI paths `/opt/cni/bin`
-and `/etc/cni/net.d`. Recheck this when upgrading K3s. Router/switch VLAN
-tables live in `deployments/homelab/network`. NixOS hosts create VLANs 20, 30,
-40 and 50.
+Cilium is the CNI in kube-proxy-replacement mode (VXLAN between management
+addresses). Because Flux needs a CNI, Cilium is installed once by hand during a
+cluster build with the HelmRelease's own chart digest and values, and Flux
+adopts the release. Cilium's Gateway API, L2 announcements, BGP, L7 proxy and
+Hubble UI are off.
 
-Home Assistant uses `10.21.40.120`, a dedicated HTTP-only MetalLB Service on
-port 8123. The internal Service carries Zigbee UI and metrics ports for
-gateway/monitoring access. LAN access is restricted to the trusted VLAN and the
-workstation's administrative WireGuard address; the IoT attachment keeps its
-separate static macvlan address and firewall.
+MetalLB announces LoadBalancer VIPs because it keeps
+`externalTrafficPolicy: Local` client addresses, which Cilium L2 announcements
+do not support; replacing it needs a BGP design. Envoy Gateway terminates every
+HTTP listener. Network policy permits for in-cluster HTTPS VIPs must also select
+the gateway pods on their translated port, because a VIP CIDR alone no longer
+identifies the backend after service translation.
 
-Pod CIDR is `10.100.0.0/16`; app reverse-proxy trust and Forge gateway client
-authorization use that range. UniFi probes use its `.127` services NIC.
+Multus adds macvlan attachments on the IoT VLAN for home automation (Matter,
+Thread and Zigbee need L2 discovery). `cni.exclusive: false` stops Cilium from
+renaming the Multus configuration. With flannel disabled, K3s uses the standard
+`/opt/cni/bin` and `/etc/cni/net.d` paths; recheck this on K3s upgrades.
+Restore radio pairing keys and the Thread dataset before any IoT workload
+reconnects, and stop pods using a secondary attachment before removing Multus
+or a NetworkAttachmentDefinition.
 
-Envoy's mail-admin connection leaves through a cluster node's management
-address. RouterOS and the AWS mail host's WireGuard/nginx allowlists therefore
-authorize exactly the three inventoried node IPs to backend TCP 8080. The HTTPS
-gateway admits only trusted LAN/admin VPN clients.
+Private services resolve only inside the LAN and NetBird. The workstation's
+WireGuard admin tunnel stays outside NetBird so the network can be repaired
+when NetBird is down ([network](network.md)).
+
+## Flux
+
+`deployments/homelab/cluster/waves/stages.yaml` is the dependency graph: plain
+Flux Kustomizations with `dependsOn`. Shared settings and health rules are
+patched in once by `waves/kustomization.yaml`. Health means "serving with one
+node lost": replicated workloads may run one replica short, single-replica
+workloads must be up. Dependencies exist only where a stage needs another's
+CRDs or services; in particular nothing depends on `observability`, because it
+is restored from backup and must not block the restore tooling.
+
+Stages labelled `homelab.fahrican.com/recovery=hold` are suspended by the
+`deployments/homelab/recovery` overlay so Ceph and stateful apps do not start
+on empty volumes during a rebuild ([recovery](recovery.md)).
+
+Namespaces are declared centrally in `cluster/namespaces.yaml`, which carries
+Pod Security levels and the labels gateways use to admit routes.
+
+## Data and backups
+
+- **PostgreSQL** runs on CloudNativePG. Databases that matter (identity,
+  NetBird, Matrix) archive WAL and base backups to Backblaze with the Barman
+  Cloud plugin, giving point-in-time recovery. Recomputable databases rely on
+  volume backups.
+- **Volumes** are backed up by Velero to Backblaze. Application hooks exist
+  only where a crash-consistent copy is not enough (a game save, the Matrix
+  relay's crypto store).
+- **etcd and host identities** are backed up by each host with Restic to its
+  own Backblaze prefix and key, which cluster workloads cannot reach.
+- **Restore drills** run in-cluster into isolated `*-restore` namespaces with
+  deny-all network policy, so a recovered copy can never talk to production.
+
+Details and procedures: [backups](../deployments/homelab/cluster/infrastructure/backups/README.md).
+
+## External providers
+
+OpenTofu roots run from the workstation; there is no in-cluster Terraform
+controller, so the cluster can be rebuilt without them and vice versa. State is
+committed in Git, encrypted by OpenTofu itself, and the passphrase is SOPS
+ciphertext; the `nix run .#tofu` wrapper supplies it ([providers](../components/homelab/providers/README.md)).
+ZITADEL client secrets are the one place a provider output feeds cluster
+Secrets: `identity-credentials` copies them into the consuming SOPS files.
+
+The mail host is a single NixOS instance on AWS (Stalwart, RDS, S3), replaced
+in place rather than recreated; it reaches the LAN-only admin backend over a
+WireGuard peer that may only reach the three node addresses
+([mail](../components/homelab/services/mail-aws/README.md)).
+
+UniFi OS Server only supports Ubuntu, so it runs as one KubeVirt VM; its guest
+scripts are generated from `components/homelab/services/unifi`.
+
+## Validation
+
+`nix flake check` builds every host and runs the repository checks. The
+manifest check renders every Kustomize entrypoint and HelmRelease with charts
+and API schemas fetched by Nix from pins, so a chart bump without a pin bump,
+a schema violation, a Flux graph error or a broken repository policy fails
+offline and without decrypting anything.
+
+## Remaining imperative code
+
+Retained only where no declarative owner exists:
+
+- Application logic: the Matrix alert relay, Forgejo runner launcher and cache
+  gateway, media import policy, mail operations, desktop hardware integration
+  (audio MIDI routing, OBSBOT camera, Home Assistant MIDI controls).
+- API adapters without a provider: the Omada switch reconciler, Forgejo
+  account/token enrollment, the NetBird credential rotation, `identity-credentials`.
+- RouterOS is driven by Ansible over SSH CLI rather than its API because the
+  playbook shares rule tables it does not fully own ([network](network.md)).
+- Restore drills and their verifiers.

@@ -41,15 +41,14 @@ two `SKC3000D2048G` NVMe Ceph disks, plus a dual-port Intel 25 Gb/s NIC
 NVIDIA GPU.
 
 Their live LACP partners confirm Taleggio on CRS510 ports `sfp28-3/4` and
-Asiago on `sfp28-5/6`, matching the [network map](../../../deployments/homelab/routeros/README.md#physical-map).
+Asiago on `sfp28-5/6`, matching the [cabling map](../../../docs/network.md#cabling).
 Use the hostname and hardware together to identify a chassis; link lights and
 switch port labels alone do not establish which server is attached. The
-[PiKVM map](../../../deployments/homelab/pikvm/README.md#two-switch-chain)
-lists console ports.
+[PiKVM section](../../../docs/network.md#pikvm) lists console ports.
 
 ## Reinstall a host / rebuild the cluster
 
-Boot an installer through [PiKVM](../../../deployments/homelab/pikvm/README.md)
+Boot an installer through [PiKVM](../../../docs/network.md#pikvm)
 and match the host's SATA serials and connectors against
 `deployments/homelab/hosts/inventory.json` before formatting. Only the two SATA
 members are in disko; never wipe the NVMe OSD disks while Ceph holds data.
@@ -87,37 +86,4 @@ extra-files directory afterwards. A reinstalled host rejoins etcd through the
 API VIP (`cluster.apiVip` in the inventory) with the K3s token from its secrets. Restore one host at
 a time and keep etcd and Ceph quorum.
 
-### Rebuilding the whole cluster
-
-After all three hosts are up, copy the admin kubeconfig from the first server
-and point it at the API VIP on port 6443. Flux cannot start without a CNI,
-so install Cilium first with the same chart and values as its HelmRelease:
-
-```sh
-kubectl apply -f deployments/homelab/cluster/infrastructure/cilium/vendor/
-digest="$(yq 'select(.kind == "OCIRepository").spec.ref.digest' \
-  deployments/homelab/cluster/infrastructure/cilium/release.yaml)"
-helm upgrade --install cilium "oci://quay.io/cilium/charts/cilium@$digest" --namespace kube-system \
-  --values deployments/homelab/cluster/infrastructure/cilium/values.yaml --wait --timeout 20m
-kubectl wait nodes --all --for=condition=Ready --timeout=20m
-```
-
-Pulling by the digest Flux pins installs the same chart. Flux adopts the
-release later.
-
-Install Flux, deliver `cluster.flux_age_identity` from `secrets/kubernetes.yaml`
-as the `flux-system/sops-age` Secret through stdin, then bootstrap the recovery
-overlay instead of `gotk-sync.yaml`:
-
-```sh
-kubectl apply -f deployments/homelab/cluster/bootstrap/flux/gotk-components.yaml
-kubectl -n flux-system wait deployment/source-controller --for=condition=Available --timeout=10m
-kubectl apply -k deployments/homelab/recovery
-```
-
-The recovery overlay points the root `flux-system` Kustomization at itself and
-suspends Ceph, observability and stateful apps. To release a held stage, first
-suspend the root Kustomization; otherwise its next reconciliation sets
-`suspend: true` again. Restore each app from Velero or its native backup before
-releasing it. Once everything runs, `kubectl apply -k deployments/homelab/cluster`
-returns the root to the normal path.
+To rebuild the whole cluster, see [disaster recovery](../../../docs/recovery.md).

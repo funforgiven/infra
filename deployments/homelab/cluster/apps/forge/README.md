@@ -44,7 +44,7 @@
 ## Credentials (manual, from the dev shell)
 
 - `enroll.py` creates Forgejo's local secrets. The OIDC client comes from
-  `render-cluster-credentials --identity-outputs-stdin`.
+  `nix run .#tofu -- identity output -json | nix run .#identity-credentials`.
 - `enroll-runners.py` creates the `forge-runner` account, the qualification
   repository and the scoped runner/registry tokens.
 - `enroll-agent-sessions.py` renews the Atollion agents' web sessions.

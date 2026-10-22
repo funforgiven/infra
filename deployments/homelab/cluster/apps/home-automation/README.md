@@ -5,7 +5,7 @@ backup/metrics sidecar. They share one network namespace so internal MQTT and
 the unauthenticated Matter WebSocket API stay on loopback. OTBR runs in its own
 pod (`thread.yaml`) because it needs a TUN device and IPv6 routing; its
 privileged exception is confined there. Both pods attach to IoT VLAN 50 through
-Multus `net1` (see [secondary IoT networking](../../infrastructure/multus/README.md));
+Multus `net1` (see [networking](../../../../../docs/ARCHITECTURE.md#networking));
 NetworkPolicies do not cover `net1`, the pod nftables rules do.
 
 **This is a single-writer stack.** Never scale either pod above one replica or
