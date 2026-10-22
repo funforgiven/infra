@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -5,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from relay import Queue, authenticate, check_room, messages
+from relay import Queue, authenticate, check_room, messages, recovery_canary
 
 
 class QueueTests(unittest.TestCase):
@@ -27,6 +28,19 @@ class QueueTests(unittest.TestCase):
             recovered.delivered(key)
             recovered.put("host", "invocation", "failure")
             self.assertIsNone(recovered.pending())
+
+    def test_delivered_rows_expire_after_the_retry_window(self):
+        with tempfile.TemporaryDirectory() as directory:
+            queue = Queue(Path(directory) / "queue.sqlite")
+            self.addCleanup(queue.db.close)
+            old = queue.put("host", "old", "body")
+            pending = queue.put("host", "pending", "body")
+            with patch("relay.time.time", return_value=1_000_000):
+                queue.delivered(old)
+            with patch("relay.time.time", return_value=1_000_000 + 8 * 86400):
+                queue.checkpoint()
+            ids = {row[0] for row in queue.db.execute("SELECT id FROM events")}
+            self.assertEqual(ids, {pending})
 
     def test_authentication_is_scoped(self):
         producers = {"host": {"token": "secret", "paths": ["/notify"]}}
@@ -102,6 +116,16 @@ class QueueTests(unittest.TestCase):
 
 
 class EncryptionTests(unittest.TestCase):
+    def test_backups_reuse_the_stored_recovery_canary(self):
+        client = MagicMock()
+        client.olm.account.identity_keys = {"ed25519": "ed", "curve25519": "curve"}
+        canary = {"room_id": "!r", "sender_key": "curve", "session_id": "s", "ciphertext": "c"}
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "identity.json").write_text(json.dumps({"canary": canary}))
+            self.assertEqual(recovery_canary(client, Path(directory)), canary)
+        client.olm.inbound_group_store.get.assert_called_once_with("!r", "curve", "s")
+        client.olm.store.save_inbound_group_session.assert_not_called()
+
     def test_invited_recipient_must_join_before_delivery_is_healthy(self):
         client = MagicMock(user_id="@bot:local", device_id="BOT")
         client.rooms = {

@@ -9,9 +9,6 @@ _: {
         (ps.matrix-nio.override { withVodozemac = true; })
         ps.boto3
       ]);
-      accessPython = pkgs.python3.withPackages (ps: [
-        ps.pyyaml
-      ]);
       proxyConfig = pkgs.runCommand "matrix-proxy-config" { } ''
         mkdir -p "$out/etc"
         substitute ${source}/nginx.conf "$out/etc/matrix-nginx.conf" \
@@ -30,7 +27,6 @@ _: {
           python
           pkgs.matrix-synapse
           pkgs.matrix-authentication-service
-          pkgs.postgresql_18
           pkgs.nginx
           pkgs.squid
           pkgs.cacert
@@ -49,7 +45,7 @@ _: {
         config = {
           User = "1000:1000";
           Env = [
-            "PATH=${pkgs.postgresql_18}/bin:/bin"
+            "PATH=/bin"
             "HOME=/var/lib/matrix"
             "PYTHONDONTWRITEBYTECODE=1"
             "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
@@ -65,17 +61,15 @@ _: {
       packages.matrix-runtime-image = image;
       packages.matrix-python = python;
       apps.matrix-admin = {
-        meta.description = "Enroll and qualify the private Matrix service";
+        meta.description = "Enroll devices, cut over alerting and publish the Matrix image";
         program = "${
           pkgs.writeShellApplication {
             name = "matrix-admin";
             runtimeInputs = [
               pkgs.kubectl
               pkgs.sops
-              pkgs.openssl
               pkgs.skopeo
               pkgs.gitMinimal
-              pkgs.matrix-authentication-service
             ];
             text = ''
               export PYTHONPATH=${../../homelab/operations}
@@ -83,23 +77,6 @@ _: {
             '';
           }
         }/bin/matrix-admin";
-      };
-      apps.matrix-access = {
-        meta.description = "Run a command with an ephemeral homelab kubeconfig";
-        program = "${
-          pkgs.writeShellApplication {
-            name = "matrix-access";
-            runtimeInputs = [
-              pkgs.openssh
-              pkgs.kubectl
-              accessPython
-            ];
-            text = ''
-              export HOMELAB_INVENTORY=${../../../deployments/homelab/hosts/inventory.json}
-              exec ${accessPython}/bin/python ${source}/access.py "$@"
-            '';
-          }
-        }/bin/matrix-access";
       };
       apps.matrix-qualify-local = {
         meta.description = "Test a disposable Matrix stack and encrypted recovery";

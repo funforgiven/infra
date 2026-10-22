@@ -10,17 +10,18 @@ gateway's NetworkPolicy and NetBird policy, never widened on the LAN gateway.
 
 import argparse
 import copy
+import json
 from pathlib import Path
 
 import yaml
 
 ROOT = Path(__file__).resolve().parents[4]
 SERVICES = ROOT / "deployments/homelab/cluster"
+# The NetBird OpenTofu root creates private DNS zones for the same hosts.
 HOSTS = frozenset(
     f"{name}.fahrican.com"
-    for name in (
-        "audiomuse", "cache", "git", "home", "mail-admin", "music",
-        "unifi", "upload",
+    for name in json.loads(
+        (ROOT / "components/homelab/providers/netbird/service-hosts.json").read_text()
     )
 )
 SOURCES = (

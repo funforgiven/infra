@@ -193,28 +193,6 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: matrix-dumps
-  namespace: matrix
-spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/name: matrix-dumps
-  policyTypes:
-  - Ingress
-  - Egress
-  egress:
-  - to:
-    - podSelector:
-        matchLabels:
-          cnpg.io/cluster: matrix-postgres
-    ports:
-    - protocol: TCP
-      port: 5432
-  ingress: []
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
   name: matrix-relay
   namespace: matrix
 spec:
@@ -332,9 +310,6 @@ spec:
     - podSelector:
         matchLabels:
           app.kubernetes.io/name: matrix-mas
-    - podSelector:
-        matchLabels:
-          app.kubernetes.io/name: matrix-dumps
     - podSelector:
         matchLabels:
           cnpg.io/cluster: matrix-postgres

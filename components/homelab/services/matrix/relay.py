@@ -24,13 +24,22 @@ from nio import (
 
 LOG = logging.getLogger("matrix-relay")
 RECOVERY_CANARY = "Matrix crypto recovery qualification"
+DELIVERED_RETENTION = 7 * 86400
 
 
-def snapshot_crypto(client, state, recovery):
+def recovery_canary(client, recovery):
+    """Reuse the stored canary session; create one only when none is usable."""
     from nio.crypto import InboundGroupSession, OutboundGroupSession
 
-    recovery.mkdir(exist_ok=True)
     keys = client.olm.account.identity_keys
+    try:
+        canary = json.loads((recovery / "identity.json").read_text())["canary"]
+        if canary["sender_key"] == keys["curve25519"] and client.olm.inbound_group_store.get(
+            canary["room_id"], canary["sender_key"], canary["session_id"]
+        ):
+            return canary
+    except (OSError, ValueError, KeyError):
+        pass
     # Persist a session before backing up, then prove that the restored session
     # can decrypt its ciphertext without contacting any server.
     outgoing = OutboundGroupSession()
@@ -39,8 +48,19 @@ def snapshot_crypto(client, state, recovery):
         outgoing.session_key, keys["ed25519"], keys["curve25519"], room
     )
     client.olm.store.save_inbound_group_session(incoming)
+    client.olm.inbound_group_store.add(incoming)
     outgoing.shared = True
-    ciphertext = outgoing.encrypt(RECOVERY_CANARY)
+    return {
+        "room_id": room,
+        "sender_key": keys["curve25519"],
+        "session_id": incoming.id,
+        "ciphertext": outgoing.encrypt(RECOVERY_CANARY),
+    }
+
+
+def snapshot_crypto(client, state, recovery):
+    recovery.mkdir(exist_ok=True)
+    canary = recovery_canary(client, recovery)
     for source in list(state.glob("*.db")) + list(state.glob("*.sqlite")):
         destination = recovery / source.name
         temporary = destination.with_suffix(destination.suffix + ".tmp")
@@ -50,13 +70,8 @@ def snapshot_crypto(client, state, recovery):
     identity = {
         "user_id": client.user_id,
         "device_id": client.device_id,
-        "ed25519": keys["ed25519"],
-        "canary": {
-            "room_id": room,
-            "sender_key": keys["curve25519"],
-            "session_id": incoming.id,
-            "ciphertext": ciphertext,
-        },
+        "ed25519": client.olm.account.identity_keys["ed25519"],
+        "canary": canary,
     }
     temporary = recovery / "identity.json.tmp"
     temporary.write_text(json.dumps(identity))
@@ -109,6 +124,12 @@ class Queue:
             )
 
     def checkpoint(self):
+        # Delivered rows only deduplicate producer retries; keep them for a week.
+        with self.db:
+            self.db.execute(
+                "DELETE FROM events WHERE delivered < ?",
+                (time.time() - DELIVERED_RETENTION,),
+            )
         # Fold erased bodies into the main database so the WAL keeps no plaintext.
         self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
 

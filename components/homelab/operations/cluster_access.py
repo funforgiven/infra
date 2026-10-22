@@ -13,7 +13,7 @@ def capture(command, timeout=45, **kwargs):
 
 INVENTORY = json.loads(Path(
     os.environ.get("HOMELAB_INVENTORY")
-    or Path(__file__).resolve().parents[4] / "deployments/homelab/hosts/inventory.json"
+    or Path(__file__).resolve().parents[3] / "deployments/homelab/hosts/inventory.json"
 ).read_text())
 SERVERS = tuple(host["management"] for host in INVENTORY["hosts"].values())
 

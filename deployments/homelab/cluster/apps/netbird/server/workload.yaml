@@ -30,32 +30,6 @@ spec:
         fsGroup: 65532
         seccompProfile:
           type: RuntimeDefault
-      initContainers:
-      - name: trust-bundle
-        image: python:3.14.0-alpine3.22@sha256:8373231e1e906ddfb457748bfc032c4c06ada8c759b7b62d9c73ec2a3c56e710
-        command:
-        - python3
-        - -c
-        - "from pathlib import Path\nPath('/trust/ca.pem').write_bytes(\n    Path('/etc/ssl/certs/ca-certificates.crt').read_bytes()\n\
-          \    + b'\\n' + Path('/etc/postgres-ca/ca.crt').read_bytes())\n"
-        securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          capabilities:
-            drop:
-            - ALL
-        resources:
-          requests:
-            cpu: 10m
-            memory: 16Mi
-          limits:
-            memory: 64Mi
-        volumeMounts:
-        - name: postgres-ca
-          mountPath: /etc/postgres-ca
-          readOnly: true
-        - name: trust
-          mountPath: /trust
       containers:
       - name: server
         image: netbirdio/netbird-server:0.80.0@sha256:05b3d8d6d056e5062a2965d4d6e5d6d83f09f2bf9133947a8e5972e0e0e7a261
@@ -63,8 +37,10 @@ spec:
         - --config
         - /etc/netbird/config.yaml
         env:
-        - name: SSL_CERT_FILE
-          value: /trust/ca.pem
+        # The embedded Dex ignores the DSN's sslrootcert, so Go must also trust
+        # the CNPG CA: it reads the image's system bundle plus this directory.
+        - name: SSL_CERT_DIR
+          value: /etc/postgres-ca
         - name: NB_DISABLE_GEOLOCATION
           value: 'true'
         - name: NB_SETUP_PAT_ENABLED
@@ -112,9 +88,6 @@ spec:
           mountPath: /var/lib/netbird
         - name: tmp
           mountPath: /tmp
-        - name: trust
-          mountPath: /trust
-          readOnly: true
       volumes:
       - name: config
         secret:
@@ -125,11 +98,12 @@ spec:
       - name: postgres-ca
         secret:
           secretName: netbird-postgres-ca
+          items:
+          - key: ca.crt
+            path: ca.crt
       - name: data
         emptyDir: {}
       - name: tmp
-        emptyDir: {}
-      - name: trust
         emptyDir: {}
 ---
 apiVersion: v1

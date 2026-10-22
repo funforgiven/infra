@@ -29,19 +29,3 @@ spec:
   resources:
     requests:
       storage: 2Gi
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: matrix-dumps
-  namespace: matrix
-  labels:
-    app.kubernetes.io/name: matrix-dumps
-    app.kubernetes.io/part-of: matrix
-spec:
-  accessModes:
-  - ReadWriteOnce
-  storageClassName: ceph-block
-  resources:
-    requests:
-      storage: 5Gi

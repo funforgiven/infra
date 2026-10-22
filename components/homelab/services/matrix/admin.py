@@ -1,28 +1,25 @@
 #!/usr/bin/env python3
-"""Prepare, enroll, and publish the closed Matrix deployment without printing secrets."""
+"""Enroll, cut over and publish the closed Matrix deployment without printing secrets."""
 
 import argparse
 import asyncio
 import base64
 import hashlib
-import ipaddress
 import json
 import os
 import re
 import secrets
 import subprocess
+import sys
 import time
 from pathlib import Path
 
 import yaml
 
 import encrypted_inputs
-from provider_state import outputs as provider_outputs
 
 DEPLOYMENT = Path("deployments/homelab/cluster/apps/matrix")
 OBSERVABILITY = Path("deployments/homelab/cluster/infrastructure/observability")
-PROVIDER_ID = "01HFVBY12TMNTYTBV8W921M5FA"
-DATABASE_HOST = "matrix-postgres-rw"
 
 
 class LiteralDumper(yaml.SafeDumper):
@@ -111,179 +108,6 @@ def secret(name, namespace, values, *, watch=False):
     if watch:
         document["metadata"]["labels"]["reconcile.fluxcd.io/watch"] = "Enabled"
     return document
-
-
-def initialize():
-    target = DEPLOYMENT / "runtime.sops.yaml"
-    if target.exists():
-        return
-    # Capture generated MAS keys; plaintext never leaves this process's memory.
-    mas = yaml.safe_load(run(["mas-cli", "config", "generate"]))
-    shared = secrets.token_hex(32)
-    passwords = {name: secrets.token_hex(32) for name in ("synapse", "mas")}
-    mas["http"] = {
-        "public_base": "https://matrix-auth.fahrican.com/",
-        "issuer": "https://matrix-auth.fahrican.com/",
-        "listeners": [
-            {
-                "name": "web",
-                "resources": [
-                    {"name": name}
-                    for name in (
-                        "discovery",
-                        "human",
-                        "oauth",
-                        "compat",
-                        "graphql",
-                        "assets",
-                    )
-                ],
-                "binds": [{"host": "0.0.0.0", "port": 8080}],
-            },
-            {
-                "name": "internal",
-                "resources": [{"name": "health"}],
-                "binds": [{"host": "0.0.0.0", "port": 8081}],
-            },
-        ],
-    }
-    mas["database"] = {
-        "host": DATABASE_HOST,
-        "port": 5432,
-        "username": "mas",
-        "password": passwords["mas"],
-        "database": "mas",
-        "ssl_mode": "disable",
-    }
-    mas["matrix"] = {
-        "kind": "synapse",
-        "homeserver": "matrix.fahrican.com",
-        "endpoint": "http://matrix-synapse:8008",
-        "secret": shared,
-    }
-    mas["passwords"]["enabled"] = False
-    mas.setdefault("account", {})["password_registration_enabled"] = False
-    # render-cluster-credentials fills the client from the identity provider outputs.
-    mas["upstream_oauth2"] = {
-        "providers": [
-            {
-                "id": PROVIDER_ID,
-                "issuer": "https://auth.cloud.fahrican.com",
-                "human_name": "Fahrican",
-                "client_id": "",
-                "client_secret": "",
-                "token_endpoint_auth_method": "client_secret_basic",
-                "scope": "openid email profile",
-                "claims_imports": {
-                    "localpart": {
-                        "action": "suggest",
-                        "template": "{{ user.preferred_username }}",
-                    },
-                    "displayname": {"action": "suggest", "template": "{{ user.name }}"},
-                    "email": {"action": "suggest", "template": "{{ user.email }}"},
-                },
-            }
-        ]
-    }
-    synapse = {
-        "server_name": "matrix.fahrican.com",
-        "public_baseurl": "https://matrix.fahrican.com/",
-        "report_stats": False,
-        "pid_file": "/tmp/synapse.pid",
-        "media_store_path": "/var/lib/matrix/media",
-        "signing_key_path": "/run/matrix/signing.key",
-        "max_upload_size": "25M",
-        "listeners": [
-            {
-                "port": 8008,
-                "bind_addresses": ["0.0.0.0"],
-                "type": "http",
-                "tls": False,
-                "x_forwarded": True,
-                "resources": [{"names": ["client"], "compress": False}],
-            },
-            {
-                "port": 9000,
-                "type": "http",
-                "bind_addresses": ["0.0.0.0"],
-                "resources": [{"names": ["metrics"], "compress": False}],
-            },
-        ],
-        "enable_metrics": True,
-        "federation_domain_whitelist": [],
-        "trusted_key_servers": [],
-        "allow_profile_lookup_over_federation": False,
-        "url_preview_enabled": False,
-        "enable_registration": False,
-        "allow_guest_access": False,
-        "enable_room_list_search": False,
-        "push": {"include_content": False},
-        "rc_login": {
-            "address": {"per_second": 0.2, "burst_count": 5},
-            "account": {"per_second": 0.2, "burst_count": 5},
-        },
-        "matrix_authentication_service": {
-            "enabled": True,
-            "endpoint": "http://matrix-mas:8080/",
-            "secret": shared,
-        },
-        "http_proxy": "http://matrix-egress:3128",
-        "https_proxy": "http://matrix-egress:3128",
-        "no_proxy_hosts": ["matrix-mas"],
-        "database": {
-            "name": "psycopg2",
-            "args": {
-                "host": DATABASE_HOST,
-                "user": "synapse",
-                "password": passwords["synapse"],
-                "database": "synapse",
-                "cp_min": 5,
-                "cp_max": 10,
-            },
-        },
-    }
-    relay = {
-        "homeserver": "http://matrix-client:8080",
-        "user_id": "@infra-alerts:matrix.fahrican.com",
-        "device_id": "INFRA_ALERTS",
-        "access_token": "",
-        "room_id": "",
-        "canary_room_id": "",
-        "allowed_users": [],
-        "trusted_devices": {},
-        "producers": {
-            "alertmanager": {
-                "paths": ["/alertmanager"],
-                "token": secrets.token_urlsafe(32),
-            }
-        },
-    }
-    # CloudNativePG owns the role passwords; the dumps pod reads the same Secrets.
-    database = []
-    for name, password in passwords.items():
-        document = secret(
-            "matrix-postgres-" + name,
-            "matrix",
-            {"username": name, "password": password},
-        )
-        document["metadata"]["labels"]["cnpg.io/reload"] = "true"
-        document["type"] = "kubernetes.io/basic-auth"
-        database.append(document)
-    encrypted_inputs.save(Path.cwd(), DEPLOYMENT / "database.sops.yaml", database)
-    values = {
-        "synapse.yaml": yaml.safe_dump(synapse),
-        "mas.yaml": yaml.safe_dump(mas),
-        "signing.key": "ed25519 matrix1 "
-        + base64.b64encode(secrets.token_bytes(32)).decode().rstrip("=")
-        + "\n",
-        "relay.json": json.dumps(relay),
-        "alertmanager-token": relay["producers"]["alertmanager"]["token"],
-    }
-    save_secret(target, secret("matrix-runtime", "matrix", values))
-
-
-def provider_values(provider):
-    return {key: str(item["value"]) for key, item in provider_outputs(provider).items()}
 
 
 async def enroll_bot(args):
@@ -514,10 +338,9 @@ def configure_alerting(args):
     }
     receivers = [{"name": "null"}, receiver, email_receiver]
     if args.phase == "dual":
-        telegram = encrypted_inputs.values(
-            load_secret(Path("secrets/service-runtime.sops.yaml"))
-        )
-        chat_id = int(telegram["INFRA_TELEGRAM_CHAT_ID"])
+        chat_id = telegram_receiver(
+            load_secret_documents(OBSERVABILITY / "runtime.sops.yaml")
+        )["telegram_configs"][0]["chat_id"]
         receivers.append(
             {
                 "name": "infrastructure-telegram",
@@ -604,62 +427,10 @@ def aws_client(service):
     )
 
 
-def sync_monitoring_policy(args):
-    import boto3
-    from botocore.exceptions import ClientError
-    from urllib.parse import unquote
-
-    session = boto3.Session(profile_name=args.aws_profile)
-    account = session.client("sts").get_caller_identity()["Account"]
-    if account != aws_client("sts").get_caller_identity()["Account"]:
-        raise ValueError("administrative session must use the enrolled AWS account")
-    desired = json.loads(
-        Path("components/homelab/services/mail-aws/matrix-iam-policy.json")
-        .read_text()
-        .replace("ACCOUNT_ID", account)
-    )
-    iam = session.client("iam")
-    arn = f"arn:aws:iam::{account}:policy/fahrican-matrix-monitoring-gitops"
-    try:
-        version = iam.get_policy(PolicyArn=arn)["Policy"]["DefaultVersionId"]
-    except ClientError as error:
-        if error.response["Error"]["Code"] != "NoSuchEntity":
-            raise
-        iam.create_policy(
-            PolicyName="fahrican-matrix-monitoring-gitops",
-            PolicyDocument=json.dumps(desired),
-        )
-        iam.attach_user_policy(UserName="fahrican-mail-gitops", PolicyArn=arn)
-        print(
-            "Enrolled the scoped Matrix monitoring policy; existing access keys retained."
-        )
-        return
-    current = iam.get_policy_version(PolicyArn=arn, VersionId=version)["PolicyVersion"][
-        "Document"
-    ]
-    if isinstance(current, str):
-        current = json.loads(unquote(current))
-    if current == desired:
-        iam.attach_user_policy(UserName="fahrican-mail-gitops", PolicyArn=arn)
-        return
-    versions = iam.list_policy_versions(PolicyArn=arn)["Versions"]
-    if len(versions) >= 5:
-        oldest = min(
-            (item for item in versions if not item["IsDefaultVersion"]),
-            key=lambda item: item["CreateDate"],
-        )
-        iam.delete_policy_version(PolicyArn=arn, VersionId=oldest["VersionId"])
-    iam.create_policy_version(
-        PolicyArn=arn, PolicyDocument=json.dumps(desired), SetAsDefault=True
-    )
-    iam.attach_user_policy(UserName="fahrican-mail-gitops", PolicyArn=arn)
-    print("Updated the scoped Matrix monitoring policy; existing access keys retained.")
-
-
-def enroll_monitoring(args):
-    outputs = provider_values("mail-aws")
-    url = outputs["matrix_heartbeat_url"]
-    arn = outputs["matrix_heartbeat_secret_arn"]
+def enroll_monitoring(outputs):
+    """Read `tofu output -json` of the mail-aws root, piped to stdin."""
+    url = outputs["matrix_heartbeat_url"]["value"]
+    arn = outputs["matrix_heartbeat_secret_arn"]["value"]
     if not re.fullmatch(r"https://[a-z0-9]+\.lambda-url\.eu-central-1\.on\.aws/", url):
         raise ValueError("monitoring URL is not enrolled")
     target = DEPLOYMENT / "runtime.sops.yaml"
@@ -671,26 +442,6 @@ def enroll_monitoring(args):
     relay["heartbeat"] = {"url": url + "heartbeat", "token": token}
     document["stringData"]["relay.json"] = json.dumps(relay)
     save_secret(target, document)
-
-
-def activate():
-    document = load_secret(DEPLOYMENT / "runtime.sops.yaml")
-    providers = yaml.safe_load(document["stringData"]["mas.yaml"])["upstream_oauth2"][
-        "providers"
-    ]
-    if not providers or not all(provider["client_id"] for provider in providers):
-        raise ValueError("ZITADEL enrollment is incomplete")
-    k = yaml.safe_load((DEPLOYMENT / "kustomization.yaml").read_text())
-    if not k.get("images") or "registry.sops.yaml" not in k["resources"]:
-        raise ValueError("publish and pin the image before activation")
-    dns = yaml.safe_load(
-        Path(
-            "deployments/homelab/credentials/matrix-dns-inputs.yaml"
-        ).read_text()
-    )
-    if not dns["data"]["matrix_wan_ipv4_address"]:
-        raise ValueError("public DNS enrollment is incomplete")
-    print("Matrix configuration is ready. Restore data and release its recovery suspension.")
 
 
 def qualify(args):
@@ -726,38 +477,34 @@ def qualify(args):
         alarm["StateValue"] != "OK" or not alarm["ActionsEnabled"] for alarm in alarms
     ):
         raise ValueError("external availability and delivery checks are not healthy")
-    jobs = json.loads(
-        run(
-            [
-                "kubectl",
-                "--kubeconfig",
-                args.cluster_kubeconfig,
-                "-n",
-                "matrix-restore",
-                "get",
-                "jobs",
-                "-o",
-                "json",
-            ]
-        )
-    )["items"]
     import datetime
 
     now = datetime.datetime.now(datetime.timezone.utc)
-
-    def recent_restore(job):
-        status = job.get("status", {})
-        if job["metadata"].get("labels", {}).get(
-            "matrix.fahrican.com/qualification"
-        ) != "true" or not status.get("succeeded"):
-            return False
-        completed = datetime.datetime.fromisoformat(
-            status["completionTime"].replace("Z", "+00:00")
+    for namespace, name in (
+        ("backup-qualification", "matrix-restore-qualification"),
+        ("matrix-restore", "postgres-restore-test"),
+    ):
+        cronjob = json.loads(
+            run(
+                [
+                    "kubectl",
+                    "--kubeconfig",
+                    args.cluster_kubeconfig,
+                    "-n",
+                    namespace,
+                    "get",
+                    "cronjob",
+                    name,
+                    "-o",
+                    "json",
+                ]
+            )
         )
-        return datetime.timedelta(0) <= now - completed <= datetime.timedelta(days=40)
-
-    if not any(recent_restore(job) for job in jobs):
-        raise ValueError("no successful isolated restore qualification")
+        succeeded = cronjob.get("status", {}).get("lastSuccessfulTime")
+        if not succeeded or now - datetime.datetime.fromisoformat(
+            succeeded.replace("Z", "+00:00")
+        ) > datetime.timedelta(days=40):
+            raise ValueError("no successful isolated restore within 40 days")
     if not args.mobile_and_recovery_checked:
         raise ValueError(
             "Element decryption, push, and recovery must be checked before qualification"
@@ -768,34 +515,47 @@ def qualify(args):
     path.write_text(json.dumps(rollout, indent=2) + "\n")
 
 
+def load_secret_documents(path):
+    return encrypted_inputs.decrypt(path)
+
+
+def telegram_receiver(documents):
+    values = next(
+        d for d in documents if d["metadata"]["name"] == "alertmanager-runtime-values"
+    )
+    config = yaml.safe_load(encrypted_inputs.values(values)["values.yaml"])
+    return next(
+        r
+        for r in config["alertmanager"]["config"]["receivers"]
+        if r["name"] == "infrastructure-telegram"
+    )
+
+
 def retire_telegram():
     rollout = json.loads((DEPLOYMENT / "rollout.json").read_text())
     if rollout["phase"] != "matrix":
         raise ValueError("complete the qualified seven-day cutover first")
-    target = Path(
-        "secrets/service-runtime.sops.yaml"
+    path = OBSERVABILITY / "runtime.sops.yaml"
+    documents = [
+        d
+        for d in load_secret_documents(path)
+        if d["metadata"]["name"] != "infrastructure-telegram"
+    ]
+    values = next(
+        d for d in documents if d["metadata"]["name"] == "alertmanager-runtime-values"
     )
-    document = load_secret(target)
-    for key in ("INFRA_TELEGRAM_BOT_TOKEN", "INFRA_TELEGRAM_CHAT_ID"):
-        for field in ("stringData", "data"):
-            document.get(field, {}).pop(key, None)
-    save_secret(target, document)
-    contract_path = Path(
-        "deployments/homelab/credentials/runtime-contract.yaml"
-    )
-    cm = yaml.safe_load(contract_path.read_text())
-    contract = yaml.safe_load(cm["data"]["required-keys.yaml"])
-    contract["credentials"].pop("infrastructure", None)
-    contract["provisionedSecrets"].pop("telegram-infrastructure", None)
-    cm["data"]["required-keys.yaml"] = yaml.safe_dump(contract, sort_keys=False)
-    contract_path.write_text(yaml.safe_dump(cm, sort_keys=False))
-    bots_path = Path("deployments/homelab/credentials/telegram-bots.yaml")
-    bots = yaml.safe_load(bots_path.read_text())
-    bots["bots"].pop("infrastructure", None)
-    bots_path.write_text(yaml.safe_dump(bots, sort_keys=False))
+    config = yaml.safe_load(encrypted_inputs.values(values)["values.yaml"])
+    config["alertmanager"]["config"]["receivers"] = [
+        r
+        for r in config["alertmanager"]["config"]["receivers"]
+        if r["name"] != "infrastructure-telegram"
+    ]
+    values.pop("data", None)
+    values["stringData"] = {"values.yaml": yaml.safe_dump(config, sort_keys=False)}
+    encrypted_inputs.save(Path.cwd(), path, documents)
     configure_alertmanager_mounts("matrix")
     print(
-        "Retired infrastructure Telegram credentials. Revoke the bot token with BotFather and remove host token files after host rollout."
+        "Removed the infrastructure Telegram receiver and bot token. Revoke the bot token with BotFather."
     )
 
 
@@ -887,8 +647,6 @@ def publish(args):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("initialize")
-    sub.add_parser("activate")
     sub.add_parser("retire-telegram")
     bot = sub.add_parser("enroll-bot")
     bot.add_argument("--kubeconfig", dest="cluster_kubeconfig", default=os.environ.get("KUBECONFIG"))
@@ -902,11 +660,10 @@ def main():
     alerting.add_argument("--phase", choices=["dual", "matrix"], default="dual")
     publication = sub.add_parser("publish-image")
     publication.add_argument("image", type=Path)
-    dns = sub.add_parser("configure-dns")
-    dns.add_argument("--wan-ipv4", required=True)
-    sub.add_parser("enroll-monitoring")
-    monitoring_policy = sub.add_parser("sync-monitoring-policy")
-    monitoring_policy.add_argument("--aws-profile", default="default")
+    sub.add_parser(
+        "enroll-monitoring",
+        help="pipe `nix run .#tofu -- mail-aws output -json` to stdin",
+    )
     qualification = sub.add_parser("qualify")
     qualification.add_argument(
         "--kubeconfig", dest="cluster_kubeconfig", default=os.environ.get("KUBECONFIG")
@@ -916,13 +673,11 @@ def main():
     for name in ("cluster_kubeconfig",):
         if hasattr(args, name) and not getattr(args, name):
             parser.error(
-                f"provide --{name.replace('_', '-')} or run through matrix-access"
+                f"provide --{name.replace('_', '-')} or run through cluster-access"
             )
     if not Path(".git").exists():
         raise ValueError("run from the infrastructure repository root")
-    if args.command == "initialize":
-        initialize()
-    elif args.command == "enroll-bot":
+    if args.command == "enroll-bot":
         asyncio.run(enroll_bot(args))
     elif args.command == "approve-device":
         approve_device(args)
@@ -930,26 +685,12 @@ def main():
         configure_alerting(args)
     elif args.command == "publish-image":
         publish(args)
-    elif args.command == "activate":
-        activate()
     elif args.command == "enroll-monitoring":
-        enroll_monitoring(args)
-    elif args.command == "sync-monitoring-policy":
-        sync_monitoring_policy(args)
+        enroll_monitoring(json.load(sys.stdin))
     elif args.command == "qualify":
         qualify(args)
     elif args.command == "retire-telegram":
         retire_telegram()
-    elif args.command == "configure-dns":
-        ip = ipaddress.IPv4Address(args.wan_ipv4)
-        if not ip.is_global:
-            raise ValueError("WAN address must be a globally routable IPv4 address")
-        path = Path(
-            "deployments/homelab/credentials/matrix-dns-inputs.yaml"
-        )
-        doc = yaml.safe_load(path.read_text())
-        doc["data"]["matrix_wan_ipv4_address"] = str(ip)
-        path.write_text(yaml.safe_dump(doc, sort_keys=False))
     print("Matrix configuration reconciled; credentials were not displayed.")
 
 

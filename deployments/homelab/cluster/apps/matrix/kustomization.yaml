@@ -12,6 +12,8 @@ resources:
 - runtime.sops.yaml
 - database.sops.yaml
 - database.yaml
+- backup.yaml
+- restore-test.yaml
 - email.sops.yaml
 - restore.yaml
 - registry.sops.yaml

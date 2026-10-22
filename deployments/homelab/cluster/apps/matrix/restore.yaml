@@ -16,7 +16,7 @@ data:
         path: /spec/volumeName
     - conditions:
         groupResource: pods
-        resourceNameRegex: ^matrix-(dumps|synapse|relay)-0$
+        resourceNameRegex: ^matrix-(synapse|relay)-0$
         namespaces:
         - matrix
       patches:
@@ -205,14 +205,6 @@ rules:
   - watch
   - create
   - delete
-- apiGroups:
-  - networking.k8s.io
-  resources:
-  - networkpolicies
-  verbs:
-  - get
-  - create
-  - patch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

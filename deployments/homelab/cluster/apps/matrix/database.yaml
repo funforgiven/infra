@@ -10,17 +10,15 @@ spec:
   inheritedMetadata:
     labels:
       app.kubernetes.io/part-of: matrix
-      # The logical dumps are the backup; Velero skips the live data directories.
+      # Barman Cloud is the backup; Velero skips the live data directories.
       velero.io/exclude-from-backup: "true"
   bootstrap:
-    initdb:
+    recovery:
+      source: backup
       database: synapse
       owner: synapse
       secret:
         name: matrix-postgres-synapse
-      encoding: UTF8
-      localeCollate: C
-      localeCType: C
   managed:
     roles:
     - name: synapse
@@ -51,10 +49,27 @@ spec:
       dataDurability: required
       failoverQuorum: true
     parameters:
+      archive_timeout: 60s
       # Leave disk headroom when an offline replica retains WAL.
       max_slot_wal_keep_size: 4GB
   monitoring:
     enablePodMonitor: true
+  plugins:
+  - name: barman-cloud.cloudnative-pg.io
+    enabled: true
+    isWALArchiver: true
+    parameters:
+      barmanObjectName: matrix-postgres-backup
+      # A rebuilt cluster cannot archive into a non-empty folder: bump this name
+      # and point the backup cluster below at the previous one.
+      serverName: matrix-postgres
+  externalClusters:
+  - name: backup
+    plugin:
+      name: barman-cloud.cloudnative-pg.io
+      parameters:
+        barmanObjectName: matrix-postgres-backup
+        serverName: matrix-postgres
 ---
 apiVersion: postgresql.cnpg.io/v1
 kind: Database

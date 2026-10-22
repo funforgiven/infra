@@ -20,7 +20,7 @@ class RestoreContractTests(unittest.TestCase):
         docs=list(yaml.safe_load_all((MATRIX/'restore.yaml').read_text()))
         rules=yaml.safe_load(docs[0]['data']['resource-modifiers.yaml'])['resourceModifierRules']
         workloads=[x for x in yaml.safe_load_all((MATRIX/'workloads.yaml').read_text()) if x and x['kind']=='StatefulSet' and x['metadata']['name'] in controller.WORKLOADS]
-        self.assertEqual(len(workloads),3)
+        self.assertEqual(len(workloads),len(controller.WORKLOADS))
         for workload in workloads:
             name=workload['metadata']['name']+'-0'
             with self.subTest(pod=name):

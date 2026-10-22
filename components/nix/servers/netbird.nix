@@ -8,7 +8,7 @@ _: {
     in
     {
       apps.netbird-admin = {
-        meta.description = "Enroll homelab NetBird without printing credentials";
+        meta.description = "Rotate NetBird automation credentials without printing them";
         program = "${
           pkgs.writeShellApplication {
             name = "netbird-admin";

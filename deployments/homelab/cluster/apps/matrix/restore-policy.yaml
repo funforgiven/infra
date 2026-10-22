@@ -1,10 +1,20 @@
+# Velero-restored relay and media sleepers never get network access, whatever
+# NetworkPolicy allows. Only the CloudNativePG restore test is exempt; it has
+# its own allowlist in restore-test.yaml.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
   name: matrix-restore-isolation
   namespace: matrix-restore
 spec:
-  endpointSelector: {}
+  endpointSelector:
+    matchExpressions:
+    - key: cnpg.io/cluster
+      operator: DoesNotExist
+    - key: app.kubernetes.io/name
+      operator: NotIn
+      values:
+      - postgres-restore-test
   ingressDeny:
   - {}
   egressDeny:

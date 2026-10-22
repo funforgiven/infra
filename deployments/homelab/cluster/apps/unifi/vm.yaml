@@ -53,6 +53,10 @@ spec:
           - name: cloud-init
             disk:
               bus: virtio
+          - name: guest
+            serial: unifi-guest
+            disk:
+              bus: virtio
           interfaces:
           - name: default
             masquerade: {}
@@ -70,10 +74,68 @@ spec:
       - name: root
         persistentVolumeClaim:
           claimName: unifi-root
+      - name: guest
+        configMap:
+          name: unifi-guest
       - name: cloud-init
         cloudInitNoCloud:
-          secretRef:
-            name: unifi-cloud-init
-          networkDataSecretRef:
-            name: unifi-cloud-init
+          userData: |
+            #cloud-config
+            hostname: unifi
+            manage_etc_hosts: true
+            ssh_pwauth: false
+            ssh_deletekeys: false
+            disable_root: true
+            users:
+            - name: ubuntu
+              groups: [sudo, adm]
+              shell: /bin/bash
+              lock_passwd: true
+              sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+              ssh_authorized_keys:
+              - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL1nHHxNA1YUl+89HhieA+YOyOLYJaSRBmutEOVxVQeB github-funforgiven-2026-07-18
+            # Every boot: install the scripts and firewall from the unifi-guest
+            # ConfigMap disk, so a VM restart applies their Git versions.
+            bootcmd:
+            - - sh
+              - -ec
+              - |
+                install -d -m 0700 /run/unifi-guest
+                mount -o ro /dev/disk/by-id/virtio-unifi-guest /run/unifi-guest
+                install -d -m 0755 /usr/local/lib/unifi
+                install -m 0755 /run/unifi-guest/*.sh /usr/local/lib/unifi/
+                install -m 0644 /run/unifi-guest/inputs.json /usr/local/lib/unifi/
+                install -m 0600 /run/unifi-guest/nftables.conf /etc/nftables.conf
+                umount /run/unifi-guest
+                systemctl try-reload-or-restart nftables.service || true
+            runcmd:
+            - [/usr/local/lib/unifi/bootstrap.sh]
+            - [systemctl, enable, --now, nftables]
+            package_update: true
+            packages:
+            - nftables
+          networkData: |
+            version: 2
+            ethernets:
+              pod:
+                match:
+                  macaddress: 02:00:21:40:01:28
+                set-name: pod0
+                dhcp4: true
+                dhcp4-overrides:
+                  route-metric: 1000
+              services:
+                match:
+                  macaddress: 02:00:21:40:01:27
+                set-name: services0
+                dhcp4: false
+                addresses:
+                - 10.21.40.127/24
+                routes:
+                - to: default
+                  via: 10.21.40.1
+                  metric: 50
+                nameservers:
+                  addresses:
+                  - 10.21.40.1
       terminationGracePeriodSeconds: 120

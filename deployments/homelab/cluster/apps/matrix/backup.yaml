@@ -1,0 +1,49 @@
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: matrix-postgres-backup
+  namespace: matrix
+spec:
+  retentionPolicy: 30d
+  configuration:
+    destinationPath: s3://fahrican-cloud-recovery/services/kubernetes/plugins/matrix/postgresql/
+    endpointURL: https://s3.us-west-004.backblazeb2.com
+    s3Credentials:
+      accessKeyId:
+        name: matrix-backup
+        key: ACCESS_KEY_ID
+      secretAccessKey:
+        name: matrix-backup
+        key: ACCESS_SECRET_KEY
+      region:
+        name: matrix-backup
+        key: AWS_REGION
+    wal:
+      compression: gzip
+      encryption: AES256
+      maxParallel: 2
+    data:
+      compression: gzip
+      encryption: AES256
+      jobs: 2
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: matrix-postgres-daily
+  namespace: matrix
+spec:
+  schedule: 0 32 2 * * *
+  backupOwnerReference: self
+  cluster:
+    name: matrix-postgres
+  immediate: true
+  method: plugin
+  online: true
+  onlineConfiguration:
+    waitForArchive: true
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io
+    parameters:
+      barmanObjectName: matrix-postgres-backup
+  target: prefer-standby

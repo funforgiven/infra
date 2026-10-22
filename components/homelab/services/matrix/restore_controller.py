@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Restore the newest daily Matrix backup into a namespace with denied networking."""
+"""Restore the newest daily Matrix media and relay volumes into the deny-all
+matrix-restore namespace, verify them offline and delete the copies.
+
+PostgreSQL is verified by the CloudNativePG restore test instead.
+"""
 
 import datetime
 import json
@@ -10,7 +14,6 @@ from pathlib import Path
 
 # Restored workloads, the claims they mount and where the verifier reads them.
 WORKLOADS = {
-    "matrix-dumps": ("matrix-dumps", "dumps", "/var/lib/matrix/dumps"),
     "matrix-synapse": ("matrix-media", "media", "/var/lib/matrix/media"),
     "matrix-relay": ("matrix-relay", "state", "/var/lib/matrix/relay"),
 }
@@ -40,19 +43,42 @@ def apply(document):
     run(["apply", "-f", "-"], json.dumps(document).encode())
 
 
-def main():
-    # Created before even copying registry authentication or restoring resources.
-    apply(
-        {
-            "apiVersion": "networking.k8s.io/v1",
-            "kind": "NetworkPolicy",
-            "metadata": {
-                "name": "matrix-restore-deny-all",
-                "namespace": "matrix-restore",
-            },
-            "spec": {"podSelector": {}, "policyTypes": ["Ingress", "Egress"]},
-        }
+def delete_restored():
+    run(
+        [
+            "-n",
+            "matrix-restore",
+            "delete",
+            "jobs",
+            "-l",
+            "matrix.fahrican.com/qualification=true",
+            "--ignore-not-found=true",
+        ]
     )
+    for resource, names in (
+        ("pods", PODS),
+        ("pvc", [claim for claim, _, _ in WORKLOADS.values()]),
+        ("secret", ["matrix-registry"]),
+        ("configmap", ["matrix-restore-tools"]),
+    ):
+        run(
+            ["-n", "matrix-restore", "delete", resource]
+            + names
+            + ["--ignore-not-found=true", "--wait=true"]
+        )
+
+
+def main():
+    # matrix-restore's deny-all policies are declared in Git, before any restore.
+    delete_restored()
+    try:
+        qualify()
+    finally:
+        # Never leave copies of the relay crypto store or queue behind.
+        delete_restored()
+
+
+def qualify():
     now = datetime.datetime.now(datetime.timezone.utc)
     candidates = []
     for backup in get("velero", "backups.velero.io")["items"]:
@@ -85,26 +111,6 @@ def main():
         "data": {"restore.py": Path("/scripts/restore.py").read_text()},
     }
     apply(scripts)
-    run(
-        [
-            "-n",
-            "matrix-restore",
-            "delete",
-            "jobs",
-            "-l",
-            "matrix.fahrican.com/qualification=true",
-            "--ignore-not-found=true",
-        ]
-    )
-    for resource, names in (
-        ("pods", PODS),
-        ("pvc", [claim for claim, _, _ in WORKLOADS.values()]),
-    ):
-        run(
-            ["-n", "matrix-restore", "delete", resource]
-            + names
-            + ["--ignore-not-found=true", "--wait=true"]
-        )
     restore_name = "matrix-qualification-" + uuid.uuid4().hex[:12]
     apply(
         {

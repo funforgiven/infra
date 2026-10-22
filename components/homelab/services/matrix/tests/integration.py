@@ -455,38 +455,15 @@ async def qualify(directory, pg_port, synapse_port, mas_port, proxy_port):
                 break
             await asyncio.sleep(0.1)
         assert "After restart" in decrypted
-        # Exercise the production snapshot and offline verifier against real DBs.
+        # Exercise the production snapshot and the offline relay verifier.
         state = directory / "infra-alerts"
         queue = Queue(state / "queue.sqlite")
         queue.put("test", "undelivered", "Pending alert survives recovery")
         snapshot_crypto(restarted, state, state / "backups")
-        dumps = directory / "dumps"
-        dumps.mkdir()
-        abandoned = dumps / "stage-abandoned"
-        abandoned.mkdir()
-        credentials = directory / "backup-credentials"
-        credentials.mkdir()
-        for database in ("synapse", "mas"):
-            (credentials / (database + "-password")).write_text("synthetic")
-        backup_environment = dict(
-            os.environ,
-            MATRIX_DUMPS_DIR=str(dumps),
-            MATRIX_SECRET_DIR=str(credentials),
-            MATRIX_DB_HOST="127.0.0.1",
-            MATRIX_DB_PORT=str(pg_port),
-        )
-        subprocess.run(
-            [sys.executable, str(Path(__file__).resolve().parents[1] / "backup.py")],
-            env=backup_environment,
-            capture_output=True,
-            check=True,
-        )
-        assert not abandoned.exists()
         work = directory / "verify"
         work.mkdir()
         environment = dict(
             os.environ,
-            MATRIX_RESTORE_DUMPS=str(dumps),
             MATRIX_RESTORE_WORK=str(work),
             MATRIX_RESTORE_MEDIA=str(directory / "media"),
             MATRIX_RESTORE_RELAY=str(state / "backups"),

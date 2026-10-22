@@ -16,57 +16,6 @@ import admin
 import outside_check
 
 
-class MonitoringPolicyTests(unittest.TestCase):
-    def reconcile(self, *, account="123456789012", current=None):
-        session, sts, provisioner, iam = (MagicMock() for _ in range(4))
-        sts.get_caller_identity.return_value = {"Account": account}
-        provisioner.get_caller_identity.return_value = {"Account": "123456789012"}
-        session.client.side_effect = lambda name: sts if name == "sts" else iam
-        iam.get_policy.return_value = {"Policy": {"DefaultVersionId": "v5"}}
-        iam.get_policy_version.return_value = {
-            "PolicyVersion": {"Document": current or {}}
-        }
-        iam.list_policy_versions.return_value = {
-            "Versions": [
-                {"VersionId": f"v{i}", "CreateDate": i, "IsDefaultVersion": i == 5}
-                for i in range(1, 6)
-            ]
-        }
-        with (
-            patch("boto3.Session", return_value=session),
-            patch.object(admin, "aws_client", return_value=provisioner),
-            patch.object(Path, "read_text", return_value='{"account": "ACCOUNT_ID"}'),
-        ):
-            if account != "123456789012":
-                with self.assertRaises(ValueError):
-                    admin.sync_monitoring_policy(
-                        argparse.Namespace(aws_profile="default")
-                    )
-            else:
-                admin.sync_monitoring_policy(argparse.Namespace(aws_profile="default"))
-        return iam
-
-    def test_different_aws_account_prevents_policy_changes(self):
-        iam = self.reconcile(account="999999999999")
-        iam.get_policy.assert_not_called()
-        iam.create_policy_version.assert_not_called()
-
-    def test_current_policy_is_idempotent(self):
-        iam = self.reconcile(current={"account": "123456789012"})
-        iam.list_policy_versions.assert_not_called()
-        iam.create_policy_version.assert_not_called()
-
-    def test_full_version_inventory_retains_current_rollback_version(self):
-        iam = self.reconcile()
-        arn = "arn:aws:iam::123456789012:policy/fahrican-matrix-monitoring-gitops"
-        iam.delete_policy_version.assert_called_once_with(PolicyArn=arn, VersionId="v1")
-        iam.create_policy_version.assert_called_once_with(
-            PolicyArn=arn,
-            PolicyDocument='{"account": "123456789012"}',
-            SetAsDefault=True,
-        )
-
-
 class CutoverTests(unittest.TestCase):
     def test_matrix_cutover_requires_seven_days_and_recent_qualification(self):
         now = 2_000_000
@@ -100,6 +49,46 @@ class CutoverTests(unittest.TestCase):
                             argparse.Namespace(phase="matrix", host=[])
                         )
                     decrypt.assert_not_called()
+
+
+class TelegramRetirementTests(unittest.TestCase):
+    def test_retirement_removes_only_the_telegram_receiver_and_token(self):
+        values = {"alertmanager": {"config": {"receivers": [
+            {"name": "null"},
+            {"name": "infrastructure-telegram", "telegram_configs": [{"chat_id": 1}]},
+        ]}}}
+        documents = [
+            {"metadata": {"name": "infrastructure-telegram"}, "stringData": {"bot-token": "x"}},
+            {"metadata": {"name": "alertmanager-runtime-values"},
+             "stringData": {"values.yaml": yaml.safe_dump(values)}},
+            {"metadata": {"name": "grafana-oidc"}, "stringData": {}},
+        ]
+        self.assertEqual(admin.telegram_receiver(documents)["telegram_configs"][0]["chat_id"], 1)
+        with tempfile.TemporaryDirectory() as directory:
+            deployment = Path(directory)
+            (deployment / "rollout.json").write_text(json.dumps({"phase": "matrix"}))
+            with (
+                patch.object(admin, "DEPLOYMENT", deployment),
+                patch.object(admin, "load_secret_documents", return_value=documents),
+                patch.object(admin.encrypted_inputs, "save") as save,
+                patch.object(admin, "configure_alertmanager_mounts") as mounts,
+            ):
+                admin.retire_telegram()
+        saved = save.call_args.args[2]
+        self.assertEqual([d["metadata"]["name"] for d in saved], ["alertmanager-runtime-values", "grafana-oidc"])
+        receivers = yaml.safe_load(saved[0]["stringData"]["values.yaml"])["alertmanager"]["config"]["receivers"]
+        self.assertEqual(receivers, [{"name": "null"}])
+        mounts.assert_called_once_with("matrix")
+
+    def test_retirement_requires_the_matrix_phase(self):
+        with tempfile.TemporaryDirectory() as directory:
+            deployment = Path(directory)
+            (deployment / "rollout.json").write_text(json.dumps({"phase": "dual"}))
+            with patch.object(admin, "DEPLOYMENT", deployment), \
+                    patch.object(admin, "load_secret_documents") as load:
+                with self.assertRaises(ValueError):
+                    admin.retire_telegram()
+                load.assert_not_called()
 
 
 class AlertingConfigurationTests(unittest.TestCase):

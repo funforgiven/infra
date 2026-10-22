@@ -46,9 +46,9 @@ dashboards, routes and encrypted runtime inputs.
 Check:
 
 ```sh
-nix run .#matrix-access -- cluster -- kubectl -n flux-system get kustomization observability
-nix run .#matrix-access -- cluster -- kubectl -n services-observability get helmreleases,pods,pvc
-nix run .#matrix-access -- cluster -- kubectl get prometheusrules,servicemonitors,podmonitors,probes -A
+nix run .#cluster-access -- cluster -- kubectl -n flux-system get kustomization observability
+nix run .#cluster-access -- cluster -- kubectl -n services-observability get helmreleases,pods,pvc
+nix run .#cluster-access -- cluster -- kubectl get prometheusrules,servicemonitors,podmonitors,probes -A
 ```
 
 Require the HelmReleases and Flux stage Ready, PVCs Bound, host/storage targets
