@@ -37,6 +37,10 @@ _: {
         }
       ];
 
+      # Steam ignores SIGTERM, so the default 90s stop timeout stalls every
+      # logout, restart, and shutdown on a blank console after Niri exits.
+      systemd.user.settings.Manager.DefaultTimeoutStopSec = "10s";
+
       services = {
         displayManager.defaultSession = "niri-uwsm";
 
