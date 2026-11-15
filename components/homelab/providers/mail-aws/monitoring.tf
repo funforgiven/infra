@@ -2,11 +2,8 @@ resource "aws_sns_topic" "mail_alerts" {
   name = "stalwart-mail-alerts"
 }
 
-resource "aws_sns_topic_subscription" "mail_alerts" {
-  topic_arn = aws_sns_topic.mail_alerts.arn
-  protocol  = "email"
-  endpoint  = "fahricanelidemir@gmail.com"
-}
+# Keep CloudWatch alarms and their topic, without an email subscription.
+# Infrastructure notifications are delivered through Matrix.
 
 # EC2 stops publishing an old instance dimension while create-before-destroy
 # replacement changes IDs. Absence is not a failed status check; only an

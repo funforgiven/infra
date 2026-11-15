@@ -16,8 +16,9 @@ containers. NixOS manages the host and Stalwart service.
   attachments. Deleted and overwritten versions are retained for 90 days.
 - An Elastic IP provides the stable public address. Reverse DNS is enabled only
   after forward DNS is correct.
-- CloudWatch infrastructure and application alarms publish to the Gmail SNS
-  subscription.
+- CloudWatch infrastructure and application alarms retain their states and
+  publish to SNS without an email subscription. Homelab alert delivery uses
+  Matrix; AWS alarms have no notification subscriber.
 - Daily encrypted Restic backups in Backblaze include a portable Vandelay
   mailbox archive and a PostgreSQL dump. The B2 key is restricted to the mail
   prefix; its values and repository password are enrolled outside OpenTofu.
@@ -61,7 +62,7 @@ After an infrastructure or host change, verify:
 - RDS connectivity;
 - the S3 read/write probe;
 - all declared CloudWatch alarms;
-- the SNS subscription; and
+- the absence of an SNS email subscription; and
 - public JMAP discovery, authenticated mail/submission methods, MX, and TLS hostname behavior.
 
 For DNS changes, also verify DKIM, SPF, DMARC, autoconfiguration records, and
