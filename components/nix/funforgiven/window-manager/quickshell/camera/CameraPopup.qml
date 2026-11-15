@@ -75,7 +75,8 @@ Scope {
     }
 
     function toggleAt(item, screen, inset) {
-        if (opened && anchorItem === item && selectedScreen === screen) {
+        // An IPC-opened popup has no anchor; the first bar click on its screen closes it.
+        if (opened && (anchorItem === item || anchorItem === null) && selectedScreen === screen) {
             dismiss();
             return;
         }
@@ -107,12 +108,6 @@ Scope {
     }
     Component.onDestruction: Services.PopupCoordinator.ownerDestroyed(root)
 
-    Shortcut {
-        sequence: "Escape"
-        enabled: root.opened
-        onActivated: root.dismiss()
-    }
-
     PanelWindow { // qmllint disable uncreatable-type
         id: cameraWindow
 
@@ -131,12 +126,29 @@ Scope {
         }
         WlrLayershell.namespace: "funforgiven:camera"
         WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.keyboardFocus: root.opened ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+        WlrLayershell.keyboardFocus: root.opened ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+
+        // Leave the bar outside the input region so a bar click reaches its
+        // button directly instead of only dismissing this popup.
+        mask: Region {
+            item: outsideClickArea
+        }
 
         MouseArea {
-            anchors.fill: parent
+            id: outsideClickArea
+
+            y: root.topInset
+            width: cameraWindow.width
+            height: Math.max(0, cameraWindow.height - y - Services.PopupCoordinator.reservedBottom(root.selectedScreen))
             acceptedButtons: Qt.AllButtons
             onPressed: root.dismiss()
+
+            // A Shortcut only matches inside a window when its parent is an Item.
+            Shortcut {
+                sequence: "Escape"
+                enabled: root.opened
+                onActivated: root.dismiss()
+            }
         }
 
         Components.Surface {
@@ -147,6 +159,8 @@ Scope {
             x: Math.max(Shell.Theme.spacingLarge, cameraWindow.width - width - Shell.Theme.spacingLarge)
             y: root.topInset + Shell.Theme.spacingXSmall
             elevated: true
+            revealed: root.opened
+            revealOrigin: Item.TopRight
             radius: Shell.Theme.radiusLarge
             outlineColor: Shell.Theme.outlineStrong
 

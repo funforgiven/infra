@@ -30,7 +30,7 @@ diff -uNr a/src/services/polkit/agentimpl.cpp b/src/services/polkit/agentimpl.cp
  		this->activateAuthenticationRequest();
  	}
  }
-@@ -121,60 +125,70 @@
+@@ -123,60 +127,71 @@
  	           it != this->queuedRequests.end())
  	{
  		qCDebug(logPolkit) << "removing queued authentication request for action" << (*it)->actionId;
@@ -117,14 +117,15 @@ diff -uNr a/src/services/polkit/agentimpl.cpp b/src/services/polkit/agentimpl.cp
 -	                   << this->bActiveFlow.value()->actionId();
 +	qCDebug(logPolkit) << "finishing authentication request for action" << flow->actionId();
  
+-	QObject::disconnect(this->bActiveFlow.value(), nullptr, this, nullptr);
 -	this->bActiveFlow.value()->deleteLater();
+-	this->bActiveFlow = nullptr;
++	QObject::disconnect(flow, nullptr, this, nullptr);
 +	flow->deleteLater();
 +	this->bActiveFlow = nullptr;
  
 -	if (!this->queuedRequests.empty()) {
 -		this->activateAuthenticationRequest();
--	} else {
--		this->bActiveFlow = nullptr;
 -	}
 +	this->activateAuthenticationRequest();
  }
@@ -706,4 +707,3 @@ diff -uNr a/src/services/polkit/listener.hpp b/src/services/polkit/listener.hpp
  
  // NOLINTEND(readability-identifier-naming)
  
-

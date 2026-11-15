@@ -38,8 +38,8 @@ Scope {
     readonly property string failureMessage: Services.AppService.lastLaunchFailureMessage
 
     function configuredScreen() {
-        for (var index = 0; index < Quickshell.screens.length; index += 1) {
-            var screen = Quickshell.screens[index];
+        for (let index = 0; index < Quickshell.screens.length; index += 1) {
+            let screen = Quickshell.screens[index];
             if (screen.name === Shell.ShellConfig.dockOutput) {
                 return screen;
             }
@@ -129,7 +129,7 @@ Scope {
     }
 
     function applicationName(desktopId) {
-        for (var index = 0; index < root.applications.length; index += 1) {
+        for (let index = 0; index < root.applications.length; index += 1) {
             if (root.applications[index].id === desktopId) {
                 return root.applications[index].name;
             }

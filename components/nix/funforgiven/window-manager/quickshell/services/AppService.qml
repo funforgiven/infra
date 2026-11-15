@@ -33,8 +33,8 @@ QtObject {
             return "";
         }
 
-        for (var index = 0; index < names.length; index += 1) {
-            var value = object[names[index]];
+        for (let index = 0; index < names.length; index += 1) {
+            let value = object[names[index]];
             if (value !== undefined && value !== null && String(value).trim().length > 0) {
                 return String(value).trim();
             }
@@ -60,8 +60,8 @@ QtObject {
     }
 
     function _firstExact(values) {
-        for (var index = 0; index < values.length; index += 1) {
-            var entry = root._entryById(values[index]);
+        for (let index = 0; index < values.length; index += 1) {
+            let entry = root._entryById(values[index]);
             if (entry !== null) {
                 return entry;
             }
@@ -70,8 +70,8 @@ QtObject {
     }
 
     function _firstHeuristic(values) {
-        for (var index = 0; index < values.length; index += 1) {
-            var entry = DesktopEntries.heuristicLookup(values[index]);
+        for (let index = 0; index < values.length; index += 1) {
+            let entry = DesktopEntries.heuristicLookup(values[index]);
             if (entry !== null) {
                 return entry;
             }
@@ -91,13 +91,50 @@ QtObject {
 
         var values = typeof value === "string" ? value.split(";") : value;
         var result = [];
-        for (var index = 0; index < values.length; index += 1) {
-            var item = AppIdentity.text(values[index]);
+        for (let index = 0; index < values.length; index += 1) {
+            let item = AppIdentity.text(values[index]);
             if (item.length > 0) {
                 result.push(item);
             }
         }
         return result;
+    }
+
+    function _themedIcon(names) {
+        var candidates = AppIdentity.iconNameCandidates(names);
+        for (let index = 0; index < candidates.length; index += 1) {
+            let path = Quickshell.iconPath(candidates[index], true);
+            if (path) {
+                return path;
+            }
+        }
+        return "";
+    }
+
+    // Try the substitution, then the declared icons, then the app ID as an icon
+    // name, then any desktop entry that mentions the app ID.
+    function _iconPath(iconNames, appId) {
+        var substitute = AppIdentity.substituteIcon(appId, Shell.ShellConfig.iconSubstitutions);
+        var direct = AppIdentity.directIconSource(substitute);
+        if (direct) {
+            return direct;
+        }
+
+        for (let index = 0; index < iconNames.length; index += 1) {
+            direct = AppIdentity.directIconSource(iconNames[index]);
+            if (direct) {
+                return direct;
+            }
+        }
+
+        var path = root._themedIcon([substitute]) || root._themedIcon(iconNames) || root._themedIcon([appId]);
+        if (path) {
+            return path;
+        }
+
+        var entry = root._firstModelMatch(appId, AppIdentity.entryMentions);
+        path = entry === null ? "" : root._themedIcon([entry.icon]);
+        return path || Quickshell.iconPath(root.fallbackIcon);
     }
 
     function launcherApplications(revision) {
@@ -106,23 +143,21 @@ QtObject {
         var entries = root._applications();
         var applications = [];
         var seen = Object.create(null);
-        for (var index = 0; index < entries.length; index += 1) {
-            var entry = entries[index];
-            var desktopId = AppIdentity.text(entry.id);
+        for (let index = 0; index < entries.length; index += 1) {
+            let entry = entries[index];
+            let desktopId = AppIdentity.text(entry.id);
             if (desktopId.length === 0 || seen[desktopId] || entry.noDisplay === true || entry.hidden === true || !entry.command || entry.command.length === 0) {
                 continue;
             }
             seen[desktopId] = true;
 
-            var iconName = AppIdentity.text(entry.icon) || root.fallbackIcon;
-            var directIconSource = AppIdentity.directIconSource(iconName);
             applications.push({
                 id: desktopId,
                 name: AppIdentity.text(entry.name) || desktopId,
                 genericName: root._value(entry, ["genericName", "generic_name"]),
                 comment: root._value(entry, ["comment"]),
                 keywords: root._textList(entry.keywords),
-                iconPath: directIconSource || Quickshell.iconPath(iconName, root.fallbackIcon)
+                iconPath: root._iconPath([AppIdentity.text(entry.icon)], desktopId)
             });
         }
         return applications;
@@ -131,7 +166,7 @@ QtObject {
     function _copyLaunchCounts() {
         var copy = Object.create(null);
         var ids = Object.keys(root._pendingLaunchCounts);
-        for (var index = 0; index < ids.length; index += 1) {
+        for (let index = 0; index < ids.length; index += 1) {
             copy[ids[index]] = root._pendingLaunchCounts[ids[index]];
         }
         return copy;
@@ -203,7 +238,7 @@ QtObject {
 
     function _firstModelMatch(value, matcher) {
         var entries = root._applications();
-        for (var index = 0; index < entries.length; index += 1) {
+        for (let index = 0; index < entries.length; index += 1) {
             if (matcher(entries[index], value)) {
                 return entries[index];
             }
@@ -214,7 +249,7 @@ QtObject {
     function _fallbackEntry(value, matcher, matchedBy) {
         var alias = AppIdentity.aliasFor([value], Shell.ShellConfig.appIdAliases);
         if (alias !== null && alias.target.length > 0) {
-            var aliasedEntry = root._entryById(alias.target);
+            let aliasedEntry = root._entryById(alias.target);
             if (aliasedEntry !== null) {
                 return {
                     entry: aliasedEntry,
@@ -247,9 +282,10 @@ QtObject {
     }
 
     function _firstFallback(hints) {
+        var match = null;
         var applicationName = AppIdentity.text(hints.applicationName);
         if (applicationName.length > 0) {
-            var match = root._fallbackEntry(applicationName, AppIdentity.entryMatchesName, "fallback-name");
+            match = root._fallbackEntry(applicationName, AppIdentity.entryMatchesName, "fallback-name");
             if (match !== null) {
                 return match;
             }
@@ -277,7 +313,6 @@ QtObject {
         var requestedIcon = AppIdentity.text(hints.iconName);
         var entryIcon = entry === null ? "" : AppIdentity.text(entry.icon);
         var iconName = requestedIcon || entryIcon || root.fallbackIcon;
-        var directIconSource = AppIdentity.directIconSource(iconName);
         var displayName = entry === null ? (AppIdentity.text(hints.applicationName) || AppIdentity.text(hints.fallbackName) || originalId || "Unknown application") : entry.name;
 
         return {
@@ -286,7 +321,7 @@ QtObject {
             desktopEntry: entry,
             displayName: displayName,
             iconName: iconName,
-            iconPath: directIconSource || Quickshell.iconPath(iconName, root.fallbackIcon),
+            iconPath: root._iconPath([requestedIcon, entryIcon], AppIdentity.text(hints.appId) || originalId),
             matchedBy: matchedBy,
             originalId: originalId
         };
@@ -308,7 +343,7 @@ QtObject {
                 return root._result(entry, entry.id, originalId, hints, "alias");
             }
 
-            var unresolved = root._result(null, alias.target, originalId, hints, "alias");
+            let unresolved = root._result(null, alias.target, originalId, hints, "alias");
             unresolved.desktopId = alias.target;
             return unresolved;
         }
@@ -458,11 +493,11 @@ QtObject {
         root.clearLaunchFailure();
         root._beginLaunch(process);
         try {
-            process.command = root._launchCommand(entry);
-            process.running = true;
+            process.command = root._launchCommand(entry); // qmllint disable missing-property
+            process.running = true; // qmllint disable missing-property
         } catch (launchError) {
             root._endLaunch(process);
-            process.completed = true;
+            process.completed = true; // qmllint disable missing-property
             process.destroy();
             root._reportLaunchFailure(entry.id, "could not launch desktop entry: " + launchError);
             return false;
@@ -498,7 +533,7 @@ QtObject {
             return;
         }
         if (exitCode !== 0) {
-            var detail = String(process.errorText || "").trim();
+            let detail = String(process.errorText || "").trim();
             root._endLaunch(process);
             root._reportLaunchFailure(process.desktopId, detail || "desktop-entry launcher exited with code " + exitCode);
         } else {

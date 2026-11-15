@@ -101,8 +101,8 @@ QtObject {
             return false;
         }
         operation.process = process;
-        process.command = operation.command;
-        process.running = true;
+        process.command = operation.command; // qmllint disable missing-property
+        process.running = true; // qmllint disable missing-property
         return true;
     }
 
@@ -178,7 +178,7 @@ QtObject {
         }
         root._disposeProcess(operation);
         if (exitCode !== 0) {
-            var detail = String(errorText || "").trim();
+            const detail = String(errorText || "").trim();
             _fail(requestId, detail || "Audio routing helper exited with code " + exitCode);
             return;
         }
@@ -212,7 +212,7 @@ QtObject {
 
         var resolved = AudioRouting.resolveSelection(normalized, AudioService.playbackStreams);
         if (resolved.length === 0) {
-            var selectedStream = normalized.kind === "stream" ? normalized.stream : null;
+            const selectedStream = normalized.kind === "stream" ? normalized.stream : null;
             return _preflightError({
                 kind: selectedStream ? "stream" : "channel",
                 channelId: channelId || "Unknown",
@@ -270,12 +270,12 @@ QtObject {
         });
         var skipped = uniqueStreamRefs.length - live.length;
         if (skipped > 0) {
-            var preflightOperation = {
+            const preflightOperation = {
                 kind: "stream",
                 canonicalId: live.length > 0 ? live[0].canonicalId : (streamRefs[0] && streamRefs[0].canonicalId),
                 key: streamRefs[0] ? _streamKey(streamRefs[0].id, streamRefs[0].serial) : ""
             };
-            var preflightMessage = live.length === 0 ? "No grouped streams remain live and idle" : skipped + (skipped === 1 ? " stream ended or was already moving; routing the remaining live members" : " streams ended or were already moving; routing the remaining live members");
+            const preflightMessage = live.length === 0 ? "No grouped streams remain live and idle" : skipped + (skipped === 1 ? " stream ended or was already moving; routing the remaining live members" : " streams ended or were already moving; routing the remaining live members");
             if (live.length === 0) {
                 return _preflightError(preflightOperation, preflightMessage);
             }
@@ -365,7 +365,7 @@ QtObject {
 
             onRunningChanged: {
                 if (!running && !startedSuccessfully) {
-                    var failedRequestId = requestId;
+                    const failedRequestId = requestId;
                     Qt.callLater(function () {
                         var operation = root._operations[failedRequestId];
                         if (operation && operation.process === childProcess && !childProcess.running && !childProcess.startedSuccessfully) {

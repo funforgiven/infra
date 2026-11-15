@@ -52,7 +52,7 @@ QtObject {
 
     function receive(line) {
         try {
-            var message = JSON.parse(line);
+            const message = JSON.parse(line);
             if (message.state !== undefined)
                 state = message.state;
             if (message.id !== null && message.id === pendingId) {

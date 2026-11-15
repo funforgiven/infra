@@ -131,3 +131,37 @@ test("absolute and URL icon sources bypass theme-name resolution", () => {
     assert.equal(AppIdentity.directIconSource("image://icon/firefox"), "image://icon/firefox");
     assert.equal(AppIdentity.directIconSource("firefox"), "");
 });
+
+test("icon substitutions follow exact, contains, regex, then the Steam rule", () => {
+    const rules = [
+        { type: "exact", pattern: "Code", replacement: "vscode" },
+        { type: "contains", pattern: "transmission", replacement: "transmission-gtk" },
+        { type: "regex", pattern: "^chrome-(\\w+)-Default$", replacement: "chrome-$1" },
+        { type: "exact", pattern: "", replacement: "ignored" }
+    ];
+    assert.equal(AppIdentity.substituteIcon("Code", rules), "vscode");
+    assert.equal(AppIdentity.substituteIcon("com.transmissionbt.transmission", rules), "transmission-gtk");
+    assert.equal(AppIdentity.substituteIcon("chrome-abc-Default", rules), "chrome-abc");
+    assert.equal(AppIdentity.substituteIcon("steam_app_632360", rules), "steam_icon_632360");
+    assert.equal(AppIdentity.substituteIcon("steam_app_default", rules), "");
+    assert.equal(AppIdentity.substituteIcon("firefox", undefined), "");
+    assert.equal(AppIdentity.substituteIcon("", rules), "");
+});
+
+test("icon name candidates keep case variants and the reverse-DNS tail", () => {
+    assert.deepEqual(AppIdentity.iconNameCandidates(["org.Telegram.Desktop", "", null, "/abs/icon.png"]), [
+        "org.Telegram.Desktop",
+        "org.telegram.desktop",
+        "Desktop",
+        "desktop"
+    ]);
+    assert.deepEqual(AppIdentity.iconNameCandidates(["firefox", "firefox"]), ["firefox"]);
+});
+
+test("desktop entries mention an app ID by ID, name, or command", () => {
+    const entry = { id: "org.kde.dolphin", name: "Dolphin", command: ["/nix/store/x-dolphin/bin/dolphin"] };
+    assert.equal(AppIdentity.entryMentions(entry, "dolphin-bin"), true);
+    assert.equal(AppIdentity.entryMentions({ id: "x", name: "y", execString: "/opt/hayase/hayase" }, "Hayase"), true);
+    assert.equal(AppIdentity.entryMentions(entry, "do"), false);
+    assert.equal(AppIdentity.entryMentions(null, "dolphin"), false);
+});

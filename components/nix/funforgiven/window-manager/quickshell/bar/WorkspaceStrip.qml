@@ -161,7 +161,10 @@ Item {
                         hoverEnabled: true
                         acceptedButtons: Qt.LeftButton
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: Services.NiriService.focusWorkspace(workspaceDelegate.workspace.id)
+                        onClicked: {
+                            Services.PopupCoordinator.closeActive("bar");
+                            Services.NiriService.focusWorkspace(workspaceDelegate.workspace.id);
+                        }
                     }
 
                     Rectangle {
@@ -262,6 +265,7 @@ Item {
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: mouse => {
                                         mouse.accepted = true;
+                                        Services.PopupCoordinator.closeActive("bar");
                                         Services.NiriService.focusWindow(windowDelegate.windowModel.id);
                                     }
                                 }

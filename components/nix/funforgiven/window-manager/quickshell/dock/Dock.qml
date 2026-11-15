@@ -195,10 +195,10 @@ Scope {
         screen: root.selectedScreen
         visible: root.selectedScreen !== null && Shell.ShellConfig.dockMode === "always-visible"
         implicitWidth: root.selectedScreen ? Math.min(root.estimatedWidth, root.selectedScreen.width - Shell.Theme.spacingLarge * 2) : root.estimatedWidth
-        implicitHeight: 72
+        implicitHeight: Shell.ShellConfig.dockHeight
         color: "transparent"
         anchors.bottom: true
-        margins.bottom: Shell.Theme.spacingLarge // qmllint disable unqualified unresolved-type
+        margins.bottom: Shell.Theme.spacingLarge // qmllint disable unqualified unresolved-type missing-property
         exclusiveZone: implicitHeight + Shell.Theme.spacingLarge
         focusable: false
         aboveWindows: true

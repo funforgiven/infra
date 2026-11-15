@@ -117,6 +117,83 @@ function directIconSource(value) {
     return "";
 }
 
+// Icon substitution and lookup order follow DankMaterialShell's Paths.qml and
+// DesktopService.qml (MIT, see THIRD_PARTY_NOTICES.md).
+var steamIconSubstitution = {
+    type: "regex",
+    pattern: "^steam_app_(\\d+)$",
+    replacement: "steam_icon_$1"
+};
+
+function substituteIcon(appId, substitutions) {
+    appId = text(appId);
+    if (appId.length === 0) {
+        return "";
+    }
+
+    var rules = (substitutions || []).concat([steamIconSubstitution]);
+    for (var index = 0; index < rules.length; index += 1) {
+        var rule = rules[index] || {};
+        var pattern = text(rule.pattern);
+        var replacement = text(rule.replacement);
+        if (pattern.length === 0 || replacement.length === 0) {
+            continue;
+        }
+        if (rule.type === "exact" && appId === pattern) {
+            return replacement;
+        }
+        if (rule.type === "contains" && appId.indexOf(pattern) !== -1) {
+            return replacement;
+        }
+        if (rule.type === "regex") {
+            var match = appId.match(new RegExp(pattern));
+            if (match) {
+                return replacement.replace(/\$(\d+)/g, function (_, group) {
+                    return match[group] || "";
+                });
+            }
+        }
+    }
+    return "";
+}
+
+// Icon themes are case-sensitive, so unlike appendUnique this keeps case variants.
+function iconNameCandidates(names) {
+    var values = [];
+    function add(value) {
+        value = text(value);
+        if (value.length > 0 && values.indexOf(value) === -1) {
+            values.push(value);
+        }
+    }
+
+    for (var index = 0; index < (names || []).length; index += 1) {
+        var name = text(names[index]);
+        if (directIconSource(name)) {
+            continue;
+        }
+        var lastPart = name.split(".").pop();
+        add(name);
+        add(name.toLowerCase());
+        if (lastPart !== name) {
+            add(lastPart);
+            add(lastPart.toLowerCase());
+        }
+    }
+    return values;
+}
+
+function entryMentions(entry, appId) {
+    var needle = text(appId).replace(/-bin$/, "").toLowerCase();
+    if (!entry || needle.length < 3) {
+        return false;
+    }
+    var command = entry.command && typeof entry.command.join === "function" ? entry.command.join(" ") : "";
+    return text(entry.id).toLowerCase().indexOf(needle) !== -1
+        || text(entry.name).toLowerCase().indexOf(needle) !== -1
+        || text(entry.execString || command).toLowerCase().indexOf(needle) !== -1;
+}
+
 function entryMatchesName(entry, candidate) {
     candidate = text(candidate).toLowerCase();
     if (!entry || candidate.length === 0) {
@@ -142,11 +219,14 @@ if (typeof module !== "undefined" && module.exports) {
         directIconSource: directIconSource,
         entryMatchesExecutable: entryMatchesExecutable,
         entryMatchesName: entryMatchesName,
+        entryMentions: entryMentions,
         executableName: executableName,
         fallbackCandidates: fallbackCandidates,
         fallbackId: fallbackId,
+        iconNameCandidates: iconNameCandidates,
         niriWindowFallbackId: niriWindowFallbackId,
         primaryCandidates: primaryCandidates,
+        substituteIcon: substituteIcon,
         text: text,
         windowCanonicalId: windowCanonicalId
     };

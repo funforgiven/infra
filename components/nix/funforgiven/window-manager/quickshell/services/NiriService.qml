@@ -49,7 +49,7 @@ QtObject {
 
     function workspacesForOutput(outputName) {
         var result = [];
-        for (var index = 0; index < root.workspaces.length; index += 1) {
+        for (let index = 0; index < root.workspaces.length; index += 1) {
             if (root.workspaces[index].output === outputName) {
                 result.push(root.workspaces[index]);
             }
@@ -59,7 +59,7 @@ QtObject {
 
     function windowsForWorkspace(workspaceId) {
         var result = [];
-        for (var index = 0; index < root.windows.length; index += 1) {
+        for (let index = 0; index < root.windows.length; index += 1) {
             if (root._sameId(root.windows[index].workspace_id, workspaceId)) {
                 result.push(root.windows[index]);
             }
@@ -97,7 +97,7 @@ QtObject {
         var wasConnected = root._eventSocket.connected;
         root._eventSocket.connected = false;
         if (!wasConnected && root._componentReady) {
-            var reason = root._eventDisconnectReason;
+            let reason = root._eventDisconnectReason;
             root._eventDisconnectReason = "";
             root._markEventDisconnected(reason);
         }
@@ -173,7 +173,7 @@ QtObject {
         }
 
         root._actionError = message;
-        for (var index = 0; index < abandoned.length; index += 1) {
+        for (let index = 0; index < abandoned.length; index += 1) {
             root.actionFailed(abandoned[index].name, message);
         }
     }
@@ -334,7 +334,7 @@ QtObject {
             if (connected) {
                 root._handleEventConnected();
             } else if (root._componentReady) {
-                var message = root._eventDisconnectReason || "niri event socket disconnected";
+                let message = root._eventDisconnectReason || "niri event socket disconnected";
                 root._eventDisconnectReason = "";
                 root._markEventDisconnected(message);
             }

@@ -1,6 +1,7 @@
 pragma Singleton
 
 import QtQuick
+import ".." as Shell
 import "PopupOwnership.js" as PopupOwnership
 
 // Ownership policy for interactive top-level shell surfaces:
@@ -24,6 +25,14 @@ QtObject {
     readonly property var activeOwner: {
         void root._revision;
         return root._ownership.owner;
+    }
+    readonly property string activeKind: {
+        void root._revision;
+        return PopupOwnership.inputClaimed(root._ownership) ? root._ownership.kind : "";
+    }
+    readonly property var activeScreen: {
+        void root._revision;
+        return PopupOwnership.inputClaimed(root._ownership) ? root._ownership.screen : null;
     }
     readonly property int generation: {
         void root._revision;
@@ -94,6 +103,14 @@ QtObject {
             return false;
         root._publish();
         return true;
+    }
+
+    // Height at the bottom of a screen that popups must leave clickable so the
+    // dock receives clicks directly instead of only dismissing the popup.
+    function reservedBottom(screen) {
+        if (!screen || Shell.ShellConfig.dockMode !== "always-visible" || screen.name !== Shell.ShellConfig.dockOutput)
+            return 0;
+        return Shell.ShellConfig.dockHeight + Shell.Theme.spacingLarge;
     }
 
     function isCurrent(owner, token) {

@@ -6,7 +6,7 @@ Rectangle {
 
     property bool active: false
     property color accent: Shell.Theme.systemAccent
-    property int ringRadius: Shell.Theme.radiusSmall
+    property real ringRadius: Shell.Theme.radiusSmall
 
     anchors.fill: parent
     anchors.margins: -2

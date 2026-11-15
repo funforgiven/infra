@@ -186,10 +186,12 @@ in
             readonly property real lineHeightTight: 1.15
             readonly property real lineHeightNormal: 1.35
 
-            readonly property int radiusXSmall: 6
-            readonly property int radiusSmall: 10
-            readonly property int radiusMedium: 16
-            readonly property int radiusLarge: 24
+            // Material 3 Expressive shape scale: small 8, medium 12,
+            // large-increased 20, extra-large 28.
+            readonly property int radiusXSmall: 8
+            readonly property int radiusSmall: 12
+            readonly property int radiusMedium: 20
+            readonly property int radiusLarge: 28
             readonly property int radiusPill: 999
             readonly property int spacingXSmall: 4
             readonly property int spacingSmall: 8
@@ -210,6 +212,12 @@ in
             readonly property int animationSlow: 240
             readonly property int easingStandard: Easing.OutCubic
             readonly property int easingEmphasized: Easing.InOutCubic
+            // Material 3 Expressive motion curves for Easing.BezierSpline.
+            // Spatial curves overshoot for movement, shape, and scale; effects
+            // curves settle without overshoot for color and opacity.
+            readonly property var curveSpatial: [0.42, 1.67, 0.21, 0.9, 1, 1]
+            readonly property var curveSpatialGentle: [0.38, 1.21, 0.22, 1, 1, 1]
+            readonly property var curveEffects: [0.31, 0.94, 0.34, 1, 1, 1]
             readonly property real subtleOverlayOpacity: 0.10
             readonly property real selectedOverlayOpacity: 0.16
             readonly property real pressedOverlayOpacity: 0.22
@@ -226,6 +234,7 @@ in
             readonly property string configName: ${qmlString configName}
             readonly property string dockOutput: ${qmlString primaryOutput.connector}
             readonly property string dockMode: "always-visible"
+            readonly property int dockHeight: 72
             readonly property string audioController: ${qmlString (lib.getExe' audioControllerPackage "funforgiven-audioctl")}
             readonly property string cameraController: ${qmlString (lib.getExe config.dendritic.cameraControllerPackage)}
             readonly property string appLauncher: ${qmlString (lib.getExe' pkgs.uwsm "uwsm-app")}
@@ -249,6 +258,10 @@ in
                 "org.telegram.desktop": "org.telegram.desktop",
                 "steam": "steam"
             })
+            // Maps app IDs to icon names or absolute icon files. Each rule has
+            // type "exact", "contains", or "regex" ($1 refers to a capture).
+            // Steam games map to their installed steam_icon_<id> automatically.
+            readonly property var iconSubstitutions: []
         }
       '';
 
@@ -275,8 +288,8 @@ in
     {
       assertions = [
         {
-          assertion = lib.getVersion config.programs.quickshell.package == "0.3.1";
-          message = "This shell requires Quickshell 0.3.1.";
+          assertion = lib.getVersion config.programs.quickshell.package == "0.3.2";
+          message = "This shell requires Quickshell 0.3.2.";
         }
         {
           assertion = !config.services.mako.enable;

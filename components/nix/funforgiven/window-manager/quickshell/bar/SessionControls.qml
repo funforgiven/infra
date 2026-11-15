@@ -34,11 +34,12 @@ Item {
         id: controls
 
         height: parent.height
-        spacing: Shell.Theme.spacingXSmall
+        spacing: 2
 
         Components.IconButton {
             activeFocusOnTab: false
             iconSource: Quickshell.iconPath("system-log-out-symbolic", "system-log-out")
+            groupPosition: "start"
             accessibleName: root.accessibleName("logout", "Log out")
             tooltipText: root.tooltip("logout", "Log out")
             accent: Shell.Theme.error
@@ -47,14 +48,17 @@ Item {
             attention: Services.SessionActions.failedAction === "logout"
             enabled: !Services.SessionActions.busy
             onClicked: button => {
-                if (button === Qt.LeftButton)
-                    Services.SessionActions.requestLogout();
+                if (button !== Qt.LeftButton)
+                    return;
+                Services.PopupCoordinator.closeActive("bar");
+                Services.SessionActions.requestLogout();
             }
         }
 
         Components.IconButton {
             activeFocusOnTab: false
             iconSource: Quickshell.iconPath("system-reboot-symbolic", "system-reboot")
+            groupPosition: "middle"
             accessibleName: root.accessibleName("reboot", "Restart")
             tooltipText: root.tooltip("reboot", "Restart")
             accent: Shell.Theme.error
@@ -63,14 +67,17 @@ Item {
             attention: Services.SessionActions.failedAction === "reboot"
             enabled: !Services.SessionActions.busy
             onClicked: button => {
-                if (button === Qt.LeftButton)
-                    Services.SessionActions.requestReboot();
+                if (button !== Qt.LeftButton)
+                    return;
+                Services.PopupCoordinator.closeActive("bar");
+                Services.SessionActions.requestReboot();
             }
         }
 
         Components.IconButton {
             activeFocusOnTab: false
             iconSource: Quickshell.iconPath("system-shutdown-symbolic", "system-shutdown")
+            groupPosition: "end"
             accessibleName: root.accessibleName("poweroff", "Shut down")
             tooltipText: root.tooltip("poweroff", "Shut down")
             accent: Shell.Theme.error
@@ -79,8 +86,10 @@ Item {
             attention: Services.SessionActions.failedAction === "poweroff"
             enabled: !Services.SessionActions.busy
             onClicked: button => {
-                if (button === Qt.LeftButton)
-                    Services.SessionActions.requestPoweroff();
+                if (button !== Qt.LeftButton)
+                    return;
+                Services.PopupCoordinator.closeActive("bar");
+                Services.SessionActions.requestPoweroff();
             }
         }
     }

@@ -52,12 +52,12 @@ PanelWindow { // qmllint disable uncreatable-type
     readonly property int leadingSlotWidth: Shell.Theme.iconMediumSize
     readonly property int trailingSlotWidth: Shell.Theme.iconSmallSize
     readonly property int minimumPopupWidth: 160
-    readonly property int maximumPopupWidth: screen ? Math.min(520, Math.max(1, screen.width - Shell.Theme.spacingXLarge * 2)) : 520
+    readonly property int maximumPopupWidth: screen ? Math.min(520, Math.max(1, screen.width - Shell.Theme.spacingXLarge * 2)) : 520 // qmllint disable missing-property
     readonly property real measuredContentWidth: Math.max(widestEntryContentWidth(), headerContentWidth())
     readonly property real desiredPopupWidth: Math.min(maximumPopupWidth, Math.max(Math.min(minimumPopupWidth, maximumPopupWidth), outerPadding * 2 + measuredContentWidth))
     readonly property int interactiveRowHeight: Shell.Theme.controlCompactSize + visualInset * 2
     readonly property int headerHeight: menuStack.length > 0 ? interactiveRowHeight : 0
-    readonly property int maximumContentHeight: screen ? Math.max(160, screen.height - 96) : 560
+    readonly property int maximumContentHeight: screen ? Math.max(160, screen.height - 96) : 560 // qmllint disable missing-property
     readonly property real desiredListHeight: entries.length === 0 ? Shell.Theme.controlSize : Math.min(Math.max(Shell.Theme.controlCompactSize, menuList.contentHeight), maximumContentHeight - headerHeight - Shell.Theme.spacingSmall * 2)
     readonly property real desiredPopupHeight: outerPadding * 2 + headerHeight + desiredListHeight
     readonly property bool hasLeadingContent: root.entries.some(function (entry) {
@@ -98,7 +98,7 @@ PanelWindow { // qmllint disable uncreatable-type
 
     function widestEntryContentWidth() {
         var widest = root.visualInset * 2 + root.rowPadding * 2 + Math.ceil(menuFontMetrics.advanceWidth("No actions"));
-        for (var index = 0; index < root.entries.length; index += 1)
+        for (let index = 0; index < root.entries.length; index += 1)
             widest = Math.max(widest, root.entryContentWidth(root.entries[index]));
         return widest;
     }
@@ -123,7 +123,7 @@ PanelWindow { // qmllint disable uncreatable-type
     }
 
     function firstSelectableIndex() {
-        for (var index = 0; index < root.entries.length; index += 1) {
+        for (let index = 0; index < root.entries.length; index += 1) {
             if (root.isSelectable(root.entries[index]))
                 return index;
         }
@@ -142,7 +142,7 @@ PanelWindow { // qmllint disable uncreatable-type
             return;
 
         var index = root.selectedIndex;
-        for (var step = 0; step < root.entries.length; step += 1) {
+        for (let step = 0; step < root.entries.length; step += 1) {
             index = (index + delta + root.entries.length) % root.entries.length;
             if (root.isSelectable(root.entries[index])) {
                 root.selectedIndex = index;
@@ -342,7 +342,7 @@ PanelWindow { // qmllint disable uncreatable-type
 
         y: root.barHeight
         width: root.width
-        height: Math.max(0, root.height - y)
+        height: Math.max(0, root.height - y - Services.PopupCoordinator.reservedBottom(root.screen))
     }
 
     FontMetrics {
@@ -380,7 +380,7 @@ PanelWindow { // qmllint disable uncreatable-type
     MouseArea {
         y: root.barHeight
         width: parent.width
-        height: Math.max(0, parent.height - y)
+        height: Math.max(0, parent.height - y - Services.PopupCoordinator.reservedBottom(root.screen))
         z: -1
         enabled: root.visible
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
@@ -405,6 +405,7 @@ PanelWindow { // qmllint disable uncreatable-type
         Components.Surface {
             anchors.fill: parent
             elevated: true
+            revealed: root.visible
             radius: Shell.Theme.radiusMedium
             outlineColor: Shell.Theme.outlineStrong
             outlineWidth: Shell.Theme.outlineWidth

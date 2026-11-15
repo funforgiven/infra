@@ -18,20 +18,42 @@ Item {
     property bool hovered: pointer.containsMouse
     property int iconSize: Shell.Theme.iconMediumSize
     property bool keyboardPressed: false
+    // Position inside a connected button group: "single", "start", "middle",
+    // or "end". Joined edges keep a small radius while outer edges morph.
+    property string groupPosition: "single"
+    // Set while this button's own popup is open so its tooltip does not
+    // cover the popup.
+    property bool tooltipSuppressed: false
 
     readonly property bool pressed: pointer.pressed || keyboardPressed
-    readonly property color checkedColor: Qt.rgba(accent.r, accent.g, accent.b, pressed ? Shell.Theme.pressedOverlayOpacity : Shell.Theme.selectedOverlayOpacity)
     readonly property color backgroundColor: {
         if (!enabled)
             return "transparent";
+        if (attention)
+            return Shell.Theme.errorSurface;
+        if (checked && destructive)
+            return Shell.Theme.errorSurface;
         if (checked)
-            return checkedColor;
+            return pressed ? Qt.darker(Shell.Theme.selectedSurface, 1.08) : Shell.Theme.selectedSurface;
         if (pressed)
             return Shell.Theme.pressedSurface;
         if (hovered)
             return Shell.Theme.hoverSurface;
-        return attention ? Qt.rgba(Shell.Theme.error.r, Shell.Theme.error.g, Shell.Theme.error.b, Shell.Theme.subtleOverlayOpacity) : "transparent";
+        return "transparent";
     }
+    // Material 3 Expressive shape morph: round at rest, a rounded square when
+    // selected, and tighter still while pressed.
+    readonly property real shapeRadius: {
+        if (pressed)
+            return Shell.Theme.radiusXSmall;
+        if (checked)
+            return Shell.Theme.radiusSmall;
+        return Math.min(width, height) / 2;
+    }
+    readonly property real joinedRadius: Shell.Theme.radiusXSmall / 2
+    readonly property bool joinedStart: groupPosition === "middle" || groupPosition === "end"
+    readonly property bool joinedEnd: groupPosition === "start" || groupPosition === "middle"
+    property real animatedRadius: shapeRadius
 
     signal clicked(int button)
     signal wheel(int delta, bool horizontal)
@@ -75,29 +97,37 @@ Item {
 
     Behavior on scale {
         NumberAnimation {
-            duration: Shell.Theme.animationFast
-            easing.type: Shell.Theme.easingStandard
+            duration: Shell.Theme.animationNormal
+            easing.type: Easing.BezierSpline
+            easing.bezierCurve: Shell.Theme.curveSpatial
+        }
+    }
+
+    Behavior on animatedRadius {
+        NumberAnimation {
+            duration: Shell.Theme.animationNormal
+            easing.type: Easing.BezierSpline
+            easing.bezierCurve: Shell.Theme.curveSpatial
         }
     }
 
     Rectangle {
+        readonly property real outerRadius: Math.max(0, root.animatedRadius)
+        readonly property real startRadius: root.joinedStart ? Math.min(outerRadius, root.joinedRadius) : outerRadius
+        readonly property real endRadius: root.joinedEnd ? Math.min(outerRadius, root.joinedRadius) : outerRadius
+
         anchors.fill: parent
         color: root.backgroundColor
-        radius: Shell.Theme.radiusSmall
-        border.color: root.attention ? Shell.Theme.error : (root.checked ? root.accent : "transparent")
-        border.width: root.attention || root.checked ? Shell.Theme.outlineWidth : 0
+        topLeftRadius: startRadius
+        bottomLeftRadius: startRadius
+        topRightRadius: endRadius
+        bottomRightRadius: endRadius
 
         Behavior on color {
             ColorAnimation {
                 duration: Shell.Theme.animationFast
-                easing.type: Shell.Theme.easingStandard
-            }
-        }
-
-        Behavior on border.color {
-            ColorAnimation {
-                duration: Shell.Theme.animationFast
-                easing.type: Shell.Theme.easingStandard
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Shell.Theme.curveEffects
             }
         }
     }
@@ -147,7 +177,7 @@ Item {
     FocusRing {
         active: root.activeFocus
         accent: root.accent
-        ringRadius: Shell.Theme.radiusSmall
+        ringRadius: root.animatedRadius + 2
     }
 
     MouseArea {
@@ -169,7 +199,7 @@ Item {
     }
 
     Tooltip {
-        visible: root.hovered && root.tooltipText.length > 0
+        visible: root.hovered && !root.pressed && !root.tooltipSuppressed && root.tooltipText.length > 0
         text: root.tooltipText
     }
 }

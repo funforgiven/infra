@@ -226,19 +226,6 @@ Scope {
 
     Component.onDestruction: Services.PopupCoordinator.ownerDestroyed(root)
 
-    Shortcut {
-        sequence: "Escape"
-        enabled: root.opened
-        onActivated: {
-            if (root.activeOutputPicker !== null)
-                root.dismissActiveChildPopup(true);
-            else if (mixerDragSession.active)
-                mixerDragSession.cancel();
-            else
-                root.dismiss();
-        }
-    }
-
     PanelWindow { // qmllint disable uncreatable-type
         id: mixerWindow
 
@@ -259,8 +246,10 @@ Scope {
 
         WlrLayershell.namespace: "funforgiven:mixer"
         WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.keyboardFocus: root.opened ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+        WlrLayershell.keyboardFocus: root.opened ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
+        // Leave the bar outside the input region so a bar click reaches its
+        // button directly instead of only dismissing this popup.
         mask: Region {
             item: outsideClickArea
         }
@@ -268,7 +257,23 @@ Scope {
         Item {
             id: outsideClickArea
 
-            anchors.fill: parent
+            y: root.topInset
+            width: mixerWindow.width
+            height: Math.max(0, mixerWindow.height - y - Services.PopupCoordinator.reservedBottom(root.selectedScreen))
+
+            // A Shortcut only matches inside a window when its parent is an Item.
+            Shortcut {
+                sequence: "Escape"
+                enabled: root.opened
+                onActivated: {
+                    if (root.activeOutputPicker !== null)
+                        root.dismissActiveChildPopup(true);
+                    else if (mixerDragSession.active)
+                        mixerDragSession.cancel();
+                    else
+                        root.dismiss();
+                }
+            }
 
             MouseArea {
                 anchors.fill: parent
@@ -286,6 +291,8 @@ Scope {
             height: Math.min(root.targetHeight, Math.max(1, mixerWindow.height - root.topInset - Shell.Theme.spacingLarge))
             z: 10
             elevated: true
+            revealed: root.opened
+            revealOrigin: Item.TopRight
             radius: Shell.Theme.radiusLarge
             outlineColor: Shell.Theme.outlineStrong
             outlineWidth: Shell.Theme.outlineWidth

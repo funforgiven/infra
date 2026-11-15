@@ -36,6 +36,9 @@ Item {
             return Shell.Theme.hoverSurface;
         return variant === "text" ? "transparent" : Shell.Theme.elevatedSurface;
     }
+    // Material 3 Expressive press morph: the shape tightens while pressed.
+    readonly property real shapeRadius: pressed ? Math.min(radius, height / 2, Shell.Theme.radiusSmall) : Math.min(radius, height / 2)
+    property real animatedRadius: shapeRadius
     readonly property color contentColor: variant === "filled" ? Shell.Theme.accentText : (variant === "danger" ? Shell.Theme.errorText : Shell.Theme.primaryText)
 
     signal clicked
@@ -88,8 +91,17 @@ Item {
 
     Behavior on scale {
         NumberAnimation {
-            duration: Shell.Theme.animationFast
-            easing.type: Shell.Theme.easingStandard
+            duration: Shell.Theme.animationNormal
+            easing.type: Easing.BezierSpline
+            easing.bezierCurve: Shell.Theme.curveSpatial
+        }
+    }
+
+    Behavior on animatedRadius {
+        NumberAnimation {
+            duration: Shell.Theme.animationNormal
+            easing.type: Easing.BezierSpline
+            easing.bezierCurve: Shell.Theme.curveSpatial
         }
     }
 
@@ -101,15 +113,14 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: root.radius
+        radius: Math.max(0, root.animatedRadius)
         color: root.backgroundColor
-        border.width: root.checked && root.variant !== "filled" ? Shell.Theme.outlineWidth : 0
-        border.color: root.accent
 
         Behavior on color {
             ColorAnimation {
                 duration: Shell.Theme.animationFast
-                easing.type: Shell.Theme.easingStandard
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Shell.Theme.curveEffects
             }
         }
     }
@@ -153,7 +164,7 @@ Item {
     FocusRing {
         active: root.activeFocus
         accent: root.variant === "danger" ? Shell.Theme.error : root.accent
-        ringRadius: root.radius
+        ringRadius: root.animatedRadius + 2
     }
 
     MouseArea {

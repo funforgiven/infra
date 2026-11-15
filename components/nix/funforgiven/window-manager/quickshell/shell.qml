@@ -74,7 +74,7 @@ ShellRoot {
 
         function snapshot(): string {
             var screens = [];
-            for (var screenIndex = 0; screenIndex < Quickshell.screens.length; screenIndex += 1) {
+            for (let screenIndex = 0; screenIndex < Quickshell.screens.length; screenIndex += 1) {
                 screens.push(Quickshell.screens[screenIndex].name);
             }
 

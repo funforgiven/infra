@@ -198,7 +198,7 @@ Rectangle {
                                 root.activeDragKey = "";
                             }
                         } else {
-                            var completedToken = root.activeDragToken;
+                            const completedToken = root.activeDragToken;
                             Qt.callLater(function () {
                                 if (groupDrag.active || completedToken === 0 || root.activeDragToken !== completedToken)
                                     return;

@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Wayland
 import ".." as Shell
 import "../components" as Components
+import "../services" as Services
 
 Scope {
     id: root
@@ -47,14 +48,14 @@ Scope {
                 width: Math.min(Math.max(desiredWidth, Shell.Theme.controlLargeSize), availableWidth)
                 height: Shell.Theme.controlSize
                 elevated: true
-                radius: Shell.Theme.radiusMedium
+                radius: Shell.Theme.radiusPill
 
                 WorkspaceStrip {
                     id: workspaceTasks
 
                     anchors.fill: parent
                     anchors.margins: Shell.Theme.spacingXSmall
-                    outputName: barWindow.screen.name
+                    outputName: barWindow.screen ? barWindow.screen.name : "" // qmllint disable missing-property
                 }
             }
 
@@ -67,7 +68,7 @@ Scope {
                 height: Shell.Theme.controlSize
                 implicitWidth: statusArea.implicitWidth + Shell.Theme.spacingXSmall * 2
                 elevated: true
-                radius: Shell.Theme.radiusMedium
+                radius: Shell.Theme.radiusPill
 
                 Row {
                     id: statusArea
@@ -88,22 +89,32 @@ Scope {
                         parentWindow: barWindow
                     }
 
-                    MixerButton {
-                        id: mixerButton
-
+                    Row {
                         height: parent.height
-                        width: implicitWidth
-                        onRequested: {
-                            root.mixerRequested(mixerButton, barWindow.screen, barWindow.height);
+                        spacing: 2
+
+                        MixerButton {
+                            id: mixerButton
+
+                            height: parent.height
+                            width: implicitWidth
+                            groupPosition: "start"
+                            checked: Services.PopupCoordinator.activeKind === "mixer" && Services.PopupCoordinator.activeScreen === barWindow.screen
+                            tooltipSuppressed: checked
+                            onRequested: {
+                                root.mixerRequested(mixerButton, barWindow.screen, barWindow.height);
+                            }
                         }
-                    }
 
-                    CameraButton {
-                        id: cameraButton
+                        CameraButton {
+                            id: cameraButton
 
-                        height: parent.height
-                        width: implicitWidth
-                        onRequested: root.cameraRequested(cameraButton, barWindow.screen, barWindow.height)
+                            height: parent.height
+                            width: implicitWidth
+                            groupPosition: "end"
+                            tooltipSuppressed: Services.PopupCoordinator.activeKind === "camera" && Services.PopupCoordinator.activeScreen === barWindow.screen
+                            onRequested: root.cameraRequested(cameraButton, barWindow.screen, barWindow.height)
+                        }
                     }
 
                     Clock {

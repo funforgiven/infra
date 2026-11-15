@@ -47,7 +47,7 @@ Item {
         if (!root.authenticationActive || identity === null || identity === undefined) {
             return -1;
         }
-        for (var index = 0; index < root.flow.identities.length; index += 1) {
+        for (let index = 0; index < root.flow.identities.length; index += 1) {
             if (root.flow.identities[index] === identity) {
                 return index;
             }
@@ -71,7 +71,7 @@ Item {
     function clearSensitiveInput() {
         root.inputEpoch += 1;
         if (responseLoader.item !== null) {
-            responseLoader.item.text = "";
+            responseLoader.item.text = ""; // qmllint disable missing-property
             responseLoader.item.deselect(); // qmllint disable missing-property
         }
         responseLoader.active = false;

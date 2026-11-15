@@ -74,7 +74,7 @@ QtObject {
         root._process = process;
         root.activeAction = action;
         root.actionStarted(action);
-        process.running = true;
+        process.running = true; // qmllint disable missing-property
         return true;
     }
 

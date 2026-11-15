@@ -191,9 +191,9 @@ Item {
                     root.highlightAt(root.candidateCount - 1, true);
                 event.accepted = true;
             } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
-                var index = deviceList.currentIndex;
+                const index = deviceList.currentIndex;
                 if (index >= 0 && index < root.candidateCount) {
-                    var candidate = root.candidates[index];
+                    const candidate = root.candidates[index];
                     root.activateStableKey(root.keyFor(candidate), root.keyFor(candidate));
                 }
                 event.accepted = true;

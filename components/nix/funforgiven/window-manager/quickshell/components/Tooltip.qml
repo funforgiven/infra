@@ -46,7 +46,12 @@ Item {
     }
 
     onVisibleChanged: syncPresentation()
-    onTextChanged: syncPresentation()
+    // A shown tooltip updates its text in place; restarting the timeout here
+    // would keep live text, such as the clock, on screen forever.
+    onTextChanged: {
+        if (!tooltipWindow.visible || root.text.length === 0)
+            syncPresentation();
+    }
     onAnchorItemChanged: syncPresentation()
 
     Component.onCompleted: syncPresentation()
@@ -87,12 +92,12 @@ Item {
         id: tooltipWindow
 
         anchor {
-            item: root.anchorItem
-            edges: Edges.Bottom // qmllint disable missing-type
-            gravity: Edges.Bottom // qmllint disable missing-type
-            adjustment: PopupAdjustment.FlipY | PopupAdjustment.Slide | PopupAdjustment.Resize // qmllint disable missing-type
+            item: root.anchorItem // qmllint disable missing-property
+            edges: Edges.Bottom // qmllint disable missing-type missing-property
+            gravity: Edges.Bottom // qmllint disable missing-type missing-property
+            adjustment: PopupAdjustment.FlipY | PopupAdjustment.Slide | PopupAdjustment.Resize // qmllint disable missing-type missing-property
 
-            margins {
+            margins { // qmllint disable unqualified unresolved-type
                 top: -root.gap
                 bottom: -root.gap
             }

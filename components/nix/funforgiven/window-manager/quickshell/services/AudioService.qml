@@ -60,7 +60,7 @@ QtObject {
 
     function _resolvePresentation(node) {
         try {
-            var result = AppService.resolveStream(node);
+            let result = AppService.resolveStream(node);
             if (result) {
                 return result;
             }
@@ -75,10 +75,10 @@ QtObject {
     }
 
     function rebuild() {
-        var nodes = Pipewire.nodes.values.map(_nodeRecord).filter(function (node) {
+        var nodes = Pipewire.nodes.values.map(_nodeRecord).filter(function (node) { // qmllint disable missing-property
             return node !== null;
         });
-        var links = Pipewire.linkGroups.values.map(_linkRecord).filter(function (link) {
+        var links = Pipewire.linkGroups.values.map(_linkRecord).filter(function (link) { // qmllint disable missing-property
             return link !== null;
         });
         var defaultId = Pipewire.defaultAudioSink ? Pipewire.defaultAudioSink.id : null;
@@ -96,7 +96,7 @@ QtObject {
         });
         var defaultSourceId = Pipewire.defaultAudioSource ? Pipewire.defaultAudioSource.id : null;
         snapshot.defaultInput = null;
-        for (var inputIndex = 0; inputIndex < snapshot.physicalInputs.length; inputIndex += 1) {
+        for (let inputIndex = 0; inputIndex < snapshot.physicalInputs.length; inputIndex += 1) {
             if (defaultSourceId !== null && String(snapshot.physicalInputs[inputIndex].id) === String(defaultSourceId)) {
                 snapshot.defaultInput = snapshot.physicalInputs[inputIndex];
                 break;
@@ -128,7 +128,7 @@ QtObject {
     }
 
     function channel(channelId) {
-        for (var index = 0; index < channels.length; index += 1) {
+        for (let index = 0; index < channels.length; index += 1) {
             if (channels[index].id === channelId) {
                 return channels[index];
             }
@@ -137,8 +137,8 @@ QtObject {
     }
 
     function stream(streamId, streamSerial) {
-        for (var index = 0; index < playbackStreams.length; index += 1) {
-            var candidate = playbackStreams[index];
+        for (let index = 0; index < playbackStreams.length; index += 1) {
+            let candidate = playbackStreams[index];
             if (String(candidate.id) === String(streamId) && String(candidate.serial) === String(streamSerial)) {
                 return candidate;
             }
@@ -151,8 +151,8 @@ QtObject {
     }
 
     function input(inputId, inputSerial) {
-        for (var index = 0; index < physicalInputs.length; index += 1) {
-            var candidate = physicalInputs[index];
+        for (let index = 0; index < physicalInputs.length; index += 1) {
+            let candidate = physicalInputs[index];
             if (String(candidate.id) === String(inputId) && String(candidate.serial) === String(inputSerial))
                 return candidate;
         }
@@ -178,11 +178,11 @@ QtObject {
     }
 
     property PwObjectTracker _objectTracker: PwObjectTracker {
-        objects: Pipewire.nodes.values.concat(Pipewire.linkGroups.values)
+        objects: Pipewire.nodes.values.concat(Pipewire.linkGroups.values) // qmllint disable missing-property
     }
 
     property Connections _nodeModelConnections: Connections {
-        target: Pipewire.nodes
+        target: Pipewire.nodes // qmllint disable incompatible-type
 
         function onValuesChanged() {
             root.scheduleRebuild();
@@ -190,7 +190,7 @@ QtObject {
     }
 
     property Connections _linkModelConnections: Connections {
-        target: Pipewire.linkGroups
+        target: Pipewire.linkGroups // qmllint disable incompatible-type
 
         function onValuesChanged() {
             root.scheduleRebuild();

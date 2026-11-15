@@ -5,6 +5,7 @@ import Quickshell.Services.SystemTray
 import Quickshell.Widgets
 import ".." as Shell
 import "../components" as Components
+import "../services" as Services
 
 Item {
     id: root
@@ -131,10 +132,12 @@ Item {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: mouse => {
                         if (mouse.button === Qt.MiddleButton) {
+                            Services.PopupCoordinator.closeActive("bar");
                             trayDelegate.trayItem.secondaryActivate();
                         } else if (mouse.button === Qt.RightButton || trayDelegate.trayItem.onlyMenu) {
                             trayDelegate.showMenu();
                         } else {
+                            Services.PopupCoordinator.closeActive("bar");
                             trayDelegate.trayItem.activate();
                         }
                     }

@@ -70,7 +70,7 @@ Rectangle {
 
     function contentDrivenPopupWidth() {
         var rowWidth = 0;
-        for (var index = 0; index < root.inputCount; index += 1)
+        for (let index = 0; index < root.inputCount; index += 1)
             rowWidth = Math.max(rowWidth, root.measuredInputRowWidth(root.inputs[index]));
         return Math.ceil(Math.min(root.maximumPopupWidth, Math.max(root.minimumPopupWidth, rowWidth + root.popupContentPadding * 2)));
     }

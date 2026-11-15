@@ -76,7 +76,24 @@ diff --git a/src/io/datastream.hpp b/src/io/datastream.hpp
 diff --git a/src/io/socket.cpp b/src/io/socket.cpp
 --- a/src/io/socket.cpp
 +++ b/src/io/socket.cpp
-@@ -77,8 +77,23 @@
+@@ -72,14 +72,14 @@
+ 
+ void Socket::onSocketError(QLocalSocket::LocalSocketError error) {
+ 	qCWarning(logSocket) << "Socket error for" << this << error;
+-	emit this->error(error);
+-
+ 	if (!this->connected) {
+ 		QObject::disconnect(this->socket, nullptr, this, nullptr);
+ 		this->socket->deleteLater();
+ 		this->socket = nullptr;
+ 		this->disconnecting = false;
+ 	}
++
++	emit this->error(error);
+ }
+ 
+ bool Socket::isConnected() const { return this->connected; }
+@@ -89,8 +89,23 @@
  
  	if (!connected) {
  		if (this->socket != nullptr && !this->disconnecting) {

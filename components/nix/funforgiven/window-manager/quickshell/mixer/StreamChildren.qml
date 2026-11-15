@@ -189,7 +189,7 @@ ColumnLayout {
                                         childRow.activeDragKey = "";
                                     }
                                 } else {
-                                    var completedToken = childRow.activeDragToken;
+                                    const completedToken = childRow.activeDragToken;
                                     Qt.callLater(function () {
                                         if (childDrag.active || completedToken === 0 || childRow.activeDragToken !== completedToken)
                                             return;
