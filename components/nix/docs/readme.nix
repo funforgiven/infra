@@ -86,6 +86,84 @@ in
     See [secret recovery](secrets/README.md) and
     [architecture](docs/ARCHITECTURE.md).
 
+    ## World of Warcraft
+
+    `components/nix/battle-net.nix` declares the shared UMU/Proton-CachyOS prefix,
+    the `battlenet` and `wow-forever` launchers, and the Forever addon profile.
+    `components/nix/packages/proton-cachyos.nix` pins the official x86_64 SLR
+    release and its hash. Installation, Battle.net and WoW Forever all use
+    that runner in `~/Games/world-of-warcraft`. Close Battle.net and WoW
+    before applying a generation that changes Proton. Run `battlenet` to
+    install or open Battle.net, `battlenet install` to rerun its installer,
+    and `wow-forever` to launch the installed game directly.
+
+    The instawow profile and direct-game shortcuts are inspired by
+    [battlenet-umu](https://github.com/jacobjdowning/battlenet-umu), implemented
+    locally without adding its flake. Two pinned upstream instawow patches
+    add Forever support to the Nixpkgs package.
+
+    The launcher declares browser hardware acceleration off after a CEF
+    device-loss freeze coincided with an NVIDIA Xid 32 error. Before launch it
+    merges that setting into Battle.net's private config, preserving login
+    state and other preferences. It does not rewrite a running launcher's
+    config. WoW uses its own graphics settings.
+
+    Battle.net and its installer also pass `--in-process-gpu`, following
+    [CachyOS's native Wayland workaround](https://github.com/CachyOS/proton-cachyos#proton-wayland-quirks)
+    for blank white CEF windows in Proton 11. The direct WoW Forever launcher
+    does not pass browser arguments.
+
+    The shared prefix sets Wine Explorer's `ShowSystray` to `0`, hiding its
+    standalone tray window on native Wayland. Battle.net stays accessible
+    through its regular window and desktop launcher.
+
+    The declared addons are What's Training?, Questie, Dungeon Quests Forever,
+    Auctionator, OpenMap, Bagnon, Details! Damage Meter and FishFry Forever.
+    `components/nix/battle-net/addons.lock.json` records exact release versions,
+    public archive URLs, SHA-256 hashes and addon folders. Nix verifies and
+    builds these archives, including QuestieDB, QuestieTrace, Bagnon's bundled
+    BagBrother, bank and configuration modules, and the packaged Details!
+    plugins. Bagnon is pinned from CurseForge because its GitHub repository
+    publishes source without packaged releases.
+    Home Manager links the declared folders into `_forever_/Interface/AddOns`.
+    Rebuilds and rollbacks use the locked contents. Close WoW before activating
+    a changed generation. Game preferences and character settings remain in
+    `WTF`; Battle.net continues to manage the game client.
+
+    To update an addon, resolve its Forever release with instawow or the
+    publisher's release page, review the version, and update its lock entry.
+    Hash the exact public archive with `nix store prefetch-file --json URL`.
+    Keep every required addon folder in the lock. Rebuild to apply the reviewed
+    changes; there is no background updater changing the live addon tree.
+
+    The instawow `forever` profile uses `forever_classic` and a disposable
+    directory under `~/.cache/instawow/forever`, so exploration cannot alter
+    the Nix-managed game directory. API credentials support CurseForge
+    discovery and optional GitHub authentication. Public pinned archive
+    downloads do not require these credentials.
+
+    Put the CurseForge key in the ignored mode-0600 intake file
+    `secrets/INSTAWOW_CURSEFORGE_API_KEY.key`, then enroll it:
+
+    ```sh
+    nix run .#enroll-wow-addon-credentials --accept-flake-config -- --from-file
+    ```
+
+    Enrollment encrypts the credential into `secrets/instawow.json`, verifies
+    decryption, and only then clears the intake file. An optional GitHub token
+    uses `secrets/INSTAWOW_GITHUB_TOKEN.key` and the same command with `github`
+    before `--from-file`. Without `--from-file`, enrollment prompts privately.
+    Apply the host configuration after enrollment or rotation. sops-nix
+    deploys the JSON as a private runtime file, and Home Manager manages
+    `~/.config/instawow/config.access_tokens.json` as a link to it. The initial
+    encrypted document has null providers until real credentials are enrolled.
+
+    Validate the locked addon bundle and credential enrollment with:
+
+    ```sh
+    nix build .#checks.${host.system}.wow-addons .#checks.${host.system}.wow-addon-credentials --no-link --accept-flake-config
+    ```
+
     ## Wallpaper
 
     The wallpaper is at

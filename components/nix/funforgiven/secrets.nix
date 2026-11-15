@@ -22,7 +22,10 @@ let
     atollion-github-cli-token = "codex/atollion_github_cli_token";
     context7-api-key = "codex/context7_api_key";
   };
-  consumerSecretNames = builtins.attrNames apiTokenKeys ++ [ "github-ssh-key" ];
+  consumerSecretNames = builtins.attrNames apiTokenKeys ++ [
+    "github-ssh-key"
+    "instawow-access-tokens"
+  ];
   runtimeSecretSpecs = {
     home-assistant-midi-webhooks = {
       key = "home_midi/webhooks";
@@ -73,6 +76,10 @@ let
     // {
       github-ssh-key = permissions // {
         sopsFile = githubSshKeyFile;
+        format = "binary";
+      };
+      instawow-access-tokens = permissions // {
+        sopsFile = ../../../secrets/instawow.json;
         format = "binary";
       };
     };
@@ -213,6 +220,9 @@ let
     in
     {
       config = {
+        xdg.configFile."instawow/config.access_tokens.json".source =
+          config.lib.file.mkOutOfStoreSymlink secretPaths.instawow-access-tokens;
+
         home.file = {
           ".ssh/config".source = lib.mkForce (config.lib.file.mkOutOfStoreSymlink sshConfigPath);
           ".ssh/allowed_signers".text = ''

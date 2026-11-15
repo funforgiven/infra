@@ -132,6 +132,8 @@ external intake names are:
 | `VALHEIM_GAME_PASSWORD.key` | Valheim shared game password; retain it in a password manager |
 | `AWS_BOOTSTRAP_ACCESS_KEY_ID.key` | Temporary AWS identity used to create the mail provisioning identity |
 | `AWS_BOOTSTRAP_SECRET_ACCESS_KEY.key` | Temporary AWS bootstrap secret |
+| `INSTAWOW_CURSEFORGE_API_KEY.key` | CurseForge API key for instawow addon discovery |
+| `INSTAWOW_GITHUB_TOKEN.key` | Optional separate GitHub token for instawow's API rate limit |
 
 Enroll a declared value without echoing it:
 
@@ -151,6 +153,25 @@ for Backblaze, Telegram, Discord music, Resend, AWS mail, and host enrollment.
 The Discord and YouTube issuance, least-privilege installation, rotation, and
 playback checks are detailed in the
 [Muse onboarding guide](../deployments/homelab/cluster/apps/media/MUSE.md).
+
+WoW addon API credentials use a workstation-specific enrollment command:
+
+```sh
+nix run .#enroll-wow-addon-credentials --accept-flake-config -- --from-file
+nix run .#enroll-wow-addon-credentials --accept-flake-config -- github --from-file
+```
+
+The first command consumes `secrets/INSTAWOW_CURSEFORGE_API_KEY.key`; the
+optional second consumes `secrets/INSTAWOW_GITHUB_TOKEN.key`. Both use the same
+mode-0600 intake convention, verify the encrypted result before clearing input,
+and preserve other enrolled providers. Omitting `--from-file` prompts privately.
+`secrets/instawow.json` is a SOPS binary document whose decrypted payload is
+instawow's native access-token JSON. Its initial null providers are unenrolled.
+Apply the workstation configuration after enrollment or rotation; sops-nix
+deploys `/run/secrets/instawow-access-tokens` with mode `0400`, and Home Manager
+links the instawow config to that file. Standalone Home Manager uses its own
+sops-nix runtime path. Pinned addon archives use public URLs and do not require
+the key to build. The addon lock and workflow are described in the root README.
 
 ## Runtime files
 

@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "flavour": "forever_classic",
+  "addons": {
+    "auctionator": {
+      "version": "346",
+      "source": "curse:6124",
+      "url": "https://edge.forgecdn.net/files/9572/997/Auctionator-346.zip",
+      "hash": "sha256-pp2NbUyHo2JA2t6BQ9yO5BLG/Hu8NLi+VzKDp77R3Dw=",
+      "folders": [
+        "Auctionator"
+      ]
+    },
+    "bagnon": {
+      "version": "12.1.10",
+      "source": "curse:1592",
+      "url": "https://edge.forgecdn.net/files/9608/574/Bagnon-12.1.10.zip",
+      "hash": "sha256-GSCOje/SLt8EgYNyEZ6tIgWnZ3wjoBjBsD0n/F7mgMo=",
+      "folders": [
+        "BagBrother",
+        "Bagnon",
+        "Bagnon_Bank",
+        "Bagnon_Config",
+        "Bagnon_GuildBank"
+      ]
+    },
+    "details": {
+      "version": "Details.20261109.15410.172",
+      "source": "curse:61284",
+      "url": "https://edge.forgecdn.net/files/9521/145/Details-Details.20261109.15410.172.zip",
+      "hash": "sha256-UAK91cPpLdWb/6Pr38hn+YCwntYpxR2rBW+1RC+SrUE=",
+      "folders": [
+        "Details",
+        "Details_Compare2",
+        "Details_DataStorage",
+        "Details_EncounterDetails",
+        "Details_RaidCheck",
+        "Details_Streamer",
+        "Details_TinyThreat",
+        "Details_Vanguard"
+      ]
+    },
+    "dungeon-quests-forever": {
+      "version": "0.3.27beta",
+      "source": "curse:1713797",
+      "url": "https://edge.forgecdn.net/files/9474/571/Dungeon_Quests_Foreverv0.3.27beta.zip",
+      "hash": "sha256-YEIBcLK1JxOvwoC3sMuOaU/gH98I7kgGOb6lZPNtQE8=",
+      "folders": [
+        "Dungeon_Quests_Forever"
+      ]
+    },
+    "fishfry-forever": {
+      "version": "1.7.6a",
+      "source": "curse:1602599",
+      "url": "https://edge.forgecdn.net/files/9593/223/FishFry-1.7.6a-16001.zip",
+      "hash": "sha256-xb0419p972KL76XWeGM+n7gN3Ny081xVHHfBN4JOvfQ=",
+      "folders": [
+        "FishFry"
+      ]
+    },
+    "openmap": {
+      "version": "0.8.9",
+      "source": "github:openmap-world/openmap",
+      "url": "https://github.com/openmap-world/openmap/releases/download/v0.8.9/OpenMap-v0.8.9-forever.zip",
+      "hash": "sha256-BFZHub0CERptJuGPPCsiP+w/WK64QX8mh8lPDf1Guuo=",
+      "folders": [
+        "OpenMap"
+      ]
+    },
+    "questie": {
+      "version": "12.9.0+1.1.1",
+      "source": "github:questie/questie",
+      "url": "https://github.com/Questie/Questie/releases/download/bundle/v12.9.0%2Bv1.1.1/Questie-v12.9.0%2Bv1.1.1.zip",
+      "hash": "sha256-nGElNHE7dcBkicwtmzhCS0v/M1ARkQEd0zqgDus/tsc=",
+      "folders": [
+        "Questie",
+        "QuestieDB",
+        "QuestieTrace"
+      ]
+    },
+    "whats-training": {
+      "version": "11.4.7",
+      "source": "github:fusionpit/whatstraining",
+      "url": "https://github.com/fusionpit/WhatsTraining/releases/download/11.4.7/WhatsTraining-11.4.7.zip",
+      "hash": "sha256-dE6j1KasBzK0IrM/6JdfPEFrYGKyXLh+hiOKIugASlc=",
+      "folders": [
+        "WhatsTraining"
+      ]
+    }
+  }
+}
