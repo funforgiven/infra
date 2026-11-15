@@ -401,9 +401,9 @@ def approve_device(args):
     save_secret(target, document)
 
 
-def configure_alertmanager_mounts(phase):
-    if phase not in ("dual", "matrix"):
-        raise ValueError("invalid alerting phase")
+def configure_alertmanager_mounts(phase="matrix"):
+    if phase != "matrix":
+        raise ValueError("infrastructure alerts are delivered only through Matrix")
     path = OBSERVABILITY / "kube-prometheus-stack.yaml"
     text = path.read_text()
     pattern = r"(?m)^        secrets:\n(?:        - [^\n]+\n)+"
@@ -412,8 +412,6 @@ def configure_alertmanager_mounts(phase):
         raise ValueError("expected one inline Alertmanager credential mount list")
     existing = yaml.safe_load(matches[0].group())["secrets"]
     names = ["matrix-alerting"]
-    if phase == "dual":
-        names.append("infrastructure-telegram")
     names.extend(
         name
         for name in existing
@@ -428,33 +426,13 @@ def configure_alertmanager_mounts(phase):
 
 
 def configure_alerting(args):
+    if args.phase != "matrix":
+        raise ValueError("infrastructure alerts are delivered only through Matrix")
     rollout_file = DEPLOYMENT / "rollout.json"
     rollout = json.loads(rollout_file.read_text())
-    if args.phase == "matrix":
-        started, qualified = rollout.get("dual_started_at"), rollout.get("qualified_at")
-        if (
-            not started
-            or time.time() - started < 7 * 86400
-            or not qualified
-            or not 0 <= time.time() - qualified <= 86400
-        ):
-            raise ValueError(
-                "cutover requires seven days of dual delivery and qualification within the last day"
-            )
     target = DEPLOYMENT / "runtime.sops.yaml"
     document = load_secret(target)
     relay = json.loads(document["stringData"]["relay.json"])
-    sending_key = encrypted_inputs.values(load_secret(DEPLOYMENT / "email.sops.yaml"))[
-        "MATRIX_RESEND_API_KEY"
-    ]
-    smtp = {
-        "host": "smtp.resend.com",
-        "port": 465,
-        "username": "resend",
-        "password": sending_key,
-        "from": "alerts@fahrican.com",
-        "to": "fahricanelidemir@gmail.com",
-    }
     for host in args.host:
         if not re.fullmatch(r"[a-z0-9-]+", host):
             raise ValueError("invalid host producer")
@@ -465,7 +443,6 @@ def configure_alerting(args):
             "url": "https://matrix-alerts.fahrican.com/notify",
             "producer_id": host,
             "token": relay["producers"][host]["token"],
-            "smtp": smtp,
         }
         save_secret(
             Path("deployments/homelab/credentials/host-runtime")
@@ -474,8 +451,9 @@ def configure_alerting(args):
                 "matrix-" + host, "matrix", {"config.json": json.dumps(host_config)}
             ),
         )
-    document["stringData"]["relay.json"] = json.dumps(relay)
-    save_secret(target, document)
+    if args.host:
+        document["stringData"]["relay.json"] = json.dumps(relay)
+        save_secret(target, document)
     receiver = {
         "name": "infrastructure-matrix",
         "webhook_configs": [
@@ -491,62 +469,28 @@ def configure_alerting(args):
             }
         ],
     }
-    email_receiver = {
-        "name": "independent-email",
-        "email_configs": [{"to": smtp["to"], "send_resolved": True}],
-    }
     routing = {
         "receiver": receiver["name"],
-        "group_by": ["alertname", "namespace", "severity"],
+        # Keep each alert instance separate: changes to another resource must
+        # not resend an already-notified firing alert in the same group.
+        "group_by": ["..."],
         "group_wait": "30s",
         "group_interval": "5m",
-        "repeat_interval": "6h",
+        # Alertmanager has no infinite repeat interval. Retain notification
+        # history for at least this long (set in the inline Helm values).
+        "repeat_interval": "8760h",
         "routes": [
             {"receiver": "null", "matchers": ['alertname = "Watchdog"']},
             {"receiver": "null", "matchers": ['alertname = "InfoInhibitor"']},
-            {
-                "receiver": email_receiver["name"],
-                "matchers": ['severity =~ "critical|error"'],
-                "continue": True,
-            },
-            {"receiver": receiver["name"]},
         ],
     }
-    receivers = [{"name": "null"}, receiver, email_receiver]
-    if args.phase == "dual":
-        telegram = encrypted_inputs.values(
-            load_secret(Path("secrets/service-runtime.sops.yaml"))
-        )
-        chat_id = int(telegram["INFRA_TELEGRAM_CHAT_ID"])
-        receivers.append(
-            {
-                "name": "infrastructure-telegram",
-                "telegram_configs": [
-                    {
-                        "bot_token_file": "/etc/alertmanager/secrets/infrastructure-telegram/bot-token",
-                        "chat_id": chat_id,
-                        "send_resolved": True,
-                        "parse_mode": "HTML",
-                    }
-                ],
-            }
-        )
-        routing["routes"].insert(
-            2, {"receiver": "infrastructure-telegram", "continue": True}
-        )
+    receivers = [{"name": "null"}, receiver]
     config = {
-        "global": {
-            "resolve_timeout": "5m",
-            "smtp_smarthost": "smtp.resend.com:587",
-            "smtp_from": smtp["from"],
-            "smtp_auth_username": "resend",
-            "smtp_auth_password_file": "/etc/alertmanager/secrets/matrix-alerting/smtp-password",
-            "smtp_require_tls": True,
-        },
+        "global": {"resolve_timeout": "5m"},
         "route": routing,
         "receivers": receivers,
     }
-    # Added last to Helm valuesFrom. No change occurs until this Secret exists.
+    # Matrix values are required; there is no secondary notification channel.
     save_secret(
         OBSERVABILITY / "alerting.sops.yaml",
         secret(
@@ -558,12 +502,7 @@ def configure_alerting(args):
                         "alertmanager": {
                             "config": config,
                             "alertmanagerSpec": {
-                                "secrets": [
-                                    "matrix-alerting",
-                                    "infrastructure-telegram",
-                                ]
-                                if args.phase == "dual"
-                                else ["matrix-alerting"]
+                                "secrets": ["matrix-alerting"]
                             },
                         }
                     }
@@ -578,15 +517,12 @@ def configure_alerting(args):
             "matrix-alerting",
             "services-observability",
             {
-                "smtp-password": sending_key,
                 "alertmanager-token": relay["producers"]["alertmanager"]["token"],
             },
         ),
     )
     configure_alertmanager_mounts(args.phase)
     rollout["phase"] = args.phase
-    if args.phase == "dual" and not rollout.get("dual_started_at"):
-        rollout["dual_started_at"] = time.time()
     rollout_file.write_text(json.dumps(rollout, indent=2) + "\n")
 
 
@@ -771,7 +707,7 @@ def qualify(args):
 def retire_telegram():
     rollout = json.loads((DEPLOYMENT / "rollout.json").read_text())
     if rollout["phase"] != "matrix":
-        raise ValueError("complete the qualified seven-day cutover first")
+        raise ValueError("switch alert delivery to Matrix first")
     target = Path(
         "secrets/service-runtime.sops.yaml"
     )
@@ -899,7 +835,7 @@ def main():
         device.add_argument("--" + name, required=True)
     alerting = sub.add_parser("configure-alerting")
     alerting.add_argument("--host", action="append", default=[])
-    alerting.add_argument("--phase", choices=["dual", "matrix"], default="dual")
+    alerting.add_argument("--phase", choices=["matrix"], default="matrix")
     publication = sub.add_parser("publish-image")
     publication.add_argument("image", type=Path)
     dns = sub.add_parser("configure-dns")

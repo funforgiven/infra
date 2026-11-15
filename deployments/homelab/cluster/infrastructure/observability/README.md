@@ -8,7 +8,7 @@ declared in [waves/stages.yaml](../../waves/stages.yaml).
 | Component | Configuration |
 | --- | --- |
 | Prometheus | One replica, 15 days or 16 GiB retention, 20 GiB `ceph-block` claim |
-| Alertmanager | One replica, 2 GiB `ceph-block` claim; Telegram and encrypted Matrix delivery |
+| Alertmanager | One replica, 2 GiB `ceph-block` claim; encrypted Matrix delivery only; one-year notification retention |
 | Grafana | Enabled, 10 GiB `ceph-block` claim, ZITADEL OIDC and management HTTPS route |
 | Loki | One monolithic replica, filesystem-backed index/chunks on a 50 GiB `ceph-block` claim |
 | Fluent Bit | Host/pod log collection into Loki |
@@ -27,13 +27,27 @@ uses the pinned operator's Endpoints workaround as a coordinated setting:
 `serviceDiscoveryRole=Endpoints`; manually managed metric targets keep matching
 Endpoints objects. Keep these settings until an operator upgrade is tested.
 
-Alertmanager groups application/backup failures and clears a failed CronJob
-incident when a newer execution succeeds. CronJobs with service-specific
+Alertmanager sends an initial notification and a recovery notification for
+each alert instance (`send_resolved: true`). All labels define the notification
+group (`group_by: ['...']`), so another resource firing or recovering cannot
+resend an ongoing incident. Recovery updates still arrive on the five-minute
+group interval; the first notification waits 30 seconds. Unchanged firing
+alerts repeat only after one year (`8760h`), with notification history retained
+for the same period on the persistent volume. Alertmanager does not support
+disabling repeats entirely; losing notification history or changing an alert's
+labels can also produce a fresh initial notification. The inline Helm values
+in `kube-prometheus-stack.yaml` enforce this policy over the encrypted Matrix
+configuration. Its values Secret is required; Telegram and email delivery are
+disabled. `matrix-admin configure-alerting` preserves this policy when
+regenerating the Matrix values and host producer configurations.
+
+The custom job rules clear a failed CronJob incident when a newer execution
+succeeds. CronJobs with service-specific
 failure alerts opt out of the generic `KubeJobFailed` rule with the
 `monitoring.fahrican.com/dedicated-job-alerts: "true"` label. Forge's OnDelete
 rollout uses its own rule. UniFi AP
 telemetry distinguishes missing metrics/scrape failure from ordinary node
-targets. Runtime Telegram/Grafana/Matrix credentials stay SOPS-encrypted.
+targets. Runtime Grafana/Matrix credentials stay SOPS-encrypted.
 
 Restore observability first, verify its CRDs/readiness, then release database
 controllers and dependent apps. Single replicas mean Grafana/logs/recent metrics

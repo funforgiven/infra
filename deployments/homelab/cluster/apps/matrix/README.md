@@ -132,18 +132,26 @@ Cross-signing is described in the
 
 Alertmanager sends to the internal relay Service. External host producers use
 the private intake route with their own scoped tokens. Enroll a host with
-`configure-alerting --phase PHASE --host NAME`, using the phase in
-`rollout.json`. Keep unrelated producer identities and fallback credentials.
+`configure-alerting --host NAME`. Alert delivery uses Matrix only; the command
+preserves producer identities and does not enroll SMTP or Telegram fallbacks.
 
 Cilium enforces the Matrix, ZITADEL, DNS, mail and push-gateway allowlists.
 
-## Telegram retirement
+## Alert delivery
 
-`rollout.json` records the alerting phase. It is `dual`: Alertmanager sends to
-both Matrix and the infrastructure Telegram bot, and critical/error alerts also
-go to email. Retire Telegram after at least seven days of verified dual
-delivery. From outside the LAN, trigger a database backup and isolated restore,
-test Element decryption and recovery, and test push with the phone locked:
+`rollout.json` records the `matrix` delivery phase. Alertmanager sends initial
+and resolved alerts only to the encrypted Matrix relay. Telegram and email
+receivers, SMTP alert credentials and the Telegram credential mount are
+disabled. Matrix values are required rather than falling back to another
+channel. Regenerate them with:
+
+```sh
+nix run .#matrix-admin -- configure-alerting
+```
+
+Delivery qualification remains a separate check. From outside the LAN, trigger
+a database backup and isolated restore, test Element decryption and recovery,
+and test push with the phone locked:
 
 ```sh
 nix run .#matrix-access -- cluster -- velero backup create matrix-check \
@@ -154,21 +162,10 @@ nix run .#matrix-access -- cluster -- kubectl -n backup-qualification wait \
   --for=condition=Complete job/matrix-restore-check --timeout=110m
 nix run .#matrix-access -- cluster -- nix run .#matrix-admin -- qualify \
   --mobile-and-recovery-checked
-nix run .#matrix-admin -- configure-alerting --phase matrix
 ```
 
 `qualify` checks the rejected public federation/admin/remote-media routes, the
-AWS alarms and an isolated restore within 40 days. `--phase matrix` requires
-seven days since dual delivery started and a `qualify` run less than 24 hours
-old. Commit and deploy the Alertmanager change, verify Matrix and email, then
-remove the bot:
-
-```sh
-nix run .#matrix-admin -- retire-telegram
-```
-
-Commit the credential, runtime-contract and bot-catalog changes. Revoke the
-infrastructure bot token through BotFather (manual) and delete the
-`services-observability/infrastructure-telegram` Secret. To roll back before
-retirement, run `configure-alerting --phase dual`, commit and redeploy; the
-Matrix queue keeps undelivered events.
+AWS alarms and an isolated restore within 40 days. Matrix's durable queue keeps
+accepted events until encrypted delivery succeeds; it does not send notification
+emails during an outage. AWS alarms retain their CloudWatch states without an
+SNS email subscriber.

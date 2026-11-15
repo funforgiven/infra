@@ -23,12 +23,8 @@ spec:
     name: kube-prometheus-stack-chart
   valuesFrom:
   - kind: Secret
-    name: alertmanager-runtime-values
-    valuesKey: values.yaml
-  - kind: Secret
     name: matrix-alertmanager-values
     valuesKey: values.yaml
-    optional: true
   driftDetection:
     mode: enabled
     ignore:
@@ -153,13 +149,22 @@ spec:
                 requests:
                   storage: 20Gi
     alertmanager:
+      # Inline values enforce the Matrix notification policy.
+      # Notify each instance once, then on recovery, without group churn
+      # resending other active alerts. Alertmanager has no infinite interval.
+      config:
+        route:
+          group_by: ['...']
+          repeat_interval: 8760h
       alertmanagerSpec:
         replicas: 1
+        # Match the one-year repeat interval: expired notification history
+        # otherwise causes reminders after the default five-day retention.
+        retention: 8760h
         image:
           sha: 9e082985f56f4c8c9f724e18f2288c6708f472e56a5286b8863d080434ea065d
         secrets:
         - matrix-alerting
-        - infrastructure-telegram
         persistentVolumeClaimRetentionPolicy:
           whenDeleted: Retain
           whenScaled: Retain

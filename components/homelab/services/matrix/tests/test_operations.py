@@ -67,55 +67,65 @@ class MonitoringPolicyTests(unittest.TestCase):
         )
 
 
-class CutoverTests(unittest.TestCase):
-    def test_matrix_cutover_requires_seven_days_and_recent_qualification(self):
-        now = 2_000_000
-        for started, qualified in (
-            (now - 6 * 86400, now),
-            (now - 8 * 86400, None),
-            (now - 8 * 86400, now - 86401),
-            (None, now),
-        ):
-            with (
-                self.subTest(started=started, qualified=qualified),
-                tempfile.TemporaryDirectory() as directory,
-            ):
-                deployment = Path(directory)
-                (deployment / "rollout.json").write_text(
-                    json.dumps(
-                        {
-                            "phase": "dual",
-                            "dual_started_at": started,
-                            "qualified_at": qualified,
-                        }
-                    )
-                )
-                with (
-                    patch.object(admin, "DEPLOYMENT", deployment),
-                    patch("admin.time.time", return_value=now),
-                    patch.object(admin, "load_secret") as decrypt,
-                ):
-                    with self.assertRaises(ValueError):
-                        admin.configure_alerting(
-                            argparse.Namespace(phase="matrix", host=[])
-                        )
-                    decrypt.assert_not_called()
-
-
 class AlertingConfigurationTests(unittest.TestCase):
-    def test_alertmanager_mounts_follow_phase(self):
+    def test_regeneration_removes_other_channels_and_preserves_producer_tokens(self):
+        relay = {"producers": {
+            "alertmanager": {"token": "alert-token", "paths": ["/alertmanager"]},
+            "pecorino": {"token": "host-token", "paths": ["/notify"]},
+        }}
+        with tempfile.TemporaryDirectory() as directory:
+            deployment = Path(directory)
+            rollout = deployment / "rollout.json"
+            rollout.write_text(json.dumps({"phase": "dual", "qualified_at": None}))
+            saved = {}
+            with (
+                patch.object(admin, "DEPLOYMENT", deployment),
+                patch.object(admin, "load_secret", return_value={"stringData": {"relay.json": json.dumps(relay)}}) as decrypt,
+                patch.object(admin, "save_secret", side_effect=lambda path, doc: saved.update({path: doc})),
+                patch.object(admin, "configure_alertmanager_mounts"),
+            ):
+                admin.configure_alerting(argparse.Namespace(phase="matrix", host=["pecorino"]))
+                decrypt.assert_called_once_with(deployment / "runtime.sops.yaml")
+                values = yaml.safe_load(saved[admin.OBSERVABILITY / "alerting.sops.yaml"]["stringData"]["values.yaml"])["alertmanager"]
+                config = values["config"]
+                self.assertEqual(config["route"]["receiver"], "infrastructure-matrix")
+                self.assertTrue(all(r["receiver"] == "null" for r in config["route"]["routes"]))
+                self.assertEqual({r["name"] for r in config["receivers"]}, {"null", "infrastructure-matrix"})
+                matrix = next(r for r in config["receivers"] if r["name"] == "infrastructure-matrix")
+                self.assertTrue(matrix["webhook_configs"][0]["send_resolved"])
+                self.assertEqual(config["global"], {"resolve_timeout": "5m"})
+                self.assertEqual(values["alertmanagerSpec"]["secrets"], ["matrix-alerting"])
+                credentials = saved[admin.OBSERVABILITY / "alerting-credentials.sops.yaml"]["stringData"]
+                self.assertEqual(credentials, {"alertmanager-token": "alert-token"})
+                host = json.loads(saved[Path("deployments/homelab/credentials/host-runtime/matrix-pecorino.sops.yaml")]["stringData"]["config.json"])
+                self.assertEqual(host["token"], "host-token")
+                self.assertNotIn("smtp", host)
+                self.assertEqual(json.loads(rollout.read_text()), {"phase": "matrix", "qualified_at": None})
+                saved.clear()
+                admin.configure_alerting(argparse.Namespace(phase="matrix", host=[]))
+                self.assertNotIn(deployment / "runtime.sops.yaml", saved)
+
+    def test_dual_delivery_is_rejected_before_changes(self):
+        with patch.object(admin, "load_secret") as decrypt, patch.object(admin, "save_secret") as save:
+            with self.assertRaises(ValueError):
+                admin.configure_alerting(argparse.Namespace(phase="dual", host=[]))
+            decrypt.assert_not_called()
+            save.assert_not_called()
+        with self.assertRaises(ValueError):
+            admin.configure_alertmanager_mounts("dual")
+
+    def test_alertmanager_mounts_remove_legacy_telegram(self):
         source = ROOT / admin.OBSERVABILITY / "kube-prometheus-stack.yaml"
         with tempfile.TemporaryDirectory() as directory:
             observability = Path(directory)
-            (observability / source.name).write_text(source.read_text())
+            (observability / source.name).write_text(source.read_text().replace(
+                "        - matrix-alerting\n", "        - matrix-alerting\n        - infrastructure-telegram\n        - extra-credentials\n"))
             with patch.object(admin, "OBSERVABILITY", observability):
                 admin.configure_alertmanager_mounts("matrix")
                 text = (observability / source.name).read_text()
                 self.assertIn("        secrets:\n        - matrix-alerting\n", text)
                 self.assertNotIn("- infrastructure-telegram", text)
-                admin.configure_alertmanager_mounts("dual")
-                self.assertIn("        - matrix-alerting\n        - infrastructure-telegram\n",
-                              (observability / source.name).read_text())
+                self.assertIn("        - extra-credentials\n", text)
 
     def test_runtime_save_restarts_only_consumers_of_changed_keys(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(admin.Path, "cwd", return_value=Path(directory)):
