@@ -1,7 +1,7 @@
 { inputs, ... }:
 {
   perSystem =
-    { pkgs, ... }:
+    { lib, pkgs, ... }:
     let
       secretScan = pkgs.writeShellApplication {
         name = "repository-secret-scan";
@@ -35,6 +35,8 @@
         name = "gitleaks staged secret scan";
         description = "Reject staged plaintext secrets with redacted output";
         entry = "${pkgs.gitleaks}/bin/gitleaks git --staged --no-banner --redact";
+        # The entry already supplies the command and staged-scan flags.
+        args = lib.mkForce [ ];
         pass_filenames = false;
         stages = [ "pre-commit" ];
       };
