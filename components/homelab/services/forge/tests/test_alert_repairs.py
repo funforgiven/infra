@@ -111,6 +111,44 @@ class MetricsTests(unittest.TestCase):
 
 
 class AlertTests(unittest.TestCase):
+    def test_backup_staleness_ignores_deleted_schedules_and_recovers(self):
+        release = list(yaml.safe_load_all((SERVICES / 'infrastructure/velero/velero.yaml').read_text()))[1]
+        rule = next(r for r in release['spec']['values']['metrics']['prometheusRule']['spec']
+                    if r['alert'] == 'VeleroScheduleBackupStale')
+        tests = []
+        for schedule, timestamp, active, fires in (
+            ('services-daily', -100000, True, True),
+            ('services-daily', 0, True, False),
+            ('services-weekly', -700000, True, True),
+            ('services-weekly', -500000, True, False),
+            ('retired-volume', -100000, False, False),
+            ('new-schedule', None, True, True),
+        ):
+            labels = f'namespace="velero",schedule="{schedule}"'
+            series = []
+            if active:
+                series.append({'series': f'velero_backup_attempt_total{{{labels}}}', 'values': '1+0x120'})
+            if timestamp is not None:
+                series.append({'series': f'velero_backup_last_successful_timestamp{{{labels}}}',
+                               'values': f'{timestamp}+0x120'})
+            expected = [{'exp_labels': {'namespace': 'velero', 'schedule': schedule, 'severity': 'critical'},
+                         'exp_annotations': {'summary': f'Velero schedule {schedule} has no successful backup within its interval.'}}]
+            tests.append({'interval': '1m', 'input_series': series, 'alert_rule_test': [
+                {'eval_time': '59m', 'alertname': rule['alert'], 'exp_alerts': []},
+                {'eval_time': '61m', 'alertname': rule['alert'], 'exp_alerts': expected if fires else []}]})
+        # Deleting a schedule clears its alert even if its success gauge survives.
+        tests.append({'interval': '1m', 'input_series': [
+            {'series': 'velero_backup_attempt_total{namespace="velero",schedule="deleted"}', 'values': '1+0x60 stale'},
+            {'series': 'velero_backup_last_successful_timestamp{namespace="velero",schedule="deleted"}', 'values': '-100000+0x120'},
+        ], 'alert_rule_test': [{'eval_time': '62m', 'alertname': rule['alert'], 'exp_alerts': []}]})
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)
+            (path / 'rules.yml').write_text(yaml.safe_dump({'groups': [{'name': 'velero', 'rules': [rule]}]}))
+            (path / 'tests.yml').write_text(yaml.safe_dump({'rule_files': ['rules.yml'], 'evaluation_interval': '1m', 'tests': tests}))
+            result = subprocess.run([shutil.which('promtool') or 'promtool', 'test', 'rules', 'tests.yml'],
+                                    cwd=path, capture_output=True, text=True, timeout=60)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_recovered_history_and_terminal_failures(self):
         document = yaml.safe_load((ROOT / 'deployments/homelab/cluster/infrastructure/observability/job-health.yaml').read_text())
         groups = document['spec']['groups']
