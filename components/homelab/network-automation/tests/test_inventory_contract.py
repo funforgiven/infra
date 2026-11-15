@@ -431,6 +431,62 @@ class NetworkInventoryTests(unittest.TestCase):
         ):
             self.assertNotIn(unrelated_mutation, selected)
 
+    def test_wowhead_us_egress_includes_trusted_and_housemate_only(self) -> None:
+        wowhead = self.router["routeros_mullvad_wowhead"]
+        routing = wowhead["routing"]
+        self.assertEqual("wg-mullvad-us", wowhead["name"])
+        self.assertTrue(wowhead["peer"]["name"].startswith("us-"))
+        self.assertNotEqual(self.router["routeros_mullvad"]["listen_port"], wowhead["listen_port"])
+        self.assertNotEqual(self.router["routeros_wireguard"]["listen_port"], wowhead["listen_port"])
+        self.assertEqual(
+            {("vlan10-trusted", "10.21.10.0/24"), ("vlan70-housemate", "10.21.70.0/24")},
+            {(source["interface"], source["network"]) for source in routing["sources"]},
+        )
+        self.assertEqual(["wowhead.com", "wow.zamimg.com"], routing["domains"])
+        self.assertTrue({"wowhead.com", "www.wowhead.com", "nether.wowhead.com", "wow.zamimg.com"} <= set(routing["seed_names"]))
+        # The Japan tunnel keeps its original, trusted-only OTOTOY scope.
+        self.assertEqual("vlan10-trusted", self.router["routeros_mullvad"]["routing"]["source_interface"])
+
+    def test_wowhead_tag_keeps_preflight_and_limits_writes(self) -> None:
+        def selected_tasks(*arguments: str) -> str:
+            return subprocess.run(
+                ["ansible-playbook", "--list-tasks", "--limit", "core_router",
+                 *arguments, "reconcile-routeros.yaml"],
+                cwd=PLAYBOOK.parent, check=True, capture_output=True, text=True,
+            ).stdout
+
+        selected = selected_tasks("--tags", "wowhead")
+        self.assertIn("Require the Wowhead source VLANs and firewall boundaries", selected)
+        self.assertIn("Refuse conflicting Wowhead DNS owners", selected)
+        self.assertIn("Reconcile the Wowhead US WireGuard interface", selected)
+        self.assertIn("Reconcile and verify each Wowhead source policy", selected)
+        self.assertIn("Track Wowhead DNS answers including subdomains", selected)
+        for unrelated_mutation in (
+            "Reconcile the Mullvad WireGuard client interface",
+            "Reconcile the WireGuard admin interface",
+            "Reconcile the external provider network",
+            "Reconcile Git-owned static DHCP leases",
+        ):
+            self.assertNotIn(unrelated_mutation, selected)
+
+        default = selected_tasks()
+        self.assertIn("Require the Wowhead source VLANs and firewall boundaries", default)
+        self.assertNotIn("Reconcile the Wowhead US WireGuard interface", default)
+        self.assertNotIn("Reconcile and verify each Wowhead source policy", default)
+
+    def test_wowhead_commands_require_success_after_all_routeros_checks(self) -> None:
+        # RouterOS custom :error messages are not reliably treated as transport
+        # errors. A split success marker avoids accepting echoed input as proof.
+        for filename in ("reconcile-routeros-wowhead.yaml", "reconcile-routeros-wowhead-source.yaml"):
+            tasks = yaml.safe_load((PLAYBOOK.parent / "tasks" / filename).read_text())
+            for task in tasks:
+                command = task.get("community.routeros.command")
+                if command is None:
+                    continue
+                with self.subTest(task=task["name"]):
+                    self.assertEqual(["result[0] contains __infra_wowhead_ok__"], command["wait_for"])
+                    self.assertTrue(command["commands"][0].endswith(':put ("__infra_" . "wowhead_ok__")'))
+
     def test_internal_management_dns_matches_host_inventory(self) -> None:
         for host in ("pecorino", "taleggio", "asiago"):
             address = self.host_inventory[host]["management"]

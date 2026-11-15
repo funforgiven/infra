@@ -273,6 +273,39 @@ all:
               destination: 210.135.96.195/32
               forward_chain: infra-forward
               forward_final_drop_comment: 'infra: forward final drop'
+          routeros_mullvad_wowhead:
+            name: wg-mullvad-us
+            address: 10.66.16.158/32
+            listen_port: 51822
+            mtu: 1420
+            private_key_file: /run/secrets/homelab-routeros-ccr2004-mullvad-private-key
+            peer:
+              name: us-nyc-wg-301
+              public_key: IzqkjVCdJYC1AShILfzebchTlKCqVCt/SMEXolaS3Uc=
+              endpoint_address: 143.244.47.65
+              endpoint_port: 51820
+              allowed_address: 0.0.0.0/0
+              persistent_keepalive: 25s
+            routing:
+              table: mullvad-wowhead
+              connection_mark: mullvad-wowhead
+              destination_address_list: infra-wowhead
+              domains:
+              - wowhead.com
+              - wow.zamimg.com
+              seed_names:
+              - wowhead.com
+              - www.wowhead.com
+              - nether.wowhead.com
+              - wow.zamimg.com
+              sources:
+              - interface: vlan10-trusted
+                network: 10.21.10.0/24
+              - interface: vlan70-housemate
+                network: 10.21.70.0/24
+              forward_chain: infra-forward
+              forward_entry_comment: 'infra: activate forward policy'
+              forward_final_drop_comment: 'infra: forward final drop'
           routeros_provider_network:
             name: CLOUD-EXTERNAL
             interface: vlan40-external

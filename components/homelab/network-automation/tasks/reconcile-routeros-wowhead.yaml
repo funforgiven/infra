@@ -1,0 +1,385 @@
+---
+- name: Validate the Mullvad Wowhead inventory
+  ansible.builtin.assert:
+    that:
+      - routeros_mullvad_wowhead.name != routeros_mullvad.name
+      - routeros_mullvad_wowhead.address is match('^[0-9.]+/32$')
+      - routeros_mullvad_wowhead.listen_port | int > 0
+      - routeros_mullvad_wowhead.listen_port | int < 65536
+      - routeros_mullvad_wowhead.listen_port not in [routeros_wireguard.listen_port, routeros_mullvad.listen_port]
+      - routeros_mullvad_wowhead.mtu | int >= 1280
+      - routeros_mullvad_wowhead.mtu | int <= 1420
+      - routeros_mullvad_wowhead.private_key_file | length > 0
+      - routeros_mullvad_wowhead.peer.name is match('^us-')
+      - routeros_mullvad_wowhead.peer.public_key is match('^[A-Za-z0-9+/]{43}=$')
+      - routeros_mullvad_wowhead.peer.endpoint_address is match('^[0-9.]+$')
+      - routeros_mullvad_wowhead.peer.endpoint_port | int == 51820
+      - routeros_mullvad_wowhead.peer.allowed_address == '0.0.0.0/0'
+      - routeros_mullvad_wowhead.peer.persistent_keepalive | length > 0
+      - routeros_mullvad_wowhead.routing.table != routeros_mullvad.routing.table
+      - routeros_mullvad_wowhead.routing.table != 'main'
+      - routeros_mullvad_wowhead.routing.connection_mark | length > 0
+      - routeros_mullvad_wowhead.routing.destination_address_list | length > 0
+      - routeros_mullvad_wowhead.routing.domains == ['wowhead.com', 'wow.zamimg.com']
+      - routeros_mullvad_wowhead.routing.seed_names | length > 0
+      - routeros_mullvad_wowhead.routing.sources | length == 2
+      - routeros_mullvad_wowhead.routing.forward_chain == 'infra-forward'
+      - routeros_mullvad_wowhead.routing.forward_entry_comment | length > 0
+      - routeros_mullvad_wowhead.routing.forward_final_drop_comment | length > 0
+  tags: [always]
+
+- name: Validate each Wowhead source VLAN
+  ansible.builtin.assert:
+    that:
+      - item.interface in [routeros_provider_network.trusted_interface, routeros_housemate.interface]
+      - item.network is match('^[0-9.]+/[0-9]+$')
+      - >-
+        item.network == (routeros_mullvad.routing.source_network
+        if item.interface == routeros_provider_network.trusted_interface
+        else routeros_housemate.network)
+  loop: "{{ routeros_mullvad_wowhead.routing.sources }}"
+  loop_control:
+    label: "{{ item.interface }}"
+  tags: [always]
+
+- name: Require the Wowhead source VLANs and firewall boundaries
+  community.routeros.command:
+    commands:
+      - >-
+        :if ([:len [/interface vlan find where name="{{ item.interface }}"
+        and !disabled]] != 1) do={ :error "missing Wowhead source VLAN" };
+        :if ([:len [/interface list member find where
+        list={{ routeros_provider_network.lan_interface_list }}
+        and interface="{{ item.interface }}" and !disabled]] != 1)
+        do={ :error "missing Wowhead source LAN membership" };
+        :if ([:len [/ip firewall filter find where
+        comment="{{ routeros_mullvad_wowhead.routing.forward_entry_comment }}"
+        and chain=forward and action=jump and
+        jump-target={{ routeros_mullvad_wowhead.routing.forward_chain }}
+        and !disabled]] != 1) do={ :error "missing Wowhead forward entry" };
+        :local drop [/ip firewall filter find where
+        comment="{{ routeros_mullvad_wowhead.routing.forward_final_drop_comment }}"
+        and chain={{ routeros_mullvad_wowhead.routing.forward_chain }}
+        and action=drop];
+        :if ([:len $drop] != 1)
+        do={ :error "missing Wowhead forward final drop" };
+        :if ([/ip firewall filter get $drop disabled])
+        do={ :error "Wowhead forward final drop is disabled" };
+        :foreach row in=[/ip firewall filter find where action=fasttrack-connection]
+        do={ :if (![/ip firewall filter get $row disabled])
+        do={ :error "Wowhead policy requires FastTrack exclusion" } };
+        :put ("__infra_" . "wowhead_ok__")
+    wait_for:
+      - result[0] contains __infra_wowhead_ok__
+    retries: 1
+  loop: "{{ routeros_mullvad_wowhead.routing.sources }}"
+  loop_control:
+    label: "{{ item.interface }}"
+  changed_when: false
+  tags: [always]
+
+- name: Refuse conflicting Wowhead tunnel and routing table owners
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/interface wireguard find where name="{{ routeros_mullvad_wowhead.name }}"];
+        :if ([:len $row] > 1) do={ :error "duplicate Wowhead interface" };
+        :if ([:len $row] = 1) do={ :if ([/interface wireguard get $row comment]
+        != "infra: Mullvad Wowhead") do={ :error "Wowhead interface has another owner" } };
+        :set row [/routing table find where name="{{ routeros_mullvad_wowhead.routing.table }}"];
+        :if ([:len $row] > 1) do={ :error "duplicate Wowhead routing table" };
+        :if ([:len $row] = 1) do={ :if ([/routing table get $row comment]
+        != "infra: Mullvad Wowhead routing table") do={ :error "Wowhead table has another owner" } };
+        :put ("__infra_" . "wowhead_ok__")
+    wait_for:
+      - result[0] contains __infra_wowhead_ok__
+    retries: 1
+  changed_when: false
+  tags: [always]
+
+- name: Refuse conflicting Wowhead DNS owners
+  community.routeros.command:
+    commands:
+      - >-
+        :local rows [/ip dns static find where name="{{ item }}"];
+        :if ([:len $rows] > 1) do={ :error "duplicate Wowhead DNS name" };
+        :if ([:len $rows] = 1) do={ :if ([/ip dns static get $rows comment]
+        != "infra: Mullvad Wowhead DNS {{ item }}")
+        do={ :error "Wowhead DNS name has another owner" } };
+        :put ("__infra_" . "wowhead_ok__")
+    wait_for:
+      - result[0] contains __infra_wowhead_ok__
+    retries: 1
+  loop: "{{ routeros_mullvad_wowhead.routing.domains }}"
+  changed_when: false
+  tags: [always]
+
+- name: Load the Wowhead Mullvad client private key
+  ansible.builtin.set_fact:
+    routeros_wowhead_private_key: >-
+      {{ lookup('ansible.builtin.file', routeros_mullvad_wowhead.private_key_file) | trim }}
+  no_log: true
+  tags: [never, apply, mullvad, wowhead]
+
+- name: Validate the Wowhead Mullvad client private key
+  ansible.builtin.assert:
+    that:
+      - routeros_wowhead_private_key is match('^[A-Za-z0-9+/]{43}=$')
+  no_log: true
+  tags: [never, apply, mullvad, wowhead]
+
+- name: Reconcile the Wowhead US WireGuard interface
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/interface wireguard find where name="{{ routeros_mullvad_wowhead.name }}"];
+        :if ([:len $row] = 0) do={ /interface wireguard add
+        name="{{ routeros_mullvad_wowhead.name }}" comment="infra: Mullvad Wowhead"
+        listen-port={{ routeros_mullvad_wowhead.listen_port }}
+        mtu={{ routeros_mullvad_wowhead.mtu }}
+        private-key="{{ routeros_wowhead_private_key }}" disabled=no
+        } else={ /interface wireguard set $row
+        listen-port={{ routeros_mullvad_wowhead.listen_port }}
+        mtu={{ routeros_mullvad_wowhead.mtu }}
+        private-key="{{ routeros_wowhead_private_key }}" disabled=no };
+        :put ("__infra_" . "wowhead_ok__")
+    wait_for:
+      - result[0] contains __infra_wowhead_ok__
+    retries: 1
+  no_log: true
+  tags: [never, apply, mullvad, wowhead]
+
+- name: Reconcile the Wowhead US tunnel objects
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/{{ item.menu }} find where comment="infra: Mullvad Wowhead {{ item.name }}"];
+        :if ([:len $row] > 1) do={ :error "duplicate Wowhead {{ item.name }}" };
+        :if ([:len $row] = 0) do={ /{{ item.menu }} add
+        comment="infra: Mullvad Wowhead {{ item.name }}" {{ item.settings }}
+        } else={ /{{ item.menu }} set $row {{ item.settings }} };
+        :put ("__infra_" . "wowhead_ok__")
+    wait_for:
+      - result[0] contains __infra_wowhead_ok__
+    retries: 1
+  loop:
+    - name: address
+      menu: ip address
+      settings: >-
+        address={{ routeros_mullvad_wowhead.address }}
+        interface={{ routeros_mullvad_wowhead.name }} disabled=no
+    - name: peer
+      menu: interface wireguard peers
+      settings: >-
+        interface={{ routeros_mullvad_wowhead.name }}
+        public-key="{{ routeros_mullvad_wowhead.peer.public_key }}"
+        endpoint-address={{ routeros_mullvad_wowhead.peer.endpoint_address }}
+        endpoint-port={{ routeros_mullvad_wowhead.peer.endpoint_port }}
+        allowed-address={{ routeros_mullvad_wowhead.peer.allowed_address }}
+        persistent-keepalive={{ routeros_mullvad_wowhead.peer.persistent_keepalive }} disabled=no
+    - name: routing table
+      menu: routing table
+      settings: "name={{ routeros_mullvad_wowhead.routing.table }} fib"
+    - name: default route
+      menu: ip route
+      settings: >-
+        dst-address=0.0.0.0/0 gateway={{ routeros_mullvad_wowhead.name }}
+        routing-table={{ routeros_mullvad_wowhead.routing.table }} distance=1 disabled=no
+    - name: blackhole
+      menu: ip route
+      settings: >-
+        blackhole dst-address=0.0.0.0/0
+        routing-table={{ routeros_mullvad_wowhead.routing.table }} distance=254 disabled=no
+    - name: NAT
+      menu: ip firewall nat
+      settings: >-
+        action=masquerade chain=srcnat
+        out-interface={{ routeros_mullvad_wowhead.name }}
+        connection-mark={{ routeros_mullvad_wowhead.routing.connection_mark }} disabled=no
+    - name: MSS
+      menu: ip firewall mangle
+      settings: >-
+        action=change-mss chain=forward new-mss=clamp-to-pmtu protocol=tcp tcp-flags=syn
+        out-interface={{ routeros_mullvad_wowhead.name }}
+        connection-mark={{ routeros_mullvad_wowhead.routing.connection_mark }} disabled=no
+  loop_control:
+    label: "{{ item.name }}"
+  tags: [never, apply, mullvad, wowhead]
+
+- name: Reconcile the Wowhead guard before established and WAN accepts
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/ip firewall filter find where comment="infra: Mullvad Wowhead guard"];
+        :if ([:len $row] > 1) do={ :error "duplicate Wowhead guard" };
+        :if ([:len $row] = 0) do={ /ip firewall filter add
+        comment="infra: Mullvad Wowhead guard" chain=forward action=drop
+        connection-mark={{ routeros_mullvad_wowhead.routing.connection_mark }}
+        in-interface-list={{ routeros_provider_network.lan_interface_list }}
+        out-interface=!{{ routeros_mullvad_wowhead.name }} disabled=no
+        } else={ /ip firewall filter set $row chain=forward action=drop
+        connection-mark={{ routeros_mullvad_wowhead.routing.connection_mark }}
+        in-interface-list={{ routeros_provider_network.lan_interface_list }}
+        out-interface=!{{ routeros_mullvad_wowhead.name }} disabled=no };
+        /ip firewall filter move [find where comment="infra: Mullvad Wowhead guard"]
+        destination=[find where comment="{{ routeros_mullvad_wowhead.routing.forward_entry_comment }}"];
+        :put ("__infra_" . "wowhead_ok__")
+    wait_for:
+      - result[0] contains __infra_wowhead_ok__
+    retries: 1
+  tags: [never, apply, mullvad, wowhead]
+
+- name: Track Wowhead DNS answers including subdomains
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/ip dns static find where comment="infra: Mullvad Wowhead DNS {{ item }}"];
+        :if ([:len $row] = 0) do={ /ip dns static add name="{{ item }}" type=FWD
+        match-subdomain=yes address-list={{ routeros_mullvad_wowhead.routing.destination_address_list }}
+        comment="infra: Mullvad Wowhead DNS {{ item }}" disabled=no
+        } else={ /ip dns static set $row name="{{ item }}" type=FWD
+        match-subdomain=yes address-list={{ routeros_mullvad_wowhead.routing.destination_address_list }}
+        disabled=no };
+        :put ("__infra_" . "wowhead_ok__")
+    wait_for:
+      - result[0] contains __infra_wowhead_ok__
+    retries: 1
+  loop: "{{ routeros_mullvad_wowhead.routing.domains }}"
+  tags: [never, apply, mullvad, wowhead]
+
+- name: Seed the main Wowhead hosts with automatically refreshed DNS addresses
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/ip firewall address-list find where
+        comment="infra: Mullvad Wowhead seed {{ item }}"];
+        :if ([:len $row] > 1) do={ :error "duplicate Wowhead seed" };
+        :if ([:len $row] = 0) do={ /ip firewall address-list add
+        list={{ routeros_mullvad_wowhead.routing.destination_address_list }} address="{{ item }}"
+        comment="infra: Mullvad Wowhead seed {{ item }}" disabled=no
+        } else={ /ip firewall address-list set $row
+        list={{ routeros_mullvad_wowhead.routing.destination_address_list }} address="{{ item }}" disabled=no };
+        :put ("__infra_" . "wowhead_ok__")
+    wait_for:
+      - result[0] contains __infra_wowhead_ok__
+    retries: 1
+  loop: "{{ routeros_mullvad_wowhead.routing.seed_names }}"
+  tags: [never, apply, mullvad, wowhead]
+
+- name: Reconcile and verify each Wowhead source policy
+  ansible.builtin.include_tasks:
+    file: reconcile-routeros-wowhead-source.yaml
+    apply:
+      tags: [never, apply, mullvad, wowhead]
+  loop: "{{ routeros_mullvad_wowhead.routing.sources }}"
+  loop_control:
+    loop_var: wowhead_source
+    label: "{{ wowhead_source.interface }}"
+  tags: [never, apply, mullvad, wowhead]
+
+- name: Prove the Wowhead tunnel and fail-closed objects
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/{{ item.menu }} find where comment="infra: Mullvad Wowhead {{ item.name }}"];
+        :if ([:len $row] != 1) do={ :error "Wowhead {{ item.name }} must be unique" };
+        {% for property, expected in item.properties.items() %}
+        :if ([:tostr [/{{ item.menu }} get $row {{ property }}]] != "{{ expected }}")
+        do={ :error "Wowhead {{ item.name }} {{ property }} did not reconcile" };
+        {% endfor %}
+        :put ("__infra_" . "wowhead_ok__")
+    wait_for:
+      - result[0] contains __infra_wowhead_ok__
+    retries: 1
+  loop:
+    - name: address
+      menu: ip address
+      properties:
+        interface: "{{ routeros_mullvad_wowhead.name }}"
+        address: "{{ routeros_mullvad_wowhead.address }}"
+        disabled: 'false'
+    - name: peer
+      menu: interface wireguard peers
+      properties:
+        interface: "{{ routeros_mullvad_wowhead.name }}"
+        public-key: "{{ routeros_mullvad_wowhead.peer.public_key }}"
+        endpoint-address: "{{ routeros_mullvad_wowhead.peer.endpoint_address }}"
+        endpoint-port: "{{ routeros_mullvad_wowhead.peer.endpoint_port }}"
+        allowed-address: "{{ routeros_mullvad_wowhead.peer.allowed_address }}"
+        disabled: 'false'
+    - name: routing table
+      menu: routing table
+      properties:
+        name: "{{ routeros_mullvad_wowhead.routing.table }}"
+        fib: 'true'
+    - name: default route
+      menu: ip route
+      properties:
+        routing-table: "{{ routeros_mullvad_wowhead.routing.table }}"
+        gateway: "{{ routeros_mullvad_wowhead.name }}"
+        dst-address: 0.0.0.0/0
+        disabled: 'false'
+    - name: blackhole
+      menu: ip route
+      properties:
+        routing-table: "{{ routeros_mullvad_wowhead.routing.table }}"
+        blackhole: 'true'
+        dst-address: 0.0.0.0/0
+        distance: '254'
+        disabled: 'false'
+    - name: guard
+      menu: ip firewall filter
+      properties:
+        chain: forward
+        action: drop
+        connection-mark: "{{ routeros_mullvad_wowhead.routing.connection_mark }}"
+        in-interface-list: "{{ routeros_provider_network.lan_interface_list }}"
+        out-interface: "!{{ routeros_mullvad_wowhead.name }}"
+        disabled: 'false'
+    - name: NAT
+      menu: ip firewall nat
+      properties:
+        chain: srcnat
+        action: masquerade
+        out-interface: "{{ routeros_mullvad_wowhead.name }}"
+        connection-mark: "{{ routeros_mullvad_wowhead.routing.connection_mark }}"
+        disabled: 'false'
+    - name: MSS
+      menu: ip firewall mangle
+      properties:
+        chain: forward
+        action: change-mss
+        new-mss: clamp-to-pmtu
+        protocol: tcp
+        tcp-flags: syn
+        out-interface: "{{ routeros_mullvad_wowhead.name }}"
+        connection-mark: "{{ routeros_mullvad_wowhead.routing.connection_mark }}"
+        disabled: 'false'
+  loop_control:
+    label: "{{ item.name }}"
+  changed_when: false
+  tags: [never, apply, mullvad, wowhead]
+
+- name: Prove the Wowhead DNS tracking and guard placement
+  community.routeros.command:
+    commands:
+      - >-
+        :if ([:len [/ip dns static find where
+        comment="infra: Mullvad Wowhead DNS {{ item }}" and name="{{ item }}" and
+        type=FWD and match-subdomain=yes and
+        address-list={{ routeros_mullvad_wowhead.routing.destination_address_list }} and
+        disabled=no]] != 1) do={ :error "Wowhead DNS tracking did not reconcile" };
+        :local guarded false;
+        :foreach row in=[/ip firewall filter find] do={
+        :if ([/ip firewall filter get $row comment] = "infra: Mullvad Wowhead guard")
+        do={ :set guarded true };
+        :if ([/ip firewall filter get $row comment] =
+        "{{ routeros_mullvad_wowhead.routing.forward_entry_comment }}" and !$guarded)
+        do={ :error "Wowhead guard must precede established and WAN accepts" } };
+        :put ("__infra_" . "wowhead_ok__")
+    wait_for:
+      - result[0] contains __infra_wowhead_ok__
+    retries: 1
+  loop: "{{ routeros_mullvad_wowhead.routing.domains }}"
+  changed_when: false
+  tags: [never, apply, mullvad, wowhead]

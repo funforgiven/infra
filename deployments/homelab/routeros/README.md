@@ -118,6 +118,37 @@ are declared in inventory. If OTOTOY's public address changes, update the
 inventory destination and recheck DNS, the WireGuard handshake, HTTPS, and
 the observed Japanese exit before applying the new `/32`.
 
+## Wowhead Mullvad egress
+
+`wg-mullvad-us` uses the New York `us-nyc-wg-301` exit and the
+`mullvad-wowhead` routing table for IPv4 Wowhead traffic from TRUSTED VLAN 10
+(`10.21.10.0/24`) and HOUSEMATE VLAN 70 (`10.21.70.0/24`). It reuses the
+registered Mullvad device key and tunnel address with a separate local UDP
+port and server peer. The Japan tunnel continues to serve OTOTOY independently.
+
+Wowhead uses changing CDN addresses. RouterOS DNS `FWD` records for
+`wowhead.com` and `wow.zamimg.com`, including subdomains, populate the
+`infra-wowhead` address list from DNS answers. FQDN address-list entries also
+refresh the apex, `www`, `nether`, and asset host without waiting for client
+queries. Clients should use their VLAN gateway for DNS; encrypted or external
+DNS can return different CDN addresses that the router has not learned.
+The rules match destination IP addresses, so another hostname sharing an address
+in the list also uses the US exit from these two VLANs.
+
+Each VLAN's classifier checks both its ingress interface and source subnet.
+Connection marks keep active sessions on the US route across DNS expiry;
+outbound NAT and TCP MSS clamping apply to those marked connections. A backup
+blackhole default route and an early forward guard prevent marked connections
+from falling back to the ISP if the tunnel route disappears. Other VLANs and
+destinations keep their normal routing. Existing browser connections must
+reconnect to pick up the new policy.
+
+Inspect with the default read-only run and apply only this egress with
+`--limit core_router --tags wowhead`. Verify the US peer's handshake, the
+resolved address list, HTTPS to both the site and asset host, and the two VLANs'
+classifier/routing counters. The preflight refuses active FastTrack rules,
+which would bypass this policy.
+
 ## Remote administration
 
 Native MikroTik WireGuard is the infrastructure recovery path. Keep its client
@@ -180,7 +211,9 @@ ansible-playbook reconcile-routeros.yaml --limit core_router --tags apply
 ```
 
 Use `--limit core_router --tags mullvad` to select only the destination-scoped
-Mullvad objects while keeping the standard read-only CCR preflight.
+Mullvad objects while keeping the standard read-only CCR preflight. Use
+`--limit core_router --tags wowhead` to select just the US Wowhead egress for
+TRUSTED and HOUSEMATE.
 Use `--limit core_router --tags lan-ports` to reconcile the CCR bridge VLANs,
 the Omada trunks (ports 15 and 2), direct AP ports, and the housemate network and access
 ports after the read-only preflight. This tag enables writes; omit it for

@@ -805,6 +805,9 @@
     - name: Reconcile the Mullvad OTOTOY egress
       ansible.builtin.import_tasks: tasks/reconcile-routeros-mullvad.yaml
 
+    - name: Reconcile the Mullvad Wowhead egress
+      ansible.builtin.import_tasks: tasks/reconcile-routeros-wowhead.yaml
+
     - name: Reconcile the external provider network
       community.routeros.command:
         commands:

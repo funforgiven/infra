@@ -24,7 +24,8 @@ objects absent from its input.
   UniFi controller discovery through DHCP option 43;
 - the private `cloud.fahrican.com` DNS forward and exact `unifi` controller A record;
 - the `wg-admin` interface and its limited firewall rules;
-- the Mullvad route used only for OTOTOY from trusted VLAN 10;
+- the Japan Mullvad route for OTOTOY from trusted VLAN 10 and the US Mullvad
+  route for Wowhead from trusted VLAN 10 and HOUSEMATE VLAN 70;
 - the Factorio/Valheim UDP and Syncthing TCP/QUIC destination NAT and matching
   destination-specific forward-filter rules;
 - the Factorio provider-to-WAN UDP discovery source-port pin, ordered before

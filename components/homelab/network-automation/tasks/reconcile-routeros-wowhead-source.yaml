@@ -1,0 +1,155 @@
+---
+# Install the connection classifier last, after its route and packet rules exist.
+- name: Reconcile the Wowhead VLAN forward and routing rules
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/{{ item.menu }} find where
+        comment="infra: Mullvad Wowhead {{ wowhead_source.interface }} {{ item.name }}"];
+        :if ([:len $row] > 1) do={ :error "duplicate Wowhead {{ item.name }}" };
+        :if ([:len $row] = 0) do={ /{{ item.menu }} add
+        comment="infra: Mullvad Wowhead {{ wowhead_source.interface }} {{ item.name }}"
+        {{ item.settings }} disabled=no
+        } else={ /{{ item.menu }} set $row {{ item.settings }} disabled=no };
+        :put ("__infra_" . "wowhead_ok__")
+    wait_for:
+      - result[0] contains __infra_wowhead_ok__
+    retries: 1
+  loop:
+    - name: forward
+      menu: ip firewall filter
+      settings: >-
+        chain={{ routeros_mullvad_wowhead.routing.forward_chain }} action=accept
+        in-interface={{ wowhead_source.interface }} src-address={{ wowhead_source.network }}
+        out-interface={{ routeros_mullvad_wowhead.name }}
+        connection-mark={{ routeros_mullvad_wowhead.routing.connection_mark }}
+    - name: routing
+      menu: ip firewall mangle
+      settings: >-
+        chain=prerouting action=mark-routing passthrough=no
+        in-interface={{ wowhead_source.interface }} src-address={{ wowhead_source.network }}
+        connection-mark={{ routeros_mullvad_wowhead.routing.connection_mark }}
+        new-routing-mark={{ routeros_mullvad_wowhead.routing.table }}
+  loop_control:
+    label: "{{ wowhead_source.interface }} {{ item.name }}"
+
+- name: Place the Wowhead VLAN forward rule before the final drop
+  community.routeros.command:
+    commands:
+      - >-
+        /ip firewall filter move [find where
+        comment="infra: Mullvad Wowhead {{ wowhead_source.interface }} forward"]
+        destination=[find where
+        comment="{{ routeros_mullvad_wowhead.routing.forward_final_drop_comment }}"];
+        :put ("__infra_" . "wowhead_ok__")
+    wait_for:
+      - result[0] contains __infra_wowhead_ok__
+    retries: 1
+
+- name: Activate the Wowhead VLAN connection classifier last
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/ip firewall mangle find where
+        comment="infra: Mullvad Wowhead {{ wowhead_source.interface }} connections"];
+        :if ([:len $row] > 1) do={ :error "duplicate Wowhead connection classifier" };
+        :if ([:len $row] = 0) do={ /ip firewall mangle add
+        comment="infra: Mullvad Wowhead {{ wowhead_source.interface }} connections"
+        chain=prerouting action=mark-connection passthrough=yes
+        in-interface={{ wowhead_source.interface }} src-address={{ wowhead_source.network }}
+        dst-address-list={{ routeros_mullvad_wowhead.routing.destination_address_list }}
+        dst-address-type=!local connection-state=new connection-mark=no-mark
+        new-connection-mark={{ routeros_mullvad_wowhead.routing.connection_mark }} disabled=no
+        } else={ /ip firewall mangle set $row
+        chain=prerouting action=mark-connection passthrough=yes
+        in-interface={{ wowhead_source.interface }} src-address={{ wowhead_source.network }}
+        dst-address-list={{ routeros_mullvad_wowhead.routing.destination_address_list }}
+        dst-address-type=!local connection-state=new connection-mark=no-mark
+        new-connection-mark={{ routeros_mullvad_wowhead.routing.connection_mark }} disabled=no };
+        /ip firewall mangle move [find where
+        comment="infra: Mullvad Wowhead {{ wowhead_source.interface }} connections"]
+        destination=[find where
+        comment="infra: Mullvad Wowhead {{ wowhead_source.interface }} routing"];
+        :put ("__infra_" . "wowhead_ok__")
+    wait_for:
+      - result[0] contains __infra_wowhead_ok__
+    retries: 1
+
+- name: Prove the Wowhead VLAN classifier and routing scope
+  community.routeros.command:
+    commands:
+      - >-
+        :local row [/{{ item.menu }} find where
+        comment="infra: Mullvad Wowhead {{ wowhead_source.interface }} {{ item.name }}"];
+        :if ([:len $row] != 1) do={ :error "Wowhead {{ item.name }} must be unique" };
+        {% for property, expected in item.properties.items() %}
+        :if ([:tostr [/{{ item.menu }} get $row {{ property }}]] != "{{ expected }}")
+        do={ :error "Wowhead {{ item.name }} {{ property }} did not reconcile" };
+        {% endfor %}
+        :put ("__infra_" . "wowhead_ok__")
+    wait_for:
+      - result[0] contains __infra_wowhead_ok__
+    retries: 1
+  loop:
+    - name: connections
+      menu: ip firewall mangle
+      properties:
+        chain: prerouting
+        action: mark-connection
+        in-interface: "{{ wowhead_source.interface }}"
+        src-address: "{{ wowhead_source.network }}"
+        dst-address-list: "{{ routeros_mullvad_wowhead.routing.destination_address_list }}"
+        connection-state: new
+        connection-mark: no-mark
+        new-connection-mark: "{{ routeros_mullvad_wowhead.routing.connection_mark }}"
+        disabled: 'false'
+    - name: routing
+      menu: ip firewall mangle
+      properties:
+        chain: prerouting
+        action: mark-routing
+        passthrough: 'false'
+        in-interface: "{{ wowhead_source.interface }}"
+        src-address: "{{ wowhead_source.network }}"
+        connection-mark: "{{ routeros_mullvad_wowhead.routing.connection_mark }}"
+        new-routing-mark: "{{ routeros_mullvad_wowhead.routing.table }}"
+        disabled: 'false'
+    - name: forward
+      menu: ip firewall filter
+      properties:
+        chain: "{{ routeros_mullvad_wowhead.routing.forward_chain }}"
+        action: accept
+        in-interface: "{{ wowhead_source.interface }}"
+        src-address: "{{ wowhead_source.network }}"
+        out-interface: "{{ routeros_mullvad_wowhead.name }}"
+        connection-mark: "{{ routeros_mullvad_wowhead.routing.connection_mark }}"
+        disabled: 'false'
+  loop_control:
+    label: "{{ wowhead_source.interface }} {{ item.name }}"
+  changed_when: false
+
+- name: Prove the Wowhead VLAN rule order
+  community.routeros.command:
+    commands:
+      - >-
+        :local classified false;
+        :foreach row in=[/ip firewall mangle find] do={
+        :if ([/ip firewall mangle get $row comment] =
+        "infra: Mullvad Wowhead {{ wowhead_source.interface }} connections")
+        do={ :set classified true };
+        :if ([/ip firewall mangle get $row comment] =
+        "infra: Mullvad Wowhead {{ wowhead_source.interface }} routing" and !$classified)
+        do={ :error "Wowhead classifier must precede routing mark" } };
+        :local admitted false;
+        :foreach row in=[/ip firewall filter find] do={
+        :if ([/ip firewall filter get $row comment] =
+        "infra: Mullvad Wowhead {{ wowhead_source.interface }} forward")
+        do={ :set admitted true };
+        :if ([/ip firewall filter get $row comment] =
+        "{{ routeros_mullvad_wowhead.routing.forward_final_drop_comment }}" and !$admitted)
+        do={ :error "Wowhead VLAN forward must precede final drop" } };
+        :put ("__infra_" . "wowhead_ok__")
+    wait_for:
+      - result[0] contains __infra_wowhead_ok__
+    retries: 1
+  changed_when: false
