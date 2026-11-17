@@ -12,5 +12,5 @@ tags:
   - networking
   - routeros
 dependencies:
-  ansible.netcommon: "8.6.2"
-  community.routeros: "3.22.0"
+  ansible.netcommon: "8.7.1"
+  community.routeros: "3.23.0"

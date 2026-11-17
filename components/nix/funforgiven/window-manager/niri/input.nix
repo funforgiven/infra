@@ -3,20 +3,6 @@ let
   physicalLayout = config.dendritic.input.physicalXkbLayout;
 in
 {
-  config.dendritic.nixpkgs.overlays = [
-    (_final: prev: {
-      mozc = prev.mozc.overrideAttrs (previous: {
-        postPatch = (previous.postPatch or "") + ''
-          # Qt 6.12 rejects a leading namespace separator in custom widget names.
-          # https://github.com/google/mozc/issues/1594
-          substituteInPlace src/gui/dictionary_tool/dictionary_tool.ui \
-            --replace-fail '::mozc::gui::DictionaryContentTableWidget' \
-              'mozc::gui::DictionaryContentTableWidget'
-        '';
-      });
-    })
-  ];
-
   config.home.gui =
     {
       config,
