@@ -228,6 +228,7 @@ async def serve(config_file, state):
     failures = 0
     last_delivery = 0
     unapproved_devices = 0
+    last_canary = 0
     stopping = asyncio.Event()
     wake = asyncio.Event()
     state_lock = asyncio.Lock()
@@ -271,6 +272,7 @@ async def serve(config_file, state):
         text = f"matrix_relay_queue_depth {count}\nmatrix_relay_oldest_seconds {age}\n"
         text += f"matrix_relay_delivery_failures_total {failures}\nmatrix_relay_last_delivery_seconds {last_delivery}\n"
         text += f"matrix_relay_unapproved_devices {unapproved_devices}\n"
+        text += f"matrix_relay_last_canary_seconds {last_canary}\n"
         return web.Response(text=text, content_type="text/plain")
 
     async def backup(_request):
@@ -324,7 +326,8 @@ async def serve(config_file, state):
             if delivered:
                 queue.checkpoint()
 
-    async def heartbeat(settings):
+    async def canary(settings):
+        nonlocal last_canary
         room = settings["canary_room_id"]
         check_room(client, room, [client.user_id], {})
         response = await client.room_send(
@@ -335,18 +338,7 @@ async def serve(config_file, state):
         )
         if not isinstance(response, RoomSendResponse):
             raise ValueError("encrypted canary failed")
-        from aiohttp import ClientSession
-
-        target = settings.get("heartbeat")
-        if not target:
-            raise ValueError("independent heartbeat not enrolled")
-        async with ClientSession() as session:
-            async with session.post(
-                target["url"],
-                headers={"Authorization": "Bearer " + target["token"]},
-            ) as response:
-                if response.status != 202:
-                    raise ValueError("independent heartbeat rejected")
+        last_canary = time.time()
 
     def members(settings):
         return {
@@ -356,7 +348,6 @@ async def serve(config_file, state):
 
     async def deliver():
         nonlocal client, failures
-        heartbeat_at = 0
         syncing = None
         members_stale = True
         while not stopping.is_set():
@@ -420,9 +411,8 @@ async def serve(config_file, state):
                     members_stale = members_stale or members(settings) != before
                     await drain(settings, members_stale)
                     members_stale = False
-                    if time.time() - heartbeat_at >= 60:
-                        await heartbeat(settings)
-                        heartbeat_at = time.time()
+                    if time.time() - last_canary >= 60:
+                        await canary(settings)
 
             except Exception as error:
                 failures += 1

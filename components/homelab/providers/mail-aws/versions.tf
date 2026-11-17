@@ -2,6 +2,7 @@ terraform {
   required_version = ">= 1.12.1, < 2.0.0"
 
   required_providers {
+    # Decode the retired Matrix archive data source in existing provider state.
     archive = {
       source  = "hashicorp/archive"
       version = "= 2.7.1"

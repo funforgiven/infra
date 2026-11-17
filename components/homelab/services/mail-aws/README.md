@@ -31,6 +31,76 @@ This deployment accepts a maintenance window instead of paying for Multi-AZ
 RDS. If the availability requirement changes, enable Multi-AZ RDS before adding
 another Stalwart node.
 
+## Pause and resume
+
+Mail is paused by default. The checked-in, non-secret inputs are
+`deployments/homelab/credentials/mail-aws/deployment.json` and
+`deployments/homelab/credentials/mail-dns-inputs.json`; pass the respective file
+with `-var-file` when planning each provider. The AWS inputs retain the source
+revision, AMI and recovery snapshot name needed to resume without guessing.
+
+`mail_enabled = false` removes EC2 (including its root disk), RDS, the Elastic IP
+and all mail CloudWatch alarms. It keeps the versioned S3 bucket, six runtime
+secret containers, IAM and the network. RDS always takes a final snapshot before
+deletion. Remaining charges are S3, RDS snapshot storage, Secrets Manager and
+existing offsite backup storage; there are no mail instance hours, EBS volumes,
+public IPv4 addresses or active mail alarms. The six runtime secrets have a
+list price of $2.40/month before API requests; this mode is near zero, not free.
+The AWS account owns mail resources only; Matrix monitoring belongs to the
+homelab.
+
+Use the existing encrypted provider state following the
+[provider workflow](../../providers/README.md). Keep the original AMI and signed
+source revision inputs in a private variable file. Never apply from empty state.
+Pausing is an intentional retirement of the running resources, rather than an
+AWS stop/start operation. Resuming creates a new host and public IP.
+
+1. While mail is still enabled, set `allow_runtime_destroy = true` and choose a
+   new `final_snapshot_identifier`, for example `stalwart-mail-paused-20261117`.
+   Review and apply this preparation plan so AWS clears RDS deletion protection.
+   The database remains available. The default for this permission is `false`.
+2. Run `mail-backup.service` and `mail-restore-check.service` on the host and
+   verify both succeeded. Preserve the SOPS recovery identity and credentials.
+   The final RDS snapshot plus the retained S3 bucket preserves the entire server;
+   the portable archive separately covers the mailbox named in the backup policy.
+3. Stop the mail operation timers and Stalwart to freeze writes. Set
+   `mail_enabled = false` in the Cloudflare DNS root and review/apply its plan
+   before releasing the EIP. This removes the public mail A records, publishes
+   Null MX (`0 .`) to decline incoming mail, removes mail transport policies and
+   changes the apex SPF to deny direct sending. Resend verification records and
+   other services remain independent.
+4. Set `mail_enabled = false` in this AWS root, keeping
+   `allow_runtime_destroy = true` and the chosen snapshot identifier. Review the
+   saved plan: it must keep S3, its policies, versioning and secrets. Apply that
+   plan and verify the final RDS snapshot is `available`. Persist the updated
+   state encrypted and keep the snapshot identifier in the deployment inputs.
+5. Suspend the homelab mail probes while paused to avoid expected downtime
+   alerts. Remove the retired AWS Matrix resources and the separate
+   `fahrican-matrix-monitoring-gitops` policy after rolling out the Matrix relay
+   script and local monitoring rule; its encrypted canary is monitored by
+   homelab Prometheus instead.
+
+The AWS plan will also remove the old Matrix Lambda, URL, scheduler, alarms,
+log group, role and heartbeat secret if they are present in existing state.
+There is no Matrix enrollment option in the mail root.
+
+To resume, set `mail_enabled = true`, `allow_runtime_destroy = false` and
+`restore_snapshot_identifier` to the saved final snapshot. Keep the original
+S3 bucket and secret containers. Ensure the provisioning IAM policy includes
+the snapshot-restore permission in `bootstrap-iam-policy.json`. Review/apply the
+plan, verify bootstrap and mailbox contents, then set the DNS root's
+`mail_enabled = true` and
+`mail_ipv4_address` to the new EIP. Update both WireGuard endpoint inventories,
+restore homelab mail probes and enable reverse DNS only after forward DNS has
+propagated. A null restore identifier initializes an empty database and must not
+be used to resume existing mail. The restore identifier is ignored after database
+creation so removing that creation-time input cannot replace the live database.
+
+Use a new final snapshot name on every subsequent pause; retained snapshots are
+outside this root's resource lifecycle and must be accounted for separately.
+To restore the homelab mail probes, add `mail-probes.yaml` back to
+`deployments/homelab/cluster/infrastructure/synthetic-monitoring/kustomization.yaml`.
+
 ## Credentials
 
 OpenTofu creates Secrets Manager containers but never creates secret versions

@@ -21,7 +21,7 @@ import urllib.error
 from pathlib import Path
 
 import yaml
-from aiohttp import ClientSession, web
+from aiohttp import ClientSession
 from nio import (
     AsyncClient,
     AsyncClientConfig,
@@ -49,20 +49,7 @@ async def qualify_relay(directory, bot, owner, token, room, decrypted, proxy_por
         ],
     )
     assert isinstance(canary, RoomCreateResponse)
-    heartbeat_port, intake_port, backup_port = [port() for _ in range(3)]
-    heartbeat_seen = asyncio.Event()
-
-    async def heartbeat(request):
-        if request.headers.get("Authorization") != "Bearer synthetic-heartbeat":
-            raise web.HTTPUnauthorized()
-        heartbeat_seen.set()
-        return web.Response(status=202)
-
-    application = web.Application()
-    application.router.add_post("/heartbeat", heartbeat)
-    runner = web.AppRunner(application, access_log=None)
-    await runner.setup()
-    await web.TCPSite(runner, "127.0.0.1", heartbeat_port).start()
+    intake_port, backup_port = [port() for _ in range(2)]
     configuration = {
         "homeserver": f"http://127.0.0.1:{proxy_port}",
         "user_id": bot.user_id,
@@ -80,10 +67,6 @@ async def qualify_relay(directory, bot, owner, token, room, decrypted, proxy_por
                 "paths": ["/alertmanager"],
                 "token": "synthetic-alertmanager",
             },
-        },
-        "heartbeat": {
-            "url": f"http://127.0.0.1:{heartbeat_port}/heartbeat",
-            "token": "synthetic-heartbeat",
         },
     }
     config_file = directory / "relay.json"
@@ -183,13 +166,24 @@ async def qualify_relay(directory, bot, owner, token, room, decrypted, proxy_por
             print(
                 "PASS: changing Alertmanager annotations decrypt as distinct updates and exact retries deduplicate"
             )
-            await asyncio.wait_for(heartbeat_seen.wait(), timeout=15)
+            for _ in range(150):
+                async with session.get(
+                    f"http://127.0.0.1:{intake_port}/metrics"
+                ) as response:
+                    metrics = dict(
+                        line.split() for line in (await response.text()).splitlines()
+                    )
+                if float(metrics["matrix_relay_last_canary_seconds"]) > 0:
+                    break
+                await asyncio.sleep(0.1)
+            else:
+                raise RuntimeError("encrypted delivery canary did not succeed")
             async with session.post(
                 f"http://127.0.0.1:{backup_port}/snapshot"
             ) as response:
                 assert response.status == 200
             print(
-                "PASS: production relay HTTP intake, scoped authentication, deduplication, recipient decryption, encrypted heartbeat and snapshot"
+                "PASS: production relay HTTP intake, scoped authentication, deduplication, recipient decryption, encrypted canary and snapshot"
             )
     finally:
         process.terminate()
@@ -198,7 +192,6 @@ async def qualify_relay(directory, bot, owner, token, room, decrypted, proxy_por
         except subprocess.TimeoutExpired:
             process.kill()
             process.communicate()
-        await runner.cleanup()
 
 
 def port():

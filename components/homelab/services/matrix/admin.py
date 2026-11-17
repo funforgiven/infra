@@ -526,89 +526,6 @@ def configure_alerting(args):
     rollout_file.write_text(json.dumps(rollout, indent=2) + "\n")
 
 
-def aws_client(service):
-    import boto3
-
-    source = encrypted_inputs.values(
-        load_secret(Path("deployments/homelab/credentials/mail-aws/aws.sops.yaml"))
-    )
-    return boto3.client(
-        service,
-        region_name="eu-central-1",
-        aws_access_key_id=source["AWS_ACCESS_KEY_ID"],
-        aws_secret_access_key=source["AWS_SECRET_ACCESS_KEY"],
-    )
-
-
-def sync_monitoring_policy(args):
-    import boto3
-    from botocore.exceptions import ClientError
-    from urllib.parse import unquote
-
-    session = boto3.Session(profile_name=args.aws_profile)
-    account = session.client("sts").get_caller_identity()["Account"]
-    if account != aws_client("sts").get_caller_identity()["Account"]:
-        raise ValueError("administrative session must use the enrolled AWS account")
-    desired = json.loads(
-        Path("components/homelab/services/mail-aws/matrix-iam-policy.json")
-        .read_text()
-        .replace("ACCOUNT_ID", account)
-    )
-    iam = session.client("iam")
-    arn = f"arn:aws:iam::{account}:policy/fahrican-matrix-monitoring-gitops"
-    try:
-        version = iam.get_policy(PolicyArn=arn)["Policy"]["DefaultVersionId"]
-    except ClientError as error:
-        if error.response["Error"]["Code"] != "NoSuchEntity":
-            raise
-        iam.create_policy(
-            PolicyName="fahrican-matrix-monitoring-gitops",
-            PolicyDocument=json.dumps(desired),
-        )
-        iam.attach_user_policy(UserName="fahrican-mail-gitops", PolicyArn=arn)
-        print(
-            "Enrolled the scoped Matrix monitoring policy; existing access keys retained."
-        )
-        return
-    current = iam.get_policy_version(PolicyArn=arn, VersionId=version)["PolicyVersion"][
-        "Document"
-    ]
-    if isinstance(current, str):
-        current = json.loads(unquote(current))
-    if current == desired:
-        iam.attach_user_policy(UserName="fahrican-mail-gitops", PolicyArn=arn)
-        return
-    versions = iam.list_policy_versions(PolicyArn=arn)["Versions"]
-    if len(versions) >= 5:
-        oldest = min(
-            (item for item in versions if not item["IsDefaultVersion"]),
-            key=lambda item: item["CreateDate"],
-        )
-        iam.delete_policy_version(PolicyArn=arn, VersionId=oldest["VersionId"])
-    iam.create_policy_version(
-        PolicyArn=arn, PolicyDocument=json.dumps(desired), SetAsDefault=True
-    )
-    iam.attach_user_policy(UserName="fahrican-mail-gitops", PolicyArn=arn)
-    print("Updated the scoped Matrix monitoring policy; existing access keys retained.")
-
-
-def enroll_monitoring(args):
-    outputs = provider_values("mail-aws")
-    url = outputs["matrix_heartbeat_url"]
-    arn = outputs["matrix_heartbeat_secret_arn"]
-    if not re.fullmatch(r"https://[a-z0-9]+\.lambda-url\.eu-central-1\.on\.aws/", url):
-        raise ValueError("monitoring URL is not enrolled")
-    target = DEPLOYMENT / "runtime.sops.yaml"
-    document = load_secret(target)
-    relay = json.loads(document["stringData"]["relay.json"])
-    token = relay.get("heartbeat", {}).get("token") or secrets.token_urlsafe(32)
-    # Credential material stays in boto3's HTTPS request; never pass it to OpenTofu.
-    aws_client("secretsmanager").put_secret_value(SecretId=arn, SecretString=token)
-    relay["heartbeat"] = {"url": url + "heartbeat", "token": token}
-    document["stringData"]["relay.json"] = json.dumps(relay)
-    save_secret(target, document)
-
-
 def activate():
     document = load_secret(DEPLOYMENT / "runtime.sops.yaml")
     providers = yaml.safe_load(document["stringData"]["mas.yaml"])["upstream_oauth2"][
@@ -651,17 +568,6 @@ def qualify(args):
             status = error.code
         if status != expected:
             raise ValueError("public route qualification failed")
-    cloudwatch = aws_client("cloudwatch")
-    alarms = cloudwatch.describe_alarms(
-        AlarmNames=[
-            "stalwart-matrix-public-unavailable",
-            "stalwart-matrix-delivery-stalled",
-        ]
-    )["MetricAlarms"]
-    if len(alarms) != 2 or any(
-        alarm["StateValue"] != "OK" or not alarm["ActionsEnabled"] for alarm in alarms
-    ):
-        raise ValueError("external availability and delivery checks are not healthy")
     jobs = json.loads(
         run(
             [
@@ -840,9 +746,6 @@ def main():
     publication.add_argument("image", type=Path)
     dns = sub.add_parser("configure-dns")
     dns.add_argument("--wan-ipv4", required=True)
-    sub.add_parser("enroll-monitoring")
-    monitoring_policy = sub.add_parser("sync-monitoring-policy")
-    monitoring_policy.add_argument("--aws-profile", default="default")
     qualification = sub.add_parser("qualify")
     qualification.add_argument(
         "--kubeconfig", dest="cluster_kubeconfig", default=os.environ.get("KUBECONFIG")
@@ -868,10 +771,6 @@ def main():
         publish(args)
     elif args.command == "activate":
         activate()
-    elif args.command == "enroll-monitoring":
-        enroll_monitoring(args)
-    elif args.command == "sync-monitoring-policy":
-        sync_monitoring_policy(args)
     elif args.command == "qualify":
         qualify(args)
     elif args.command == "retire-telegram":

@@ -74,6 +74,7 @@
         "rds:ModifyDBInstance",
         "rds:ModifyDBSubnetGroup",
         "rds:RemoveTagsFromResource",
+        "rds:RestoreDBInstanceFromDBSnapshot",
         "sns:CreateTopic",
         "sns:DeleteTopic",
         "sns:GetTopicAttributes",

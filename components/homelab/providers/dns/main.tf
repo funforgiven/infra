@@ -11,12 +11,19 @@ terraform {
 
 provider "cloudflare" {}
 
+variable "mail_enabled" {
+  description = "Publish the live mail endpoint; false publishes a Null MX while mail is paused"
+  type        = bool
+  default     = false
+}
+
 variable "mail_ipv4_address" {
   description = "Stable public IPv4 address of the active mail origin"
   type        = string
+  default     = null
 
   validation {
-    condition = can(cidrhost("${var.mail_ipv4_address}/32", 0)) && !contains([
+    condition = var.mail_ipv4_address == null ? !var.mail_enabled : can(cidrhost("${var.mail_ipv4_address}/32", 0)) && !contains([
       "0.0.0.0",
       "192.0.2.255",
     ], var.mail_ipv4_address)
@@ -86,7 +93,7 @@ resource "cloudflare_dns_record" "private_services" {
 }
 
 resource "cloudflare_dns_record" "mail_hosts" {
-  for_each = local.mail_hosts
+  for_each = var.mail_enabled ? local.mail_hosts : toset([])
 
   zone_id = data.cloudflare_zone.fahrican.zone_id
   name    = "${each.key}.fahrican.com"
@@ -111,10 +118,10 @@ resource "cloudflare_dns_record" "mail_exchange" {
   zone_id  = data.cloudflare_zone.fahrican.zone_id
   name     = "fahrican.com"
   type     = "MX"
-  content  = "mail.fahrican.com"
-  priority = 10
+  content  = var.mail_enabled ? "mail.fahrican.com" : "."
+  priority = var.mail_enabled ? 10 : 0
   ttl      = 300
-  comment  = "Git-managed inbound mail route"
+  comment  = var.mail_enabled ? "Git-managed inbound mail route" : "Mail paused; Null MX explicitly declines inbound mail"
 }
 
 resource "cloudflare_dns_record" "dmarc" {
@@ -127,6 +134,10 @@ resource "cloudflare_dns_record" "dmarc" {
 }
 
 resource "cloudflare_dns_record" "mta_sts" {
+  lifecycle {
+    enabled = var.mail_enabled
+  }
+
   zone_id = data.cloudflare_zone.fahrican.zone_id
   name    = "_mta-sts.fahrican.com"
   type    = "TXT"
@@ -136,6 +147,10 @@ resource "cloudflare_dns_record" "mta_sts" {
 }
 
 resource "cloudflare_dns_record" "tls_reports" {
+  lifecycle {
+    enabled = var.mail_enabled
+  }
+
   zone_id = data.cloudflare_zone.fahrican.zone_id
   name    = "_smtp._tls.fahrican.com"
   type    = "TXT"
@@ -156,6 +171,10 @@ resource "cloudflare_dns_record" "stalwart_dkim" {
 }
 
 resource "cloudflare_dns_record" "mail_spf" {
+  lifecycle {
+    enabled = var.mail_enabled
+  }
+
   zone_id = data.cloudflare_zone.fahrican.zone_id
   name    = "mail.fahrican.com"
   type    = "TXT"
@@ -168,7 +187,7 @@ resource "cloudflare_dns_record" "apex_spf" {
   zone_id = data.cloudflare_zone.fahrican.zone_id
   name    = "fahrican.com"
   type    = "TXT"
-  content = "v=spf1 mx -all"
+  content = var.mail_enabled ? "v=spf1 mx -all" : "v=spf1 -all"
   ttl     = 300
   comment = "Git-managed Stalwart domain SPF policy"
 }
@@ -197,5 +216,5 @@ output "services_gateway_address" {
 
 output "mail_ipv4_address" {
   description = "Public mail address published by this root"
-  value       = var.mail_ipv4_address
+  value       = var.mail_enabled ? var.mail_ipv4_address : null
 }

@@ -2,13 +2,16 @@ resource "aws_sns_topic" "mail_alerts" {
   name = "stalwart-mail-alerts"
 }
 
-# Keep CloudWatch alarms and their topic, without an email subscription.
-# Infrastructure notifications are delivered through Matrix.
+# Mail alarms exist only while mail is running. This stack owns no Matrix checks.
 
 # EC2 stops publishing an old instance dimension while create-before-destroy
 # replacement changes IDs. Absence is not a failed status check; only an
 # observed StatusCheckFailed sample should notify.
 resource "aws_cloudwatch_metric_alarm" "instance_status" {
+  lifecycle {
+    enabled = var.mail_enabled
+  }
+
   alarm_name          = "stalwart-mail-instance-status"
   alarm_description   = "The Stalwart EC2 instance failed an AWS status check"
   comparison_operator = "GreaterThanOrEqualToThreshold"
@@ -28,6 +31,10 @@ resource "aws_cloudwatch_metric_alarm" "instance_status" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "database_cpu" {
+  lifecycle {
+    enabled = var.mail_enabled
+  }
+
   alarm_name          = "stalwart-mail-database-cpu"
   alarm_description   = "The Stalwart RDS instance has sustained high CPU"
   comparison_operator = "GreaterThanThreshold"
@@ -47,6 +54,10 @@ resource "aws_cloudwatch_metric_alarm" "database_cpu" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "database_storage" {
+  lifecycle {
+    enabled = var.mail_enabled
+  }
+
   alarm_name          = "stalwart-mail-database-free-storage"
   alarm_description   = "The Stalwart RDS instance has less than 5 GiB free"
   comparison_operator = "LessThanThreshold"
@@ -111,7 +122,7 @@ locals {
 }
 
 resource "aws_cloudwatch_metric_alarm" "mail_health" {
-  for_each            = local.mail_health_alarms
+  for_each            = var.mail_enabled ? local.mail_health_alarms : {}
   alarm_name          = "stalwart-mail-${each.key}"
   alarm_description   = each.value.description
   comparison_operator = each.value.comparison

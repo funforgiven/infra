@@ -50,6 +50,13 @@ spec:
         severity: critical
       annotations:
         summary: Matrix alert relay is unavailable
+    - alert: MatrixRelayCanaryStale
+      expr: time() - matrix_relay_last_canary_seconds > 300
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: Matrix encrypted delivery canary has not succeeded within five minutes
     - alert: MatrixStorageCapacity
       expr: kubelet_volume_stats_available_bytes{namespace="matrix"} / kubelet_volume_stats_capacity_bytes{namespace="matrix"}
         < 0.2

@@ -7,7 +7,6 @@ _: {
         ps.pyyaml
         ps.aiohttp
         (ps.matrix-nio.override { withVodozemac = true; })
-        ps.boto3
       ]);
       accessPython = pkgs.python3.withPackages (ps: [
         ps.pyyaml

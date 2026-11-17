@@ -1,4 +1,8 @@
 data "aws_ami" "nixos" {
+  lifecycle {
+    enabled = var.mail_enabled
+  }
+
   owners = ["427812963091"]
 
   filter {
@@ -50,6 +54,10 @@ resource "aws_iam_role_policy_attachment" "ssm" {
 }
 
 data "aws_iam_policy_document" "mail" {
+  lifecycle {
+    enabled = var.mail_enabled
+  }
+
   statement {
     sid = "MailBlobBucketMetadata"
     actions = [
@@ -119,6 +127,10 @@ resource "aws_iam_role_policy" "mail" {
   name   = "stalwart-mail-runtime"
   role   = aws_iam_role.mail.id
   policy = data.aws_iam_policy_document.mail.json
+
+  lifecycle {
+    enabled = var.mail_enabled
+  }
 }
 
 resource "aws_iam_instance_profile" "mail" {
@@ -175,8 +187,9 @@ resource "aws_instance" "mail" {
   }
 
   lifecycle {
-    # Never replace the instance; NixOS changes deploy in place.
-    prevent_destroy = true
+    # Routine NixOS changes deploy in place; retirement must be explicit.
+    enabled         = var.mail_enabled
+    prevent_destroy = !var.allow_runtime_destroy
     ignore_changes  = [user_data]
   }
 
@@ -198,13 +211,18 @@ resource "aws_eip" "mail" {
   tags = { Name = "stalwart-mail" }
 
   lifecycle {
-    prevent_destroy = true
+    enabled         = var.mail_enabled
+    prevent_destroy = !var.allow_runtime_destroy
   }
 }
 
 resource "terraform_data" "mail_ready" {
   triggers_replace = [aws_instance.mail.id]
   input            = aws_instance.mail.public_ip
+
+  lifecycle {
+    enabled = var.mail_enabled
+  }
 
   provisioner "local-exec" {
     command = "sh ${path.module}/wait-ready.sh"
@@ -223,7 +241,7 @@ removed {
 }
 
 resource "aws_eip_domain_name" "mail" {
-  count = var.enable_reverse_dns ? 1 : 0
+  count = var.mail_enabled && var.enable_reverse_dns ? 1 : 0
 
   allocation_id = aws_eip.mail.id
   domain_name   = "mail.fahrican.com"

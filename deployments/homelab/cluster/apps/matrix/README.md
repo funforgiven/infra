@@ -125,7 +125,7 @@ nix run .#matrix-admin -- approve-device --user @NAME:matrix.fahrican.com \
 
 In Element Web, open avatar → All Settings → Encryption → Advanced and use
 Session ID and the public Session key. A recovery key or access token is not a
-device fingerprint. Device changes pause delivery and the heartbeat until
+device fingerprint. Device changes pause delivery and the encrypted canary until
 approved; intake stays durable and the relay does not fall back to plaintext.
 Cross-signing is described in the
 [Matrix specification](https://spec.matrix.org/v1.16/client-server-api/#cross-signing).
@@ -164,8 +164,10 @@ nix run .#matrix-access -- cluster -- nix run .#matrix-admin -- qualify \
   --mobile-and-recovery-checked
 ```
 
-`qualify` checks the rejected public federation/admin/remote-media routes, the
-AWS alarms and an isolated restore within 40 days. Matrix's durable queue keeps
-accepted events until encrypted delivery succeeds; it does not send notification
-emails during an outage. AWS alarms retain their CloudWatch states without an
-SNS email subscriber.
+`qualify` checks the rejected public federation/admin/remote-media routes and an
+isolated restore within 40 days. Homelab Prometheus monitors the relay queue,
+availability and the last successful encrypted delivery canary. Matrix's durable
+queue keeps accepted events until encrypted delivery succeeds; it does not send
+notification emails during an outage. Matrix has no resources or credentials in
+the AWS mail account. These local checks cannot report a complete homelab outage
+through the same homelab-hosted Matrix service.

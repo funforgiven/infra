@@ -8,6 +8,15 @@ Application records resolve to the routed-LAN services Gateway at
 records resolve to the EIP output of the AWS mail root and
 include the Stalwart TLS, autoconfiguration, MX, SPF, DKIM, and DMARC records.
 
+Set `mail_enabled = false` when pausing AWS mail. The root removes its public
+mail A records, publishes Null MX (`0 .`), removes MTA-STS/TLS-reporting records
+and changes the apex SPF to `v=spf1 -all`. Private services, Matrix, NetBird,
+DKIM and Resend verification records remain. Apply this before releasing the
+AWS EIP; incoming mail will be rejected while paused. `mail_ipv4_address` may
+be omitted while paused. On resume, enable mail with the new EIP only after the
+restored host is verified. See the
+[mail pause procedure](../../services/mail-aws/README.md#pause-and-resume).
+
 The Cloudflare provider discovers the `fahrican.com` zone by name. Its token is
 read from `CLOUDFLARE_API_TOKEN` in the private workstation provider environment and is not an
 OpenTofu variable, output, or state attribute.

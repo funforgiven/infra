@@ -17,6 +17,8 @@ resource "aws_db_instance" "mail" {
   engine_version = "17.10"
   instance_class = "db.t4g.micro"
 
+  snapshot_identifier = var.restore_snapshot_identifier
+
   allocated_storage     = 20
   max_allocated_storage = 100
   storage_type          = "gp3"
@@ -42,21 +44,23 @@ resource "aws_db_instance" "mail" {
 
   auto_minor_version_upgrade  = true
   allow_major_version_upgrade = false
-  deletion_protection         = true
+  deletion_protection         = !var.allow_runtime_destroy
   skip_final_snapshot         = false
-  final_snapshot_identifier   = "stalwart-mail-final"
-  apply_immediately           = false
+  final_snapshot_identifier   = var.final_snapshot_identifier
+  apply_immediately           = var.allow_runtime_destroy
 
   performance_insights_enabled = false
   monitoring_interval          = 0
 
   lifecycle {
-    prevent_destroy = true
+    enabled         = var.mail_enabled
+    prevent_destroy = !var.allow_runtime_destroy
+    ignore_changes  = [snapshot_identifier]
   }
 }
 
 resource "aws_security_group" "restore_qualification" {
-  count = var.enable_restore_qualification ? 1 : 0
+  count = var.mail_enabled && var.enable_restore_qualification ? 1 : 0
 
   name        = "stalwart-mail-restore-qualification"
   description = "Temporary isolated PostgreSQL restore target"
@@ -74,7 +78,7 @@ resource "aws_security_group" "restore_qualification" {
 }
 
 resource "aws_db_instance" "restore_qualification" {
-  count = var.enable_restore_qualification ? 1 : 0
+  count = var.mail_enabled && var.enable_restore_qualification ? 1 : 0
 
   identifier = "stalwart-mail-restore-qualification"
 

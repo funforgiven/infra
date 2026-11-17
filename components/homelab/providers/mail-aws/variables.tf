@@ -1,3 +1,27 @@
+variable "mail_enabled" {
+  description = "Run the mail host and database; false retains S3 and recovery credentials only"
+  type        = bool
+  default     = false
+}
+
+variable "allow_runtime_destroy" {
+  description = "Explicitly permit retiring EC2, RDS and the EIP after verifying backups; apply while enabled first to clear RDS deletion protection"
+  type        = bool
+  default     = false
+}
+
+variable "final_snapshot_identifier" {
+  description = "Unique name for the final RDS snapshot made when pausing mail; choose a new name for each pause"
+  type        = string
+  default     = "stalwart-mail-final"
+}
+
+variable "restore_snapshot_identifier" {
+  description = "Final RDS snapshot to restore when resuming; null creates an empty database"
+  type        = string
+  default     = null
+}
+
 variable "source_revision" {
   description = "Signed Git revision containing the NixOS mail appliance configuration"
   type        = string
