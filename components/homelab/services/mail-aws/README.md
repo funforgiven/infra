@@ -54,6 +54,11 @@ Use the existing encrypted provider state following the
 source revision inputs in a private variable file. Never apply from empty state.
 Pausing is an intentional retirement of the running resources, rather than an
 AWS stop/start operation. Resuming creates a new host and public IP.
+Use an administrator SSO session in this AWS account for pause/resume operations
+(`aws sso login --profile default`, then `AWS_PROFILE=default` for OpenTofu).
+The routine provisioning identity deliberately lacks reverse-DNS reset and
+database snapshot creation/restore permissions. Do not expand its persistent
+policy to perform this occasional operator workflow.
 
 1. While mail is still enabled, set `allow_runtime_destroy = true` and choose a
    new `final_snapshot_identifier`, for example `stalwart-mail-paused-20261117`.
@@ -86,8 +91,8 @@ There is no Matrix enrollment option in the mail root.
 
 To resume, set `mail_enabled = true`, `allow_runtime_destroy = false` and
 `restore_snapshot_identifier` to the saved final snapshot. Keep the original
-S3 bucket and secret containers. Ensure the provisioning IAM policy includes
-the snapshot-restore permission in `bootstrap-iam-policy.json`. Review/apply the
+S3 bucket and secret containers. Use the administrator SSO session for the
+snapshot restore. Review/apply the
 plan, verify bootstrap and mailbox contents, then set the DNS root's
 `mail_enabled = true` and
 `mail_ipv4_address` to the new EIP. Update both WireGuard endpoint inventories,

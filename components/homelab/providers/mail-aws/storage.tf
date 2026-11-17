@@ -272,6 +272,8 @@ resource "aws_secretsmanager_secret" "vpn" {
   recovery_window_in_days = 30
   lifecycle {
     prevent_destroy = true
+    # The provisioner cannot call UpdateSecret; retain existing metadata.
+    ignore_changes = [description]
   }
 }
 
