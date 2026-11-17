@@ -12,6 +12,7 @@ in
 
   config = {
     git.ignore = [
+      "/.claude/worktrees/"
       "/.codex-doc-cache/"
       "/.direnv/"
       ".env"
