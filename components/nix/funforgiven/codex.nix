@@ -1,4 +1,15 @@
-_: {
+{ inputs, ... }:
+{
+  perSystem = { pkgs, ... }: {
+    packages.codex = pkgs.codex;
+  };
+
+  dendritic.nixpkgs.overlays = [
+    (_final: prev: {
+      codex = inputs.nixpkgs-codex.legacyPackages.${prev.stdenv.hostPlatform.system}.codex;
+    })
+  ];
+
   dendritic.nixpkgs.allowUnfreePackages = [ "terraform" ];
 
   home.base.imports = [
@@ -29,7 +40,7 @@ _: {
           package = pkgs.codex;
 
           settings = {
-            model = "gpt-6.1-sol";
+            model = "gpt-6.2-sol";
             personality = "pragmatic";
 
             approval_policy = "on-request";
@@ -37,6 +48,7 @@ _: {
             sandbox_mode = "workspace-write";
 
             model_reasoning_effort = "xhigh";
+            service_tier = "ultrafast";
             model_verbosity = "medium";
 
             projects."${config.home.homeDirectory}/dev/anwa" = {
