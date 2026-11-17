@@ -109,7 +109,7 @@ standalone tray window on native Wayland. Battle.net stays accessible
 through its regular window and desktop launcher.
 
 The declared addons are What's Training?, Questie, Dungeon Quests Forever,
-Auctionator, OpenMap, Bagnon, Details! Damage Meter and FishFry Forever.
+Auctionator, OpenMap, Bagnon, Details! Damage Meter and OneCast.
 `components/nix/battle-net/addons.lock.json` records exact release versions,
 public archive URLs, SHA-256 hashes and addon folders. Nix verifies and
 builds these archives, including QuestieDB, QuestieTrace, Bagnon's bundled

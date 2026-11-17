@@ -49,13 +49,13 @@
         "Dungeon_Quests_Forever"
       ]
     },
-    "fishfry-forever": {
-      "version": "1.7.6a",
-      "source": "curse:1602599",
-      "url": "https://edge.forgecdn.net/files/9593/223/FishFry-1.7.6a-16001.zip",
-      "hash": "sha256-xb0419p972KL76XWeGM+n7gN3Ny081xVHHfBN4JOvfQ=",
+    "onecast": {
+      "version": "0.9.1a",
+      "source": "github:rynmon/onecast",
+      "url": "https://github.com/rynmon/OneCast/releases/download/v0.9.1a/OneCast-0.9.1a.zip",
+      "hash": "sha256-5G7Dm4oejCIOUm+IHdoNy2Ji2+E1FwZaSDe5ztKul8Q=",
       "folders": [
-        "FishFry"
+        "OneCast"
       ]
     },
     "openmap": {
