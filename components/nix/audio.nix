@@ -1,6 +1,9 @@
 _: {
-  nixos.modules.audio = { pkgs, ... }: {
+  nixos.modules.audio = { config, pkgs, ... }: {
     security.rtkit.enable = true;
+
+    # Run JACK clients through pw-jack instead of setting LD_LIBRARY_PATH globally.
+    environment.systemPackages = [ config.services.pipewire.package.jack ];
 
     services.pipewire = {
       enable = true;
@@ -9,7 +12,6 @@ _: {
         support32Bit = true;
       };
       pulse.enable = true;
-      jack.enable = true;
 
       # WirePlumber 0.5.18 deadlocks while creating the Duo's SplitPCM
       # loopbacks, blocking discovery of every output and microphone. Keep
