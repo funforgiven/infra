@@ -109,13 +109,12 @@ standalone tray window on native Wayland. Battle.net stays accessible
 through its regular window and desktop launcher.
 
 The declared addons are What's Training?, Questie, Dungeon Quests Forever,
-Auctionator, OpenMap, Bagnon, Details! Damage Meter and OneCast.
+Auctionator, OpenMap, OneCast, HealKit, Keep or Toss: Forever,
+EllesmereUI, and Forever Graphics Enhancer.
 `components/nix/battle-net/addons.lock.json` records exact release versions,
 public archive URLs, SHA-256 hashes and addon folders. Nix verifies and
-builds these archives, including QuestieDB, QuestieTrace, Bagnon's bundled
-BagBrother, bank and configuration modules, and the packaged Details!
-plugins. Bagnon is pinned from CurseForge because its GitHub repository
-publishes source without packaged releases.
+builds these archives, including QuestieDB, QuestieTrace, and the bundled
+EllesmereUI modules.
 Home Manager links the declared folders into `_forever_/Interface/AddOns`.
 Rebuilds and rollbacks use the locked contents. Close WoW before activating
 a changed generation. Game preferences and character settings remain in

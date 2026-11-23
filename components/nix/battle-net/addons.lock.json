@@ -11,42 +11,71 @@
         "Auctionator"
       ]
     },
-    "bagnon": {
-      "version": "12.1.10",
-      "source": "curse:1592",
-      "url": "https://edge.forgecdn.net/files/9608/574/Bagnon-12.1.10.zip",
-      "hash": "sha256-GSCOje/SLt8EgYNyEZ6tIgWnZ3wjoBjBsD0n/F7mgMo=",
-      "folders": [
-        "BagBrother",
-        "Bagnon",
-        "Bagnon_Bank",
-        "Bagnon_Config",
-        "Bagnon_GuildBank"
-      ]
-    },
-    "details": {
-      "version": "Details.20261109.15410.172",
-      "source": "curse:61284",
-      "url": "https://edge.forgecdn.net/files/9521/145/Details-Details.20261109.15410.172.zip",
-      "hash": "sha256-UAK91cPpLdWb/6Pr38hn+YCwntYpxR2rBW+1RC+SrUE=",
-      "folders": [
-        "Details",
-        "Details_Compare2",
-        "Details_DataStorage",
-        "Details_EncounterDetails",
-        "Details_RaidCheck",
-        "Details_Streamer",
-        "Details_TinyThreat",
-        "Details_Vanguard"
-      ]
-    },
     "dungeon-quests-forever": {
-      "version": "0.3.27beta",
+      "version": "0.3.30beta",
       "source": "curse:1713797",
-      "url": "https://edge.forgecdn.net/files/9474/571/Dungeon_Quests_Foreverv0.3.27beta.zip",
-      "hash": "sha256-YEIBcLK1JxOvwoC3sMuOaU/gH98I7kgGOb6lZPNtQE8=",
+      "url": "https://edge.forgecdn.net/files/9688/83/Dungeon_Quests_Foreverv0.3.30beta.zip",
+      "hash": "sha256-9Czi5KxS2bQ9UW9W8vu+4nftWNxlFugPtTK84WTGUN8=",
       "folders": [
         "Dungeon_Quests_Forever"
+      ]
+    },
+    "ellesmereui": {
+      "version": "9.9.1",
+      "source": "curse:1477613",
+      "url": "https://edge.forgecdn.net/files/9708/838/EllesmereUI-v9.9.1.zip",
+      "hash": "sha256-T6Cx04pbuVF635+pgceDlc8/rJzbFz0mg2Y4yzoNI6A=",
+      "folders": [
+        "EllesmereUI",
+        "EllesmereUIActionBars",
+        "EllesmereUIAuraBuffReminders",
+        "EllesmereUIBags",
+        "EllesmereUIBlizzardSkin",
+        "EllesmereUIChat",
+        "EllesmereUICooldownManager",
+        "EllesmereUIDamageMeters",
+        "EllesmereUIDataBars",
+        "EllesmereUIForeverEssentials",
+        "EllesmereUIFriends",
+        "EllesmereUIGroupFinder",
+        "EllesmereUILocales",
+        "EllesmereUIMinimap",
+        "EllesmereUIMythicTimer",
+        "EllesmereUINameplates",
+        "EllesmereUIOptions",
+        "EllesmereUIQoL",
+        "EllesmereUIQuestTracker",
+        "EllesmereUIQuickdraw",
+        "EllesmereUIRaidFrames",
+        "EllesmereUIResourceBars",
+        "EllesmereUIUnitFrames"
+      ]
+    },
+    "forever-graphics-enhancer": {
+      "version": "0.9.4",
+      "source": "curse:1801478",
+      "url": "https://edge.forgecdn.net/files/9720/278/ForeverGraphicsEnhanced-v0.9.4.zip",
+      "hash": "sha256-PZo7Xj+meNMwWvZ3Zdhv3KcbEN3K6G6YrSHstGnNVM8=",
+      "folders": [
+        "ForeverGraphicsEnhanced"
+      ]
+    },
+    "healkit": {
+      "version": "1.13.0",
+      "source": "curse:1740280",
+      "url": "https://edge.forgecdn.net/files/9704/634/HealKit-1.13.0.zip",
+      "hash": "sha256-kmoH/B8UWFl0LfNKnz9w2Ef8yNGRC5CLE+bYYheRg1o=",
+      "folders": [
+        "HealKit"
+      ]
+    },
+    "keep-or-toss-forever": {
+      "version": "2.3.0",
+      "source": "curse:1737994",
+      "url": "https://edge.forgecdn.net/files/9718/247/KeepOrToss-2.3.0.zip",
+      "hash": "sha256-6IJkAvN3cpkID1t6Zpq3JH65sDyoiMW9hcWnJnSGVtM=",
+      "folders": [
+        "KeepOrToss"
       ]
     },
     "onecast": {
@@ -68,10 +97,10 @@
       ]
     },
     "questie": {
-      "version": "12.9.0+1.1.1",
+      "version": "12.11.1+1.1.3",
       "source": "github:questie/questie",
-      "url": "https://github.com/Questie/Questie/releases/download/bundle/v12.9.0%2Bv1.1.1/Questie-v12.9.0%2Bv1.1.1.zip",
-      "hash": "sha256-nGElNHE7dcBkicwtmzhCS0v/M1ARkQEd0zqgDus/tsc=",
+      "url": "https://github.com/Questie/Questie/releases/download/bundle/v12.11.1%2Bv1.1.3/Questie-v12.11.1%2Bv1.1.3.zip",
+      "hash": "sha256-iEDy3fNwvYc3Qj2ZrlX15mMA1oaslsNHwkhIHrZgG5Q=",
       "folders": [
         "Questie",
         "QuestieDB",
