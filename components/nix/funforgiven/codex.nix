@@ -40,7 +40,7 @@
           package = pkgs.codex;
 
           settings = {
-            model = "gpt-6.2-sol";
+            model = "gpt-6.2-astra";
             personality = "pragmatic";
 
             approval_policy = "on-request";
@@ -48,7 +48,7 @@
             sandbox_mode = "workspace-write";
 
             model_reasoning_effort = "xhigh";
-            service_tier = "ultrafast";
+            service_tier = "default";
             model_verbosity = "medium";
 
             projects."${config.home.homeDirectory}/dev/anwa" = {
