@@ -17,13 +17,25 @@ variable "mail_enabled" {
   default     = false
 }
 
+variable "mail_admin_via_iap" {
+  description = "Use Google IAP for mail administration and retire the private AWS VPN panel records"
+  type        = bool
+  default     = false
+}
+
+variable "stage_mail_hosts" {
+  description = "Publish the candidate hostnames for certificate and mailbox checks while retaining the Null MX"
+  type        = bool
+  default     = false
+}
+
 variable "mail_ipv4_address" {
   description = "Stable public IPv4 address of the active mail origin"
   type        = string
   default     = null
 
   validation {
-    condition = var.mail_ipv4_address == null ? !var.mail_enabled : can(cidrhost("${var.mail_ipv4_address}/32", 0)) && !contains([
+    condition = var.mail_ipv4_address == null ? !(var.mail_enabled || var.stage_mail_hosts) : can(cidrhost("${var.mail_ipv4_address}/32", 0)) && !contains([
       "0.0.0.0",
       "192.0.2.255",
     ], var.mail_ipv4_address)
@@ -81,7 +93,7 @@ locals {
 }
 
 resource "cloudflare_dns_record" "private_services" {
-  for_each = local.private_services
+  for_each = var.mail_admin_via_iap ? setsubtract(local.private_services, ["mail-admin"]) : local.private_services
 
   zone_id = data.cloudflare_zone.fahrican.zone_id
   name    = "${each.key}.fahrican.com"
@@ -93,7 +105,7 @@ resource "cloudflare_dns_record" "private_services" {
 }
 
 resource "cloudflare_dns_record" "mail_hosts" {
-  for_each = var.mail_enabled ? local.mail_hosts : toset([])
+  for_each = (var.mail_enabled || var.stage_mail_hosts) ? local.mail_hosts : toset([])
 
   zone_id = data.cloudflare_zone.fahrican.zone_id
   name    = "${each.key}.fahrican.com"
@@ -105,6 +117,10 @@ resource "cloudflare_dns_record" "mail_hosts" {
 }
 
 resource "cloudflare_dns_record" "mail_direct_vpn" {
+  lifecycle {
+    enabled = !var.mail_admin_via_iap
+  }
+
   zone_id = data.cloudflare_zone.fahrican.zone_id
   name    = "mail-admin-aws.fahrican.com"
   type    = "A"

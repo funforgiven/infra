@@ -39,6 +39,18 @@ run "active_requires_mail_address" {
   expect_failures = [var.mail_ipv4_address]
 }
 
+run "google_admin_uses_iap" {
+  command = plan
+  variables {
+    mail_enabled       = false
+    mail_admin_via_iap = true
+  }
+  assert {
+    condition     = cloudflare_dns_record.mail_direct_vpn == null && !contains(keys(cloudflare_dns_record.private_services), "mail-admin") && contains(keys(cloudflare_dns_record.private_services), "netbird-api")
+    error_message = "IAP administration retires both AWS panel records and preserves unrelated private services."
+  }
+}
+
 run "resumed_publishes_new_address" {
   command = plan
 
@@ -49,5 +61,18 @@ run "resumed_publishes_new_address" {
   assert {
     condition     = cloudflare_dns_record.mail_exchange.content == "mail.fahrican.com" && cloudflare_dns_record.mail_exchange.priority == 10 && cloudflare_dns_record.mail_hosts["mail"].content == "203.0.113.10"
     error_message = "Resumed mail must publish its new EIP and normal MX."
+  }
+}
+
+run "stage_hostnames_before_accepting_mail" {
+  command = plan
+  variables {
+    mail_enabled      = false
+    stage_mail_hosts  = true
+    mail_ipv4_address = "203.0.113.10"
+  }
+  assert {
+    condition     = cloudflare_dns_record.mail_exchange.content == "." && cloudflare_dns_record.mail_hosts["mail"].content == "203.0.113.10" && !cloudflare_dns_record.mail_hosts["mail"].proxied && cloudflare_dns_record.apex_spf.content == "v=spf1 -all"
+    error_message = "Staging must publish DNS-only hostnames while mail delivery remains paused."
   }
 }

@@ -176,6 +176,12 @@ class MailOperationsTest(unittest.TestCase):
             with self.assertRaises(sqlite3.DatabaseError):
                 ops.validate_archive(path)
 
+    def test_google_operation_success_waits_for_periodic_health_sample(self):
+        with patch.object(ops, "GCP_PROJECT", "mail"), patch.object(ops.urllib.request, "urlopen") as http:
+            for name in ("InboundAgeSeconds", "BackupAgeSeconds", "RestoreAgeSeconds"):
+                ops.metrics({name: 0})
+            http.assert_not_called()
+
     def test_health_failure_still_publishes_failure_heartbeat(self):
         with patch.object(ops, "age", return_value=10), \
              patch.object(ops.shutil, "disk_usage", return_value=type("Disk", (), {"free": 100})()), \

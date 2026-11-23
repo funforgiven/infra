@@ -34,6 +34,8 @@ CANARY = "mail-canary@fahrican.com"
 STATE = Path("/var/lib/mail-operations")
 SECRETS = Path("/run/stalwart-secrets")
 REGION = "eu-central-1"
+GCP_PROJECT = os.environ.get("MAIL_GCP_PROJECT")
+BACKUP_HOST = "mail-gcp" if GCP_PROJECT else "mail-aws"
 REPOSITORY = "s3:https://s3.us-west-004.backblazeb2.com/fahrican-cloud-recovery/services/hosts/mail-aws"
 ATTACHMENT = b"Stalwart readiness attachment v1\n"
 JMAP_CORE = "urn:ietf:params:jmap:core"
@@ -230,12 +232,37 @@ def age(name, now=None):
 
 
 def metrics(values):
+    if GCP_PROJECT:
+        # Each operation persists its own success timestamp. The health timer
+        # publishes those ages together so concurrent jobs cannot write the
+        # same Google time series within its minimum sampling interval.
+        if "ServiceHealthy" not in values:
+            return
+        token_request = urllib.request.Request(
+            "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token",
+            headers={"Metadata-Flavor": "Google"})
+        with urllib.request.urlopen(token_request, timeout=10) as response:
+            token = json.load(response)["access_token"]
+        now = dt.datetime.now(dt.timezone.utc).isoformat()
+        series = [{
+            "metric": {"type": "custom.googleapis.com/stalwart/operation", "labels": {"measure": key}},
+            "resource": {"type": "global", "labels": {"project_id": GCP_PROJECT}},
+            "points": [{"interval": {"endTime": now}, "value": {"doubleValue": float(value)}}],
+        } for key, value in values.items()]
+        request = urllib.request.Request(
+            f"https://monitoring.googleapis.com/v3/projects/{GCP_PROJECT}/timeSeries",
+            data=json.dumps({"timeSeries": series}).encode(),
+            headers={"Authorization": "Bearer " + token, "Content-Type": "application/json"})
+        with urllib.request.urlopen(request, timeout=20):
+            return
     client("cloudwatch").put_metric_data(Namespace="Fahrican/Mail", MetricData=[
         {"MetricName": key, "Dimensions": [{"Name": "Service", "Value": "stalwart-mail"}],
          "Value": float(value)} for key, value in values.items()])
 
 
 def secret(name):
+    if GCP_PROJECT:
+        return (SECRETS / name).read_text().strip()
     return client("secretsmanager").get_secret_value(
         SecretId=f"fahrican/stalwart/{name}")["SecretString"].strip()
 
@@ -287,6 +314,10 @@ def health():
                 raise OperationError("SMTP greeting failed")
         count, oldest = queue_health(objects("QueuedMessage", "id,createdAt,flags,recipients"))
         values.update(QueueMessages=count, OldestQueuedSeconds=oldest, ServiceHealthy=1)
+        if GCP_PROJECT:
+            # The management listener is reached through IAP port forwarding.
+            del values["AdminPanelHealthy"], values["AdminCertificateSecondsRemaining"]
+            return
         run(["systemctl", "is-active", "--quiet", "wg-quick-wg-mail-admin.service"])
         with socket.create_connection((PANEL_HOST, PANEL_PORT), timeout=15) as raw:
             with ssl.create_default_context().wrap_socket(raw, server_hostname=PANEL_HOST) as connection:
@@ -399,8 +430,13 @@ def backup():
     # PostgreSQL dump additionally holds the full server registry/metadata
     # for AWS recovery with matching S3 versions.
     db_env = os.environ.copy()
-    db_env.update(PGHOST=os.environ["STALWART_RDS_HOST"], PGDATABASE="stalwart", PGUSER="stalwart",
-                  PGPASSWORD=(SECRETS / "rds-password").read_text().strip(), PGSSLMODE="verify-full")
+    if GCP_PROJECT:
+        # The loopback proxy supplies a short-lived IAM credential and verified TLS.
+        db_env.update(PGHOST="127.0.0.1", PGDATABASE="stalwart", PGUSER=os.environ["MAIL_DB_USER"],
+                      PGSSLMODE="disable")
+    else:
+        db_env.update(PGHOST=os.environ["STALWART_RDS_HOST"], PGDATABASE="stalwart", PGUSER="stalwart",
+                      PGPASSWORD=(SECRETS / "rds-password").read_text().strip(), PGSSLMODE="verify-full")
     run(["pg_dump", "--format=custom", "--no-owner", "--no-acl", "--file",
          str(payload / "database.dump")], env=db_env, timeout=1800)
     run(["pg_restore", "--list", str(payload / "database.dump")])
@@ -414,11 +450,11 @@ def backup():
     restic_env = backup_environment()
     # Initialization is a separate operator action; an inaccessible or missing
     # repository must fail instead of silently creating a different backup set.
-    run(["restic", "backup", "--quiet", "--tag", "mail-aws", "--host", "mail-aws",
+    run(["restic", "backup", "--quiet", "--tag", BACKUP_HOST, "--host", BACKUP_HOST,
          str(payload)], env=restic_env, timeout=3600)
     write_state("backup.json", {"last_success": time.time()})
     metrics({"BackupAgeSeconds": 0})
-    run(["restic", "forget", "--quiet", "--tag", "mail-aws", "--host", "mail-aws",
+    run(["restic", "forget", "--quiet", "--tag", BACKUP_HOST, "--host", BACKUP_HOST,
          "--keep-daily", "14", "--keep-weekly", "8", "--keep-monthly", "12"],
         env=restic_env, timeout=300)
 
@@ -438,7 +474,7 @@ def verify_payload(payload):
 def restore_check():
     env = backup_environment()
     with tempfile.TemporaryDirectory(dir=STATE, prefix="restore-") as directory:
-        run(["restic", "restore", "latest", "--tag", "mail-aws", "--host", "mail-aws",
+        run(["restic", "restore", "latest", "--tag", BACKUP_HOST, "--host", BACKUP_HOST,
              "--target", directory, "--verify", "--quiet"], env=env, timeout=3600)
         payload = Path(directory) / str(STATE / "payload").lstrip("/")
         verify_payload(payload)
