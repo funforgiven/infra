@@ -1,5 +1,6 @@
 _: {
   dendritic.nixpkgs.allowUnfreePackages = [
+    "chatgpt"
     "discord"
     "discord-unwrapped"
     "r2modman"
@@ -10,6 +11,7 @@ _: {
     { pkgs, ... }:
     {
       home.packages = [
+        pkgs.chatgpt
         pkgs.discord
         pkgs.element-desktop
         pkgs.ffmpegthumbnailer
