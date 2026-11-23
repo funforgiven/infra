@@ -12,6 +12,24 @@
 
   dendritic.nixpkgs.allowUnfreePackages = [ "terraform" ];
 
+  home.gui =
+    { config, pkgs, ... }:
+    {
+      programs.codex.settings = {
+        marketplaces.openai-bundled = {
+          source_type = "local";
+          source = "${config.home.homeDirectory}/.codex/.tmp/bundled-marketplaces/openai-bundled";
+        };
+        plugins."browser@openai-bundled".enabled = true;
+      };
+
+      # Codex scans real version directories in its plugin cache.
+      home.file.".codex/plugins/cache/openai-bundled/browser/${pkgs.chatgpt.version}" = {
+        source = "${pkgs.chatgpt}/lib/chatgpt/resources/plugins/openai-bundled/plugins/browser";
+        recursive = true;
+      };
+    };
+
   home.base.imports = [
     (
       {
