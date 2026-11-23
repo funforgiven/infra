@@ -1,8 +1,9 @@
 # AWS Stalwart mail platform
 
-Mail runs in `eu-central-1` on one Graviton EC2 instance. OpenTofu manages the
-network, instance, database, object storage, monitoring, IAM, and empty secret
-containers. NixOS manages the host and Stalwart service.
+Mail moved to Google Cloud on November 23, 2026. AWS Organizations confirmed
+closure of the source `mail` account (`027355625923`) the same day. For current
+operations and recovery, use the [Google Cloud mail runbook](../mail-gcp/README.md).
+The sections below document the former Frankfurt deployment and its procedures.
 
 ## Architecture
 

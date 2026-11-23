@@ -43,9 +43,11 @@ blobs matched their GCS copies byte for byte. The replacement VM passed the
 public Resend-to-JMAP delivery test and restored its first encrypted offsite
 backup. The EU Cloud SQL baseline backup ID is `1795463887233`.
 
-The AWS snapshot, original versioned bucket and recovery secrets remain
-available. Their retention incurs separate AWS charges. The temporary migration
-database and SSM tunnel VM were removed.
+AWS Organizations confirmed closure of the source `mail` account
+(`027355625923`) on November 23, 2026. Access to its RDS snapshots, versioned
+S3 bucket and recovery secrets would require reopening the account during AWS's
+90-day post-closure period. Use Cloud SQL, GCS and the encrypted Backblaze
+backups for recovery.
 
 ## Recovery
 
